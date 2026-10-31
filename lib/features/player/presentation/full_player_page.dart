@@ -79,7 +79,7 @@ class FullPlayerPage extends ConsumerWidget {
                   tooltip: context.l10n.download,
                   onPressed: song == null
                       ? null
-                      : () => showDownloadSheet(context, song!),
+                      : () => showDownloadSheet(context, song),
                 ),
                 IconButton(
                   icon: const Icon(Icons.queue_music_rounded),
@@ -301,7 +301,7 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
                 child: ClipRect(
                   key: const ValueKey('lyric'),
                   child: LyricView(
-                    lyric: lyricAsync.value!.lyric,
+                    lyric: lyricAsync.value!.lyric!,
                     position: position,
                     mode: lyricMode,
                     onTapLine: (ms) => ref

@@ -91,7 +91,7 @@ class PublicMediaStore {
             .invokeMethod<bool>('write', {'uri': uri, 'srcPath': tempFilePath});
         if (ok != true) {
           await _channel.invokeMethod<bool>('delete', {'uri': uri});
-          return _publishDirect(type, tempFilePath, displayName);
+          return await _publishDirect(type, tempFilePath, displayName);
         }
         await _channel.invokeMethod<bool>('finalize', {'uri': uri});
         return PublishedFile(

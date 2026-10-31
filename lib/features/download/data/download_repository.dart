@@ -146,7 +146,7 @@ class DownloadRepository {
   }
 
   /// 发布到公共目录，返回可访问位置。
-  Future<PublicMediaStore.PublishedFile> publish(
+  Future<PublishedFile> publish(
     DownloadTask task,
     String tempFilePath, {
     required StorageStrategy strategy,

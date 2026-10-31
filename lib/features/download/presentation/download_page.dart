@@ -148,7 +148,7 @@ class _DownloadTile extends ConsumerWidget {
               break;
             case 'open':
               await PublicMediaStore.instance.open(
-                PublicMediaStore.PublishedFile(
+                PublishedFile(
                   uri: task.mediaUri.isEmpty ? null : task.mediaUri,
                   path: task.filePath.isEmpty ? null : task.filePath,
                 ),
@@ -156,7 +156,7 @@ class _DownloadTile extends ConsumerWidget {
               break;
             case 'folder':
               await PublicMediaStore.instance.viewFolder(
-                PublicMediaStore.PublishedFile(
+                PublishedFile(
                   uri: task.mediaUri.isEmpty ? null : task.mediaUri,
                   path: task.filePath.isEmpty ? null : task.filePath,
                 ),
@@ -188,7 +188,7 @@ class _DownloadTile extends ConsumerWidget {
       onTap: () {
         if (task.status == DownloadTaskStatus.completed) {
           PublicMediaStore.instance.open(
-            PublicMediaStore.PublishedFile(
+            PublishedFile(
               uri: task.mediaUri.isEmpty ? null : task.mediaUri,
               path: task.filePath.isEmpty ? null : task.filePath,
             ),

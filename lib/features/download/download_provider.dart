@@ -140,7 +140,7 @@ class DownloadManager extends StateNotifier<DownloadState> {
     _running.remove(id);
     if (task != null) {
       await PublicMediaStore.instance.delete(
-        PublicMediaStore.PublishedFile(
+        PublishedFile(
           uri: task.mediaUri.isEmpty ? null : task.mediaUri,
           path: task.filePath.isEmpty ? null : task.filePath,
         ),
@@ -158,7 +158,7 @@ class DownloadManager extends StateNotifier<DownloadState> {
     for (final t in state.tasks) {
       _tokens[t.id]?.cancel('cleared');
       await PublicMediaStore.instance.delete(
-        PublicMediaStore.PublishedFile(
+        PublishedFile(
           uri: t.mediaUri.isEmpty ? null : t.mediaUri,
           path: t.filePath.isEmpty ? null : t.filePath,
         ),
