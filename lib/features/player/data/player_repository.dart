@@ -198,7 +198,7 @@ class PlayerRepository {
       final status = _int(data['status']);
       if (errorCode != 0 || (status != null && status != 1)) {
         throw ApiException(
-          errorCode != 0 ? errorCode : -1,
+          errorCode ?? -1,
           _songFailureMessage(data, q),
         );
       }
