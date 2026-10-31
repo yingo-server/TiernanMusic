@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../core/api/kugou_api_client.dart';
+import '../../core/direct/kg_providers.dart';
 import 'data/audio_handler.dart';
 import 'data/models.dart';
 import 'data/player_repository.dart';
@@ -10,9 +11,13 @@ import 'data/player_repository.dart';
 /// API 客户端单例。
 final _apiClientProvider = Provider<KugouApiClient>((ref) => KugouApiClient());
 
-/// 播放器仓库。
-final playerRepositoryProvider = Provider<PlayerRepository>(
-    (ref) => PlayerRepository(ref.watch(_apiClientProvider)));
+/// 播放器仓库（直连播放 + kapi 内容接口）。
+final playerRepositoryProvider = Provider<PlayerRepository>((ref) {
+  // 预热直连客户端，确保首次播放前设备身份已就绪
+  ref.watch(kgClientProvider);
+  return PlayerRepository(ref.watch(_apiClientProvider), ref);
+});
+
 
 /// 全局音频处理器（应用生命周期内常驻）。
 final audioHandlerProvider = Provider<TiernanAudioHandler>((ref) {

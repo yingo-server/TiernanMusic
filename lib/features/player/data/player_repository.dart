@@ -1,4 +1,8 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/api/kugou_api_client.dart';
+import '../../core/direct/kg_play_api.dart';
+import '../../core/direct/kg_providers.dart';
 import '../../core/storage/secure_storage.dart';
 import 'models.dart';
 
@@ -14,11 +18,17 @@ class PlayableResult {
   final bool isPreview;
 }
 
-/// 播放器仓库：封装 dfid 注册、歌曲详情查询与播放地址获取（含音质降级）。
+/// 播放器仓库：直连酷狗网关（不经 Node 中转），避免中转层的 20028 风控。
+///
+/// 内容接口仍走 kapi；只有受风控影响的播放/权益链路直连。
 class PlayerRepository {
-  PlayerRepository(this._api);
+  PlayerRepository(this._api, [this._ref]);
 
   final KugouApiClient _api;
+  final Ref? _ref;
+
+  /// 动态获取直连播放接口（异步 provider，可能尚未就绪）
+  KgPlayApi? get _directPlay => _ref?.read(kgPlayApiProvider).value;
 
   bool _registering = false;
 
@@ -100,10 +110,72 @@ class PlayerRepository {
     return song;
   }
 
+  /// 获取可播放 URL：直连优先，失败回退 kapi。
+  Future<PlayableResult> resolveUrl(Song song,
+      {AudioQuality? preferred}) async {
+    if (_directPlay != null) {
+      try {
+        final direct =
+            await _resolveViaDirect(song, preferred: preferred);
+        if (direct != null) return direct;
+      } on ApiException catch (e) {
+        // 20028/权益错误直接上抛，不再回退（回退也会被同样拦截）
+        if (e.errorCode == 20028) rethrow;
+        // 其它错误回退 kapi 再试
+      }
+    }
+    return _resolveViaKapi(song, preferred: preferred);
+  }
+
+  /// 直连解析：按音质降级，命中权益不足才抛错。
+  Future<PlayableResult?> _resolveViaDirect(Song song,
+      {AudioQuality? preferred}) async {
+    final play = _directPlay!;
+    final start = preferred ?? song.quality;
+    final order = AudioQuality.fallbackOrder;
+    var startIndex = order.indexOf(start);
+    if (startIndex < 0) startIndex = order.length - 1;
+
+    int? lastErrorCode;
+    String lastMessage = '';
+    for (var i = startIndex; i < order.length; i++) {
+      final q = order[i];
+      final result = await play.songUrl(
+        hash: song.hash,
+        albumId: int.tryParse(song.albumId) ?? 0,
+        albumAudioId: int.tryParse(song.albumAudioId) ?? 0,
+        quality: q.value,
+      );
+      if (result.hasUrl) {
+        return PlayableResult(
+          // 直连拿到的是 http://fsandroid... ，走代理转 https
+          url: _proxyHttp(result.bestUrl!),
+          quality: _qualityFromBitrate(result.bitrate, q),
+          isPreview: result.isPreview,
+        );
+      }
+      lastErrorCode = result.errorCode;
+      lastMessage = result.message.isNotEmpty ? result.message : lastMessage;
+      // 20028（需验证）/ 权益不足：不再继续降级（继续也没权限）
+      if (result.errorCode == 20028) break;
+    }
+    if (lastErrorCode != null && lastErrorCode != 0) {
+      throw ApiException(lastErrorCode, lastMessage.isEmpty ? '直连获取播放地址失败' : lastMessage);
+    }
+    return null;
+  }
+
+  static AudioQuality _qualityFromBitrate(int bitrate, AudioQuality requested) {
+    if (bitrate >= 2000) return AudioQuality.flac;
+    if (bitrate >= 900) return AudioQuality.high;
+    if (bitrate >= 300) return AudioQuality.q320;
+    return requested == AudioQuality.q128 ? AudioQuality.q128 : requested;
+  }
+
   /// 获取可播放 URL。从期望音质起逐级降级（super→high→flac→320→128）。
   ///
-  /// 业务失败（含 20028）不是空地址：前者抛出权益/验证错误，后者才降级。
-  Future<PlayableResult> resolveUrl(Song song,
+  /// 这里是 kapi 回退路径。
+  Future<PlayableResult> _resolveViaKapi(Song song,
       {AudioQuality? preferred}) async {
     await ensureDfid();
     final start = preferred ?? song.quality;
