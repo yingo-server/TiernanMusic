@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
 
 import '../../../core/providers.dart';
 import 'auth_repository.dart';
@@ -26,6 +27,11 @@ class AuthStateNotifier extends AsyncNotifier<AuthUser?> {
 
   Future<void> logout({bool removeAccount = false}) async {
     await ref.read(authRepositoryProvider).logout(removeAccount: removeAccount);
+    try {
+      final box = Hive.box('settings');
+      await box.delete('nickname');
+      await box.delete('avatar');
+    } catch (_) {}
     state = const AsyncData(null);
   }
 

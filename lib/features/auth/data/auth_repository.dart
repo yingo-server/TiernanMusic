@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:hive/hive.dart';
 
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/storage/secure_storage.dart';
@@ -354,6 +355,13 @@ class AuthRepository {
       avatar: avatar,
       t1: t1,
     ));
+
+    // 写入设置盒（供设置页显示当前账号）
+    try {
+      final box = Hive.box('settings');
+      await box.put('nickname', nickname);
+      await box.put('avatar', avatar);
+    } catch (_) {}
 
     return AuthUser(
       userid: userid,
