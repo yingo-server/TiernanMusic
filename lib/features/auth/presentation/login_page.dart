@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/api/kugou_api_client.dart';
 import '../../../core/providers.dart' show kugouApiClientProvider;
 import '../../../l10n/l10n.dart';
 import '../data/auth_providers.dart';

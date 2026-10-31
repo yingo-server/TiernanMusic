@@ -81,7 +81,7 @@ class PlaylistDetailPage extends ConsumerWidget {
                       child: Row(
                         children: [
                           _InfoChip(Icons.play_arrow,
-                              context.l10n.playCountSuffix(_formatCount(detail.playCount))),
+                              context.l10n.playCountSuffix(detail.playCount)),
                           const SizedBox(width: 12),
                           _InfoChip(Icons.music_note,
                               context.l10n.trackCountSuffix(detail.trackCount)),

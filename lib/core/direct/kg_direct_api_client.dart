@@ -8,7 +8,7 @@ import 'dart:convert';
 
 import 'kg_client.dart';
 import 'kg_crypto.dart';
-import '../../api/kugou_api_client.dart';
+import '../api/kugou_api_client.dart';
 
 class KgDirectApiClient extends KugouApiClient {
   KgDirectApiClient(this.kg, {super.baseUrl});

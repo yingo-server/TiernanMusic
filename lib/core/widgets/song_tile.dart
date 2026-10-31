@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../l10n/l10n.dart';
+import '../../l10n/l10n.dart';
 
 /// 统一歌曲列表项
 class SongTile extends StatelessWidget {

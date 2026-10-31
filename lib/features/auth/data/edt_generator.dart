@@ -19,12 +19,22 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:pointycastle/asn1.dart';
 import 'package:pointycastle/export.dart';
 
 class EdtResult {
   const EdtResult({required this.sid, required this.edt});
   final String sid;
   final String edt;
+}
+
+/// MD5 工具（避免与 pointycastle/crypto 包顶层函数遮蔽）
+class KgCryptoHelper {
+  KgCryptoHelper._();
+  static String md5Hex(List<int> bytes) {
+    final d = MD5Digest().process(Uint8List.fromList(bytes));
+    return d.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
 }
 
 class EdtGenerator {
@@ -66,9 +76,7 @@ rQIDAQAB''';
 
     // key = MD5(随机16字符) 的 hex 前 16 位
     final key = fixedKey ??
-        md5
-            .convert(utf8.encode(_randomString(16)))
-            .toString()
+        KgCryptoHelper.md5Hex(utf8.encode(_randomString(16)))
             .substring(0, 16);
 
     final points = _ri(30, 60);
@@ -249,20 +257,20 @@ rQIDAQAB''';
   /// RSA-OAEP(SHA-256) 加密 key，输出 Base64
   static String _rsaOaepEncryptBase64(String key) {
     final derBytes = base64.decode(_publicKeyPem.replaceAll(RegExp(r'\s'), ''));
-    final asn1 = ASN1Parser(derBytes);
-    final publicKey = PublicKey(
-      asn1.nextObject() as ASN1Sequence,
-    );
+    final outer = ASN1Parser(derBytes).nextObject() as ASN1Sequence;
+    final keyBits = (outer.elements![1] as ASN1BitString).stringValues!;
+    final keySeq = ASN1Parser(Uint8List.fromList(keyBits)).nextObject()
+        as ASN1Sequence;
+    final modulus =
+        (keySeq.elements![0] as ASN1Integer).integer as BigInt;
+    final exponent =
+        (keySeq.elements![1] as ASN1Integer).integer as BigInt;
 
-    final rsa = RSAEngine();
-    final oaep = OAEPEncoding.withCustomDigest(
-      () => SHA256Digest(),
-      rsa,
-    );
-    oaep.init(
-      true,
-      PublicKeyParameter<RSAPublicKey>(publicKey as RSAPublicKey),
-    );
+    final oaep = OAEPEncoding(RSAEngine())
+      ..init(
+        true,
+        PublicKeyParameter<RSAPublicKey>(RSAPublicKey(modulus, exponent)),
+      );
 
     final data = Uint8List.fromList(utf8.encode(key));
     final out = oaep.process(data);

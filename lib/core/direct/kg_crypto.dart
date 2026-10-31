@@ -16,6 +16,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:pointycastle/asn1.dart';
 import 'package:pointycastle/export.dart';
 
 /// 平台常量（对应 util/config.json）
@@ -137,22 +138,29 @@ LgFVxtzIY41Pe7lPOgsfTCn5kZcvKhYKJesKnnJDNr5/abvTGf+rHG3YRwsCHcQ0
   /// MD5 十六进制小写
   static String md5(String input) => _md5Bytes(utf8.encode(input));
 
-  static String _md5Bytes(List<int> bytes) =>
-      md5.convert(bytes).toString();
+  static String _md5Bytes(List<int> bytes) {
+    final digest = MD5Digest().process(Uint8List.fromList(bytes));
+    return digest.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
 
   /// RSA-PKCS1 加密，输出十六进制大写（对应 rsaEncrypt2）
   static String rsaEncryptPkcs1(String data, {bool lite = false}) {
     final der = base64.decode(
       (lite ? _publicKeyPemLite : _publicKeyPem).replaceAll(RegExp(r'\s'), ''),
     );
-    final asn1 = ASN1Parser(der);
-    final publicKey = PublicKey(asn1.nextObject() as ASN1Sequence);
+    final outer = ASN1Parser(der).nextObject() as ASN1Sequence;
+    // SPKI: SEQUENCE { SEQUENCE{alg}, BIT STRING{key} }
+    final keyBits = (outer.elements![1] as ASN1BitString).stringValues!;
+    final keySeq = ASN1Parser(Uint8List.fromList(keyBits)).nextObject()
+        as ASN1Sequence;
+    final modulus =
+        (keySeq.elements![0] as ASN1Integer).integer as BigInt;
+    final exponent =
+        (keySeq.elements![1] as ASN1Integer).integer as BigInt;
+    final publicKey = RSAPublicKey(modulus, exponent);
 
     final cipher = PKCS1Encoding(RSAEngine())
-      ..init(
-        true,
-        PublicKeyParameter<RSAPublicKey>(publicKey as RSAPublicKey),
-      );
+      ..init(true, PublicKeyParameter<RSAPublicKey>(publicKey));
     final encrypted = cipher.process(Uint8List.fromList(utf8.encode(data)));
     return encrypted
         .map((b) => b.toRadixString(16).padLeft(2, '0'))

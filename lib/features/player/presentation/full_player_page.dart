@@ -289,7 +289,7 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
                 child: ClipRect(
                   key: const ValueKey('lyric'),
                   child: LyricView(
-                    lyric: lyricAsync.value!.lyric,
+                    lyric: lyricAsync.value!.lyric!,
                     position: position,
                     mode: lyricMode,
                     onTapLine: (ms) => ref
