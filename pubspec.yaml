@@ -26,6 +26,7 @@ dependencies:
   just_audio: ^0.9.40
   just_audio_background: ^0.0.1-beta.13
   audio_service: ^0.18.15
+  audio_session: ^0.1.21
 
   # 视频播放
   video_player: ^2.9.2
