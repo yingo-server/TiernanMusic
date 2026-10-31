@@ -5,14 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../l10n/l10n.dart';
-import 'package:logger/logger.dart';
 
 import '../../player/play_helper.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../data/home_repository.dart';
 import '../data/models.dart';
 
-final _log = Logger();
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});

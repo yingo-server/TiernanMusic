@@ -164,12 +164,6 @@ class PlaylistDetailPage extends ConsumerWidget {
       ),
     );
   }
-
-  String _formatCount(int count) {
-    if (count >= 100000000) return '${(count / 100000000).toStringAsFixed(1)}亿';
-    if (count >= 10000) return '${(count / 10000).toStringAsFixed(1)}万';
-    return '$count';
-  }
 }
 
 class _InfoChip extends StatelessWidget {
