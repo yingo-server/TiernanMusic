@@ -7,6 +7,8 @@ import '../../../core/providers.dart' show kugouApi;
 import '../../../core/widgets/song_tile.dart';
 import '../../auth/data/account_manager.dart';
 import '../../playlist/data/playlist_repository.dart';
+import '../../player/data/models.dart';
+import '../../player/play_helper.dart';
 import '../data/recent_play_store.dart';
 
 /// 音乐库页：账号卡片 + 我的歌单 + 最近播放 + 收藏 MV 占位。
@@ -71,13 +73,23 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               message: '还没有播放记录，去首页挑首歌吧',
             )
           else ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _confirmClearRecent,
+                  icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+                  label: const Text('清空'),
+                ),
+              ),
+            ),
             for (final r in _recent.take(20))
               SongTile(
                 title: r.name,
                 artist: r.artist,
                 cover: r.cover,
-                // TODO(播放): 接入播放 API 后在此恢复播放
-                onTap: () {},
+                onTap: () => _playRecent(r),
               ),
           ],
 
@@ -92,8 +104,47 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     );
   }
 
-  AccountRecord? _currentAccount() {
-    try {
+  /// 从最近播放记录构造 Song 并跳转播放页。
+  Future<void> _playRecent(RecentPlay r) async {
+    final song = Song(
+      hash: r.hash,
+      albumId: '',
+      albumAudioId: r.albumAudioId,
+      name: r.name,
+      artist: r.artist,
+      cover: r.cover,
+    );
+    await ref.read(playHelperProvider).playSong(song);
+    if (!mounted) return;
+    context.push('/player');
+  }
+
+  /// 清空最近播放（带确认弹窗）。
+  Future<void> _confirmClearRecent() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('清空最近播放'),
+        content: const Text('确定要清空全部播放记录吗？此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('清空'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await RecentPlayStore.clear();
+      _loadRecent();
+    }
+  }
+
+  AccountRecord? _currentAccount() {    try {
       return AccountManager.instance.currentAccount;
     } catch (_) {
       return null;
@@ -188,7 +239,6 @@ class _LoginGuideCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Card(
@@ -196,15 +246,11 @@ class _LoginGuideCard extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              const EmptyState(
+              EmptyState(
                 icon: Icons.playlist_add_rounded,
                 message: '登录后查看你的歌单',
-              ),
-              const SizedBox(height: 8),
-              FilledButton.tonalIcon(
-                onPressed: () => context.push('/login'),
-                icon: const Icon(Icons.login_rounded, size: 18),
-                label: const Text('去登录'),
+                actionLabel: '去登录',
+                onAction: () => context.push('/login'),
               ),
             ],
           ),

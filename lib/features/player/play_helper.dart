@@ -21,6 +21,7 @@ class PlayHelper {
       name: song.name,
       artist: song.artist,
       cover: song.cover,
+      albumAudioId: song.albumAudioId,
       ts: DateTime.now().millisecondsSinceEpoch,
     ));
   }

@@ -8,6 +8,7 @@ class RecentPlay {
     required this.artist,
     required this.cover,
     required this.ts,
+    this.albumAudioId = '',
   });
 
   final String hash;
@@ -15,6 +16,7 @@ class RecentPlay {
   final String artist;
   final String cover;
   final int ts; // 毫秒时间戳
+  final String albumAudioId;
 
   Map<String, dynamic> toJson() => {
         'hash': hash,
@@ -22,6 +24,7 @@ class RecentPlay {
         'artist': artist,
         'cover': cover,
         'ts': ts,
+        'albumAudioId': albumAudioId,
       };
 
   factory RecentPlay.fromJson(Map<dynamic, dynamic> json) => RecentPlay(
@@ -29,6 +32,7 @@ class RecentPlay {
         name: '${json['name'] ?? ''}',
         artist: '${json['artist'] ?? ''}',
         cover: '${json['cover'] ?? ''}',
+        albumAudioId: '${json['albumAudioId'] ?? ''}',
         ts: (json['ts'] is int) ? json['ts'] as int : int.tryParse('${json['ts']}') ?? 0,
       );
 }
@@ -61,5 +65,11 @@ class RecentPlayStore {
       ..insert(0, item);
     if (list.length > _max) list.removeRange(_max, list.length);
     await box.put(_kList, list.map((e) => e.toJson()).toList());
+  }
+
+  /// 清空全部最近播放记录。
+  static Future<void> clear() async {
+    if (!Hive.isBoxOpen(_boxName)) return;
+    await _box.delete(_kList);
   }
 }
