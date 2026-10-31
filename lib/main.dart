@@ -16,8 +16,15 @@ Future<void> main() async {
   await Hive.initFlutter();
   await initSettingsBox();
 
-  // 设备身份（固定，持久化在 box 'device'）
+  // 预开所有会被读取的 Hive box（避免运行期 HiveError: box not open）
   final deviceBox = await Hive.openBox<String>(KgDeviceStore.boxName);
+  await Hive.openBox<dynamic>('settings');
+  await Hive.openBox<dynamic>('accounts');
+  await Hive.openBox<dynamic>('recent_plays');
+  await Hive.openBox<String>('search_history');
+  await Hive.openBox<String>('lyric_translations');
+
+  // 设备身份（固定，持久化在 box 'device'）
   final device = KgDeviceStore.loadSync(deviceBox);
 
   await JustAudioBackground.init(
