@@ -151,21 +151,24 @@ class KgDirectApiClient extends KugouApiClient {
   }
 
   Future<KgResponse> _searchLyric(Map<String, dynamic> q) {
+    // 注意：Node 版 search_lyric.js 写了 notSign:true，但 util/request.js
+    // 实际并未实现 notSignature 分支（bug），实测 lyrics.kugou.com 要求
+    // android 签名（x-kg-errcode=200 才通过，无签名返回 20010 空响应）。
+    final params = <String, dynamic>{
+      'album_audio_id': q['album_audio_id'] ?? 0,
+      'appid': kg.lite ? KgConfig.liteAppid : KgConfig.appid,
+      'clientver': kg.lite ? KgConfig.liteClientver : KgConfig.clientver,
+      'duration': q['duration'] ?? 0,
+      'hash': q['hash'] ?? '',
+      'keyword': q['keywords'] ?? '',
+      'lrctxt': 1,
+      'man': q['man'] ?? 'no',
+    };
     return kg.request('/v1/search',
         baseUrl: 'https://lyrics.kugou.com',
         method: 'GET',
         clearDefaultParams: true,
-        notSignature: true,
-        params: {
-          'album_audio_id': q['album_audio_id'] ?? 0,
-          'appid': kg.lite ? KgConfig.liteAppid : KgConfig.appid,
-          'clientver': kg.lite ? KgConfig.liteClientver : KgConfig.clientver,
-          'duration': q['duration'] ?? 0,
-          'hash': q['hash'] ?? '',
-          'keyword': q['keywords'] ?? '',
-          'lrctxt': 1,
-          'man': q['man'] ?? 'no',
-        });
+        params: params);
   }
 
   Future<KgResponse> _lyric(Map<String, dynamic> q) async {
