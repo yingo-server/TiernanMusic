@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/login_page.dart';
+import '../../features/auth/presentation/verification_listener.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/player/presentation/full_player_page.dart';
 import '../../features/search/presentation/search_page.dart';
@@ -10,6 +11,7 @@ import '../../features/settings/presentation/settings_page.dart';
 import '../../features/playlist/presentation/playlist_detail_page.dart';
 import '../../features/comment/presentation/comments_page.dart';
 import '../../features/mv/presentation/mv_player_page.dart';
+import '../../features/library/presentation/library_page.dart';
 import '../../features/player/presentation/mini_player.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -26,7 +28,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             GoRoute(path: '/search', builder: (_, __) => const SearchPage()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/library', builder: (_, __) => const HomePage()),
+            GoRoute(path: '/library', builder: (_, __) => const LibraryPage()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/settings', builder: (_, __) => const SettingsPage()),
@@ -62,13 +64,13 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: shell,
+    return VerificationListener(
+      child: Scaffold(
+        body: shell,
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const MiniPlayer(),
-          NavigationBar(
           NavigationBar(
             selectedIndex: shell.currentIndex,
             onDestinationSelected: (i) =>
@@ -81,6 +83,7 @@ class MainShell extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }

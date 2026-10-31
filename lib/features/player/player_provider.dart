@@ -31,6 +31,14 @@ final currentSongProvider = StreamProvider<Song?>((ref) =>
 final actualQualityProvider = StreamProvider<AudioQuality?>(
     (ref) => ref.watch(audioHandlerProvider).actualQualityStream);
 
+/// 需要人机验证的事件流。
+final verificationStreamProvider = StreamProvider<ApiException?>((ref) async* {
+  yield null;
+  await for (final e in ref.watch(audioHandlerProvider).verificationRequired) {
+    yield e;
+  }
+});
+
 /// 播放队列。
 final queueProvider = StreamProvider<List<Song>>((ref) async* {
   final handler = ref.watch(audioHandlerProvider);

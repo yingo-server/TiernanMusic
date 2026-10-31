@@ -1,9 +1,12 @@
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../player_provider.dart';
+import 'queue_sheet.dart';
 
 /// 底部迷你播放器（高 64）。无播放内容时不显示。
 class MiniPlayer extends ConsumerStatefulWidget {
@@ -32,22 +35,30 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
 
     return GestureDetector(
       onTap: () => context.push('/player'),
-      child: Container(
-        height: 64,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHigh,
-          border: Border(
-            top: BorderSide(
-                color: theme.dividerColor.withOpacity(0.3), width: 0.5),
-          ),
-        ),
-        child: Column(
-          children: [
-            LinearProgressIndicator(
-              value: progress.clamp(0.0, 1.0),
-              minHeight: 2,
-              backgroundColor: Colors.transparent,
+      onLongPress: () => showQueueSheet(context),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHigh.withOpacity(0.55),
+              border: Border(
+                top: BorderSide(
+                    color: theme.dividerColor.withOpacity(0.3), width: 0.5),
+              ),
             ),
+            child: Column(
+              children: [
+                // 底部 2px 线性进度条
+                SizedBox(
+                  height: 2,
+                  child: LinearProgressIndicator(
+                    value: progress.clamp(0.0, 1.0),
+                    minHeight: 2,
+                    backgroundColor: Colors.transparent,
+                  ),
+                ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -109,6 +120,8 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
               ),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

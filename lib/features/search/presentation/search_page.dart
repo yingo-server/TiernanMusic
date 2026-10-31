@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 
 import '../../home/data/models.dart';
+import '../../../core/widgets/song_tile.dart' show GradientChip, EmptyState;
 import '../../player/play_helper.dart';
 import '../data/search_repository.dart';
 
@@ -247,18 +248,19 @@ class _SearchLandingState extends ConsumerState<_SearchLanding> {
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
-                  runSpacing: 4,
+                  runSpacing: 8,
                   children: [
-                    for (final kw in board.keywords)
+                    for (var i = 0; i < board.keywords.length; i++)
                       Badge(
-                        isLabelVisible: kw.reason != null,
-                        label: Text(kw.reason ?? '',
+                        isLabelVisible: board.keywords[i].reason != null,
+                        label: Text(board.keywords[i].reason ?? '',
                             style: const TextStyle(fontSize: 9)),
                         offset: const Offset(8, -4),
-                        child: ActionChip(
-                          label: Text(kw.keyword),
-                          onPressed: () =>
-                              widget.onTapKeyword(kw.keyword),
+                        child: GradientChip(
+                          label: board.keywords[i].keyword,
+                          index: i,
+                          onTap: () =>
+                              widget.onTapKeyword(board.keywords[i].keyword),
                         ),
                       ),
                   ],
@@ -297,6 +299,8 @@ class _SearchResults extends StatelessWidget {
           ),
           Expanded(
             child: TabBarView(
+              // 结果 Tab 切换带 PageTransition 滑动过渡
+              physics: const PageScrollPhysics(parent: ClampingScrollPhysics()),
               children: [
                 _SongResultTab(keyword: keyword),
                 _PlaylistResultTab(keyword: keyword),
@@ -400,7 +404,7 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
       });
     }
     if (_items.isEmpty) {
-      return const Center(child: Text('暂无数据'));
+      return const EmptyState(icon: Icons.search_off_rounded, message: '暂无搜索结果');
     }
     return Column(
       children: [
@@ -478,7 +482,10 @@ class _PlaylistResultTab extends ConsumerWidget {
       error: (_, __) => _ErrorRetry(
           onRetry: () => ref.invalidate(_playlistSearchProvider(keyword))),
       data: (r) {
-        if (r.items.isEmpty) return const Center(child: Text('暂无数据'));
+        if (r.items.isEmpty) {
+          return const EmptyState(
+              icon: Icons.playlist_play_rounded, message: '暂无相关歌单');
+        }
         return GridView.builder(
           padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -549,7 +556,12 @@ class _GenericResultTab extends ConsumerWidget {
           onRetry: () =>
               ref.invalidate(_genericSearchProvider((keyword, type)))),
       data: (r) {
-        if (r.items.isEmpty) return const Center(child: Text('暂无数据'));
+        if (r.items.isEmpty) {
+          return EmptyState(
+            icon: type == 'mv' ? Icons.movie_outlined : Icons.album_outlined,
+            message: '暂无相关内容',
+          );
+        }
         return ListView.separated(
           itemCount: r.items.length,
           separatorBuilder: (_, __) => const Divider(height: 1, indent: 88),

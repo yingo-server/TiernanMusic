@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/providers.dart' show kugouApiClientProvider;
 import '../data/auth_providers.dart';
 import '../data/auth_repository.dart';
 import 'captcha_page.dart';
@@ -44,12 +45,37 @@ class _LoginPageState extends ConsumerState<LoginPage>
         child: Column(
           children: [
             const SizedBox(height: 40),
-            Icon(Icons.graphic_eq_rounded, size: 72, color: scheme.primary),
-            const SizedBox(height: 12),
-            Text('汀澜音乐', style: Theme.of(context).textTheme.headlineSmall),
+            // Logo 区：圆角图标 + 标题 + 副标题
+            Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [scheme.primary, scheme.tertiary],
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: scheme.primary.withOpacity(0.35),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.graphic_eq_rounded,
+                  size: 44, color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            Text('汀澜音乐',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(
-              '登录酷狗账号，畅享完整曲库',
+              '非官方第三方客户端',
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -325,7 +351,7 @@ class _PasswordLoginTabState extends ConsumerState<_PasswordLoginTab> {
           fullscreenDialog: true,
           builder: (_) => CaptchaPage(
             ssaCode: e.ssaCode,
-            repository: ref.read(authRepositoryProvider),
+            api: ref.read(kugouApiClientProvider),
           ),
         ));
         // 验证成功后重试原登录请求
@@ -498,10 +524,17 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
               borderRadius: BorderRadius.circular(20),
             ),
             padding: const EdgeInsets.all(16),
-            child: _buildQrContent(),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: KeyedSubtree(
+                key: ValueKey('qr-${_loading}-$_status-$_qrBase64?.length'),
+                child: _buildQrContent(),
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 24),
+        // 状态提示：AnimatedSwitcher 平滑过渡
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -512,10 +545,14 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
                     color: scheme.primary, size: 20),
               ),
             Flexible(
-              child: Text(
-                _error ?? _statusText,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  _error ?? _statusText,
+                  key: ValueKey(_error ?? _statusText),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
               ),
             ),
           ],

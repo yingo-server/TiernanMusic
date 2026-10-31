@@ -48,6 +48,8 @@ dependencies:
   # 工具
   crypto: ^3.0.3
   archive: ^3.6.1
+  image: ^4.2.0
+  pointycastle: ^3.9.1
   equatable: ^2.0.5
   logger: ^2.4.0
   permission_handler: ^11.3.1

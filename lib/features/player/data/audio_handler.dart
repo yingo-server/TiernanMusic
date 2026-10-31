@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:dio/dio.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../../../core/api/kugou_api_client.dart';
 import 'models.dart';
 import 'player_repository.dart';
 
@@ -24,6 +26,12 @@ class TiernanAudioHandler extends BaseAudioHandler
   final _currentSongController = StreamController<Song?>.broadcast();
   final _actualQualityController =
       StreamController<AudioQuality?>.broadcast();
+
+  /// 人机验证事件（播放命中 20028 时发出）
+  final _verificationController =
+      StreamController<ApiException>.broadcast();
+
+  Stream<ApiException> get verificationRequired => _verificationController.stream;
 
   int _index = -1;
   bool _loading = false;
@@ -187,6 +195,17 @@ class TiernanAudioHandler extends BaseAudioHandler
       if (token != _playToken) return;
       await _player.play();
     } catch (e) {
+      // 命中 20028：需要人机验证，不跳歌，交由 UI 弹验证页后重试
+      final api = _extractApiException(e);
+      if (api != null && api.needsVerification) {
+        _pendingSongIndex = index;
+        _verificationController.add(api);
+        playbackState.add(playbackState.value.copyWith(
+          processingState: AudioProcessingState.error,
+          errorMessage: '需要人机验证',
+        ));
+        return;
+      }
       // 播放失败，尝试下一首
       playbackState.add(playbackState.value.copyWith(
         processingState: AudioProcessingState.error,
@@ -198,6 +217,25 @@ class TiernanAudioHandler extends BaseAudioHandler
     } finally {
       _loading = false;
     }
+  }
+
+  /// 待验证的歌曲下标（验证通过后重试）
+  int? _pendingSongIndex;
+
+  ApiException? _extractApiException(Object e) {
+    if (e is ApiException) return e;
+    if (e is DioException && e.error is ApiException) {
+      return e.error as ApiException;
+    }
+    return null;
+  }
+
+  /// 验证完成后重试上次失败的播放
+  Future<void> retryPendingPlayback() async {
+    final idx = _pendingSongIndex;
+    if (idx == null) return;
+    _pendingSongIndex = null;
+    await _playAt(idx);
   }
 
   @override
@@ -282,5 +320,10 @@ class TiernanAudioHandler extends BaseAudioHandler
     if (!_player.playing) {
       await stop();
     }
+  }
+
+  @override
+  Future<void> onNotificationDeleted() async {
+    await _player.stop();
   }
 }

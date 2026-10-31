@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 
 import '../../player/play_helper.dart';
+import '../../../core/widgets/song_tile.dart';
 import '../data/home_repository.dart';
 import '../data/models.dart';
 
@@ -51,7 +54,10 @@ class HomePage extends ConsumerWidget {
                     data.songs.isEmpty)
                   const SliverFillRemaining(
                     hasScrollBody: false,
-                    child: Center(child: Text('暂无推荐内容，请下拉重试')),
+                    child: EmptyState(
+                      icon: Icons.explore_outlined,
+                      message: '暂无推荐内容，请下拉重试',
+                    ),
                   ),
                 if (data.banners.isNotEmpty)
                   SliverToBoxAdapter(child: _BannerCarousel(data.banners)),
@@ -112,10 +118,31 @@ class _BannerCarousel extends StatefulWidget {
 
 class _BannerCarouselState extends State<_BannerCarousel> {
   final _controller = PageController();
+  Timer? _timer;
   int _index = 0;
 
   @override
+  void initState() {
+    super.initState();
+    _startAutoPlay();
+  }
+
+  void _startAutoPlay() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || widget.banners.length < 2) return;
+      final next = (_index + 1) % widget.banners.length;
+      _controller.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  @override
   void dispose() {
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -321,6 +348,12 @@ class _RankRow extends StatelessWidget {
   const _RankRow(this.ranks);
   final List<HomeRank> ranks;
 
+  static Color _hue(int i) =>
+      HSLColor.fromAHSL(1, (i * 67.0) % 360, 0.65, 0.42).toColor();
+
+  static Color _hue2(int i) =>
+      HSLColor.fromAHSL(1, ((i + 1) * 67.0) % 360, 0.7, 0.28).toColor();
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -332,6 +365,7 @@ class _RankRow extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, i) {
           final r = ranks[i];
+          final c = _hue(i);
           return InkWell(
             borderRadius: BorderRadius.circular(16),
             onTap: () => context.push('/playlist/${r.id}'),
@@ -342,13 +376,24 @@ class _RankRow extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    CachedNetworkImage(
-                      imageUrl: r.cover,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => Container(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest),
+                    // 渐变主题色背景（每张不同色相）
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [c, _hue2(i)],
+                        ),
+                      ),
+                    ),
+                    Opacity(
+                      opacity: 0.5,
+                      child: CachedNetworkImage(
+                        imageUrl: r.cover,
+                        fit: BoxFit.cover,
+                        colorBlendMode: BlendMode.luminosity,
+                        errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                      ),
                     ),
                     Positioned(
                       left: 0,

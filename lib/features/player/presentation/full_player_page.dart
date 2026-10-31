@@ -9,6 +9,7 @@ import '../../lyric/data/krc_parser.dart';
 import '../../lyric/presentation/lyric_view.dart';
 import '../data/models.dart';
 import '../player_provider.dart';
+import 'queue_sheet.dart';
 
 /// 歌词 Provider（当前歌曲）
 final currentLyricProvider = FutureProvider.autoDispose<
@@ -32,8 +33,6 @@ final currentLyricProvider = FutureProvider.autoDispose<
   final translated = await repo.ensureTranslation(lyric, candidate.id, targetLang);
   return (lyric: translated, error: null);
 });
-
-import '../../../core/providers.dart' show lyricRepositoryProvider;
 
 String _fmt(Duration d) {
   final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -71,7 +70,11 @@ class FullPlayerPage extends ConsumerWidget {
                       textAlign: TextAlign.center,
                       style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
-                const SizedBox(width: 48),
+                IconButton(
+                  icon: const Icon(Icons.queue_music_rounded),
+                  tooltip: '播放队列',
+                  onPressed: () => showQueueSheet(context),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -199,8 +202,25 @@ class _CoverOrLyric extends ConsumerStatefulWidget {
   ConsumerState<_CoverOrLyric> createState() => _CoverOrLyricState();
 }
 
-class _CoverOrLyricState extends ConsumerState<_CoverOrLyric> {
+class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
+    with SingleTickerProviderStateMixin {
   bool _showLyric = false;
+  late final AnimationController _fadeCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 400),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -209,19 +229,26 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric> {
     final position = ref.watch(positionProvider).value ?? Duration.zero;
 
     return GestureDetector(
-      onTap: () => setState(() => _showLyric = !_showLyric),
+      onTap: () {
+        setState(() => _showLyric = !_showLyric);
+        if (_showLyric) _fadeCtrl.forward(from: 0);
+      },
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         child: _showLyric && lyricAsync.value?.lyric != null
-            ? ClipRect(
-                key: const ValueKey('lyric'),
-                child: LyricView(
-                  lyric: lyricAsync.value!.lyric,
-                  position: position,
-                  mode: lyricMode,
-                  onTapLine: (ms) => ref
-                      .read(playerControllerProvider)
-                      .seekTo(Duration(milliseconds: ms)),
+            ? FadeTransition(
+                opacity: CurvedAnimation(
+                    parent: _fadeCtrl, curve: Curves.easeOutCubic),
+                child: ClipRect(
+                  key: const ValueKey('lyric'),
+                  child: LyricView(
+                    lyric: lyricAsync.value!.lyric,
+                    position: position,
+                    mode: lyricMode,
+                    onTapLine: (ms) => ref
+                        .read(playerControllerProvider)
+                        .seekTo(Duration(milliseconds: ms)),
+                  ),
                 ),
               )
             : _buildCover(context),

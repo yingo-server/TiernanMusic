@@ -139,6 +139,97 @@ class ListSkeleton extends StatelessWidget {
   }
 }
 
+/// 统一空态（图标 + 文案 + 可选按钮）
+class EmptyState extends StatelessWidget {
+  const EmptyState({
+    super.key,
+    required this.icon,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 56, color: theme.colorScheme.onSurface.withOpacity(0.35)),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 16),
+            FilledButton.tonalIcon(
+              onPressed: onAction,
+              icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+              label: Text(actionLabel!),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 渐变色 Chip（色相随 index 变化），用于热门搜索等场景
+class GradientChip extends StatelessWidget {
+  const GradientChip({
+    super.key,
+    required this.label,
+    required this.index,
+    this.onTap,
+  });
+
+  final String label;
+  final int index;
+  final VoidCallback? onTap;
+
+  static HSLColor _hue(int i) =>
+      HSLColor.fromAHSL(1, (i * 47.0) % 360, 0.65, 0.5);
+
+  @override
+  Widget build(BuildContext context) {
+    final a = _hue(index).toColor();
+    final b = _hue(index + 1).toColor();
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [a, b]),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// 统一错误重试
 class ErrorRetry extends StatelessWidget {
   const ErrorRetry({super.key, this.message, this.onRetry});

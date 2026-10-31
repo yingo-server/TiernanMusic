@@ -127,7 +127,10 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                     .load(refresh: true),
               ),
               data: (page) => page.comments.isEmpty
-                  ? const Center(child: Text('暂无评论'))
+                  ? const EmptyState(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      message: '还没有评论，快来抢沙发',
+                    )
                   : RefreshIndicator(
                       onRefresh: () => ref
                           .read(_commentsProvider(_args).notifier)
