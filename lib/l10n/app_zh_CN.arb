@@ -225,5 +225,20 @@
         "type": "String"
       }
     }
+  },
+  "noRecentlyPlayed": "还没有播放记录，去首页挑首歌吧",
+  "loginToViewPlaylists": "登录后查看你的歌单",
+  "queueEmpty": "队列为空，先去播放几首歌吧",
+  "cache": "缓存",
+  "replyPrefix": "回复 {name}：{content}",
+  "@replyPrefix": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
   }
 }

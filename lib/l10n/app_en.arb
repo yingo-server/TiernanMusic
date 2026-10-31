@@ -1,14 +1,73 @@
 {
   "@@locale": "en",
+  "@playCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@trackCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@songCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@totalSongs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@repliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "@userIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "@replyPrefix": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
   "recommendedPlaylists": "Recommended Playlists",
   "topCharts": "Charts",
   "newSongs": "New Releases",
   "hotArtists": "Popular Artists",
-  "lyricOriginal": "Currently Playing",
-  "lyricBilingual": "Queue",
-  "lyricTranslation": "Theme",
+  "lyricOriginal": "Original",
+  "lyricBilingual": "Bilingual",
+  "lyricTranslation": "Translation",
   "nowPlaying": "Now Playing",
-  "playQueue": "Playback Queue",
+  "playQueue": "Play Queue",
   "theme": "Theme",
   "previous": "Previous Track",
   "favorite": "Save",
@@ -65,24 +124,121 @@
   "noCopyright": "No Copyright Available",
   "tryListen": "Preview",
   "fullPlay": "Play in Full",
-  "captchaTitle": "Human-Machine Verification",
+  "captchaTitle": "Human verification",
   "captchaHint": "Please complete the slider verification",
   "loginSuccess": "Login successful",
   "loginFailed": "Login failed",
-  "accountManage": "Account Management",
-  "addAccount": "Add Account",
-  "switchAccount": "Switch Account",
-  "currentAccount": "Current Account",
-  "myPlaylists": "My Playlists",
-  "createPlaylist": "Create New Playlist",
-  "playlistName": "Playlist Name",
-  "addToPlaylist": "Add to Playlist",
-  "removeFromPlaylist": "Remove from Playlist",
+  "accountManage": "Account management",
+  "addAccount": "Add account",
+  "switchAccount": "Switch account",
+  "currentAccount": "Current account",
+  "myPlaylists": "My playlists",
+  "createPlaylist": "Create new playlist",
+  "playlistName": "Playlist name",
+  "addToPlaylist": "Add to playlist",
+  "removeFromPlaylist": "Remove from playlist",
   "mv": "MV",
   "playMv": "Play MV",
   "relatedMv": "Related MVs",
   "quality": "Audio Quality",
   "quality128": "Smooth 128K",
   "quality320": "High Quality 320K",
-  "qualityFlac": "Lossless FLAC"
+  "qualityFlac": "Lossless FLAC",
+  "notLoggedIn": "Not Logged In",
+  "loginToSync": "Log in to sync your playlists and favorites",
+  "goLogin": "Log In",
+  "noPlaylistsYet": "No playlists yet",
+  "playlistLoadFailed": "Failed to load playlist",
+  "unofficialClient": "Unofficial third-party client",
+  "smsLogin": "Log in via SMS",
+  "operationFailed": "Operation failed",
+  "phoneInvalid": "Please enter a valid phone number",
+  "smsCodeSent": "Verification code has been sent",
+  "artists": "Artist",
+  "noSearchResults": "No search results available.",
+  "noRelatedPlaylists": "No related playlists available.",
+  "noRelatedContent": "No content available",
+  "recentlyPlayed": "Recently Played",
+  "clear": "Clear",
+  "myFavoriteMvs": "My Favorite MVs",
+  "mvComingSoon": "The MV Favorites feature will be available soon. Stay tuned!",
+  "clearRecentlyPlayed": "Clear Recently Played",
+  "clearRecentConfirm": "Are you sure you want to clear all playback history? This action cannot be undone.",
+  "noRecommend": "No recommendations available. Please pull down to try again.",
+  "newSongsRecommend": "New Song Recommendations",
+  "authErrorRetry": "Please log in or complete verification and try again.",
+  "loadFailedNetwork": "Loading failed. Please check your network.",
+  "searchSongsHint": "Search for songs, playlists, or artists",
+  "tabSongs": "Single",
+  "albums": "Album",
+  "switchAccountSubtitle": "Switch or manage logged-in accounts",
+  "appearance": "Appearance",
+  "themeMode": "Theme mode",
+  "appLanguage": "Interface Language",
+  "lyricModeOriginal": "Original Text Only",
+  "lyricModeBilingual": "Bilingual Comparison",
+  "lyricModeTranslation": "Translation Only",
+  "playback": "Play",
+  "lyricDisplayMode": "Lyrics Display Mode",
+  "defaultQuality": "Default Audio Quality",
+  "qrExpiredShort": "Expired",
+  "unknownArtist": "Unknown Artist",
+  "notPlaying": "Not Playing",
+  "noLyric": "No lyrics available",
+  "lyricParseFailed": "Failed to parse lyrics",
+  "calculating": "Calculating…",
+  "cannotCalculate": "Unable to calculate",
+  "clearCacheConfirm": "This will clear the image cache, API cache, and lyric translation cache, but will not delete your account data. Are you sure you want to proceed?",
+  "cacheCleared": "Cache cleared",
+  "account": "Account",
+  "testConnectivity": "Test connectivity",
+  "save": "Save",
+  "openSourceLicenses": "Open-source license",
+  "licenseDesc": "Source code is visible.",
+  "githubRepo": "GitHub repository",
+  "knowIt": "Got it",
+  "noComments": "No comments yet, be the first to comment!",
+  "commentHint": "Say something...",
+  "loginToComment": "You can comment after logging in.",
+  "pleaseLoginFirst": "Please log in first.",
+  "codeInvalid": "Please enter the verification code",
+  "selectAccount": "This phone number is linked to multiple accounts. Please select the account you want to log in to.",
+  "phoneHintCn": "Please enter a mainland China phone number",
+  "verificationCode": "Verification Code",
+  "usernameLabel": "Username / Phone Number",
+  "usernamePasswordRequired": "Please enter your username and password",
+  "qrExpired": "The QR code has expired. Please refresh.",
+  "qrScanSuccess": "Scan successful. Please confirm the login on your phone.",
+  "qrScanHint": "Please use the Kugou Music app to scan the QR code and log in.",
+  "refreshQr": "Refresh QR Code",
+  "commentSuccess": "Comment successful.",
+  "deleteComment": "Delete comment",
+  "deleteCommentConfirm": "Delete this comment?",
+  "deleted": "Deleted.",
+  "playAll": "Play All",
+  "playFailed": "Play Failed",
+  "back": "Back",
+  "loadFailed": "Load Failed",
+  "playCountSuffix": "{count} Plays",
+  "trackCountSuffix": "{count} Tracks",
+  "wifiAutoHighQuality": "Automatically use the highest quality over Wi-Fi",
+  "wifiAutoHighQualityDesc": "Prioritize lossless/Hi-Res playback when connected to Wi-Fi (reserved)",
+  "cellularLowQuality": "Reduce audio quality when using mobile data",
+  "cellularLowQualityDesc": "Automatically switch to standard audio quality when using mobile data (reserved)",
+  "cacheUsage": "Cache usage",
+  "recalculate": "Recalculate",
+  "clearCacheDesc": "Clear interface, image, and lyric translation cache",
+  "resetToDefault": "Reset to default",
+  "resetToDefaultDone": "Address has been reset to default",
+  "testing": "Testing...",
+  "songCountSuffix": "{count} Tracks",
+  "totalSongs": "Total {count} Tracks",
+  "repliesCount": "{count} Replies",
+  "resendIn": "Repost in {seconds}s",
+  "userIdLabel": "ID: {id}",
+  "noRecentlyPlayed": "No playback history yet. Go to the homepage and pick a song.",
+  "loginToViewPlaylists": "Log in to view your playlist.",
+  "queueEmpty": "The queue is empty. Go play a few songs first.",
+  "cache": "Cache",
+  "replyPrefix": "Reply to {name}: {content}"
 }

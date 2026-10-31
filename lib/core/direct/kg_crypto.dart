@@ -160,21 +160,22 @@ LgFVxtzIY41Pe7lPOgsfTCn5kZcvKhYKJesKnnJDNr5/abvTGf+rHG3YRwsCHcQ0
         .toUpperCase();
   }
 
-  /// AES-128-CBC + PKCS7，返回 hex（对应 cryptoAesEncrypt 的 str）
+  /// AES-128-CBC + PKCS7，输出 Base64（对应 playlistAesEncrypt）
   ///
-  /// 若未提供 key，则临时生成 key（小写随机16字符）并返回 {str, key}
+  /// seed 缺省时随机生成 6 位小写；派生：key=md5(seed)[:16], iv=md5(seed)[16:32]
+  /// 注意与 Node cryptoAesEncrypt（hex 输出、32 位 key）不同——那是另一个函数。
   static AesResult aesEncryptHex(String data, {String? key, String? iv}) {
-    var tempKey = key;
+    var seed = key;
     String useKey;
     String useIv;
     if (key != null && iv != null) {
       useKey = key;
       useIv = iv;
     } else {
-      tempKey ??= randomString(16).toLowerCase();
-      final md5Key = md5(tempKey);
-      useKey = md5Key.substring(0, 32);
-      useIv = useKey.substring(useKey.length - 16);
+      seed ??= randomString(6).toLowerCase();
+      final md5Key = md5(seed);
+      useKey = md5Key.substring(0, 16);
+      useIv = md5Key.substring(16, 32);
     }
 
     final cipher = PaddedBlockCipherImpl(
@@ -191,10 +192,7 @@ LgFVxtzIY41Pe7lPOgsfTCn5kZcvKhYKJesKnnJDNr5/abvTGf+rHG3YRwsCHcQ0
         ),
       );
     final out = cipher.process(Uint8List.fromList(utf8.encode(data)));
-    final hex = out
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join();
-    return AesResult(str: hex, key: tempKey);
+    return AesResult(str: base64.encode(out), key: seed ?? '');
   }
 
   /// randomString：字符表 1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ

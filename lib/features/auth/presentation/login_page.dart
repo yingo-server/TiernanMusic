@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+../../../l10n/l10n.dart
 
 import '../../../core/providers.dart' show kugouApiClientProvider;
 import '../data/auth_providers.dart';
@@ -68,14 +69,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   size: 44, color: Colors.white),
             ),
             const SizedBox(height: 16),
-            Text('汀澜音乐',
+            Text(context.l10n.appName,
                 style: Theme.of(context)
                     .textTheme
                     .headlineSmall
                     ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(
-              '非官方第三方客户端',
+              context.l10n.unofficialClient,
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -87,10 +88,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
               child: TabBar(
                 controller: _tabController,
                 dividerColor: Colors.transparent,
-                tabs: const [
-                  Tab(text: '短信登录'),
-                  Tab(text: '密码登录'),
-                  Tab(text: '扫码登录'),
+                tabs: [
+                  Tab(text: context.l10n.smsLogin),
+                  Tab(text: context.l10n.passwordLogin),
+                  Tab(text: context.l10n.qrLogin),
                 ],
               ),
             ),
@@ -119,7 +120,7 @@ void _showError(BuildContext context, Object e) {
           ? e.message
           : '$e';
   ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(msg.isEmpty ? '操作失败' : msg)));
+      .showSnackBar(SnackBar(content: Text(msg.isEmpty ? context.l10n.operationFailed : msg)));
 }
 
 // ---------------------------------------------------------------------------
@@ -154,14 +155,14 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
   Future<void> _sendCode() async {
     final mobile = _mobileCtrl.text.trim();
     if (!_mobileValid) {
-      _showError(context, '请输入正确的手机号');
+      _showError(context, context.l10n.phoneInvalid);
       return;
     }
     try {
       await ref.read(authRepositoryProvider).sendSmsCode(mobile);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('验证码已发送')));
+          .showSnackBar(SnackBar(content: Text(context.l10n.smsCodeSent)));
       setState(() => _countdown = 60);
       _timer?.cancel();
       _timer = Timer.periodic(const Duration(seconds: 1), (t) {
@@ -181,11 +182,11 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
     final mobile = _mobileCtrl.text.trim();
     final code = _codeCtrl.text.trim();
     if (!_mobileValid) {
-      _showError(context, '请输入正确的手机号');
+      _showError(context, context.l10n.phoneInvalid);
       return;
     }
     if (code.isEmpty) {
-      _showError(context, '请输入验证码');
+      _showError(context, context.l10n.codeInvalid);
       return;
     }
     setState(() => _loading = true);
@@ -219,7 +220,7 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text('该手机号绑定了多个账号，请选择要登录的账号',
+              child: Text(context.l10n.selectAccount,
                   style: Theme.of(ctx).textTheme.titleMedium),
             ),
             Flexible(
@@ -230,7 +231,7 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
                   final u = users[i];
                   final userid = '${u['userid'] ?? u['user_id'] ?? ''}';
                   final nickname =
-                      '${u['nickname'] ?? u['name'] ?? '账号 $userid'}';
+                      '${u['nickname'] ?? u['name'] ?? context.l10n.account + ' $userid'}';
                   return ListTile(
                     leading: const CircleAvatar(child: Icon(Icons.person)),
                     title: Text(nickname),
@@ -256,9 +257,9 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
           controller: _mobileCtrl,
           keyboardType: TextInputType.phone,
           maxLength: 11,
-          decoration: const InputDecoration(
-            labelText: '手机号',
-            hintText: '请输入中国大陆手机号',
+          decoration: InputDecoration(
+            labelText: context.l10n.phoneNumber,
+            hintText: context.l10n.phoneHintCn,
             prefixIcon: Icon(Icons.phone_iphone),
             counterText: '',
           ),
@@ -272,8 +273,8 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
                 controller: _codeCtrl,
                 keyboardType: TextInputType.number,
                 maxLength: 6,
-                decoration: const InputDecoration(
-                  labelText: '验证码',
+                decoration: InputDecoration(
+                  labelText: context.l10n.verificationCode,
                   prefixIcon: Icon(Icons.pin_outlined),
                   counterText: '',
                 ),
@@ -282,7 +283,7 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
             const SizedBox(width: 12),
             FilledButton.tonal(
               onPressed: _countdown > 0 ? null : _sendCode,
-              child: Text(_countdown > 0 ? '${_countdown}s 后重发' : '发送验证码'),
+              child: Text(_countdown > 0 ? context.l10n.resendIn(_countdown) : context.l10n.sendSmsCode),
             ),
           ],
         ),
@@ -298,7 +299,7 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('登录'),
+              : Text(context.l10n.login),
         ),
       ],
     );
@@ -333,7 +334,7 @@ class _PasswordLoginTabState extends ConsumerState<_PasswordLoginTab> {
     final username = _usernameCtrl.text.trim();
     final password = _passwordCtrl.text;
     if (username.isEmpty || password.isEmpty) {
-      _showError(context, '请输入用户名和密码');
+      _showError(context, context.l10n.usernamePasswordRequired);
       return;
     }
     setState(() => _loading = true);
@@ -374,8 +375,8 @@ class _PasswordLoginTabState extends ConsumerState<_PasswordLoginTab> {
       children: [
         TextField(
           controller: _usernameCtrl,
-          decoration: const InputDecoration(
-            labelText: '用户名 / 手机号',
+          decoration: InputDecoration(
+            labelText: context.l10n.usernameLabel,
             prefixIcon: Icon(Icons.person_outline),
           ),
         ),
@@ -384,7 +385,7 @@ class _PasswordLoginTabState extends ConsumerState<_PasswordLoginTab> {
           controller: _passwordCtrl,
           obscureText: _obscure,
           decoration: InputDecoration(
-            labelText: '密码',
+            labelText: context.l10n.password,
             prefixIcon: const Icon(Icons.lock_outline),
             suffixIcon: IconButton(
               icon: Icon(
@@ -406,7 +407,7 @@ class _PasswordLoginTabState extends ConsumerState<_PasswordLoginTab> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('登录'),
+              : Text(context.l10n.login),
         ),
       ],
     );
@@ -502,10 +503,10 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
   }
 
   String get _statusText => switch (_status) {
-        0 => '二维码已过期，请刷新',
-        2 => '扫码成功，请在手机上确认登录',
-        4 => '登录成功',
-        _ => '请使用酷狗音乐 App 扫码登录',
+        0 => context.l10n.qrExpired,
+        2 => context.l10n.qrScanSuccess,
+        4 => context.l10n.loginSuccess,
+        _ => context.l10n.qrScanHint,
       };
 
   @override
@@ -563,7 +564,7 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
             child: FilledButton.tonalIcon(
               onPressed: _loadQr,
               icon: const Icon(Icons.refresh),
-              label: const Text('刷新二维码'),
+              label: Text(context.l10n.refreshQr),
             ),
           ),
         ],
@@ -589,7 +590,7 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
             Container(
               color: Colors.black87,
               alignment: Alignment.center,
-              child: const Text('已过期',
+              child: Text(context.l10n.qrExpiredShort,
                   style: TextStyle(color: Colors.white, fontSize: 18)),
             ),
         ],

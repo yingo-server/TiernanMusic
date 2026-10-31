@@ -308,12 +308,11 @@ class KgClient {
   }
 
   /// 设备注册（移植 module/register_dev.js），成功后写入 device.dfid
+  ///
+  /// 实测：匿名态返回 dfid；已登录账号 data 为空数组（本就不返回 dfid），
+  /// 因此登录态下注册没有收益，本方法主要供匿名态首次使用。
   Future<bool> registerDevice() async {
-    const aesKeySeed = 'abcdef';
-    final aes = KgCrypto.aesEncryptHex(
-      jsonEncode(_registerPayload()),
-      key: null,
-    );
+    final aes = KgCrypto.aesEncryptHex(jsonEncode(_registerPayload()));
     final p = KgCrypto.rsaEncryptPkcs1(
       jsonEncode({'aes': aes.key, 'uid': userid, 'token': token}),
       lite: lite,
@@ -341,16 +340,10 @@ class KgClient {
       device.dfid = m.group(1)!;
       return true;
     }
-    // aesKeySeed 占位避免未使用告警
-    assert(aesKeySeed.isNotEmpty);
     return false;
   }
 
   Map<String, dynamic> _registerPayload() => {
-        'uuid': device.guid,
-        'guid': device.guid,
-        'imei': device.guid,
-        'mid': device.mid,
         'availableRamSize': 4983533568,
         'availableRomSize': 48114719,
         'availableSDSize': 48114717,
@@ -360,8 +353,10 @@ class KgClient {
         'brand': 'Redmi',
         'buildSerial': 'unknown',
         'device': 'marble',
+        'imei': device.guid,
         'imsi': '',
         'manufacturer': 'Xiaomi',
+        'uuid': device.guid,
         'accelerometer': false,
         'accelerometerValue': '',
         'gravity': false,
@@ -380,8 +375,6 @@ class KgClient {
         'step_counterValue': '',
         'temperature': false,
         'temperatureValue': '',
-        'networktype': 1,
-        'mac': device.mac,
       };
 }
 

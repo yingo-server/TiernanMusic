@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+../../../l10n/l10n.dart
 import '../../../core/widgets/song_tile.dart';
 import '../../auth/data/auth_providers.dart';
 import '../data/comment_repository.dart';
@@ -114,7 +115,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('评论')),
+      appBar: AppBar(title: Text(context.l10n.comments)),
       body: Column(
         children: [
           Expanded(
@@ -127,9 +128,9 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                     .load(refresh: true),
               ),
               data: (page) => page.comments.isEmpty
-                  ? const EmptyState(
+                  ? EmptyState(
                       icon: Icons.chat_bubble_outline_rounded,
-                      message: '还没有评论，快来抢沙发',
+                      message: context.l10n.noComments,
                     )
                   : RefreshIndicator(
                       onRefresh: () => ref
@@ -185,7 +186,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                 children: [
                   Expanded(
                     child: Text(
-                      '回复 ${_replyTo!.userName}：${_replyTo!.content}',
+                      context.l10n.replyPrefix(_replyTo!.userName, _replyTo!.content),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall,
@@ -206,7 +207,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                   child: TextField(
                     controller: _inputCtrl,
                     decoration: InputDecoration(
-                      hintText: _isLoggedIn ? '说点什么…' : '登录后可评论',
+                      hintText: _isLoggedIn ? context.l10n.commentHint : context.l10n.loginToComment,
                       isDense: true,
                     ),
                     maxLines: null,
@@ -232,7 +233,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
     if (text.isEmpty) return;
     if (!_isLoggedIn) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('请先登录')));
+          .showSnackBar(SnackBar(content: Text(context.l10n.pleaseLoginFirst)));
       return;
     }
     _inputCtrl.clear();
@@ -255,7 +256,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
       }
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('评论成功')));
+            .showSnackBar(SnackBar(content: Text(context.l10n.commentSuccess)));
       }
     } catch (e) {
       if (mounted) {
@@ -269,15 +270,15 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除评论'),
-        content: const Text('确定删除这条评论吗？'),
+        title: Text(context.l10n.deleteComment),
+        content: Text(context.l10n.deleteCommentConfirm),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('取消')),
+              child: Text(context.l10n.cancel)),
           FilledButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('删除')),
+              child: Text(context.l10n.delete)),
         ],
       ),
     );
@@ -288,7 +289,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
           specialId: comment.specialChildId);
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('已删除')));
+            .showSnackBar(SnackBar(content: Text(context.l10n.deleted)));
       }
     } catch (e) {
       if (mounted) {
@@ -356,7 +357,7 @@ class _CommentTile extends StatelessWidget {
                   )),
               if (comment.replyCount > 0) ...[
                 const SizedBox(width: 16),
-                Text('${comment.replyCount} 条回复',
+                Text(context.l10n.repliesCount(comment.replyCount),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.primary,
                     )),
@@ -365,7 +366,7 @@ class _CommentTile extends StatelessWidget {
               if (onReply != null)
                 GestureDetector(
                   onTap: onReply,
-                  child: Text('回复',
+                  child: Text(context.l10n.reply,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.primary,
                       )),
@@ -374,7 +375,7 @@ class _CommentTile extends StatelessWidget {
                 const SizedBox(width: 12),
                 GestureDetector(
                   onTap: onDelete,
-                  child: Text('删除',
+                  child: Text(context.l10n.delete,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.error,
                       )),

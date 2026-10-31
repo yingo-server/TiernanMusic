@@ -150,25 +150,35 @@ class KgDirectApiClient extends KugouApiClient {
         });
   }
 
+  /// 歌词搜索。
+  ///
+  /// 实测：lyrics.kugou.com 上 `/v1/search` 恒返回**空响应体 + HTTP 200**，
+  /// 响应头 `x-kg-errcode: 20010`（10 种参数/UA/Referer/签名组合全部一样空），
+  /// 加 `x-router` 头也一样空。真正存在的路径是 `/search`（无版本前缀），
+  /// 返回 `x-kg-errcode: 200` 与 candidates 数组。
+  /// 该接口不校验 signature，保持 clearDefaultParams + notSignature。
+  /// duration 传毫秒：搜索结果 Duration 是秒，服务端候选 duration=269792。
   Future<KgResponse> _searchLyric(Map<String, dynamic> q) {
-    // 注意：Node 版 search_lyric.js 写了 notSign:true，但 util/request.js
-    // 实际并未实现 notSignature 分支（bug），实测 lyrics.kugou.com 要求
-    // android 签名（x-kg-errcode=200 才通过，无签名返回 20010 空响应）。
-    final params = <String, dynamic>{
-      'album_audio_id': q['album_audio_id'] ?? 0,
-      'appid': kg.lite ? KgConfig.liteAppid : KgConfig.appid,
-      'clientver': kg.lite ? KgConfig.liteClientver : KgConfig.clientver,
-      'duration': q['duration'] ?? 0,
-      'hash': q['hash'] ?? '',
-      'keyword': q['keywords'] ?? '',
-      'lrctxt': 1,
-      'man': q['man'] ?? 'no',
-    };
-    return kg.request('/v1/search',
+    final durationSec = int.tryParse('${q['duration'] ?? 0}') ?? 0;
+    return kg.request('/search',
         baseUrl: 'https://lyrics.kugou.com',
         method: 'GET',
         clearDefaultParams: true,
-        params: params);
+        notSignature: true,
+        params: {
+          'appid': kg.lite ? KgConfig.liteAppid : KgConfig.appid,
+          'clientver': kg.lite ? KgConfig.liteClientver : KgConfig.clientver,
+          'keyword': '${q['keywords'] ?? ''}',
+          'lrctxt': 1,
+          'man': '${q['man'] ?? 'no'}',
+          if (durationSec > 0)
+            'duration': q['duration_ms'] ?? durationSec * 1000,
+          if (q['hash'] != null && '${q['hash']}'.isNotEmpty) 'hash': q['hash'],
+          if (q['album_audio_id'] != null &&
+              '${q['album_audio_id']}'.isNotEmpty &&
+              '${q['album_audio_id']}' != '0')
+            'album_audio_id': q['album_audio_id'],
+        });
   }
 
   Future<KgResponse> _lyric(Map<String, dynamic> q) async {
@@ -320,19 +330,26 @@ class KgDirectApiClient extends KugouApiClient {
 
   // ---------------- 歌单 ----------------
 
+  /// 歌单详情。
+  ///
+  /// 实测：载荷必须是 `{"data": [{"global_collection_id": "<gid>"}]}`。
+  /// 旧写法 `{"listid": [...]}` 不管传 gid 还是数字 specialid、不管 v1/v2/v3
+  /// 都返回 `status=0 error_code=20010`（v2 附带 errmsg `data len need in [1, 10]`）。
+  /// 数字 listid（用户歌单）不被接受，只认 `collection_x_uid_xx` 形式的 gid。
   Future<KgResponse> _playlistDetail(Map<String, dynamic> q) {
-    final ids = '${q['ids'] ?? ''}'
+    final ids = '${q['ids'] ?? q['global_collection_id'] ?? ''}'
         .split(',')
+        .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
         .toList();
     return kg.request('/v3/get_list_info',
         method: 'POST',
         headers: {'x-router': 'pubsongs.kugou.com'},
         data: {
-          'listid': ids,
-          'area_code': 1,
-          'show_landingpage': 1,
-          'request_mac': '',
+          // data 必须 1..10 项，每项用 global_collection_id 定位
+          'data': [
+            for (final id in ids.take(10)) {'global_collection_id': id},
+          ],
         });
   }
 

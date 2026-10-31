@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+../../../l10n/l10n.dart
 
 import '../../../core/providers.dart' show kugouApi;
 import '../../../core/widgets/song_tile.dart';
@@ -39,7 +40,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final playlistsAsync = ref.watch(_userPlaylistsProvider(account != null));
 
     return Scaffold(
-      appBar: AppBar(title: Text('音乐库',
+      appBar: AppBar(title: Text(context.l10n.library,
           style: theme.textTheme.headlineSmall
               ?.copyWith(fontWeight: FontWeight.bold))),
       body: ListView(
@@ -51,7 +52,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
           // ---- 我的歌单 ----
           if (account != null) ...[
-            _sectionTitle(context, '我的歌单'),
+            _sectionTitle(context, context.l10n.myPlaylists),
             playlistsAsync.when(
               loading: () => const _PlaylistRowSkeleton(),
               error: (e, _) => _PlaylistRowError(
@@ -61,16 +62,16 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               data: (list) => _MyPlaylistRow(playlists: list),
             ),
           ] else ...[
-            _sectionTitle(context, '我的歌单'),
+            _sectionTitle(context, context.l10n.myPlaylists),
             const _LoginGuideCard(),
           ],
 
           // ---- 最近播放 ----
-          _sectionTitle(context, '最近播放'),
+          _sectionTitle(context, context.l10n.recentlyPlayed),
           if (_recent.isEmpty)
-            const EmptyState(
+            EmptyState(
               icon: Icons.history_rounded,
-              message: '还没有播放记录，去首页挑首歌吧',
+              message: context.l10n.noRecentlyPlayed,
             )
           else ...[
             Padding(
@@ -80,7 +81,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 child: TextButton.icon(
                   onPressed: _confirmClearRecent,
                   icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-                  label: const Text('清空'),
+                  label: Text(context.l10n.clear),
                 ),
               ),
             ),
@@ -94,10 +95,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           ],
 
           // ---- 我收藏的 MV ----
-          _sectionTitle(context, '我收藏的 MV'),
-          const EmptyState(
+          _sectionTitle(context, context.l10n.myFavoriteMvs),
+          EmptyState(
             icon: Icons.movie_outlined,
-            message: 'MV 收藏功能即将上线，敬请期待',
+            message: context.l10n.mvComingSoon,
           ),
         ],
       ),
@@ -124,16 +125,16 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('清空最近播放'),
-        content: const Text('确定要清空全部播放记录吗？此操作不可恢复。'),
+        title: Text(context.l10n.clearRecentlyPlayed),
+        content: Text(context.l10n.clearRecentConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('清空'),
+            child: Text(context.l10n.clear),
           ),
         ],
       ),
@@ -203,7 +204,7 @@ class _AccountCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    account == null ? '未登录' : account!.nickname,
+                    account == null ? context.l10n.notLoggedIn : account!.nickname,
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold),
                     maxLines: 1,
@@ -211,7 +212,7 @@ class _AccountCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    account == null ? '登录后同步你的歌单与收藏' : 'ID: ${account!.userid}',
+                    account == null ? context.l10n.loginToSync : context.l10n.userIdLabel('${account!.userid}'),
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: scheme.onSurfaceVariant),
                     maxLines: 1,
@@ -223,7 +224,7 @@ class _AccountCard extends StatelessWidget {
             if (account == null)
               FilledButton(
                 onPressed: () => context.push('/login'),
-                child: const Text('登录'),
+                child: Text(context.l10n.login),
               ),
           ],
         ),
@@ -248,8 +249,8 @@ class _LoginGuideCard extends StatelessWidget {
             children: [
               EmptyState(
                 icon: Icons.playlist_add_rounded,
-                message: '登录后查看你的歌单',
-                actionLabel: '去登录',
+                message: context.l10n.loginToViewPlaylists,
+                actionLabel: context.l10n.goLogin,
                 onAction: () => context.push('/login'),
               ),
             ],
@@ -276,7 +277,7 @@ class _MyPlaylistRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (playlists.isEmpty) {
-      return const EmptyState(icon: Icons.queue_music_outlined, message: '暂无歌单');
+      return EmptyState(icon: Icons.queue_music_outlined, message: context.l10n.noPlaylistsYet);
     }
     return SizedBox(
       height: 170,
@@ -325,7 +326,7 @@ class _MyPlaylistRow extends StatelessWidget {
                             color: Colors.black54,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text('${p.count} 首',
+                          child: Text(context.l10n.songCountSuffix(p.count),
                               style: const TextStyle(
                                   fontSize: 10, color: Colors.white)),
                         ),
@@ -386,6 +387,6 @@ class _PlaylistRowError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ErrorRetry(message: '歌单加载失败', onRetry: onRetry);
+    return ErrorRetry(message: context.l10n.playlistLoadFailed, onRetry: onRetry);
   }
 }

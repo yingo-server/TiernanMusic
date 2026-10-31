@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+../../../l10n/l10n.dart
 import 'package:video_player/video_player.dart';
 
 import '../../mv/mv_provider.dart';
@@ -207,7 +208,7 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
       children: [
         const Icon(Icons.error_outline, color: Colors.white54, size: 56),
         const SizedBox(height: 16),
-        const Text('播放失败', style: TextStyle(color: Colors.white70)),
+        Text(context.l10n.playFailed, style: const TextStyle(color: Colors.white70)),
         const SizedBox(height: 8),
         Text(_error!,
             style: const TextStyle(color: Colors.white38, fontSize: 12),
@@ -218,12 +219,12 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
           children: [
             FilledButton.tonal(
               onPressed: () => _resolve(_activeHash ?? widget.hash),
-              child: const Text('重试'),
+              child: Text(context.l10n.retry),
             ),
             const SizedBox(width: 12),
             FilledButton.tonal(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('返回'),
+              child: Text(context.l10n.back),
             ),
           ],
         ),

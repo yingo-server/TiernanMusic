@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+../../../l10n/l10n.dart
 
 import '../player_provider.dart';
 import 'queue_sheet.dart';
@@ -96,7 +97,7 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
                                 ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           Text(
-                            song.artist.isEmpty ? '未知歌手' : song.artist,
+                            song.artist.isEmpty ? context.l10n.unknownArtist : song.artist,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall?.copyWith(

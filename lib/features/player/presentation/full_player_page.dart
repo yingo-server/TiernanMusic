@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../../core/providers.dart' show lyricRepositoryProvider;
+../../../l10n/l10n.dart
 import '../../../core/theme/settings_provider.dart';
 import '../../lyric/data/krc_parser.dart';
 import '../../lyric/presentation/lyric_view.dart';
@@ -67,14 +68,14 @@ class FullPlayerPage extends ConsumerWidget {
                   icon: const Icon(Icons.keyboard_arrow_down),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
-                const Expanded(
-                  child: Text('正在播放',
+                Expanded(
+                  child: Text(context.l10n.nowPlaying,
                       textAlign: TextAlign.center,
                       style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
                 IconButton(
                   icon: const Icon(Icons.queue_music_rounded),
-                  tooltip: '播放队列',
+                  tooltip: context.l10n.playQueue,
                   onPressed: () => showQueueSheet(context),
                 ),
               ],
@@ -93,7 +94,7 @@ class FullPlayerPage extends ConsumerWidget {
               child: Column(
                 children: [
                   Text(
-                    song?.name ?? '未在播放',
+                    song?.name ?? context.l10n.notPlaying,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -122,7 +123,7 @@ class FullPlayerPage extends ConsumerWidget {
                       ],
                       Flexible(
                         child: Text(
-                          song?.artist ?? '未知歌手',
+                          song?.artist ?? context.l10n.unknownArtist,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodyMedium?.copyWith(

@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+../../l10n/l10n.dart
 
 /// 统一歌曲列表项
 class SongTile extends StatelessWidget {
@@ -247,7 +248,7 @@ class ErrorRetry extends StatelessWidget {
               size: 56, color: theme.colorScheme.onSurface.withOpacity(0.4)),
           const SizedBox(height: 16),
           Text(
-            message ?? '加载失败',
+            message ?? context.l10n.loadFailed,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withOpacity(0.6),
             ),
@@ -257,7 +258,7 @@ class ErrorRetry extends StatelessWidget {
             FilledButton.tonalIcon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('重试'),
+              label: Text(context.l10n.retry),
             ),
           ],
         ],

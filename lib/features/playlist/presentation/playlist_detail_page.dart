@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/song_tile.dart';
+../../../l10n/l10n.dart
 import '../../player/play_helper.dart';
 import '../data/playlist_repository.dart';
 
@@ -80,10 +81,10 @@ class PlaylistDetailPage extends ConsumerWidget {
                       child: Row(
                         children: [
                           _InfoChip(Icons.play_arrow,
-                              '${_formatCount(detail.playCount)} 播放'),
+                              context.l10n.playCountSuffix(_formatCount(detail.playCount))),
                           const SizedBox(width: 12),
                           _InfoChip(Icons.music_note,
-                              '${detail.trackCount} 首'),
+                              context.l10n.trackCountSuffix(detail.trackCount)),
                         ],
                       ),
                     ),
@@ -117,7 +118,7 @@ class PlaylistDetailPage extends ConsumerWidget {
                     }
                   },
                   icon: const Icon(Icons.play_arrow),
-                  label: const Text('播放全部'),
+                  label: Text(context.l10n.playAll),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
                     shape: RoundedRectangleBorder(

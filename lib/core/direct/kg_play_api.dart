@@ -78,7 +78,7 @@ class KgPlayApi {
     for (var i = 0; i < hashes.length; i++) {
       resource.add({
         'type': 'audio',
-        'page_id': 1,
+        'page_id': 0,
         'hash': hashes[i].toLowerCase(),
         'album_id': i < albumIds.length ? albumIds[i] : '0',
       });
@@ -87,6 +87,7 @@ class KgPlayApi {
     final res = await client.requestWithVerify(
       '/v2/get_res_privilege/lite',
       method: 'POST',
+      headers: {'x-router': 'media.store.kugou.com'},
       data: {
         'appid': client.lite ? KgConfig.liteAppid : KgConfig.appid,
         'area_code': 1,
@@ -164,10 +165,9 @@ class PlayUrlResult {
       backupUrls: backups,
       quality: '${b['quality'] ?? ''}',
       bitrate: bitrate,
-      // 60s 试听：end_ms 约 60000 且路径含 p_0_
-      isPreview: endMs > 0 &&
-          endMs <= 65000 &&
-          (urls.isNotEmpty ? urls.first.contains('/p_0_') : false),
+      // 60s 试听：end_ms 约 60000 或路径含 /p_0_（flac 时 bitRate=0 不可作为依据）
+      isPreview:
+          (endMs > 0 && endMs <= 65000) || urls.any((u) => u.contains('/p_0_')),
       errorCode: res.errorCode,
       message: '${b['error'] ?? b['error_msg'] ?? b['errmsg'] ?? ''}',
       ssaCode: res.ssaCode,
@@ -206,18 +206,25 @@ class PrivilegeItem {
   bool get needsPurchase => payType != 0 || privilege != 0;
 
   factory PrivilegeItem.fromJson(Map<String, dynamic> j) {
-    final info = j['info'] is Map ? Map<String, dynamic>.from(j['info'] as Map) : const <String, dynamic>{};
-    final fp = j['fail_process'];
+    final info = j['info'] is Map
+        ? Map<String, dynamic>.from(j['info'] as Map)
+        : const <String, dynamic>{};
+    // 真实权益在 data[].relate_goods[]（128 可能同时有 level=1 ogg 与 level=2 mp3）
+    final goods = j['relate_goods'];
+    final g = (goods is List && goods.isNotEmpty)
+        ? Map<String, dynamic>.from(goods.first as Map)
+        : <String, dynamic>{};
+    final fp = g['fail_process'] ?? j['fail_process'];
     return PrivilegeItem(
       hash: '${j['hash'] ?? ''}',
-      privilege: _int(j['privilege']),
-      payType: _int(j['pay_type']),
-      status: _int(j['status']),
+      privilege: _int(g['privilege'] ?? j['privilege']),
+      payType: _int(g['pay_type'] ?? j['pay_type']),
+      status: _int(g['status'] ?? j['status']),
       failProcess: fp is List
           ? fp.map(_int).toList()
           : (_int(fp) > 0 ? [_int(fp)] : const <int>[]),
-      quality: '${j['quality'] ?? ''}',
-      pkgPrice: _int(j['pkg_price']),
+      quality: '${g['quality'] ?? j['quality'] ?? ''}',
+      pkgPrice: _int(g['pkg_price'] ?? j['pkg_price']),
       durationMs: info['duration'] == null ? null : _int(info['duration']),
       cover: info['image']?.toString(),
     );

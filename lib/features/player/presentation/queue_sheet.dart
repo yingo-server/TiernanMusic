@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/song_tile.dart';
+../../../l10n/l10n.dart
 import '../player_provider.dart';
 
 /// 播放队列底部弹层（迷你播放器长按 / 全屏播放页队列按钮共用）。
@@ -37,11 +38,11 @@ class QueueSheet extends ConsumerWidget {
             children: [
               const Icon(Icons.queue_music_rounded, size: 20),
               const SizedBox(width: 8),
-              Text('当前播放',
+              Text(context.l10n.nowPlaying,
                   style: theme.textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold)),
               const Spacer(),
-              Text('${queue.length} 首',
+              Text(context.l10n.songCountSuffix(queue.length),
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
             ],
@@ -50,9 +51,9 @@ class QueueSheet extends ConsumerWidget {
         const Divider(height: 1),
         Expanded(
           child: queue.isEmpty
-              ? const EmptyState(
+              ? EmptyState(
                   icon: Icons.queue_music_outlined,
-                  message: '队列为空，先去播放几首歌吧',
+                  message: context.l10n.queueEmpty,
                 )
               : ListView.builder(
                   itemCount: queue.length,
@@ -83,7 +84,7 @@ class QueueSheet extends ConsumerWidget {
                       title: Text(s.name,
                           maxLines: 1, overflow: TextOverflow.ellipsis),
                       subtitle: Text(
-                        s.artist.isEmpty ? '未知歌手' : s.artist,
+                        s.artist.isEmpty ? context.l10n.unknownArtist : s.artist,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

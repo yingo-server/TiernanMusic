@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/cache/cache_manager.dart';
+../../../l10n/l10n.dart
 import '../../../core/config/app_config.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../core/theme/settings_provider.dart';
@@ -23,7 +24,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  String _cacheSize = '计算中…';
+  String _cacheSize = '';
   String _version = '';
   Map<String, dynamic>? _account;
 
@@ -69,7 +70,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
       if (mounted) setState(() => _cacheSize = _formatBytes(total));
     } catch (_) {
-      if (mounted) setState(() => _cacheSize = '无法计算');
+      if (mounted) setState(() => _cacheSize = context.l10n.cannotCalculate);
     }
   }
 
@@ -86,15 +87,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('清除缓存'),
-        content: const Text('将清除图片缓存、接口缓存与歌词翻译缓存，不会删除账号数据。确定继续吗？'),
+        title: Text(context.l10n.clearCache),
+        content: Text(context.l10n.clearCacheConfirm),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消')),
+              child: Text(context.l10n.cancel)),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('清除')),
+              child: Text(context.l10n.clear)),
         ],
       ),
     );
@@ -120,7 +121,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('缓存已清除')));
+            .showSnackBar(const SnackBar(content: Text(context.l10n.cacheCleared)));
       }
       _loadCacheSize();
     } catch (e) {
@@ -134,7 +135,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      appBar: AppBar(title: Text(context.l10n.settings)),
       body: ListView(
         children: [
           _buildAccountSection(),
@@ -155,7 +156,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final nickname = _account?['nickname'] as String?;
     final loggedIn = nickname != null && nickname.isNotEmpty;
     return _Section(
-      title: '账号',
+      title: context.l10n.account,
       children: [
         ListTile(
           leading: CircleAvatar(
@@ -166,8 +167,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ? const Icon(Icons.person_outline)
                 : null,
           ),
-          title: Text(loggedIn ? nickname : '未登录'),
-          subtitle: Text(loggedIn ? 'ID: ${_account?['userid'] ?? '-'}' : '点击登录酷狗账号'),
+          title: Text(loggedIn ? nickname : context.l10n.notLoggedIn),
+          subtitle: Text(loggedIn ? context.l10n.userIdLabel('${_account?['userid'] ?? '-'}') : context.l10n.login),
           trailing: const Icon(Icons.chevron_right),
           onTap: () async {
             await context.push<void>('/login');
@@ -176,8 +177,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
         ListTile(
           leading: const Icon(Icons.switch_account_outlined),
-          title: const Text('账号管理'),
-          subtitle: const Text('切换或管理已登录的账号'),
+          title: Text(context.l10n.accountManage),
+          subtitle: Text(context.l10n.switchAccountSubtitle),
           trailing: const Icon(Icons.chevron_right),
           onTap: () async {
             await context.push<void>('/login');
@@ -193,28 +194,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
     final themeLabel = switch (themeMode) {
-      ThemeMode.light => '浅色',
-      ThemeMode.system => '跟随系统',
-      _ => '深色',
+      ThemeMode.light => context.l10n.themeLight,
+      ThemeMode.system => context.l10n.themeSystem,
+      _ => context.l10n.themeDark,
     };
     final localeLabel = locale == null
-        ? '跟随系统'
+        ? context.l10n.themeSystem
         : AppConfig.localeNames[locale.countryCode != null
                 ? '${locale.languageCode}_${locale.countryCode}'
                 : locale.languageCode] ??
             locale.toString();
     return _Section(
-      title: '外观',
+      title: context.l10n.appearance,
       children: [
         ListTile(
           leading: const Icon(Icons.dark_mode_outlined),
-          title: const Text('主题模式'),
+          title: Text(context.l10n.themeMode),
           subtitle: Text(themeLabel),
           onTap: () => _showThemeDialog(themeMode),
         ),
         ListTile(
           leading: const Icon(Icons.language_outlined),
-          title: const Text('界面语言'),
+          title: Text(context.l10n.appLanguage),
           subtitle: Text(localeLabel),
           onTap: () => _showLocaleDialog(locale),
         ),
@@ -226,12 +227,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     showDialog<void>(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: const Text('主题模式'),
+        title: Text(context.l10n.themeMode),
         children: [
           for (final (mode, label) in [
-            (ThemeMode.dark, '深色'),
-            (ThemeMode.light, '浅色'),
-            (ThemeMode.system, '跟随系统'),
+            (ThemeMode.dark, context.l10n.themeDark),
+            (ThemeMode.light, context.l10n.themeLight),
+            (ThemeMode.system, context.l10n.themeSystem),
           ])
             RadioListTile<ThemeMode>(
               value: mode,
@@ -254,7 +255,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     showDialog<void>(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: const Text('界面语言'),
+        title: Text(context.l10n.appLanguage),
         children: [
           SizedBox(
             width: double.maxFinite,
@@ -265,7 +266,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 RadioListTile<String>(
                   value: 'system',
                   groupValue: codeOf(current),
-                  title: const Text('跟随系统'),
+                  title: Text(context.l10n.themeSystem),
                   onChanged: (_) {
                     ref.read(localeProvider.notifier).set(null);
                     Navigator.pop(ctx);
@@ -299,36 +300,36 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final wifiHigh = ref.watch(wifiQualityProvider);
     final cellularLow = ref.watch(cellularQualityProvider);
     final lyricLabel = switch (lyricMode) {
-      LyricDisplayMode.original => '仅原文',
-      LyricDisplayMode.bilingual => '双语对照',
-      LyricDisplayMode.translation => '仅译文',
+      LyricDisplayMode.original => context.l10n.lyricModeOriginal,
+      LyricDisplayMode.bilingual => context.l10n.lyricModeBilingual,
+      LyricDisplayMode.translation => context.l10n.lyricModeTranslation,
     };
     return _Section(
-      title: '播放',
+      title: context.l10n.playback,
       children: [
         ListTile(
           leading: const Icon(Icons.lyrics_outlined),
-          title: const Text('歌词显示模式'),
+          title: Text(context.l10n.lyricDisplayMode),
           subtitle: Text(lyricLabel),
           onTap: () => _showLyricModeDialog(lyricMode),
         ),
         ListTile(
           leading: const Icon(Icons.high_quality_outlined),
-          title: const Text('默认音质'),
+          title: Text(context.l10n.defaultQuality),
           subtitle: Text(qualityNames[quality] ?? quality),
           onTap: () => _showQualityDialog(quality),
         ),
         SwitchListTile(
           secondary: const Icon(Icons.wifi),
-          title: const Text('Wi-Fi 下自动最高音质'),
-          subtitle: const Text('连接 Wi-Fi 时优先播放无损/Hi-Res（预留）'),
+          title: Text(context.l10n.wifiAutoHighQuality),
+          subtitle: Text(context.l10n.wifiAutoHighQualityDesc),
           value: wifiHigh,
           onChanged: (v) => ref.read(wifiQualityProvider.notifier).set(v),
         ),
         SwitchListTile(
           secondary: const Icon(Icons.signal_cellular_alt),
-          title: const Text('流量下降低音质'),
-          subtitle: const Text('使用移动网络时自动切换为标准音质（预留）'),
+          title: Text(context.l10n.cellularLowQuality),
+          subtitle: Text(context.l10n.cellularLowQualityDesc),
           value: cellularLow,
           onChanged: (v) => ref.read(cellularQualityProvider.notifier).set(v),
         ),
@@ -340,12 +341,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     showDialog<void>(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: const Text('歌词显示模式'),
+        title: Text(context.l10n.lyricDisplayMode),
         children: [
           for (final (mode, label) in [
-            (LyricDisplayMode.original, '仅原文'),
-            (LyricDisplayMode.bilingual, '双语对照'),
-            (LyricDisplayMode.translation, '仅译文'),
+            (LyricDisplayMode.original, context.l10n.lyricModeOriginal),
+            (LyricDisplayMode.bilingual, context.l10n.lyricModeBilingual),
+            (LyricDisplayMode.translation, context.l10n.lyricModeTranslation),
           ])
             RadioListTile<LyricDisplayMode>(
               value: mode,
@@ -365,7 +366,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     showDialog<void>(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: const Text('默认音质'),
+        title: Text(context.l10n.defaultQuality),
         children: [
           for (final entry in qualityNames.entries)
             RadioListTile<String>(
@@ -385,26 +386,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   // ---------- 缓存 ----------
   Widget _buildCacheSection() {
     return _Section(
-      title: '缓存',
+      title: context.l10n.cache,
       children: [
         ListTile(
           leading: const Icon(Icons.storage_outlined),
-          title: const Text('缓存占用'),
+          title: Text(context.l10n.cacheUsage),
           subtitle: Text(_cacheSize),
           trailing: IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: '重新计算',
+            tooltip: context.l10n.recalculate,
             onPressed: () {
-              setState(() => _cacheSize = '计算中…');
+              setState(() => _cacheSize = context.l10n.calculating);
               _loadCacheSize();
             },
           ),
         ),
         ListTile(
           leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-          title: const Text('清除缓存',
+          title: Text(context.l10n.clearCache,
               style: TextStyle(color: Colors.redAccent)),
-          subtitle: const Text('清除接口、图片与歌词翻译缓存'),
+          subtitle: Text(context.l10n.clearCacheDesc),
           onTap: _clearCache,
         ),
       ],
@@ -420,21 +421,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       children: [
         ListTile(
           leading: const Icon(Icons.api_outlined),
-          title: const Text('酷狗 API 地址'),
+          title: Text(context.l10n.kugouApiUrl),
           subtitle: Text(kugouApi, maxLines: 1, overflow: TextOverflow.ellipsis),
           trailing: IconButton(
             icon: const Icon(Icons.restart_alt),
-            tooltip: '重置为默认',
+            tooltip: context.l10n.resetToDefault,
             onPressed: () async {
               await ref.read(kugouApiProvider.notifier).reset();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('已重置为默认地址')));
+                    const SnackBar(content: Text(context.l10n.resetToDefaultDone)));
               }
             },
           ),
           onTap: () => _showApiEditDialog(
-            title: '酷狗 API 地址',
+            title: context.l10n.kugouApiUrl,
             initial: kugouApi,
             onSave: (v) => ref.read(kugouApiProvider.notifier).set(v),
             onTest: _testConnectivity,
@@ -442,11 +443,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
         ListTile(
           leading: const Icon(Icons.translate_outlined),
-          title: const Text('翻译 API 地址'),
+          title: Text(context.l10n.translateApiUrl),
           subtitle:
               Text(translateApi, maxLines: 1, overflow: TextOverflow.ellipsis),
           onTap: () => _showApiEditDialog(
-            title: '翻译 API 地址',
+            title: context.l10n.translateApiUrl,
             initial: translateApi,
             onSave: (v) => ref.read(translateApiProvider.notifier).set(v),
             onTest: _testConnectivity,
@@ -508,7 +509,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.network_check, size: 18),
-                    label: Text(testing ? '测试中…' : '测试连通性'),
+                    label: Text(testing ? context.l10n.testing : context.l10n.testConnectivity),
                     onPressed: testing
                         ? null
                         : () async {
@@ -535,14 +536,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+                onPressed: () => Navigator.pop(ctx), child: Text(context.l10n.cancel)),
             FilledButton(
               onPressed: () async {
                 final v = controller.text.trim();
                 if (v.isNotEmpty) await onSave(v);
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text('保存'),
+              child: Text(context.l10n.save),
             ),
           ],
         ),
@@ -553,22 +554,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   // ---------- 关于 ----------
   Widget _buildAboutSection() {
     return _Section(
-      title: '关于',
+      title: context.l10n.about,
       children: [
         ListTile(
           leading: const Icon(Icons.music_note_outlined),
           title: const Text(AppConfig.appNameCn),
-          subtitle: Text('版本 $_version'),
+          subtitle: Text('${context.l10n.version} $_version'),
         ),
         ListTile(
           leading: const Icon(Icons.description_outlined),
-          title: const Text('开源许可证'),
-          subtitle: const Text('源代码可见，禁止使用'),
+          title: Text(context.l10n.openSourceLicenses),
+          subtitle: Text(context.l10n.licenseDesc),
           onTap: _showLicenseDialog,
         ),
         ListTile(
           leading: const Icon(Icons.code_outlined),
-          title: const Text('GitHub 仓库'),
+          title: Text(context.l10n.githubRepo),
           subtitle: const Text('github.com/tiernan/music'),
           trailing: const Icon(Icons.open_in_new, size: 18),
           onTap: () async {
@@ -586,7 +587,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('开源许可证'),
+        title: Text(context.l10n.openSourceLicenses),
         content: const SingleChildScrollView(
           child: Text(
             '汀澜音乐 Tiernan Music\n\n'
@@ -601,7 +602,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
         actions: [
           FilledButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('知道了')),
+              onPressed: () => Navigator.pop(ctx), child: Text(context.l10n.knowIt)),
         ],
       ),
     );

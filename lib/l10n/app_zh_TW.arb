@@ -1,5 +1,64 @@
 {
   "@@locale": "zh_TW",
+  "@playCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@trackCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@songCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@totalSongs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@repliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "@userIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "@replyPrefix": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
   "previous": "上一首",
   "favorite": "收藏",
   "unfavorite": "取消收藏",
@@ -38,11 +97,11 @@
   "searchHint": "搜尋歌曲、歌單、專輯、MV",
   "searchHistory": "搜尋歷史",
   "hotSearch": "熱門搜尋",
-  "clearHistory": "清空歷史",
+  "clearHistory": "清除歷史",
   "dailyRecommend": "每日推薦",
   "about": "關於",
   "version": "版本",
-  "license": "授權條款",
+  "license": "許可證",
   "mobileLogin": "手機號碼登入",
   "passwordLogin": "密碼登入",
   "qrLogin": "二維碼登入",
@@ -54,13 +113,13 @@
   "topCharts": "排行榜",
   "newSongs": "新歌",
   "hotArtists": "熱門歌手",
-  "lyricOriginal": "歌詞原文",
+  "lyricOriginal": "原文",
   "lyricBilingual": "雙語",
   "lyricTranslation": "譯文",
   "nowPlaying": "正在播放",
   "playQueue": "播放佇列",
   "theme": "主題",
-  "qualityHigh": "高解析度",
+  "qualityHigh": "Hi-Res",
   "vipOnly": "VIP 專屬",
   "noCopyright": "暫無版權",
   "tryListen": "試聽",
@@ -84,5 +143,102 @@
   "switchAccount": "切換帳號",
   "currentAccount": "目前帳號",
   "myPlaylists": "我的歌單",
-  "createPlaylist": "建立新歌單"
+  "createPlaylist": "建立新歌單",
+  "noRecommend": "暫無推薦內容，請下拉重試",
+  "newSongsRecommend": "新歌推薦",
+  "authErrorRetry": "需要登入或完成驗證後重試",
+  "loadFailedNetwork": "載入失敗，請檢查網路",
+  "searchSongsHint": "搜尋歌曲、歌單、歌手",
+  "tabSongs": "單曲",
+  "albums": "專輯",
+  "artists": "歌手",
+  "noSearchResults": "暫無搜尋結果",
+  "goLogin": "前往登入",
+  "noPlaylistsYet": "目前沒有歌單",
+  "playlistLoadFailed": "歌單載入失敗",
+  "unofficialClient": "非官方第三方客戶端",
+  "smsLogin": "簡訊登入",
+  "operationFailed": "操作失敗",
+  "phoneInvalid": "請輸入正確的手機號碼",
+  "smsCodeSent": "驗證碼已傳送",
+  "codeInvalid": "請輸入驗證碼",
+  "selectAccount": "該手機號碼已綁定多個帳號，請選擇要登入的帳號",
+  "phoneHintCn": "請輸入中國大陸手機號碼",
+  "verificationCode": "驗證碼",
+  "usernameLabel": "使用者名稱 / 手機號碼",
+  "usernamePasswordRequired": "請輸入使用者名稱與密碼",
+  "qrExpired": "二維碼已過期，請重新載入",
+  "qrScanSuccess": "掃描成功，請在手機上確認登入",
+  "qrScanHint": "請使用酷狗音樂 App 掃描二維碼登入",
+  "refreshQr": "重新產生二維碼",
+  "qrExpiredShort": "已過期",
+  "unknownArtist": "未知歌手",
+  "noRelatedPlaylists": "暫無相關歌單",
+  "noRelatedContent": "暫無相關內容",
+  "recentlyPlayed": "最近播放",
+  "clear": "清空",
+  "myFavoriteMvs": "我收藏的 MV",
+  "mvComingSoon": "MV 收藏功能即將上線，敬請期待",
+  "clearRecentlyPlayed": "清空最近播放",
+  "clearRecentConfirm": "確定要清空所有播放紀錄嗎？此動作無法復原。",
+  "notLoggedIn": "未登入",
+  "loginToSync": "登入後同步您的歌單與收藏",
+  "notPlaying": "目前未播放",
+  "noLyric": "暫無歌詞",
+  "lyricParseFailed": "歌詞解析失敗",
+  "calculating": "計算中…",
+  "cannotCalculate": "無法計算",
+  "clearCacheConfirm": "將會清除圖片快取、介面快取與歌詞翻譯快取，不會刪除帳號資料。確定要繼續嗎？",
+  "cacheCleared": "快取已清除",
+  "account": "帳號",
+  "switchAccountSubtitle": "切換或管理已登入的帳號",
+  "appearance": "外觀",
+  "themeMode": "主題模式",
+  "appLanguage": "介面語言",
+  "lyricModeOriginal": "僅原文",
+  "lyricModeBilingual": "雙語對照",
+  "lyricModeTranslation": "僅譯文",
+  "playback": "播放",
+  "lyricDisplayMode": "歌詞顯示模式",
+  "defaultQuality": "預設音質",
+  "wifiAutoHighQuality": "Wi-Fi 下自動最高音質",
+  "wifiAutoHighQualityDesc": "連接 Wi-Fi 時優先播放無損/Hi-Res（預留）",
+  "cellularLowQuality": "行動數據下降低音質",
+  "cellularLowQualityDesc": "使用流動網絡時自動切換至標準音質（預留）",
+  "cacheUsage": "快取佔用",
+  "recalculate": "重新計算",
+  "clearCacheDesc": "清除介面、圖片與歌詞翻譯快取",
+  "resetToDefault": "重設為預設",
+  "resetToDefaultDone": "已重設為預設位址",
+  "testing": "測試中…",
+  "testConnectivity": "測試連線性",
+  "save": "儲存",
+  "openSourceLicenses": "開放原始碼授權",
+  "licenseDesc": "原始碼可見，禁止使用",
+  "githubRepo": "GitHub 倉庫",
+  "knowIt": "知道了",
+  "noComments": "還沒有評論，快來搶沙發",
+  "commentHint": "說點什麼…",
+  "loginToComment": "登入後可評論",
+  "pleaseLoginFirst": "請先登入",
+  "commentSuccess": "評論成功",
+  "deleteComment": "刪除評論",
+  "deleteCommentConfirm": "確定要刪除這則評論嗎？",
+  "deleted": "已刪除",
+  "playAll": "全部播放",
+  "playFailed": "播放失敗",
+  "back": "返回",
+  "loadFailed": "載入失敗",
+  "playCountSuffix": "{count} 次播放",
+  "trackCountSuffix": "{count} 首",
+  "songCountSuffix": "{count} 首",
+  "totalSongs": "共 {count} 首",
+  "repliesCount": "{count} 則回覆",
+  "resendIn": "{seconds}秒後重新傳送",
+  "userIdLabel": "ID: {id}",
+  "noRecentlyPlayed": "目前還沒有播放記錄，到首頁選一首歌吧",
+  "loginToViewPlaylists": "登入後查看你的歌單",
+  "queueEmpty": "隊列為空，先去播放幾首歌吧",
+  "cache": "快取",
+  "replyPrefix": "回覆 {name}：{content}"
 }

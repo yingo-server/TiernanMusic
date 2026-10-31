@@ -1,6 +1,65 @@
 {
   "@@locale": "ja",
-  "about": "について",
+  "@playCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@trackCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@songCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@totalSongs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@repliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "@userIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "@replyPrefix": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "about": "バージョン情報",
   "version": "バージョン",
   "license": "ライセンス",
   "mobileLogin": "電話番号でログイン",
@@ -54,13 +113,13 @@
   "topCharts": "ランキング",
   "newSongs": "新曲",
   "hotArtists": "人気アーティスト",
-  "lyricOriginal": "歌詞の原文",
+  "lyricOriginal": "原文",
   "lyricBilingual": "バイリンガル",
   "lyricTranslation": "訳文",
   "nowPlaying": "再生中",
   "playQueue": "再生リスト",
   "theme": "テーマ",
-  "qualityHigh": "ハイレゾ",
+  "qualityHigh": "Hi-Res",
   "vipOnly": "VIP限定",
   "noCopyright": "現在著作権がありません",
   "tryListen": "試聴",
@@ -75,8 +134,8 @@
   "quality128": "スムーズ 128K",
   "quality320": "高品質 320K",
   "qualityFlac": "ロスレス FLAC",
-  "captchaTitle": "人間か確認する",
-  "captchaHint": "スライダーを動かして認証を完了してください",
+  "captchaTitle": "CAPTCHA認証",
+  "captchaHint": "スライダーをスライドして認証してください",
   "loginSuccess": "ログインに成功しました",
   "loginFailed": "ログインに失敗しました",
   "accountManage": "アカウント管理",
@@ -84,5 +143,102 @@
   "switchAccount": "アカウントを切り替える",
   "currentAccount": "現在のアカウント",
   "myPlaylists": "マイプレイリスト",
-  "createPlaylist": "プレイリストを新規作成"
+  "createPlaylist": "プレイリストを新規作成",
+  "albums": "アルバム",
+  "artists": "アーティスト",
+  "noSearchResults": "検索結果はありません",
+  "noRelatedPlaylists": "関連するプレイリストはありません",
+  "noRelatedContent": "関連するコンテンツはありません",
+  "recentlyPlayed": "最近再生",
+  "clear": "クリア",
+  "myFavoriteMvs": "マイコレクションのMV",
+  "mvComingSoon": "MVコレクション機能はまもなくリリースされます。どうぞご期待ください",
+  "clearRecentlyPlayed": "最近再生をクリア",
+  "clearRecentConfirm": "すべての再生履歴をクリアしてもよろしいですか？この操作は元に戻せません。",
+  "notLoggedIn": "ログインしていません",
+  "loginToSync": "ログイン後、プレイリストとお気に入りを同期します",
+  "goLogin": "ログインする",
+  "noPlaylistsYet": "プレイリストはありません",
+  "playlistLoadFailed": "プレイリストの読み込みに失敗しました",
+  "unofficialClient": "非公式サードパーティ製クライアントです",
+  "smsLogin": "SMSでログイン",
+  "operationFailed": "操作に失敗しました",
+  "phoneInvalid": "正しい電話番号を入力してください",
+  "noRecommend": "現在おすすめコンテンツはありません。下にスワイプして再試行してください",
+  "newSongsRecommend": "新曲おすすめ",
+  "authErrorRetry": "ログインまたは認証を完了してから再試行してください",
+  "loadFailedNetwork": "読み込み失敗。ネットワークを確認してください",
+  "searchSongsHint": "曲、プレイリスト、アーティストを検索",
+  "tabSongs": "シングル",
+  "refreshQr": "QRコードを更新",
+  "qrExpiredShort": "有効期限切れ",
+  "unknownArtist": "不明のアーティスト",
+  "notPlaying": "再生中ではありません",
+  "noLyric": "歌詞はありません",
+  "lyricParseFailed": "歌詞の解析に失敗しました",
+  "calculating": "計算中…",
+  "cannotCalculate": "計算できません",
+  "clearCacheConfirm": "画像キャッシュ、APIキャッシュ、歌詞翻訳キャッシュがクリアされます。アカウントデータは削除されません。このまま続行しますか？",
+  "cacheCleared": "キャッシュがクリアされました",
+  "account": "アカウント",
+  "switchAccountSubtitle": "ログイン済みのアカウントを切り替えたり、管理したりします",
+  "appearance": "外観",
+  "themeMode": "テーマモード",
+  "appLanguage": "インターフェース言語",
+  "lyricModeOriginal": "原文のみ",
+  "lyricModeBilingual": "二言語対照",
+  "lyricModeTranslation": "訳文のみ",
+  "playback": "再生",
+  "lyricDisplayMode": "歌詞表示モード",
+  "smsCodeSent": "認証コードを送信しました",
+  "codeInvalid": "認証コードを入力してください",
+  "selectAccount": "この電話番号は複数のアカウントに紐付けられています。ログインするアカウントを選択してください",
+  "phoneHintCn": "中国大陸の携帯電話番号を入力してください",
+  "verificationCode": "認証コード",
+  "usernameLabel": "ユーザー名 / 携帯電話番号",
+  "usernamePasswordRequired": "ユーザー名とパスワードを入力してください",
+  "qrExpired": "QRコードの有効期限が切れました。更新してください",
+  "qrScanSuccess": "スキャンに成功しました。スマートフォンでログインを承認してください",
+  "qrScanHint": "Kugou Musicアプリを使用してQRコードをスキャンし、ログインしてください",
+  "pleaseLoginFirst": "まずログインしてください",
+  "commentSuccess": "コメントに成功しました",
+  "deleteComment": "コメントを削除",
+  "deleteCommentConfirm": "このコメントを削除してもよろしいですか？",
+  "deleted": "削除済み",
+  "playAll": "すべて再生",
+  "playFailed": "再生に失敗しました",
+  "back": "戻る",
+  "loadFailed": "読み込みに失敗しました",
+  "playCountSuffix": "{count} 回再生",
+  "testing": "テスト中…",
+  "testConnectivity": "接続性をテスト",
+  "save": "保存",
+  "openSourceLicenses": "オープンソースライセンス",
+  "licenseDesc": "ソースコードは公開されていますが、使用は禁止されています",
+  "githubRepo": "GitHub リポジトリ",
+  "knowIt": "了解しました",
+  "noComments": "まだコメントはありません。一番乗りでコメントしましょう",
+  "commentHint": "何かコメント…",
+  "loginToComment": "ログインするとコメントできます",
+  "replyPrefix": "{name}さんへの返信：{content}",
+  "trackCountSuffix": "{count} 曲",
+  "songCountSuffix": "{count} 曲",
+  "totalSongs": "合計 {count} 曲",
+  "repliesCount": "{count} 件の返信",
+  "resendIn": "{seconds}秒後に再送信",
+  "userIdLabel": "ID: {id}",
+  "noRecentlyPlayed": "再生履歴がありません。ホーム画面から曲を選んでみましょう",
+  "loginToViewPlaylists": "ログインしてプレイリストを確認",
+  "queueEmpty": "キューが空です。まずは曲をいくつか再生してみましょう",
+  "cache": "キャッシュ",
+  "defaultQuality": "デフォルト音質",
+  "wifiAutoHighQuality": "Wi-Fi接続時に自動的に最高音質へ",
+  "wifiAutoHighQualityDesc": "Wi-Fi接続時にロスレス/Hi-Resを優先的に再生（保留）",
+  "cellularLowQuality": "モバイルデータ通信時は音質を低減",
+  "cellularLowQualityDesc": "モバイルネットワーク使用時に標準音質へ自動切り替え（保留）",
+  "cacheUsage": "キャッシュ使用量",
+  "recalculate": "再計算",
+  "clearCacheDesc": "インターフェース、画像、歌詞翻訳のキャッシュをクリア",
+  "resetToDefault": "デフォルトにリセット",
+  "resetToDefaultDone": "デフォルトのアドレスにリセットされました"
 }
