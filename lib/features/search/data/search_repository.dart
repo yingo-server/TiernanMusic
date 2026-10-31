@@ -115,7 +115,7 @@ class SearchRepository {
       'name': name,
       'singer': singer,
       'cover': img,
-      'albumId': albumId,
+      'albumid': albumId,
       // 专辑没有单曲 hash/时长；用 songcount 表示条目数，避免被当成可播放单曲。
       'songcount': _toInt(e['songcount'] ?? e['song_count']),
     };
@@ -160,7 +160,7 @@ class SearchRepository {
       'cover': cover,
       'duration': _toInt(e['Duration'] ?? e['duration']),
       'fileHash': _toStr(e['FileHash'] ?? e['hash']),
-      'albumId': _toStr(e['AlbumID'] ?? e['album_id']),
+      'albumid': _toStr(e['AlbumID'] ?? e['album_id']),
     };
   }
 

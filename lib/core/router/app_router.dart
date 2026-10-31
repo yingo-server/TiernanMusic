@@ -58,6 +58,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/mv/:hash',
         builder: (_, state) => MvPlayerPage(
           hash: state.pathParameters['hash']!,
+          videoId: state.uri.queryParameters['videoId'],
           title: state.uri.queryParameters['title'],
           artist: state.uri.queryParameters['artist'],
         ),

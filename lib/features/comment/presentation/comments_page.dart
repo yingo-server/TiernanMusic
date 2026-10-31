@@ -52,9 +52,36 @@ class _CommentsController extends StateNotifier<AsyncValue<CommentPage>> {
     }
   }
 
+  bool _loadingMore = false;
+  bool _hasMore = true;
+
   Future<void> loadMore() async {
-    _page++;
-    await load();
+    if (_loadingMore || !_hasMore) return;
+    _loadingMore = true;
+    final next = _page + 1;
+    try {
+      final result = await _repo.fetchComments(
+          type: _args.type, id: _args.id, page: next);
+      final prev = state.value;
+      if (prev == null) {
+        state = AsyncValue.data(result);
+      } else {
+        state = AsyncValue.data(CommentPage(
+          comments: [...prev.comments, ...result.comments],
+          total: result.total,
+          classifies: result.classifies,
+          hotWords: result.hotWords,
+        ));
+      }
+      _page = next;
+      if (result.comments.isEmpty || _page * 30 >= result.total) {
+        _hasMore = false;
+      }
+    } catch (_) {
+      // 失败不推进页码，保留重试机会
+    } finally {
+      _loadingMore = false;
+    }
   }
 
   Future<void> sendComment(String content, {String? name}) async {

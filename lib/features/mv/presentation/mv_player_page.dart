@@ -23,11 +23,16 @@ class MvPlayerPage extends ConsumerStatefulWidget {
   const MvPlayerPage({
     super.key,
     required this.hash,
+    this.videoId,
     this.title,
     this.artist,
   });
 
+  /// 视频 hash（/video/url 只认它）
   final String hash;
+
+  /// 视频 id（/video/detail 只认它，用于清晰度列表）
+  final String? videoId;
   final String? title;
   final String? artist;
 
@@ -68,22 +73,27 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
       _error = null;
       _controller?.pause();
     });
+    VideoPlayerController? created;
     try {
       final url = await ref.read(mvRepoProvider).resolvePlayUrl(hash);
-      final controller = VideoPlayerController.networkUrl(Uri.parse(url));
-      await controller.initialize();
-      await controller.play();
+      created = VideoPlayerController.networkUrl(Uri.parse(url));
+      await created.initialize();
+      await created.play();
       final old = _controller;
       if (!mounted) {
-        await controller.dispose();
+        await created.dispose();
+        created = null;
         return;
       }
       setState(() {
-        _controller = controller;
+        _controller = created;
         _activeHash = hash;
       });
+      created = null; // 已交给 _controller，勿在 finally 释放
       old?.dispose();
     } catch (e) {
+      // 初始化失败必须释放刚创建的原生播放器，否则每次重试泄漏一个
+      await created?.dispose();
       if (mounted) setState(() => _error = '$e');
     } finally {
       _resolving = false;
@@ -94,7 +104,9 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
   Widget build(BuildContext context) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
-    final detail = ref.watch(mvDetailProvider(widget.hash)).value;
+    final detail = ref
+        .watch(mvDetailProvider(widget.videoId ?? widget.hash))
+        .value;
     final qualities = detail?.hashes ?? const <String, String>{};
 
     return Scaffold(

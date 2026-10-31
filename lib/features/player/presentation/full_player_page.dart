@@ -236,9 +236,13 @@ class _MvEntry extends ConsumerWidget {
               final title = mv.name.isNotEmpty ? mv.name : (song?.name ?? '');
               final artist =
                   mv.artist.isNotEmpty ? mv.artist : (song?.artist ?? '');
+              // /video/url 只认视频 hash，故 path 用 hash；
+              // videoId 走 query 供清晰度列表使用
+              final hash = mv.bestHash ?? mv.sdHash ?? '';
               context.push(
-                '/mv/${Uri.encodeComponent(mv.videoId)}'
-                '?title=${Uri.encodeComponent(title)}'
+                '/mv/${Uri.encodeComponent(hash.isEmpty ? mv.videoId : hash)}'
+                '?videoId=${Uri.encodeComponent(mv.videoId)}'
+                '&title=${Uri.encodeComponent(title)}'
                 '&artist=${Uri.encodeComponent(artist)}',
               );
             },

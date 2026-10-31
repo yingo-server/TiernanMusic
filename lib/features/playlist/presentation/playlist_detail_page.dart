@@ -2,13 +2,17 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../l10n/l10n.dart';
+import '../../../core/providers.dart' show kugouApiClientProvider;
 import '../../../core/widgets/song_tile.dart';
+import '../../../l10n/l10n.dart';
 import '../../player/play_helper.dart';
 import '../data/playlist_repository.dart';
 
-final _playlistRepoProvider =
-    Provider<PlaylistRepository>((ref) => throw UnimplementedError());
+/// 歌单仓库（用全局直连/回退客户端构造，之前是 throw 导致歌单页必然失败）
+final playlistRepositoryProvider = Provider<PlaylistRepository>(
+    (ref) => PlaylistRepository(ref.watch(kugouApiClientProvider)));
+
+final _playlistRepoProvider = playlistRepositoryProvider;
 
 final playlistDetailProvider = FutureProvider.family
     .autoDispose<PlaylistDetail, String>((ref, id) {
