@@ -47,10 +47,14 @@ class HomeRepository {
   Future<List<HomePlaylist>> fetchYuekuPlaylists() async {
     final json = await _cachedGet('/yueku');
     final info = (json['data']?['info'] as Map?) ?? {};
-    final raw = _asList(info['special'] ?? info['playlist']);
-    return raw
-        .map((e) => HomePlaylist.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
+    final raw = _asList(info['special'] ?? info['playlist'] ?? info['recommend']);
+    return raw.map((e) {
+      final item = Map<String, dynamic>.from(e as Map);
+      // 乐库推荐歌单的实际内容包在 extra 中。
+      return HomePlaylist.fromJson(item['extra'] is Map
+          ? Map<String, dynamic>.from(item['extra'] as Map)
+          : item);
+    }).toList();
   }
 
   /// 推荐歌单（优先 /top/playlist，失败回落 /yueku）
@@ -74,7 +78,8 @@ class HomeRepository {
   /// 排行榜列表
   Future<List<HomeRank>> fetchRankList() async {
     final json = await _cachedGet('/rank/list', query: {'withsong': '1'});
-    final raw = data is Map ? _asList(data['info']) : const <dynamic>[];
+    final data = json['data'];
+    final raw = data is Map ? _asList(data['info']) : _asList(data);
     return raw
         .map((e) => HomeRank.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
@@ -102,7 +107,9 @@ class HomeRepository {
       final json = await _cachedGet('/everyday/recommend');
       final data = json['data'];
       final raw = _asList(
-          data is Map ? (data['list'] ?? data['songs'] ?? data['info']) : data);
+          data is Map
+              ? (data['song_list'] ?? data['list'] ?? data['songs'] ?? data['info'])
+              : data);
       if (raw.isEmpty) return null;
       return raw
           .map((e) => HomeSong.fromJson(Map<String, dynamic>.from(e as Map)))

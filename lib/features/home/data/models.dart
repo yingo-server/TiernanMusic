@@ -45,10 +45,16 @@ class HomeSong {
   }
 
   factory HomeSong.fromJson(Map<String, dynamic> json) {
-    final hash = _toStr(json['hash'] ?? json['FileHash'] ?? json['mixsongid']);
+    final transParam = json['trans_param'] is Map
+        ? json['trans_param'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+    final hash = _toStr(json['hash'] ?? json['FileHash']);
     final name = _toStr(json['songname'] ?? json['OriSongName'] ?? json['name']);
-    final singer = _toStr(json['singername'] ?? json['SingerName'] ?? json['singer']);
-    final fileName = _toStr(json['FileName']);
+    final singer = _toStr(json['singername'] ??
+        json['SingerName'] ??
+        json['author_name'] ??
+        json['singer']);
+    final fileName = _toStr(json['FileName'] ?? json['filename']);
     var displayName = name;
     var displaySinger = singer;
     if (displayName.isEmpty && fileName.contains('-')) {
@@ -57,17 +63,27 @@ class HomeSong {
       displayName = parts.sublist(1).join('-').trim();
     }
     if (displayName.isEmpty) displayName = fileName;
+    final duration = json.containsKey('duration') || json.containsKey('Duration')
+        ? _toInt(json['duration'] ?? json['Duration'])
+        : json.containsKey('time_length')
+            ? _toInt(json['time_length'])
+            : _toInt(json['timelength']) ~/ 1000;
+    final albumId = _toStr(json['albumid'] ?? json['album_id'] ?? json['AlbumID']);
     return HomeSong(
-      id: hash.isNotEmpty ? hash : _toStr(json['id']),
+      id: hash.isNotEmpty
+          ? hash
+          : _toStr(json['mixsongid'] ?? json['audio_id'] ?? json['id']),
       name: displayName.isEmpty ? '未知歌曲' : displayName,
       singer: displaySinger.isEmpty ? '未知歌手' : displaySinger,
-      cover: kugouImageUrl(
-          _toStr(json['imgurl'] ?? json['Image'] ?? json['album_img'])),
-      duration: _toInt(json['duration'] ?? json['Duration']),
+      cover: kugouImageUrl(_toStr(transParam['union_cover'] ??
+          json['imgurl'] ??
+          json['Image'] ??
+          json['album_sizable_cover'] ??
+          json['sizable_cover'] ??
+          json['album_img'])),
+      duration: duration,
       hash: hash.isEmpty ? null : hash,
-      albumId: _toStr(json['albumid'] ?? json['AlbumID']).isEmpty
-          ? null
-          : _toStr(json['albumid'] ?? json['AlbumID']),
+      albumId: albumId.isEmpty ? null : albumId,
     );
   }
 }
@@ -98,15 +114,20 @@ class HomePlaylist {
   }
 
   factory HomePlaylist.fromJson(Map<String, dynamic> json) {
+    final globalId = _toStr(json['global_collection_id'] ??
+        json['global_specialid'] ??
+        json['gid']);
     return HomePlaylist(
       id: _toStr(json['specialid'] ?? json['id']),
-      globalCollectionId: _toStr(
-          json['global_collection_id'] ?? json['specialid'] ?? json['id']),
+      globalCollectionId: globalId.isNotEmpty
+          ? globalId
+          : _toStr(json['specialid'] ?? json['id']),
       name: _toStr(json['specialname'] ?? json['name'] ?? json['title'])
           .isEmpty
           ? '未知歌单'
           : _toStr(json['specialname'] ?? json['name'] ?? json['title']),
-      cover: kugouImageUrl(_toStr(json['imgurl'] ?? json['cover'])),
+      cover: kugouImageUrl(_toStr(
+          json['imgurl'] ?? json['img'] ?? json['flexible_cover'] ?? json['cover'])),
       playCount: _toInt(json['playcount'] ?? json['play_count']),
       intro: _toStr(json['intro']).isEmpty ? null : _toStr(json['intro']),
     );

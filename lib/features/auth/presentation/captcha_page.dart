@@ -12,16 +12,19 @@ import '../data/auth_repository.dart';
 ///   builder: (_) => CaptchaPage(ssaCode: code, repository: repo),
 /// ));
 /// ```
-/// 返回 true 表示验证成功，调用方应重试原请求。
+/// 返回 true 表示验证成功。若提供 [onVerified]，成功后在页内重试原请求，
+/// 重试也成功才关闭页面；否则仍由调用方根据 true 重试原请求。
 class CaptchaPage extends StatefulWidget {
   const CaptchaPage({
     super.key,
     required this.ssaCode,
     required this.repository,
+    this.onVerified,
   });
 
   final String ssaCode;
   final AuthRepository repository;
+  final Future<void> Function()? onVerified;
 
   @override
   State<CaptchaPage> createState() => _CaptchaPageState();
@@ -29,8 +32,6 @@ class CaptchaPage extends StatefulWidget {
 
 class _CaptchaPageState extends State<CaptchaPage> {
   VerifyInfo? _info;
-  String? _sid;
-  String? _edt;
   String? _error;
   bool _loading = true;
   bool _submitting = false;
@@ -55,13 +56,11 @@ class _CaptchaPageState extends State<CaptchaPage> {
       _error = null;
     });
     try {
+      // 20028 的 ssaCode 就是验证接口的 eventid。
       final info = await widget.repository.getVerifyInfo(widget.ssaCode);
-      final se = await widget.repository.getSidEdt();
       if (!mounted) return;
       setState(() {
         _info = info;
-        _sid = se.sid;
-        _edt = se.edt;
         _loading = false;
       });
     } catch (e) {
@@ -84,9 +83,8 @@ class _CaptchaPageState extends State<CaptchaPage> {
         eventid: widget.ssaCode,
         vType: _info!.vType,
         verifycode: verifycode,
-        sid: _sid ?? '',
-        edt: _edt ?? '',
       );
+      await widget.onVerified?.call();
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;

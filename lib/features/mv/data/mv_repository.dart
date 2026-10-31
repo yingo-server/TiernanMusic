@@ -45,9 +45,13 @@ class MvRepository {
     final data = await _api.get('/video/url', query: {'hash': videoHash});
     final d = data['data'] as Map<String, dynamic>?;
     if (d == null) throw ApiException(-1, 'MV 解析失败');
-    final entry = d[videoHash.toLowerCase()] ?? d[videoHash] ?? d.values.first;
+    final entry = d[videoHash.toLowerCase()] ??
+        d[videoHash.toUpperCase()] ??
+        (d.isEmpty ? null : d.values.first);
     if (entry is! Map<String, dynamic>) throw ApiException(-1, 'MV 解析失败');
-    final url = '${entry['downurl'] ?? (entry['backupdownurl'] as List?)?.first ?? ''}';
+    final backup = entry['backupdownurl'];
+    final url = '${entry['downurl'] ??
+        (backup is List && backup.isNotEmpty ? backup.first : '')}';
     if (url.isEmpty) throw ApiException(-1, 'MV 暂无播放地址');
     return AppConfig.proxyMvUrl(url);
   }
@@ -75,7 +79,10 @@ class MvInfo {
   final String? qhdHash;
   final String? sqHash;
 
-  String? get bestHash => sqHash ?? qhdHash ?? hdHash ?? sdHash;
+  String? get bestHash => [sqHash, qhdHash, hdHash, sdHash]
+      .whereType<String>()
+      .where((hash) => hash.isNotEmpty)
+      .firstOrNull;
 
   factory MvInfo.fromJson(Map<String, dynamic> json) {
     final mkv = json['mkv'] as Map<String, dynamic>? ?? {};
@@ -84,10 +91,14 @@ class MvInfo {
     thumb = thumb.replaceAll('{size}', '480');
     return MvInfo(
       videoId: '${json['mv_hash'] ?? json['id'] ?? json['video_id'] ?? ''}',
-      name: '${json['songname'] ?? json['name'] ?? json['filename'] ?? ''}',
+      name: '${json['mv_name'] ?? json['songname'] ?? json['name'] ?? json['filename'] ?? ''}',
       artist: authors.isNotEmpty
-          ? '${(authors.first as Map)['author_name'] ?? ''}'
-          : '${json['singername'] ?? ''}',
+          ? authors
+              .whereType<Map>()
+              .map((author) => '${author['author_name'] ?? ''}')
+              .where((name) => name.isNotEmpty)
+              .join('、')
+          : '${json['singername'] ?? json['singer'] ?? json['user_name'] ?? ''}',
       thumb: thumb,
       duration: (json['duration'] ?? mkv['timelength'] ?? 0) is int
           ? (json['duration'] ?? mkv['timelength'] ?? 0)

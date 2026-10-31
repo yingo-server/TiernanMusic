@@ -46,7 +46,7 @@ class VerifyInfo {
     this.raw = const {},
   });
 
-  final int vType; // 23 = 腾讯 TCaptcha，32 = 二次短信
+  final int vType; // 23 = 腾讯 TCaptcha，32 = 二次短信，38 = 其它类型
   final String txappid;
   final String mobile;
   final Map<String, dynamic> raw;
@@ -166,34 +166,20 @@ class AuthRepository {
     );
   }
 
-  /// 从 /sidedt 获取 sid / edt
-  Future<({String sid, String edt})> getSidEdt() async {
-    try {
-      final res = await _api.get('/sidedt');
-      final d = (res['data'] as Map<String, dynamic>?) ?? res;
-      return (
-        sid: '${d['sid'] ?? ''}',
-        edt: '${d['edt'] ?? ''}',
-      );
-    } catch (_) {
-      return (sid: '', edt: '');
-    }
-  }
-
-  /// 提交人机验证结果
+  /// 提交人机验证结果；eventid 直接使用 20028 返回的 ssaCode。
+  /// 部署版不提供 /sidedt，不额外请求 sid / edt。
   Future<void> submitVerify({
     required String eventid,
     required int vType,
     required String verifycode,
-    required String sid,
-    required String edt,
   }) async {
+    if (vType != 23 && vType != 32) {
+      throw ApiException(-1, '暂不支持的验证类型（v_type=$vType）');
+    }
     await _api.post('/verify/user/info', {
       'eventid': eventid,
       'v_type': vType,
       'verifycode': verifycode,
-      'sid': sid,
-      'edt': edt,
     });
   }
 

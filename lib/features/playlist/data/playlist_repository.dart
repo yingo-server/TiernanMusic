@@ -102,20 +102,20 @@ class PlaylistDetail {
     final data = json['data'] is List && (json['data'] as List).isNotEmpty
         ? (json['data'] as List).first as Map<String, dynamic>
         : (json['data'] as Map<String, dynamic>?) ?? {};
-    String cover = '${data['imgurl'] ?? data['flexible_cover'] ?? ''}';
+    var cover = '${data['imgurl'] ?? data['pic'] ?? data['flexible_cover'] ?? ''}';
     cover = cover.replaceAll('{size}', '480');
     return PlaylistDetail(
-      id: id,
+      id: '${data['global_collection_id'] ?? id}',
       name: '${data['specialname'] ?? data['name'] ?? ''}',
       cover: cover,
       intro: '${data['intro'] ?? ''}',
-      playCount: (data['playcount'] ?? 0) is int
-          ? data['playcount'] ?? 0
-          : int.tryParse('${data['playcount']}') ?? 0,
-      trackCount: (data['songcount'] ?? 0) is int
-          ? data['songcount'] ?? 0
-          : int.tryParse('${data['songcount']}') ?? 0,
-      creatorName: '${data['nickname'] ?? data['username'] ?? ''}',
+      playCount: (data['playcount'] ?? data['play_count'] ?? 0) is int
+          ? data['playcount'] ?? data['play_count'] ?? 0
+          : int.tryParse('${data['playcount'] ?? data['play_count']}') ?? 0,
+      trackCount: (data['songcount'] ?? data['count'] ?? 0) is int
+          ? data['songcount'] ?? data['count'] ?? 0
+          : int.tryParse('${data['songcount'] ?? data['count']}') ?? 0,
+      creatorName: '${data['nickname'] ?? data['list_create_username'] ?? data['username'] ?? ''}',
     );
   }
 }
@@ -157,17 +157,30 @@ class PlaylistSong {
   final String fileId;
 
   factory PlaylistSong.fromJson(Map<String, dynamic> json) {
-    final name = '${json['name'] ?? json['filename'] ?? json['OriSongName'] ?? ''}';
-    final singer = '${json['singername'] ?? json['SingerName'] ?? json['author_name'] ?? ''}';
+    final rawName = '${json['name'] ?? json['filename'] ?? json['OriSongName'] ?? ''}';
+    final parts = rawName.split(' - ');
+    final name = parts.length > 1 ? parts.sublist(1).join(' - ') : rawName;
+    final singerInfo = json['singerinfo'];
+    final singers = singerInfo is List
+        ? singerInfo
+            .whereType<Map>()
+            .map((e) => '${e['name'] ?? ''}')
+            .where((name) => name.isNotEmpty)
+            .join('、')
+        : '';
+    final singer = '${json['singername'] ?? json['SingerName'] ?? json['author_name'] ?? singers}';
+    final duration = json.containsKey('timelen')
+        ? (int.tryParse('${json['timelen']}') ?? 0) ~/ 1000
+        : (int.tryParse('${json['duration'] ?? json['Duration'] ?? 0}') ?? 0);
     return PlaylistSong(
       hash: '${json['hash'] ?? json['FileHash'] ?? ''}',
-      name: name.contains(' - ') ? name.split(' - ').last : name,
-      artist: singer.isNotEmpty ? singer : (name.contains(' - ') ? name.split(' - ').first : ''),
+      name: name,
+      artist: singer.isNotEmpty
+          ? singer
+          : (parts.length > 1 ? parts.first : ''),
       albumId: '${json['album_id'] ?? json['AlbumID'] ?? ''}',
-      albumAudioId: '${json['album_audio_id'] ?? json['MixSongID'] ?? json['audio_id'] ?? ''}',
-      duration: (json['duration'] ?? json['Duration'] ?? 0) is int
-          ? (json['duration'] ?? json['Duration'] ?? 0)
-          : int.tryParse('${json['duration'] ?? json['Duration']}') ?? 0,
+      albumAudioId: '${json['album_audio_id'] ?? json['mixsongid'] ?? json['MixSongID'] ?? ''}',
+      duration: duration,
       fileId: '${json['fileid'] ?? json['FileID'] ?? ''}',
     );
   }

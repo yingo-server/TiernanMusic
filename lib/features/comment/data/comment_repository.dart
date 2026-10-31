@@ -29,6 +29,13 @@ class CommentRepository {
     return CommentPage.fromJson(data);
   }
 
+  /// 按歌曲 hash 查询评论数。
+  Future<int> fetchCount(String hash) async {
+    final data = await _api.get('/comment/count', query: {'hash': hash});
+    final value = data[hash] ?? data[hash.toUpperCase()] ?? data[hash.toLowerCase()];
+    return value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+  }
+
   /// 楼中楼
   Future<CommentPage> fetchFloor({
     required String specialId, // special_child_id
@@ -114,9 +121,8 @@ class CommentPage {
     final comments = list
         .map((e) => Comment.fromJson(e as Map<String, dynamic>))
         .toList();
-    final total = (data['count'] ?? data['total'] ?? comments.length) is int
-        ? (data['count'] ?? data['total'] ?? comments.length)
-        : int.tryParse('${data['count'] ?? data['total']}') ?? comments.length;
+    final total = _asInt(data['count'] ?? data['total'] ?? data['comments_num'],
+        fallback: comments.length);
 
     List<CommentClassify>? classifies;
     if (data['classify'] is List) {
@@ -133,6 +139,11 @@ class CommentPage {
     return CommentPage(
         comments: comments, total: total, classifies: classifies, hotWords: hotWords);
   }
+}
+
+int _asInt(dynamic value, {int fallback = 0}) {
+  if (value is num) return value.toInt();
+  return int.tryParse('$value') ?? fallback;
 }
 
 class Comment {
@@ -160,18 +171,17 @@ class Comment {
   factory Comment.fromJson(Map<String, dynamic> json) {
     var avatar = '${json['user_pic'] ?? json['avatar'] ?? json['pic'] ?? ''}';
     avatar = avatar.replaceAll('{size}', '120');
+    final like = json['like'];
     return Comment(
       id: '${json['id'] ?? json['cid'] ?? ''}',
       userName: '${json['user_name'] ?? json['nickname'] ?? ''}',
       avatar: avatar,
       content: '${json['content'] ?? ''}',
-      likeCount: (json['like'] ?? json['likecount'] ?? 0) is int
-          ? (json['like'] ?? json['likecount'] ?? 0)
-          : int.tryParse('${json['like'] ?? json['likecount']}') ?? 0,
+      likeCount: _asInt(like is Map
+          ? like['count'] ?? like['likenum']
+          : like ?? json['likecount']),
       createTime: '${json['addtime'] ?? json['create_time'] ?? ''}',
-      replyCount: (json['reply_num'] ?? json['replycount'] ?? 0) is int
-          ? (json['reply_num'] ?? json['replycount'] ?? 0)
-          : int.tryParse('${json['reply_num'] ?? json['replycount']}') ?? 0,
+      replyCount: _asInt(json['reply_num'] ?? json['replycount']),
       specialChildId: json['special_child_id'] != null
           ? '${json['special_child_id']}'
           : null,

@@ -35,14 +35,27 @@ class KugouApiClient {
       onResponse: (response, handler) {
         final data = response.data;
         if (data is Map<String, dynamic>) {
-          final status = data['status'];
-          final errorCode = data['error_code'] ?? data['errcode'] ?? 0;
-          if (status == 0 && errorCode != 0) {
+          final status = int.tryParse('${data['status'] ?? 1}') ?? 1;
+          final rawCode = data['error_code'] ?? data['errcode'] ?? 0;
+          final errorCode = rawCode is int
+              ? rawCode
+              : int.tryParse('$rawCode') ?? -1;
+          final hasErrorCode = data.containsKey('error_code') ||
+              data.containsKey('errcode');
+          // 部分接口使用 status=2，另有失败响应只给非零 errcode。
+          // 无论哪种形式都必须向上抛错，不能被仓库当成空列表。
+          if (status == 0 || status == 2 || (hasErrorCode && errorCode != 0)) {
+            final defaultMessage = errorCode == 20028
+                ? '需要完成人机验证'
+                : status == 0 && errorCode == 0
+                    ? '请求失败'
+                    : '未知错误';
             handler.reject(DioException(
               requestOptions: response.requestOptions,
+              response: response,
               error: ApiException(
-                errorCode is int ? errorCode : int.tryParse('$errorCode') ?? -1,
-                '${data['error_msg'] ?? data['errmsg'] ?? data['info'] ?? '未知错误'}',
+                errorCode,
+                '${data['error_msg'] ?? data['errmsg'] ?? data['error'] ?? data['info'] ?? defaultMessage}',
               ),
             ));
             return;

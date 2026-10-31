@@ -17,8 +17,12 @@ class KrcDecoder {
 
   /// 解密 Base64 编码的加密 KRC
   static String decode(String base64Content) {
-    final bytes = base64.decode(base64Content);
-    if (bytes.length < 4) return '';
+    final bytes = base64.decode(base64.normalize(base64Content.trim()));
+    if (bytes.length <= 4 ||
+        bytes[0] != 0x6b || bytes[1] != 0x72 ||
+        bytes[2] != 0x63 || bytes[3] != 0x31) {
+      throw const FormatException('无效的 KRC 内容或文件头');
+    }
 
     // 跳过 4 字节 'krc1' 头
     final body = bytes.sublist(4);

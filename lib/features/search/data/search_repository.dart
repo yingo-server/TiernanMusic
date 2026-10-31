@@ -163,13 +163,23 @@ class SearchRepository {
       final json =
           await _cachedGet('/search/suggest', query: {'keywords': keywords});
       final data = json['data'];
-      final raw = _asList(data is Map
+      final groups = _asList(data is Map
           ? (data['list'] ?? data['info'] ?? data['suggest'])
           : data);
+      // 搜索建议按 RecordDatas 分组返回，而不是字符串列表。
+      final raw = groups
+          .expand((e) => e is Map && e['RecordDatas'] is List
+              ? e['RecordDatas'] as List
+              : [e])
+          .toList();
       return raw
           .map((e) {
             if (e is Map) {
-              return (e['keyword'] ?? e['KeywordName'] ?? e['name'] ?? e['suggest'])
+              return (e['HintInfo'] ??
+                      e['keyword'] ??
+                      e['KeywordName'] ??
+                      e['name'] ??
+                      e['suggest'])
                       ?.toString() ??
                   '';
             }

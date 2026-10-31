@@ -4,9 +4,14 @@ import 'models.dart';
 
 /// 一次成功解析出的播放结果。
 class PlayableResult {
-  const PlayableResult({required this.url, required this.quality});
+  const PlayableResult({
+    required this.url,
+    required this.quality,
+    this.isPreview = false,
+  });
   final String url;
   final AudioQuality quality;
+  final bool isPreview;
 }
 
 /// 播放器仓库：封装 dfid 注册、歌曲详情查询与播放地址获取（含音质降级）。
@@ -51,10 +56,15 @@ class PlayerRepository {
         'qualities': '128,320,flac,high',
       });
       final data = res['data'];
-      if (data is Map<String, dynamic>) {
-        var merged = Song.fromJson(data);
-        // 保留原有非空字段
-        merged = merged.copyWith(
+      // 部署版的 data 是各音质权益条目列表，并非单首歌曲对象。
+      if (data is List) {
+        final entries = data.whereType<Map>();
+        if (entries.isEmpty) return song;
+        final matching = entries.where((entry) =>
+            '${entry['hash']}'.toUpperCase() == song.hash.toUpperCase());
+        final detail = matching.isNotEmpty ? matching.first : entries.first;
+        final merged = Song.fromJson(Map<String, dynamic>.from(detail));
+        return merged.copyWith(
           hash: song.hash,
           albumId: merged.albumId.isNotEmpty ? merged.albumId : song.albumId,
           albumAudioId: merged.albumAudioId.isNotEmpty
@@ -65,14 +75,24 @@ class PlayerRepository {
           cover: merged.cover.isNotEmpty ? merged.cover : song.cover,
           duration:
               merged.duration > Duration.zero ? merged.duration : song.duration,
+          quality: song.quality,
         );
-        // 免费可得的最佳音质
-        final vip = data['quality_vip'];
-        if (vip is Map && vip['best_free_quality'] != null) {
-          merged = merged.copyWith(
-              quality: AudioQuality.fromString('${vip['best_free_quality']}'));
-        }
-        return merged;
+      }
+      if (data is Map<String, dynamic>) {
+        final merged = Song.fromJson(data);
+        return merged.copyWith(
+          hash: song.hash,
+          albumId: merged.albumId.isNotEmpty ? merged.albumId : song.albumId,
+          albumAudioId: merged.albumAudioId.isNotEmpty
+              ? merged.albumAudioId
+              : song.albumAudioId,
+          name: merged.name.isNotEmpty ? merged.name : song.name,
+          artist: merged.artist.isNotEmpty ? merged.artist : song.artist,
+          cover: merged.cover.isNotEmpty ? merged.cover : song.cover,
+          duration:
+              merged.duration > Duration.zero ? merged.duration : song.duration,
+          quality: song.quality,
+        );
       }
     } catch (_) {
       // 详情查询失败不阻塞播放
@@ -81,6 +101,8 @@ class PlayerRepository {
   }
 
   /// 获取可播放 URL。从期望音质起逐级降级（super→high→flac→320→128）。
+  ///
+  /// 业务失败（含 20028）不是空地址：前者抛出权益/验证错误，后者才降级。
   Future<PlayableResult> resolveUrl(Song song,
       {AudioQuality? preferred}) async {
     await ensureDfid();
@@ -89,38 +111,90 @@ class PlayerRepository {
     var startIndex = order.indexOf(start);
     if (startIndex < 0) startIndex = order.length - 1;
 
-    Object? lastError;
+    ApiException? lastError;
     for (var i = startIndex; i < order.length; i++) {
       final q = order[i];
-      try {
-        final res = await _api.get('/song/url', query: {
-          'hash': song.hash,
-          'album_id': song.albumId,
-          'album_audio_id': song.albumAudioId,
-          'quality': q.value,
-          'free_part': '1',
-        });
-        final data = res['data'];
-        if (data is Map) {
-          final urls = <dynamic>[
-            if (data['url'] is List) ...(data['url'] as List) else data['url'],
-            if (data['backupUrl'] is List)
-              ...(data['backupUrl'] as List)
-            else
-              data['backupUrl'],
-          ];
-          for (final u in urls) {
-            final url = '$u';
-            if (url.isNotEmpty && url.startsWith('http') && url != 'null') {
-              return PlayableResult(url: url, quality: q);
-            }
-          }
-        }
-        lastError = ApiException(-1, '音质 ${q.value} 无可用播放地址');
-      } catch (e) {
-        lastError = e;
+      final res = await _api.get('/song/url', query: {
+        'hash': song.hash,
+        'album_id': song.albumId,
+        'album_audio_id': song.albumAudioId,
+        'quality': q.value,
+        'free_part': '1',
+      });
+      final data = res['data'] is Map ? res['data'] as Map : res;
+      final errorCode = _int(data['errcode'] ?? data['error_code']);
+      final status = _int(data['status']);
+      if (errorCode != 0 || (status != null && status != 1)) {
+        throw ApiException(
+          errorCode != 0 ? errorCode : -1,
+          _songFailureMessage(data, q),
+        );
       }
+
+      // 优先 url[0]，仅当主地址缺失时才使用 backupUrl[0]。
+      final url = _firstUrl(data['url']) ?? _firstUrl(data['backupUrl']);
+      if (url != null) {
+        return PlayableResult(
+          url: _proxyHttp(url),
+          quality: _actualQuality(data, q),
+          isPreview: _int(data['priv_status']) == 0 ||
+              data['hash_offset'] is Map,
+        );
+      }
+      lastError = ApiException(-1, '音质 ${q.value} 无可用播放地址');
     }
-    throw ApiException(-1, '获取播放地址失败：$lastError');
+    throw lastError ?? ApiException(-1, '没有可尝试的播放音质');
+  }
+
+  /// 将部署版 /privilege/lite 的真实权益字段转换为可播放性。
+  /// privilege 的 8 位表示无版权；接口顶层 status=1 且非无版权时可播放。
+  static bool canPlay(Map<dynamic, dynamic> privilege) {
+    final status = _int(privilege['status']);
+    if (status != null && status != 1) return false;
+    final value = _int(privilege['privilege']) ?? 0;
+    return value & 8 == 0;
+  }
+
+  static bool requiresVip(Map<dynamic, dynamic> privilege) {
+    final payType = _int(privilege['pay_type']) ?? 0;
+    return payType == 1 || payType == 3;
+  }
+
+  static String _songFailureMessage(Map data, AudioQuality quality) {
+    if (_int(data['errcode'] ?? data['error_code']) == 20028) {
+      return '本次请求需要验证';
+    }
+    if (data['privilege'] != null && !canPlay(data)) {
+      return (_int(data['privilege']) ?? 0) & 8 != 0 ? '歌曲暂无版权' : '歌曲不可播放';
+    }
+    if (requiresVip(data) || data['fail_process'] != null) {
+      return '音质 ${quality.value} 需要会员或单独购买';
+    }
+    return '${data['error'] ?? data['error_msg'] ?? data['errmsg'] ?? '音质 ${quality.value} 暂不可播放'}';
+  }
+
+  static int? _int(Object? value) =>
+      value is int ? value : int.tryParse('$value');
+
+  static String? _firstUrl(Object? value) {
+    final first = value is List && value.isNotEmpty ? value.first : value;
+    if (first == null) return null;
+    final url = first.toString().trim();
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;
+    return url;
+  }
+
+  static String _proxyHttp(String url) => url.startsWith('http://')
+      ? 'https://proxy.344977.xyz/$url'
+      : url;
+
+  static AudioQuality _actualQuality(Map data, AudioQuality requested) {
+    final bitrate = _int(data['bitRate']);
+    if (bitrate != null && bitrate > 0) {
+      if (bitrate <= 192000) return AudioQuality.q128;
+      if (bitrate <= 500000) return AudioQuality.q320;
+    }
+    return AudioQuality.fromString('${data['extName'] ?? requested.value}');
   }
 }

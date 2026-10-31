@@ -41,11 +41,17 @@ class LyricRepository {
   }
 
   /// 获取并解析 KRC 歌词（客户端解密或服务端 decode=true）
-  Future<KrcLyric?> fetchLyric(LyricCandidate candidate) async {
+  Future<KrcLyric?> fetchLyric(
+    LyricCandidate candidate, {
+    String format = 'krc',
+  }) async {
+    if (format != 'krc' && format != 'lrc') {
+      throw ArgumentError.value(format, 'format', '仅支持 krc 或 lrc');
+    }
     final query = {
       'id': candidate.id,
       'accesskey': candidate.accessKey,
-      'fmt': 'krc',
+      'fmt': format,
       'decode': 'true',
     };
     final cacheKey = MemoryCache.keyOf('/lyric', query);
@@ -53,14 +59,19 @@ class LyricRepository {
     final data = cached ?? await _api.get('/lyric', query: query);
     if (cached == null) MemoryCache.instance.set(cacheKey, data);
 
-    // 优先用服务端 decodeContent，否则客户端解密 content
+    // 优先用服务端 decodeContent；LRC 的 content 是明文 Base64，KRC 则加密。
     String? krcText;
-    if (data['decodeContent'] != null && (data['decodeContent'] as String).isNotEmpty) {
-      krcText = data['decodeContent'] as String;
-    } else if (data['content'] != null && data['contenttype'] == 0) {
+    final decoded = data['decodeContent'];
+    if (decoded is String && decoded.isNotEmpty) {
+      krcText = decoded;
+    } else if (data['content'] is String) {
       try {
-        krcText = KrcDecoder.decode(data['content'] as String);
-      } catch (_) {
+        krcText = format == 'lrc'
+            ? utf8.decode(base64.decode(
+                base64.normalize((data['content'] as String).trim())),
+                allowMalformed: true)
+            : KrcDecoder.decode(data['content'] as String);
+      } on FormatException {
         return null;
       }
     }
@@ -83,7 +94,10 @@ class LyricRepository {
         await LyricTranslationCache.instance.get(lyricId, targetLanguage);
     if (cached != null) {
       for (var i = 0; i < lyric.lines.length; i++) {
-        lyric.lines[i].translation = cached[i];
+        final translation = cached[i];
+        if (translation != null && translation.isNotEmpty) {
+          lyric.lines[i].translation = translation;
+        }
       }
       return lyric;
     }

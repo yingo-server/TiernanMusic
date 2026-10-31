@@ -22,6 +22,7 @@ class HomePage extends ConsumerWidget {
         child: homeAsync.when(
           loading: () => const _HomeSkeleton(),
           error: (e, _) => _HomeError(
+            error: e,
             onRetry: () => ref.invalidate(homeDataProvider),
           ),
           data: (data) => RefreshIndicator(
@@ -43,6 +44,15 @@ class HomePage extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (data.banners.isEmpty &&
+                    data.dailyRecommend == null &&
+                    data.playlists.isEmpty &&
+                    data.ranks.isEmpty &&
+                    data.songs.isEmpty)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: Text('暂无推荐内容，请下拉重试')),
+                  ),
                 if (data.banners.isNotEmpty)
                   SliverToBoxAdapter(child: _BannerCarousel(data.banners)),
                 if (data.dailyRecommend != null &&
@@ -473,18 +483,23 @@ class _HomeSkeleton extends StatelessWidget {
 }
 
 class _HomeError extends StatelessWidget {
-  const _HomeError({required this.onRetry});
+  const _HomeError({required this.error, required this.onRetry});
+  final Object error;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
+    final message = '$error';
+    final isAuthError = message.contains('20028') ||
+        message.contains('登录') ||
+        message.contains('验证');
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.cloud_off_outlined, size: 56),
           const SizedBox(height: 12),
-          const Text('加载失败，请检查网络'),
+          Text(isAuthError ? '需要登录或完成验证后重试' : '加载失败，请检查网络'),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: onRetry,

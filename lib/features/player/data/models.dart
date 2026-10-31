@@ -94,12 +94,14 @@ class Song {
           .join('、');
     }
 
+    final info = json['info'] is Map ? json['info'] as Map : const {};
     var cover = str(['cover', 'Image', 'img', 'album_img']);
+    if (cover.isEmpty) cover = '${info['image'] ?? ''}';
     cover = cover.replaceAll('{size}', '400');
 
-    // 时长：秒或毫秒，尽量兼容
+    // /privilege/lite 的时长位于 info.duration（毫秒）。
     var duration = Duration.zero;
-    final durRaw = json['duration'] ?? json['Duration'];
+    final durRaw = json['duration'] ?? json['Duration'] ?? info['duration'];
     if (durRaw is num) {
       // 大于 10000 视为毫秒
       duration = durRaw > 10000
@@ -116,8 +118,8 @@ class Song {
       artist: artist,
       cover: cover,
       duration: duration,
-      quality: AudioQuality.fromString(
-          str(['quality', 'best_free_quality', 'quality_vip'])),
+      // quality_vip 可为 null，best_free_quality 在该部署版中不存在。
+      quality: AudioQuality.fromString(str(['quality'])),
     );
   }
 
