@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
-import '../../features/auth/data/auth_providers.dart';
 import 'kg_client.dart';
+import 'kg_direct_api_client.dart';
 import 'kg_play_api.dart';
 
 /// 设备身份持久化（Hive box 'device'，单条 key 'kg'）
@@ -14,54 +14,41 @@ class KgDeviceStore {
   KgDeviceStore._();
   static final instance = KgDeviceStore._();
 
-  static const _boxName = 'device';
+  static const boxName = 'device';
   static const _key = 'kg';
 
-  Box<String>? _box;
-
-  Future<Box<String>> _open() async =>
-      _box ??= await Hive.openBox<String>(_boxName);
-
-  Future<KgDevice> load() async {
-    final box = await _open();
+  /// 同步加载（Hive 已 open 后可用），首次无记录则生成并保存
+  static KgDevice loadSync(Box<String> box) {
     final raw = box.get(_key);
     if (raw != null) {
       try {
-        return KgDevice.fromJson(
-            jsonDecode(raw) as Map<String, dynamic>);
+        return KgDevice.fromJson(jsonDecode(raw) as Map<String, dynamic>);
       } catch (_) {}
     }
     final device = KgDevice.generate();
-    await save(device);
+    box.put(_key, jsonEncode(device.toJson()));
     return device;
   }
 
-  Future<void> save(KgDevice device) async {
-    final box = await _open();
-    await box.put(_key, jsonEncode(device.toJson()));
-  }
+  static Future<void> save(Box<String> box, KgDevice device) =>
+      box.put(_key, jsonEncode(device.toJson()));
 }
 
-/// 全局设备
-final kgDeviceProvider = FutureProvider<KgDevice>((ref) async {
-  return KgDeviceStore.instance.load();
+/// 设备（main() 中 override）
+final kgDeviceProvider = Provider<KgDevice>((ref) {
+  throw UnimplementedError('kgDeviceProvider 需在 main() 中 override');
 });
 
-/// 全局直连客户端（登录态变化时同步 token/userid）
-final kgClientProvider = FutureProvider<KgClient>((ref) async {
-  final device = await ref.watch(kgDeviceProvider.future);
-  final client = KgClient(device: device);
-  final auth = ref.watch(authStateProvider);
-  final user = auth.value;
-  if (user != null) {
-    client.token = user.token;
-    client.userid = user.userid;
-  }
-  return client;
+/// 直连客户端（main() 中 override，或由设备派生）
+final kgClientProvider = Provider<KgClient>((ref) {
+  return KgClient(device: ref.watch(kgDeviceProvider));
 });
 
 /// 直连播放接口
-final kgPlayApiProvider = FutureProvider<KgPlayApi>((ref) async {
-  final client = await ref.watch(kgClientProvider.future);
-  return KgPlayApi(client);
+final kgPlayApiProvider =
+    Provider<KgPlayApi>((ref) => KgPlayApi(ref.watch(kgClientProvider)));
+
+/// 直连内容客户端（替代 kapi 中转）
+final kgDirectApiProvider = Provider<KgDirectApiClient>((ref) {
+  return KgDirectApiClient(ref.watch(kgClientProvider));
 });

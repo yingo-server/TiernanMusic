@@ -28,7 +28,7 @@ class PlayerRepository {
   final Ref? _ref;
 
   /// 动态获取直连播放接口（异步 provider，可能尚未就绪）
-  KgPlayApi? get _directPlay => _ref?.read(kgPlayApiProvider).value;
+  KgPlayApi? get _directPlay => _ref?.read(kgPlayApiProvider);
 
   bool _registering = false;
 
