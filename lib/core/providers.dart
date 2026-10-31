@@ -18,8 +18,7 @@ final lyricRepositoryProvider = Provider<LyricRepository>((ref) =>
     LyricRepository(
         ref.watch(kugouApiClientProvider), ref.watch(translateApiProvider)));
 
-/// 全局 ProviderScope 容器（在非 Widget 环境读取 provider 时使用）
-final globalContainer = ProviderContainer();
-
-/// 便捷访问全局 API 客户端
-KugouApiClient get kugouApi => globalContainer.read(kugouApiClientProvider);
+// 注意：不要在这里创建第二个顶层 ProviderContainer（旧的 globalContainer）。
+// 它没有 ProviderScope 的 override（尤其 kgDeviceProvider），一旦被读取会抛
+// UnimplementedError。需要访问客户端时一律通过 Provider 的 ref 获取，
+// 例如 ref.watch(kugouApiClientProvider)。

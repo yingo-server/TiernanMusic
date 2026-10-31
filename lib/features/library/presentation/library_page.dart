@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/providers.dart' show kugouApi;
+import '../../../core/providers.dart' show kugouApiClientProvider;
 import '../../../core/widgets/song_tile.dart';
 import '../../auth/data/account_manager.dart';
 import '../../playlist/data/playlist_repository.dart';
@@ -325,7 +325,7 @@ class _LoginGuideCard extends StatelessWidget {
 final _userPlaylistsProvider = FutureProvider.autoDispose
     .family<List<UserPlaylist>, bool>((ref, loggedIn) async {
   if (!loggedIn) return const [];
-  final repo = PlaylistRepository(kugouApi);
+  final repo = PlaylistRepository(ref.watch(kugouApiClientProvider));
   return repo.fetchUserPlaylists();
 });
 
