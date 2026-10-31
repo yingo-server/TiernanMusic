@@ -1,0 +1,85 @@
+import 'package:hive/hive.dart';
+
+import '../config/app_config.dart';
+
+/// 内存缓存（90 秒过期）
+class MemoryCache {
+  MemoryCache._();
+  static final instance = MemoryCache._();
+
+  final _cache = <String, _Entry>{};
+
+  T? get<T>(String key) {
+    final e = _cache[key];
+    if (e == null) return null;
+    if (DateTime.now().isAfter(e.expires)) {
+      _cache.remove(key);
+      return null;
+    }
+    return e.value as T?;
+  }
+
+  void set<T>(String key, T value, {Duration? ttl}) {
+    _cache[key] = _Entry(
+      value,
+      DateTime.now().add(ttl ?? const Duration(seconds: AppConfig.memoryCacheSeconds)),
+    );
+  }
+
+  void clear() => _cache.clear();
+
+  static String keyOf(String path, [Map<String, dynamic>? query]) {
+    if (query == null || query.isEmpty) return path;
+    final sorted = Map.fromEntries(
+        query.entries.toList()..sort((a, b) => a.key.compareTo(b.key)));
+    return '$path?${sorted.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+  }
+}
+
+class _Entry {
+  _Entry(this.value, this.expires);
+  final Object? value;
+  final DateTime expires;
+}
+
+/// 歌词翻译持久缓存（按歌词 ID + 目标语言）
+class LyricTranslationCache {
+  LyricTranslationCache._();
+  static final instance = LyricTranslationCache._();
+
+  Box<String>? _box;
+
+  Future<void> init() async {
+    _box ??= await Hive.openBox<String>('lyric_translations');
+  }
+
+  String _key(String lyricId, String targetLang) => '$lyricId:$targetLang';
+
+  Future<Map<int, String>?> get(String lyricId, String targetLang) async {
+    await init();
+    final raw = _box!.get(_key(lyricId, targetLang));
+    if (raw == null) return null;
+    final map = <int, String>{};
+    for (final line in raw.split('\n')) {
+      final idx = line.indexOf('\t');
+      if (idx > 0) {
+        map[int.parse(line.substring(0, idx))] = line.substring(idx + 1);
+      }
+    }
+    return map;
+  }
+
+  Future<void> set(
+      String lyricId, String targetLang, Map<int, String> translations) async {
+    await init();
+    final raw = translations.entries
+        .map((e) => '${e.key}\t${e.value}')
+        .join('\n');
+    await _box!.put(_key(lyricId, targetLang), raw);
+  }
+
+  Future<void> clear() async {
+    await init();
+    await _box!.clear();
+  }
+}

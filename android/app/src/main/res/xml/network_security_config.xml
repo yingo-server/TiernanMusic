@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 默认禁止 cleartext -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- 允许酷狗域名 cleartext（MV HTTP 流） -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">kugou.com</domain>
+        <domain includeSubdomains="true">kugouaudio.com</domain>
+        <domain includeSubdomains="true">fsmvpc.kugou.com</domain>
+        <domain includeSubdomains="true">fsmvpc.tx.kugou.com</domain>
+    </domain-config>
+</network-security-config>

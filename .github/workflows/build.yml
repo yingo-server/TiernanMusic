@@ -1,0 +1,115 @@
+name: Tiernan Music Build
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  analyze-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Generate i18n
+        run: flutter gen-l10n || true
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test
+
+  build-apk:
+    needs: analyze-test
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Generate i18n
+        run: flutter gen-l10n || true
+
+      - name: Generate keystore
+        if: github.ref_type == 'tag'
+        run: |
+          keytool -genkeypair -v \
+            -keystore android/app/tiernan.jks \
+            -alias tiernan \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -storepass tiernan123 -keypass tiernan123 \
+            -dname "CN=Tiernan Music, OU=Dev, O=yingo-server, L=Unknown, ST=Unknown, C=CN"
+
+      - name: Build APK (debug)
+        run: flutter build apk --debug --split-per-abi
+
+      - name: Build APK (release, tagged)
+        if: github.ref_type == 'tag'
+        run: flutter build apk --release --split-per-abi
+
+      - name: Upload debug APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiernan-debug-apks
+          path: build/app/outputs/flutter-apk/*-debug.apk
+          retention-days: 30
+
+      - name: Upload release APKs
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiernan-release-apks
+          path: build/app/outputs/flutter-apk/*-release.apk
+          retention-days: 90
+
+  release:
+    needs: build-apk
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: tiernan-release-apks
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            artifacts/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
