@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
-../../../l10n/l10n.dart
 
 import '../../home/data/models.dart';
 import '../../../core/widgets/song_tile.dart' show GradientChip, EmptyState;
 import '../../player/play_helper.dart';
 import '../data/search_repository.dart';
+import '../../../l10n/l10n.dart';
 
 final _log = Logger();
 
@@ -414,7 +414,7 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text(context.l10n.totalSongs(_total)),
+              child: Text(context.l10n.totalSongs(_total),
                   style: Theme.of(context).textTheme.bodySmall),
             ),
           ),

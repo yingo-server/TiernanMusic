@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-../../../l10n/l10n.dart
 
 import '../../../core/providers.dart' show kugouApi;
 import '../../../core/widgets/song_tile.dart';
@@ -11,6 +10,7 @@ import '../../playlist/data/playlist_repository.dart';
 import '../../player/data/models.dart';
 import '../../player/play_helper.dart';
 import '../data/recent_play_store.dart';
+import '../../../l10n/l10n.dart';
 
 /// 音乐库页：账号卡片 + 我的歌单 + 最近播放 + 收藏 MV 占位。
 class LibraryPage extends ConsumerStatefulWidget {

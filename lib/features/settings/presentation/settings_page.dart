@@ -10,10 +10,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/cache/cache_manager.dart';
-../../../l10n/l10n.dart
 import '../../../core/config/app_config.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../core/theme/settings_provider.dart';
+import '../../../l10n/l10n.dart';
 import 'settings_providers.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -121,7 +121,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text(context.l10n.cacheCleared)));
+            .showSnackBar(SnackBar(content: Text(context.l10n.cacheCleared)));
       }
       _loadCacheSize();
     } catch (e) {
@@ -430,7 +430,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               await ref.read(kugouApiProvider.notifier).reset();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text(context.l10n.resetToDefaultDone)));
+                    SnackBar(content: Text(context.l10n.resetToDefaultDone)));
               }
             },
           ),

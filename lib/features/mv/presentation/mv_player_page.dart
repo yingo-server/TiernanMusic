@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-../../../l10n/l10n.dart
 import 'package:video_player/video_player.dart';
 
-import '../../mv/mv_provider.dart';
+import '../../../l10n/l10n.dart';
 import '../data/mv_repository.dart';
+import '../mv_provider.dart';
 
 /// 清晰度档位显示名。
 const _qualityLabels = {

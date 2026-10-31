@@ -4,10 +4,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-../../../l10n/l10n.dart
 
 import '../player_provider.dart';
 import 'queue_sheet.dart';
+import '../../../l10n/l10n.dart';
 
 /// 底部迷你播放器（高 64）。无播放内容时不显示。
 class MiniPlayer extends ConsumerStatefulWidget {

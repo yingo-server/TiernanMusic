@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../../core/providers.dart' show lyricRepositoryProvider;
-../../../l10n/l10n.dart
 import '../../../core/theme/settings_provider.dart';
+import '../../../l10n/l10n.dart';
 import '../../lyric/data/krc_parser.dart';
 import '../../lyric/presentation/lyric_view.dart';
 import '../../mv/mv_provider.dart';

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
-../../../l10n/l10n.dart
 import '../../../core/widgets/song_tile.dart';
 import '../../auth/data/auth_providers.dart';
 import '../data/comment_repository.dart';
+import '../../../l10n/l10n.dart';
 
 final _commentRepoProvider = Provider<CommentRepository>(
     (ref) => CommentRepository(ref.watch(kugouApiClientProvider)));

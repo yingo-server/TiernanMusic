@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/song_tile.dart';
-../../../l10n/l10n.dart
 import '../player_provider.dart';
+import '../../../l10n/l10n.dart';
 
 /// 播放队列底部弹层（迷你播放器长按 / 全屏播放页队列按钮共用）。
 Future<void> showQueueSheet(BuildContext context) {

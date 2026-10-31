@@ -4,9 +4,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-../../../l10n/l10n.dart
 
 import '../../../core/providers.dart' show kugouApiClientProvider;
+import '../../../l10n/l10n.dart';
 import '../data/auth_providers.dart';
 import '../data/auth_repository.dart';
 import 'captcha_page.dart';
