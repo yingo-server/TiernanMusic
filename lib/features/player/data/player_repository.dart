@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api/kugou_api_client.dart';
-import '../../core/direct/kg_play_api.dart';
-import '../../core/direct/kg_providers.dart';
-import '../../core/storage/secure_storage.dart';
+import '../../../core/api/kugou_api_client.dart';
+import '../../../core/direct/kg_play_api.dart';
+import '../../../core/direct/kg_providers.dart';
+import '../../../core/storage/secure_storage.dart';
 import 'models.dart';
 
 /// 一次成功解析出的播放结果。
