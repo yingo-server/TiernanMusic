@@ -15,12 +15,28 @@ import 'player_repository.dart';
 /// 并维护歌曲队列与播放逻辑（含音质解析与失败自动降级）。
 class TiernanAudioHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
-  TiernanAudioHandler(this._repository) {
-    _init();
-  }
+  TiernanAudioHandler(this._repository);
 
   final PlayerRepository _repository;
-  final AudioPlayer _player = AudioPlayer();
+
+  /// 延迟创建：启动期不实例化 AudioPlayer / AudioSession，
+  /// 避免任何平台通道异常导致首屏卡死。
+  AudioPlayer? _playerInstance;
+  AudioPlayer get _player => _playerInstance ??= AudioPlayer();
+
+  bool _initialized = false;
+
+  /// 首次播放前调用；重复调用安全。
+  void ensureInitialized() {
+    if (_initialized) return;
+    _initialized = true;
+    final p = _player; // 触发创建
+    p.playbackEventStream.listen(_broadcastState);
+    p.processingStateStream.listen((state) {
+      if (state == ProcessingState.completed) skipToNext();
+    });
+    _configureSession();
+  }
 
   final List<Song> _songs = [];
   final _currentSongController = StreamController<Song?>.broadcast();
@@ -37,7 +53,10 @@ class TiernanAudioHandler extends BaseAudioHandler
   bool _loading = false;
   int _playToken = 0;
 
-  AudioPlayer get player => _player;
+  AudioPlayer get player {
+    ensureInitialized();
+    return _player;
+  }
 
   /// 当前播放歌曲流。
   Stream<Song?> get currentSongStream => _currentSongController.stream;
@@ -50,20 +69,6 @@ class TiernanAudioHandler extends BaseAudioHandler
   int get currentIndex => _index;
   Song? get currentSong =>
       (_index >= 0 && _index < _songs.length) ? _songs[_index] : null;
-
-  void _init() {
-    // 转发播放状态
-    _player.playbackEventStream.listen(_broadcastState);
-
-    // 播放完成自动下一首
-    _player.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed) {
-        skipToNext();
-      }
-    });
-
-    _configureSession();
-  }
 
   Future<void> _configureSession() async {
     try {
@@ -143,6 +148,7 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   /// 设置队列并从 [index] 开始播放。
   Future<void> playQueue(List<Song> songs, int index) async {
+    ensureInitialized();
     _songs
       ..clear()
       ..addAll(songs);
@@ -152,6 +158,7 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   /// 播放单曲（追加到队列或替换当前位置）。
   Future<void> playSong(Song song) async {
+    ensureInitialized();
     final existing = _songs.indexOf(song);
     if (existing >= 0) {
       await _playAt(existing);
@@ -164,6 +171,7 @@ class TiernanAudioHandler extends BaseAudioHandler
   }
 
   Future<void> _playAt(int index) async {
+    ensureInitialized();
     if (index < 0 || index >= _songs.length) return;
     _index = index;
     _emitMediaItem();

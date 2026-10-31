@@ -13,6 +13,7 @@ import '../../features/comment/presentation/comments_page.dart';
 import '../../features/mv/presentation/mv_player_page.dart';
 import '../../features/library/presentation/library_page.dart';
 import '../../features/player/presentation/mini_player.dart';
+import '../../features/download/presentation/download_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -48,6 +49,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           resourceType: state.pathParameters['type']!,
           resourceId: state.pathParameters['id']!,
         ),
+      ),
+      GoRoute(
+        path: '/downloads',
+        builder: (_, __) => const DownloadPage(),
       ),
       GoRoute(
         path: '/mv/:hash',

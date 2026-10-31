@@ -141,6 +141,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _buildAccountSection(),
           _buildAppearanceSection(),
           _buildPlaybackSection(),
+          _buildDownloadSection(),
           _buildCacheSection(),
           _buildApiSection(),
           _buildAboutSection(),
@@ -380,6 +381,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
         ],
       ),
+    );
+  }
+
+  // ---------- 下载 ----------
+  Widget _buildDownloadSection() {
+    return _Section(
+      title: context.l10n.downloadManagement,
+      children: [
+        ListTile(
+          leading: const Icon(Icons.download_for_offline_outlined),
+          title: Text(context.l10n.downloadManagement),
+          subtitle: Text(context.l10n.downloads),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push<void>('/downloads'),
+        ),
+      ],
     );
   }
 

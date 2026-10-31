@@ -9,6 +9,9 @@ import '../../auth/data/account_manager.dart';
 import '../../playlist/data/playlist_repository.dart';
 import '../../player/data/models.dart';
 import '../../player/play_helper.dart';
+import '../../download/data/download_task.dart';
+import '../../download/download_provider.dart';
+import '../../download/presentation/download_sheet.dart';
 import '../data/recent_play_store.dart';
 import '../../../l10n/l10n.dart';
 
@@ -38,6 +41,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final theme = Theme.of(context);
     final account = _currentAccount();
     final playlistsAsync = ref.watch(_userPlaylistsProvider(account != null));
+    final downloaded = ref.watch(downloadedAudioProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.library,
@@ -91,7 +95,48 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 artist: r.artist,
                 cover: r.cover,
                 onTap: () => _playRecent(r),
+                onDownload: () => showDownloadSheet(
+                  context,
+                  Song(
+                    hash: r.hash,
+                    albumAudioId: r.albumAudioId,
+                    name: r.name,
+                    artist: r.artist,
+                    cover: r.cover,
+                  ),
+                ),
               ),
+          ],
+
+          // ---- 已下载 ----
+          _sectionTitle(context, context.l10n.downloadedSongs),
+          if (downloaded.isEmpty)
+            EmptyState(
+              icon: Icons.download_for_offline_outlined,
+              message: context.l10n.noDownloads,
+              actionLabel: context.l10n.downloadManagement,
+              onAction: () => context.push<void>('/downloads'),
+            )
+          else ...[
+            for (final task in downloaded.take(20))
+              SongTile(
+                title: task.title.isEmpty ? task.hash : task.title,
+                artist: task.artist,
+                cover: task.coverUrl,
+                onTap: () => _playDownloaded(task),
+                trailing: const Icon(Icons.offline_pin_outlined, size: 20),
+              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => context.push<void>('/downloads'),
+                  icon: const Icon(Icons.folder_open_outlined, size: 18),
+                  label: Text(context.l10n.downloadManagement),
+                ),
+              ),
+            ),
           ],
 
           // ---- 我收藏的 MV ----
@@ -114,6 +159,20 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       name: r.name,
       artist: r.artist,
       cover: r.cover,
+    );
+    await ref.read(playHelperProvider).playSong(song);
+    if (!mounted) return;
+    context.push('/player');
+  }
+
+  /// 播放已下载音频（本地文件路径优先）。
+  Future<void> _playDownloaded(DownloadTask task) async {
+    final song = Song(
+      hash: task.hash,
+      albumAudioId: task.albumAudioId,
+      name: task.title.isEmpty ? task.hash : task.title,
+      artist: task.artist,
+      cover: task.coverUrl,
     );
     await ref.read(playHelperProvider).playSong(song);
     if (!mounted) return;

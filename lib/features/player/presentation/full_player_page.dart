@@ -10,6 +10,7 @@ import '../../../l10n/l10n.dart';
 import '../../lyric/data/krc_parser.dart';
 import '../../lyric/presentation/lyric_view.dart';
 import '../../mv/mv_provider.dart';
+import '../../download/presentation/download_sheet.dart';
 import '../data/models.dart';
 import '../player_provider.dart';
 import 'queue_sheet.dart';
@@ -72,6 +73,13 @@ class FullPlayerPage extends ConsumerWidget {
                   child: Text(context.l10n.nowPlaying,
                       textAlign: TextAlign.center,
                       style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.download_outlined),
+                  tooltip: context.l10n.download,
+                  onPressed: song == null
+                      ? null
+                      : () => showDownloadSheet(context, song),
                 ),
                 IconButton(
                   icon: const Icon(Icons.queue_music_rounded),

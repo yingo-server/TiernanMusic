@@ -137,21 +137,44 @@ class HomeRepository {
     return fetchYuekuSongs();
   }
 
-  /// 首页聚合：并发请求 yueku + top/playlist + rank/list，
-  /// banner / 每日推荐独立容错。
+  /// 首页聚合：全部并发，单项超时 12s，任一失败不影响其它区块。
+  ///
+  /// 之前是串行（3 并发 + banner + 每日推荐 顺序 await），最坏 90s 骨架屏，
+  /// 表现为"卡在第一屏"。现在并发 + 单项超时，最坏 12s 出内容或错误页。
   Future<HomeData> fetchHomeData() async {
-    final results = await Future.wait([
-      fetchNewSongs(),
-      fetchTopPlaylists(),
-      fetchRankList(),
+    const t = Duration(seconds: 12);
+    Future<T?> safe<T>(Future<T> f, T? fallback) async {
+      try {
+        return await f.timeout(t);
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    final futures = await Future.wait<Object?>([
+      safe(fetchNewSongs(), const <HomeSong>[]),
+      safe(fetchTopPlaylists(), const <HomePlaylist>[]),
+      safe(fetchRankList(), const <HomeRank>[]),
+      safe(fetchBanners(), const <HomeBanner>[]),
+      safe(fetchDailyRecommend(), null),
     ]);
-    final banners = await fetchBanners();
-    final daily = await fetchDailyRecommend();
+
+    final songs = futures[0] as List<HomeSong>? ?? const <HomeSong>[];
+    final playlists = futures[1] as List<HomePlaylist>? ?? const <HomePlaylist>[];
+    final ranks = futures[2] as List<HomeRank>? ?? const <HomeRank>[];
+    final banners = futures[3] as List<HomeBanner>? ?? const <HomeBanner>[];
+    final daily = futures[4] as List<HomeSong>?;
+
+    // 完全没有任何内容时明确报错，让 UI 显示"重试"而不是空骨架
+    if (songs.isEmpty && playlists.isEmpty && ranks.isEmpty && banners.isEmpty) {
+      throw Exception('首页数据加载失败，请检查网络后重试');
+    }
+
     return HomeData(
       banners: banners,
-      songs: results[0] as List<HomeSong>,
-      playlists: results[1] as List<HomePlaylist>,
-      ranks: results[2] as List<HomeRank>,
+      songs: songs,
+      playlists: playlists,
+      ranks: ranks,
       dailyRecommend: daily,
     );
   }

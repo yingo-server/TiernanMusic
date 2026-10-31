@@ -13,6 +13,7 @@ class SongTile extends StatelessWidget {
     this.duration,
     this.trailing,
     this.onTap,
+    this.onDownload,
     this.isPlaying = false,
   });
 
@@ -22,6 +23,7 @@ class SongTile extends StatelessWidget {
   final int? duration; // 秒
   final Widget? trailing;
   final VoidCallback? onTap;
+  final VoidCallback? onDownload;
   final bool isPlaying;
 
   @override
@@ -61,14 +63,20 @@ class SongTile extends StatelessWidget {
         ),
       ),
       trailing: trailing ??
-          (duration != null
-              ? Text(
-                  _fmt(duration!),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.5),
-                  ),
+          (onDownload != null
+              ? IconButton(
+                  icon: const Icon(Icons.download_outlined, size: 20),
+                  tooltip: context.l10n.download,
+                  onPressed: onDownload,
                 )
-              : null),
+              : (duration != null
+                  ? Text(
+                      _fmt(duration!),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    )
+                  : null)),
     );
   }
 
