@@ -58,6 +58,17 @@ class KgDirectApiClient extends KugouApiClient {
         return _wrap(await _commentFloor(q));
       case 'song/url':
         return _wrap(await _songUrl(q));
+      // 仓库既有 Repository 用 get() 调这些接口（B 代理实测发现），
+      // 直连必须在这里也接住，否则漏到 kapi 回退
+      case 'playlist/detail':
+        return _wrap(await _playlistDetail(q));
+      case 'kmr/audio/mv':
+        return _wrap(await _kmrAudioMv(q));
+      case 'comment/music':
+        return _wrap(await _commentMusic(q));
+      case 'top/playlist':
+        // 实测 GET 恒 200101，必须 POST
+        return _wrap(await _topPlaylist(q));
     }
     return super.get(path, query: query);
   }
@@ -374,12 +385,13 @@ class KgDirectApiClient extends KugouApiClient {
   // ---------------- MV ----------------
 
   Future<KgResponse> _kmrAudioMv(Map<String, dynamic> q) {
-    final ids = '${q['album_audio_id'] ?? ''}'.split(',');
+    // B 代理实测：该接口要 mixsongid（传 album_audio_id 返回 [{}]）
+    final ids = '${q['mixsongid'] ?? q['album_audio_id'] ?? ''}'.split(',');
     return kg.request('/kmr/v1/audio/mv',
         method: 'POST',
         headers: {'x-router': 'openapi.kugou.com', 'KG-TID': '38'},
         data: {
-          'data': ids.map((s) => {'album_audio_id': s}).toList(),
+          'data': ids.map((s) => {'mixsongid': s}).toList(),
           'fields': q['fields'] ?? '',
         });
   }
