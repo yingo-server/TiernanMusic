@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
 
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/direct/kg_play_api.dart';
@@ -110,9 +111,21 @@ class PlayerRepository {
     return song;
   }
 
+  /// 读取用户设置的默认音质（Hive settings['defaultQuality']，缺省 320）
+  AudioQuality _preferredFromSettings() {
+    try {
+      if (Hive.isBoxOpen('settings')) {
+        final v = Hive.box<dynamic>('settings').get('defaultQuality');
+        if (v is String) return AudioQuality.fromString(v);
+      }
+    } catch (_) {}
+    return AudioQuality.q320;
+  }
+
   /// 获取可播放 URL：直连优先，失败回退 kapi。
   Future<PlayableResult> resolveUrl(Song song,
       {AudioQuality? preferred}) async {
+    preferred ??= _preferredFromSettings();
     if (_directPlay != null) {
       try {
         final direct =

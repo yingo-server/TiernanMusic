@@ -31,6 +31,7 @@ class PlayHelper {
     final song = Song(
       hash: s.hash ?? s.id,
       albumId: s.albumId ?? '',
+      albumAudioId: s.albumAudioId ?? '',
       name: s.name,
       artist: s.singer,
       cover: s.cover,
@@ -46,6 +47,7 @@ class PlayHelper {
         .map((s) => Song(
               hash: s.hash ?? s.id,
               albumId: s.albumId ?? '',
+              albumAudioId: s.albumAudioId ?? '',
               name: s.name,
               artist: s.singer,
               cover: s.cover,

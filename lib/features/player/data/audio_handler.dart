@@ -170,15 +170,24 @@ class TiernanAudioHandler extends BaseAudioHandler
     await _playAt(_songs.indexOf(song));
   }
 
+  /// 加载中又收到的新播放请求（排队，保证"点了就有声音"）
+  int? _pendingIndex;
+  int _failureStreak = 0;
+
   Future<void> _playAt(int index) async {
     ensureInitialized();
     if (index < 0 || index >= _songs.length) return;
+
+    if (_loading) {
+      // 不丢弃请求：记录待播下标，当前流程结束后立刻播它
+      _pendingIndex = index;
+      return;
+    }
+
     _index = index;
     _emitMediaItem();
     final token = ++_playToken;
     final song = _songs[index];
-
-    if (_loading) return;
     _loading = true;
     try {
       // 先广播缓冲状态
@@ -201,6 +210,7 @@ class TiernanAudioHandler extends BaseAudioHandler
         ),
       );
       if (token != _playToken) return;
+      _failureStreak = 0;
       await _player.play();
     } catch (e) {
       // 命中 20028：需要人机验证，不跳歌，交由 UI 弹验证页后重试
@@ -214,13 +224,18 @@ class TiernanAudioHandler extends BaseAudioHandler
         ));
         return;
       }
-      // 播放失败，尝试下一首
+      // 播放失败，尝试下一首（连续失败达到队列长度即停止，防止无限循环）
       playbackState.add(playbackState.value.copyWith(
         processingState: AudioProcessingState.error,
         errorMessage: '播放失败：$e',
       ));
-      if (token == _playToken && _songs.length > 1) {
+      _failureStreak++;
+      final canAdvance =
+          token == _playToken && _songs.length > 1 && _failureStreak < _songs.length;
+      if (canAdvance) {
         await skipToNext();
+      } else {
+        _failureStreak = 0;
       }
     } finally {
       _loading = false;

@@ -154,12 +154,14 @@ class TiernanMusicApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // 登录态变化时同步到直连客户端（仅在有值时创建 client，避免启动期强依赖）
     ref.listen(authStateProvider, (_, next) {
-      final user = next.value;
-      if (user == null) return;
+      // loading 期间不做任何事（避免把已登录态误清空）
+      if (next.isLoading) return;
       try {
         final client = ref.read(kgClientProvider);
-        client.token = user.token;
-        client.userid = user.userid;
+        final user = next.value;
+        // 退出登录时必须清空，否则会继续以旧账号身份请求
+        client.token = user?.token ?? '';
+        client.userid = user?.userid ?? '0';
       } catch (e) {
         debugPrint('[auth-sync] $e');
       }
