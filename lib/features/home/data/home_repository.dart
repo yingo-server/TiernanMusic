@@ -74,7 +74,7 @@ class HomeRepository {
   /// 排行榜列表
   Future<List<HomeRank>> fetchRankList() async {
     final json = await _cachedGet('/rank/list', query: {'withsong': '1'});
-    final raw = _asList(json['data']?['info']);
+    final raw = data is Map ? _asList(data['info']) : const <dynamic>[];
     return raw
         .map((e) => HomeRank.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
