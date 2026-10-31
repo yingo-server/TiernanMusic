@@ -17,6 +17,9 @@ import 'l10n/l10n.dart';
 /// 启动阶段致命错误（用于在 UI 上直接展示，而不是白屏卡死）
 Object? _startupError;
 
+/// 首帧是否已渲染（用于启动看门狗）
+bool _firstFrameRendered = false;
+
 Future<void> main() async {
   // 任何未捕获异常都记录下来，保证仍能 runApp 显示错误页
   runZonedGuarded(() async {
@@ -34,63 +37,110 @@ Future<void> main() async {
     );
 
     KgDevice? device;
+
+    // 整个「启动准备」阶段都包在 try 里：任何未预期异常都不得阻止 runApp，
+    // 否则原生启动屏（LaunchTheme）永远不会被 Flutter 首帧替换 —— 表现为「卡在第一屏」。
     try {
-      await Hive.initFlutter();
+      try {
+        await Hive.initFlutter();
+      } catch (e, st) {
+        debugPrint('[startup] Hive.initFlutter failed: $e\n$st');
+      }
+
+      // 逐个 box 打开，单个失败不影响启动
+      Future<void> openSafe(String name, {bool stringValues = false}) async {
+        try {
+          if (stringValues) {
+            await Hive.openBox<String>(name);
+          } else {
+            await Hive.openBox<dynamic>(name);
+          }
+        } catch (e) {
+          debugPrint('[startup] openBox($name) failed: $e');
+        }
+      }
+
+      await openSafe(KgDeviceStore.boxName, stringValues: true);
+      await openSafe('settings');
+      await openSafe('accounts');
+      await openSafe('recent_plays');
+      await openSafe('search_history', stringValues: true);
+      await openSafe('lyric_translations', stringValues: true);
+      await openSafe('downloads');
+
+      // 设备身份（box 未开时用内存默认值兜底，绝不阻塞启动）
+      try {
+        final box = Hive.isBoxOpen(KgDeviceStore.boxName)
+            ? Hive.box<String>(KgDeviceStore.boxName)
+            : null;
+        device = box != null
+            ? KgDeviceStore.loadSync(box)
+            : KgDevice.generate();
+      } catch (e) {
+        debugPrint('[startup] device init failed: $e');
+        device = KgDevice.generate();
+      }
+
+      // 音频后台服务：失败不阻塞（否则整机白屏）
+      try {
+        await JustAudioBackground.init(
+          androidNotificationChannelId: 'com.tiernan.music.channel.audio',
+          androidNotificationChannelName: '汀澜音乐播放',
+          androidNotificationOngoing: true,
+        ).timeout(const Duration(seconds: 8));
+      } catch (e) {
+        debugPrint('[startup] JustAudioBackground.init failed: $e');
+      }
     } catch (e, st) {
-      debugPrint('[startup] Hive.initFlutter failed: $e\n$st');
+      // 兜底：准备阶段出现任何未预期异常，记录并继续 runApp（不让启动屏卡死）
+      _startupError = e;
+      debugPrint('[startup] preparation failed: $e\n$st');
     }
 
-    // 逐个 box 打开，单个失败不影响启动
-    Future<void> openSafe(String name, {bool stringValues = false}) async {
+    // 设备身份最终兜底：device 为 null 时（极端情况）再尝试一次
+    if (device == null) {
       try {
-        if (stringValues) {
-          await Hive.openBox<String>(name);
-        } else {
-          await Hive.openBox<dynamic>(name);
-        }
+        device = KgDevice.generate();
       } catch (e) {
-        debugPrint('[startup] openBox($name) failed: $e');
+        _startupError ??= e;
+        debugPrint('[startup] device fallback failed: $e');
       }
     }
-
-    await openSafe(KgDeviceStore.boxName, stringValues: true);
-    await openSafe('settings');
-    await openSafe('accounts');
-    await openSafe('recent_plays');
-    await openSafe('search_history', stringValues: true);
-    await openSafe('lyric_translations', stringValues: true);
-    await openSafe('downloads');
-
-    // 设备身份（box 未开时用内存默认值兜底，绝不阻塞启动）
-    try {
-      final box = Hive.isBoxOpen(KgDeviceStore.boxName)
-          ? Hive.box<String>(KgDeviceStore.boxName)
-          : null;
-      device = box != null
-          ? KgDeviceStore.loadSync(box)
-          : KgDevice.generate();
-    } catch (e) {
-      debugPrint('[startup] device init failed: $e');
-      device = KgDevice.generate();
+    if (device == null) {
+      // 仍失败：写入 startupError 让 UI 显示错误页，而不是让 override 崩溃
+      _startupError ??= StateError('设备身份初始化失败');
     }
 
-    // 音频后台服务：失败不阻塞（否则整机白屏）
+    // 无论如何都要 runApp —— 保证首帧渲染，原生启动屏才会消失
+    final dev = device;
+    final overrides = <Override>[
+      if (dev != null) kgDeviceProvider.overrideWithValue(dev),
+    ];
+
     try {
-      await JustAudioBackground.init(
-        androidNotificationChannelId: 'com.tiernan.music.channel.audio',
-        androidNotificationChannelName: '汀澜音乐播放',
-        androidNotificationOngoing: true,
-      ).timeout(const Duration(seconds: 8));
-    } catch (e) {
-      debugPrint('[startup] JustAudioBackground.init failed: $e');
+      runApp(
+        ProviderScope(
+          overrides: overrides,
+          child: const TiernanMusicApp(),
+        ),
+      );
+    } catch (e, st) {
+      debugPrint('[startup] runApp failed: $e\n$st');
     }
 
-    runApp(
-      ProviderScope(
-        overrides: [kgDeviceProvider.overrideWithValue(device!)],
-        child: const TiernanMusicApp(),
-      ),
-    );
+    // 启动看门狗：15 秒内首帧未渲染则记录日志（不阻塞 UI）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _firstFrameRendered = true;
+      debugPrint('[startup] first frame rendered');
+    });
+    Timer(const Duration(seconds: 15), () {
+      if (!_firstFrameRendered) {
+        debugPrint(
+          '[startup][watchdog] 15 秒内未渲染首帧，疑似卡在启动屏。'
+          'startupError=$_startupError',
+        );
+      }
+    });
   }, (error, stack) {
     // runZonedGuarded 捕获的异步异常：记录，不崩溃
     debugPrint('[runtime] uncaught: $error\n$stack');

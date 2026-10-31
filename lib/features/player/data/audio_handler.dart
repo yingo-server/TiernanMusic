@@ -247,23 +247,34 @@ class TiernanAudioHandler extends BaseAudioHandler
   }
 
   @override
-  Future<void> play() => _player.play();
+  Future<void> play() {
+    ensureInitialized();
+    return _player.play();
+  }
 
   @override
-  Future<void> pause() => _player.pause();
+  Future<void> pause() {
+    ensureInitialized();
+    return _player.pause();
+  }
 
   @override
   Future<void> stop() async {
+    ensureInitialized();
     await _player.stop();
     _currentSongController.add(null);
     await super.stop();
   }
 
   @override
-  Future<void> seek(Duration position) => _player.seek(position);
+  Future<void> seek(Duration position) {
+    ensureInitialized();
+    return _player.seek(position);
+  }
 
   @override
   Future<void> skipToNext() async {
+    ensureInitialized();
     if (_songs.isEmpty) return;
     if (_player.shuffleModeEnabled) {
       final next = _randomIndex();
@@ -283,6 +294,7 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> skipToPrevious() async {
+    ensureInitialized();
     if (_songs.isEmpty) return;
     // 播放超过 3 秒回到开头
     if (_player.position > const Duration(seconds: 3)) {
@@ -306,6 +318,7 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
+    ensureInitialized();
     await _player.setShuffleModeEnabled(
         shuffleMode == AudioServiceShuffleMode.all);
     _broadcastState(_player.playbackEvent);
@@ -313,6 +326,7 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
+    ensureInitialized();
     await _player.setLoopMode(switch (repeatMode) {
       AudioServiceRepeatMode.none => LoopMode.off,
       AudioServiceRepeatMode.all => LoopMode.all,
@@ -324,6 +338,7 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> onTaskRemoved() async {
+    ensureInitialized();
     // 任务被移除时若未在播放则停止服务
     if (!_player.playing) {
       await stop();
@@ -332,6 +347,7 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> onNotificationDeleted() async {
+    ensureInitialized();
     await _player.stop();
   }
 }
