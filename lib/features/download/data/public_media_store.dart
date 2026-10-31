@@ -50,26 +50,6 @@ class PublicMediaStore {
         DownloadTaskType.mv => 'movies',
       };
 
-  /// 已发布文件的位置信息。
-  class PublishedFile {
-    const PublishedFile({
-      this.uri,
-      this.path,
-      this.displayPath = '',
-    });
-
-    /// MediaStore Uri（Android 10+）
-    final String? uri;
-
-    /// 绝对路径（Android 9 及以下 / 降级目录）
-    final String? path;
-
-    /// 展示给用户的目录位置
-    final String displayPath;
-
-    bool get isValid => (uri != null && uri!.isNotEmpty) ||
-        (path != null && path!.isNotEmpty);
-  }
 
   /// 下载用临时目录（App 私有，发布完成后再写入公共目录）。
   static Future<Directory> tempDir() async {
@@ -244,4 +224,25 @@ class PublicMediaStore {
       return false;
     }
   }
+}
+
+/// 已发布文件的位置信息。
+class PublishedFile {
+  const PublishedFile({
+    this.uri,
+    this.path,
+    this.displayPath = '',
+  });
+
+  /// MediaStore Uri（Android 10+）
+  final String? uri;
+
+  /// 绝对路径（Android 9 及以下 / 降级目录）
+  final String? path;
+
+  /// 展示给用户的目录位置
+  final String displayPath;
+
+  bool get isValid => (uri != null && uri!.isNotEmpty) ||
+      (path != null && path!.isNotEmpty);
 }

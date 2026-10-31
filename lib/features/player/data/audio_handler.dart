@@ -239,6 +239,12 @@ class TiernanAudioHandler extends BaseAudioHandler
       }
     } finally {
       _loading = false;
+      final pending = _pendingIndex;
+      if (pending != null) {
+        _pendingIndex = null;
+        // 异步调度，避免在 finally 中递归调用自身
+        Future.microtask(() => _playAt(pending));
+      }
     }
   }
 
