@@ -7,7 +7,13 @@ class TranslateApi {
       : _dio = Dio(BaseOptions(
           connectTimeout: const Duration(seconds: 20),
           receiveTimeout: const Duration(seconds: 60),
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            // B 站 WAF 拦截无 UA 请求（412）
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 14) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/126.0.0.0 Mobile Safari/537.36',
+          },
         ));
 
   final Dio _dio;
