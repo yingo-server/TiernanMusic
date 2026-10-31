@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/lyric/data/lyric_repository.dart';
 import 'api/kugou_api_client.dart';
 import 'api/translate_api.dart';
-import 'direct/kg_direct_api_client.dart';
 import 'direct/kg_providers.dart';
 
 /// 全局 API 客户端：默认直连酷狗网关，未移植路径自动回退 kapi。

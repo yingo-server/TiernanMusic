@@ -35,7 +35,7 @@ class SliderSolver {
 
     // 拼图块通常有约 10px 透明外扩，缺口实际宽度取有效宽度
     final searchTop = math.max(0, py);
-    final searchBottom = math.min(bg.height, searchTop + ph);
+    // 缺口区域纵向以拼图块顶部为起点
 
     var bestScore = double.infinity;
     var bestX = -1;
@@ -153,7 +153,6 @@ class TrajectoryGenerator {
     final peak = distance + overshoot;
 
     // 三段：加速 → 减速 → 回弹
-    final accelEnd = (total * 0.35).round();
     final decelEnd = (total * 0.85).round();
 
     var lastX = 0.0;

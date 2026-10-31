@@ -18,7 +18,6 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
 import 'package:pointycastle/asn1.dart';
 import 'package:pointycastle/export.dart';
 

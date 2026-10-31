@@ -13,7 +13,6 @@ class SecureStorage {
   static const _kT1 = 't1';
   static const _kAuth = 'auth';
   static const _kDfid = 'dfid';
-  static const _kAccounts = 'accounts'; // JSON list of {userid, token, nickname, avatar}
 
   Future<void> saveCredentials({
     required String token,

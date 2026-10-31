@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
-import 'core/direct/kg_client.dart';
 import 'core/direct/kg_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
