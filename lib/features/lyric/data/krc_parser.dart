@@ -121,6 +121,19 @@ class KrcParser {
           words: const [],
           text: lrc.group(3)!,
         ));
+        continue;
+      }
+
+      // 既无时间标签也非元数据的正文：不能静默丢弃（会丢歌词）。
+      // 归并到上一行，保证内容完整。
+      if (lines.isNotEmpty) {
+        final last = lines.removeLast();
+        lines.add(KrcLine(
+          startMs: last.startMs,
+          durationMs: last.durationMs,
+          words: last.words,
+          text: last.text.isEmpty ? line : '${last.text}$line',
+        ));
       }
     }
 

@@ -71,7 +71,8 @@ class LyricRepository {
                 base64.normalize((data['content'] as String).trim())),
                 allowMalformed: true)
             : KrcDecoder.decode(data['content'] as String);
-      } on FormatException {
+      } catch (_) {
+        // 歌词是可选内容，任何解码异常都不应影响播放
         return null;
       }
     }

@@ -16,12 +16,21 @@ class KrcDecoder {
   ];
 
   /// 解密 Base64 编码的加密 KRC
+  ///
+  /// 输入非法（空、非 Base64、非 krc1 头）时返回空串而非抛异常——
+  /// 歌词是可选内容，不能因为一条脏数据让整个播放页崩掉。
   static String decode(String base64Content) {
-    final bytes = base64.decode(base64.normalize(base64Content.trim()));
+    if (base64Content.trim().isEmpty) return '';
+    final Uint8List bytes;
+    try {
+      bytes = base64.decode(base64.normalize(base64Content.trim()));
+    } catch (_) {
+      return '';
+    }
     if (bytes.length <= 4 ||
         bytes[0] != 0x6b || bytes[1] != 0x72 ||
         bytes[2] != 0x63 || bytes[3] != 0x31) {
-      throw const FormatException('无效的 KRC 内容或文件头');
+      return '';
     }
 
     // 跳过 4 字节 'krc1' 头

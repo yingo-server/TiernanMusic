@@ -66,9 +66,10 @@ void main() {
   });
 
   group('KRC', () {
-    test('解密非法输入不抛异常', () {
-      expect(() => KrcDecoder.decode('not-base64!!!'), returnsNormally);
+    test('解密非法输入不抛异常（返回空串）', () {
+      expect(KrcDecoder.decode('not-base64!!!'), '');
       expect(KrcDecoder.decode(''), '');
+      expect(KrcDecoder.decode('aGVsbG8='), ''); // 合法 base64 但无 krc1 头
     });
 
     test('解析逐字时间轴', () {
@@ -92,9 +93,9 @@ void main() {
       const krc = '[0,1000]<0,500,0>[A]B[C]\n'
           '无标签正文\n';
       final lyric = KrcParser.parse(krc);
-      expect(lyric.lines.length, 2);
-      expect(lyric.lines.first.text, '[A]B[C]');
-      expect(lyric.lines.last.text, '无标签正文');
+      // 无时间戳正文归并到上一行，不丢失
+      expect(lyric.lines.length, 1);
+      expect(lyric.lines.first.text, '[A]B[C]无标签正文');
     });
 
     test('解析空内容不抛异常', () {
