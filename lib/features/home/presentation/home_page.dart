@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../l10n/l10n.dart';
 import 'package:logger/logger.dart';
 
 import '../../player/play_helper.dart';
@@ -35,7 +36,7 @@ class HomePage extends ConsumerWidget {
               slivers: [
                 SliverAppBar(
                   floating: true,
-                  title: Text('汀澜音乐',
+                  title: Text(context.l10n.appName,
                       style: Theme.of(context)
                           .textTheme
                           .headlineSmall
@@ -52,11 +53,11 @@ class HomePage extends ConsumerWidget {
                     data.playlists.isEmpty &&
                     data.ranks.isEmpty &&
                     data.songs.isEmpty)
-                  const SliverFillRemaining(
+                  SliverFillRemaining(
                     hasScrollBody: false,
                     child: EmptyState(
                       icon: Icons.explore_outlined,
-                      message: '暂无推荐内容，请下拉重试',
+                      message: context.l10n.noRecommend,
                     ),
                   ),
                 if (data.banners.isNotEmpty)
@@ -66,15 +67,15 @@ class HomePage extends ConsumerWidget {
                   SliverToBoxAdapter(
                       child: _DailyRecommend(data.dailyRecommend!)),
                 if (data.playlists.isNotEmpty) ...[
-                  _sectionTitle(context, '推荐歌单'),
+                  _sectionTitle(context, context.l10n.recommendedPlaylists),
                   SliverToBoxAdapter(child: _PlaylistRow(data.playlists)),
                 ],
                 if (data.ranks.isNotEmpty) ...[
-                  _sectionTitle(context, '排行榜'),
+                  _sectionTitle(context, context.l10n.topCharts),
                   SliverToBoxAdapter(child: _RankRow(data.ranks)),
                 ],
                 if (data.songs.isNotEmpty) ...[
-                  _sectionTitle(context, '新歌推荐'),
+                  _sectionTitle(context, context.l10n.newSongsRecommend),
                   SliverList.separated(
                     itemCount: data.songs.length,
                     separatorBuilder: (_, __) =>
@@ -206,7 +207,7 @@ class _DailyRecommend extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-          child: Text('每日推荐',
+          child: Text(context.l10n.dailyRecommend,
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
@@ -544,12 +545,12 @@ class _HomeError extends StatelessWidget {
         children: [
           const Icon(Icons.cloud_off_outlined, size: 56),
           const SizedBox(height: 12),
-          Text(isAuthError ? '需要登录或完成验证后重试' : '加载失败，请检查网络'),
+          Text(isAuthError ? context.l10n.authErrorRetry : context.l10n.loadFailedNetwork),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('重试'),
+            label: Text(context.l10n.retry),
           ),
         ],
       ),

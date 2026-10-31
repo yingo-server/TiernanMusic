@@ -84,5 +84,146 @@
   "vipOnly": "VIP 专属",
   "noCopyright": "暂无版权",
   "tryListen": "试听",
-  "fullPlay": "完整播放"
+  "fullPlay": "完整播放",
+  "noRecommend": "暂无推荐内容，请下拉重试",
+  "newSongsRecommend": "新歌推荐",
+  "authErrorRetry": "需要登录或完成验证后重试",
+  "loadFailedNetwork": "加载失败，请检查网络",
+  "searchSongsHint": "搜索歌曲、歌单、歌手",
+  "tabSongs": "单曲",
+  "albums": "专辑",
+  "artists": "歌手",
+  "noSearchResults": "暂无搜索结果",
+  "noRelatedPlaylists": "暂无相关歌单",
+  "noRelatedContent": "暂无相关内容",
+  "recentlyPlayed": "最近播放",
+  "clear": "清空",
+  "myFavoriteMvs": "我收藏的 MV",
+  "mvComingSoon": "MV 收藏功能即将上线，敬请期待",
+  "clearRecentlyPlayed": "清空最近播放",
+  "clearRecentConfirm": "确定要清空全部播放记录吗？此操作不可恢复。",
+  "notLoggedIn": "未登录",
+  "loginToSync": "登录后同步你的歌单与收藏",
+  "goLogin": "去登录",
+  "noPlaylistsYet": "暂无歌单",
+  "playlistLoadFailed": "歌单加载失败",
+  "unofficialClient": "非官方第三方客户端",
+  "smsLogin": "短信登录",
+  "operationFailed": "操作失败",
+  "phoneInvalid": "请输入正确的手机号",
+  "smsCodeSent": "验证码已发送",
+  "codeInvalid": "请输入验证码",
+  "selectAccount": "该手机号绑定了多个账号，请选择要登录的账号",
+  "phoneHintCn": "请输入中国大陆手机号",
+  "verificationCode": "验证码",
+  "usernameLabel": "用户名 / 手机号",
+  "usernamePasswordRequired": "请输入用户名和密码",
+  "qrExpired": "二维码已过期，请刷新",
+  "qrScanSuccess": "扫码成功，请在手机上确认登录",
+  "qrScanHint": "请使用酷狗音乐 App 扫码登录",
+  "refreshQr": "刷新二维码",
+  "qrExpiredShort": "已过期",
+  "unknownArtist": "未知歌手",
+  "notPlaying": "未在播放",
+  "noLyric": "暂无歌词",
+  "lyricParseFailed": "歌词解析失败",
+  "calculating": "计算中…",
+  "cannotCalculate": "无法计算",
+  "clearCacheConfirm": "将清除图片缓存、接口缓存与歌词翻译缓存，不会删除账号数据。确定继续吗？",
+  "cacheCleared": "缓存已清除",
+  "account": "账号",
+  "switchAccountSubtitle": "切换或管理已登录的账号",
+  "appearance": "外观",
+  "themeMode": "主题模式",
+  "appLanguage": "界面语言",
+  "lyricModeOriginal": "仅原文",
+  "lyricModeBilingual": "双语对照",
+  "lyricModeTranslation": "仅译文",
+  "playback": "播放",
+  "lyricDisplayMode": "歌词显示模式",
+  "defaultQuality": "默认音质",
+  "wifiAutoHighQuality": "Wi-Fi 下自动最高音质",
+  "wifiAutoHighQualityDesc": "连接 Wi-Fi 时优先播放无损/Hi-Res（预留）",
+  "cellularLowQuality": "流量下降低音质",
+  "cellularLowQualityDesc": "使用移动网络时自动切换为标准音质（预留）",
+  "cacheUsage": "缓存占用",
+  "recalculate": "重新计算",
+  "clearCacheDesc": "清除接口、图片与歌词翻译缓存",
+  "resetToDefault": "重置为默认",
+  "resetToDefaultDone": "已重置为默认地址",
+  "testing": "测试中…",
+  "testConnectivity": "测试连通性",
+  "save": "保存",
+  "openSourceLicenses": "开源许可证",
+  "licenseDesc": "源代码可见，禁止使用",
+  "githubRepo": "GitHub 仓库",
+  "knowIt": "知道了",
+  "noComments": "还没有评论，快来抢沙发",
+  "commentHint": "说点什么…",
+  "loginToComment": "登录后可评论",
+  "pleaseLoginFirst": "请先登录",
+  "commentSuccess": "评论成功",
+  "deleteComment": "删除评论",
+  "deleteCommentConfirm": "确定删除这条评论吗？",
+  "deleted": "已删除",
+  "playAll": "播放全部",
+  "playFailed": "播放失败",
+  "back": "返回",
+  "loadFailed": "加载失败",
+  "playCountSuffix": "{count} 播放",
+  "trackCountSuffix": "{count} 首",
+  "songCountSuffix": "{count} 首",
+  "totalSongs": "共 {count} 首",
+  "repliesCount": "{count} 条回复",
+  "resendIn": "{seconds}s 后重发",
+  "userIdLabel": "ID: {id}",
+  "@playCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@trackCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@songCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@totalSongs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@repliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "@userIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  }
 }

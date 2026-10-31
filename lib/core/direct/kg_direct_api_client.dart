@@ -227,8 +227,9 @@ class KgDirectApiClient extends KugouApiClient {
         params: {
           'r': 'comments/getcommentsnum',
           'code': 'fc4be23b4e972707f36b8a828a93ba8a',
-          if (q['hash'] != null) 'hash': q['hash']
-          else if (q['special_id'] != null) 'childrenid': q['special_id'],
+          if (q['hash'] != null) 'hash': q['hash'],
+          if (q['hash'] == null && q['special_id'] != null)
+            'childrenid': q['special_id'],
         });
   }
 

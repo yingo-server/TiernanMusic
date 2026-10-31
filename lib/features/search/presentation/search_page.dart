@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
+../../../l10n/l10n.dart
 
 import '../../home/data/models.dart';
 import '../../../core/widgets/song_tile.dart' show GradientChip, EmptyState;
@@ -96,7 +97,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             onChanged: _onChanged,
             onSubmitted: _submit,
             decoration: InputDecoration(
-              hintText: '搜索歌曲、歌单、歌手',
+              hintText: context.l10n.searchSongsHint,
               prefixIcon: const Icon(Icons.search, size: 20),
               suffixIcon: _controller.text.isNotEmpty
                   ? IconButton(
@@ -185,14 +186,14 @@ class _SearchLandingState extends ConsumerState<_SearchLanding> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('搜索历史',
+              Text(context.l10n.searchHistory,
                   style: Theme.of(context)
                       .textTheme
                       .titleSmall
                       ?.copyWith(fontWeight: FontWeight.bold)),
               IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20),
-                tooltip: '清空历史',
+                tooltip: context.l10n.clearHistory,
                 onPressed: () async {
                   await ref
                       .read(searchRepositoryProvider)
@@ -221,7 +222,7 @@ class _SearchLandingState extends ConsumerState<_SearchLanding> {
           ),
           const SizedBox(height: 24),
         ],
-        Text('热门搜索',
+        Text(context.l10n.hotSearch,
             style: Theme.of(context)
                 .textTheme
                 .titleSmall
@@ -286,15 +287,15 @@ class _SearchResults extends StatelessWidget {
       length: 5,
       child: Column(
         children: [
-          const TabBar(
+          TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             tabs: [
-              Tab(text: '单曲'),
-              Tab(text: '歌单'),
-              Tab(text: '专辑'),
-              Tab(text: '歌手'),
-              Tab(text: 'MV'),
+              Tab(text: context.l10n.tabSongs),
+              Tab(text: context.l10n.playlist),
+              Tab(text: context.l10n.albums),
+              Tab(text: context.l10n.artists),
+              Tab(text: context.l10n.mv),
             ],
           ),
           Expanded(
@@ -404,7 +405,7 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
       });
     }
     if (_items.isEmpty) {
-      return const EmptyState(icon: Icons.search_off_rounded, message: '暂无搜索结果');
+      return EmptyState(icon: Icons.search_off_rounded, message: context.l10n.noSearchResults);
     }
     return Column(
       children: [
@@ -413,7 +414,7 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('共 $_total 首',
+              child: Text(context.l10n.totalSongs(_total)),
                   style: Theme.of(context).textTheme.bodySmall),
             ),
           ),
@@ -483,8 +484,8 @@ class _PlaylistResultTab extends ConsumerWidget {
           onRetry: () => ref.invalidate(_playlistSearchProvider(keyword))),
       data: (r) {
         if (r.items.isEmpty) {
-          return const EmptyState(
-              icon: Icons.playlist_play_rounded, message: '暂无相关歌单');
+          return EmptyState(
+              icon: Icons.playlist_play_rounded, message: context.l10n.noRelatedPlaylists);
         }
         return GridView.builder(
           padding: const EdgeInsets.all(16),
@@ -559,7 +560,7 @@ class _GenericResultTab extends ConsumerWidget {
         if (r.items.isEmpty) {
           return EmptyState(
             icon: type == 'mv' ? Icons.movie_outlined : Icons.album_outlined,
-            message: '暂无相关内容',
+            message: context.l10n.noRelatedContent,
           );
         }
         return ListView.separated(
@@ -623,12 +624,12 @@ class _ErrorRetry extends StatelessWidget {
         children: [
           const Icon(Icons.cloud_off_outlined, size: 56),
           const SizedBox(height: 12),
-          const Text('加载失败，请检查网络'),
+          Text(context.l10n.loadFailedNetwork),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('重试'),
+            label: Text(context.l10n.retry),
           ),
         ],
       ),

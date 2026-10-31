@@ -1,12 +1,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../../core/providers.dart' show lyricRepositoryProvider;
 import '../../../core/theme/settings_provider.dart';
 import '../../lyric/data/krc_parser.dart';
 import '../../lyric/presentation/lyric_view.dart';
+import '../../mv/mv_provider.dart';
 import '../data/models.dart';
 import '../player_provider.dart';
 import 'queue_sheet.dart';
@@ -78,6 +80,8 @@ class FullPlayerPage extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 12),
+            // MV 入口：首次构建时按 album_audio_id 查询该歌是否有 MV
+            _MvEntry(song: song),
             // 封面 / 歌词切换
             Expanded(
               child: _CoverOrLyric(song: song),
@@ -188,6 +192,48 @@ class FullPlayerPage extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// MV 入口按钮：首次构建时查询当前歌是否有 MV，有则显示。
+class _MvEntry extends ConsumerWidget {
+  const _MvEntry({this.song});
+  final Song? song;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final albumAudioId = song?.albumAudioId ?? '';
+    if (albumAudioId.isEmpty) return const SizedBox.shrink();
+    final mvAsync = ref.watch(songMvProvider(albumAudioId));
+    final mv = mvAsync.value;
+    if (mv == null || mv.videoId.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          height: 30,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.movie_outlined, size: 16),
+            label: const Text('MV', style: TextStyle(fontSize: 12)),
+            onPressed: () {
+              final title = mv.name.isNotEmpty ? mv.name : (song?.name ?? '');
+              final artist =
+                  mv.artist.isNotEmpty ? mv.artist : (song?.artist ?? '');
+              context.push(
+                '/mv/${Uri.encodeComponent(mv.videoId)}'
+                '?title=${Uri.encodeComponent(title)}'
+                '&artist=${Uri.encodeComponent(artist)}',
+              );
+            },
+          ),
         ),
       ),
     );
