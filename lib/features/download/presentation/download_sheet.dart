@@ -7,10 +7,11 @@ import '../data/download_task.dart';
 import '../download_provider.dart';
 
 /// 打开单曲下载弹层。
-Future<void> showDownloadSheet(BuildContext context, Song song) {
-  return showModalBottomSheet<void>(
+Future<void> showDownloadSheet(BuildContext context, Song song) async {
+  await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
+    isScrollControlled: true,
     builder: (_) => DownloadSheet(song: song),
   );
 }

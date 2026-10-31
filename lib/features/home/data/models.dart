@@ -18,6 +18,16 @@ int _toInt(dynamic v) {
 String _toStr(dynamic v) => v?.toString() ?? '';
 
 /// 单曲
+///
+/// 实测各来源字段差异（均为真实响应）：
+/// - `/top/song`：`hash` / `songname` / `author_name` / `timelength`（**毫秒**）
+///   / `album_sizable_cover` / `album_id` / `album_audio_id` / `trans_param.union_cover`
+/// - `/yueku`：`hash` / `songname` / `singername` / `duration`（**秒**）/ `trans_param.union_cover`
+/// - `/everyday/recommend`：`hash` / `songname` / `author_name` / `time_length`（**秒**）
+///   / `sizable_cover` / `album_id` / `album_audio_id` / `singerinfo[]`
+/// - `/search?type=song`：`FileHash` / `OriSongName` / `SingerName` / `Duration`（**秒**）
+///   / `Image` / `AlbumID` / `MixSongID`
+/// - 歌单歌曲：`hash` / `name`（"歌手 - 歌名"）/ `singerinfo[]` / `timelen`（**毫秒**）
 class HomeSong {
   const HomeSong({
     required this.id,
@@ -27,6 +37,7 @@ class HomeSong {
     required this.duration,
     this.hash,
     this.albumId,
+    this.albumAudioId,
   });
 
   final String id;
@@ -36,6 +47,9 @@ class HomeSong {
   final int duration; // 秒
   final String? hash;
   final String? albumId;
+
+  /// album_audio_id（= mixsongid），MV/歌词接口需要。
+  final String? albumAudioId;
 
   String get durationText {
     if (duration <= 0) return '--:--';
@@ -49,11 +63,30 @@ class HomeSong {
         ? json['trans_param'] as Map<String, dynamic>
         : const <String, dynamic>{};
     final hash = _toStr(json['hash'] ?? json['FileHash']);
-    final name = _toStr(json['songname'] ?? json['OriSongName'] ?? json['name']);
-    final singer = _toStr(json['singername'] ??
+    final name = _toStr(json['songname'] ??
+        json['OriSongName'] ??
+        json['name'] ??
+        json['song_name']);
+
+    // 歌手：优先显式字段，其次 singerinfo[]（歌单/每日推荐）。
+    var singer = _toStr(json['singername'] ??
         json['SingerName'] ??
         json['author_name'] ??
-        json['singer']);
+        json['singer_name']);
+    if (singer.isEmpty) {
+      final singerInfo = json['singerinfo'];
+      if (singerInfo is List) {
+        singer = singerInfo
+            .whereType<Map>()
+            .map((e) => _toStr(e['name']))
+            .where((s) => s.isNotEmpty)
+            .join('、');
+      } else if (singerInfo != null && singerInfo is! Map) {
+        singer = _toStr(singerInfo);
+      }
+    }
+    if (singer.isEmpty) singer = _toStr(json['singer']);
+
     final fileName = _toStr(json['FileName'] ?? json['filename']);
     var displayName = name;
     var displaySinger = singer;
@@ -63,12 +96,31 @@ class HomeSong {
       displayName = parts.sublist(1).join('-').trim();
     }
     if (displayName.isEmpty) displayName = fileName;
-    final duration = json.containsKey('duration') || json.containsKey('Duration')
-        ? _toInt(json['duration'] ?? json['Duration'])
-        : json.containsKey('time_length')
-            ? _toInt(json['time_length'])
-            : _toInt(json['timelength']) ~/ 1000;
+
+    // 时长：按字段名区分单位，秒与毫秒不可混用。
+    // - duration / Duration / time_length → 秒
+    // - timelength / timelen → 毫秒
+    var duration = 0;
+    for (final key in ['duration', 'Duration', 'time_length']) {
+      if (json.containsKey(key) && json[key] != null) {
+        duration = _toInt(json[key]);
+        break;
+      }
+    }
+    if (duration <= 0) {
+      for (final key in ['timelength', 'timelen', 'timeLength']) {
+        if (json.containsKey(key) && json[key] != null) {
+          duration = _toInt(json[key]) ~/ 1000;
+          break;
+        }
+      }
+    }
+
     final albumId = _toStr(json['albumid'] ?? json['album_id'] ?? json['AlbumID']);
+    final albumAudioId = _toStr(json['album_audio_id'] ??
+        json['MixSongID'] ??
+        json['mixsongid'] ??
+        json['albumAudioId']);
     return HomeSong(
       id: hash.isNotEmpty
           ? hash
@@ -80,15 +132,23 @@ class HomeSong {
           json['Image'] ??
           json['album_sizable_cover'] ??
           json['sizable_cover'] ??
-          json['album_img'])),
+          json['album_img'] ??
+          json['cover'])),
       duration: duration,
       hash: hash.isEmpty ? null : hash,
       albumId: albumId.isEmpty ? null : albumId,
+      albumAudioId: albumAudioId.isEmpty ? null : albumAudioId,
     );
   }
 }
 
 /// 歌单
+///
+/// 实测全局 ID 字段名按接口不同：
+/// - `/top/playlist`：`global_collection_id`（如 `collection_1_355034155_571395_0`）
+/// - `/yueku` 的 `info.recommend[].extra`：`global_specialid`（同名格式）
+/// - `/search?type=special`：`gid`（同名格式）
+/// 三者都是 `collection_<...>` 形式，必须原样作为歌单路由参数。
 class HomePlaylist {
   const HomePlaylist({
     required this.id,
@@ -114,21 +174,25 @@ class HomePlaylist {
   }
 
   factory HomePlaylist.fromJson(Map<String, dynamic> json) {
+    // 全局 ID 优先级：global_collection_id > global_specialid > gid。
+    // 数字 specialid 不是全局 ID，不能当路由参数用。
     final globalId = _toStr(json['global_collection_id'] ??
         json['global_specialid'] ??
         json['gid']);
+    final numericId = _toStr(json['specialid'] ?? json['id']);
+    final name = _toStr(json['specialname'] ?? json['name'] ?? json['title']);
     return HomePlaylist(
-      id: _toStr(json['specialid'] ?? json['id']),
-      globalCollectionId: globalId.isNotEmpty
-          ? globalId
-          : _toStr(json['specialid'] ?? json['id']),
-      name: _toStr(json['specialname'] ?? json['name'] ?? json['title'])
-          .isEmpty
-          ? '未知歌单'
-          : _toStr(json['specialname'] ?? json['name'] ?? json['title']),
+      id: numericId.isNotEmpty ? numericId : globalId,
+      globalCollectionId: globalId.isNotEmpty ? globalId : numericId,
+      name: name.isEmpty ? '未知歌单' : name,
       cover: kugouImageUrl(_toStr(
-          json['imgurl'] ?? json['img'] ?? json['flexible_cover'] ?? json['cover'])),
-      playCount: _toInt(json['playcount'] ?? json['play_count']),
+          json['imgurl'] ??
+              json['img'] ??
+              json['flexible_cover'] ??
+              json['pic'] ??
+              json['cover'])),
+      // play_count / playcount 都是实测字段；collect_count 是收藏数不是播放数。
+      playCount: _toInt(json['play_count'] ?? json['playcount']),
       intro: _toStr(json['intro']).isEmpty ? null : _toStr(json['intro']),
     );
   }

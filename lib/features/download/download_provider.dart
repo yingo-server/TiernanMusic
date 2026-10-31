@@ -6,12 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/direct/kg_providers.dart';
 import '../../core/providers.dart';
-import '../../mv/mv_provider.dart';
-import '../data/download_repository.dart';
-import '../data/download_store.dart';
-import '../data/download_task.dart';
-import '../data/public_media_store.dart';
-import '../data/storage_permission_service.dart';
+import '../mv/data/mv_repository.dart';
+import 'data/download_repository.dart';
+import 'data/download_store.dart';
+import 'data/download_task.dart';
+import 'data/public_media_store.dart';
+import 'data/storage_permission_service.dart';
 
 /// 下载状态快照。
 class DownloadState {
@@ -56,8 +56,9 @@ class DownloadManager extends StateNotifier<DownloadState> {
   final Map<String, CancelToken> _tokens = {};
   final Set<String> _running = {};
 
-  /// 写入策略（首次下载时确定）
+  /// 写入策略（首次下载时确定，之后复用）
   StorageStrategy _strategy = StorageStrategy.mediaStore;
+  bool _strategyResolved = false;
 
   /// 从 Hive 恢复任务记录（未完成的置为暂停）
   void _restore() {
@@ -234,13 +235,14 @@ class DownloadManager extends StateNotifier<DownloadState> {
 
     try {
       // 首次下载时确定写入策略（可能触发权限申请）
-      if (_strategy == StorageStrategy.mediaStore) {
+      if (!_strategyResolved) {
         _strategy = await StoragePermissionService.instance.resolveStrategy();
+        _strategyResolved = true;
       }
 
       final tempDir = await PublicMediaStore.tempDir();
       final tempPath = '${tempDir.path}/${task.hash}_${task.type.name}'
-          '${task.type.extension}';
+          '${task.type.fileExtension}';
 
       void onProgress(int received, int total) {
         final cur = _find(task.id);
@@ -263,19 +265,23 @@ class DownloadManager extends StateNotifier<DownloadState> {
           );
           await _repo.downloadFile(url, tempPath,
               onProgress: onProgress, cancelToken: token);
+          break;
         case DownloadTaskType.cover:
           if (task.coverUrl.isEmpty) {
             throw StateError('缺少封面地址');
           }
           await _repo.downloadCover(task.coverUrl, tempPath,
               onProgress: onProgress, cancelToken: token);
+          break;
         case DownloadTaskType.lyric:
           await _repo.downloadLyric(task, tempPath,
               onProgress: onProgress, cancelToken: token);
+          break;
         case DownloadTaskType.mv:
-          final url = await _repo.resolveMvUrl(task.albumAudioId, task.hash);
+          final url = await _repo.resolveMvUrl(task.albumAudioId, task.mvHash);
           await _repo.downloadFile(url, tempPath,
               onProgress: onProgress, cancelToken: token);
+          break;
       }
 
       // 发布到公共目录（MediaStore / 公共路径）
@@ -304,6 +310,7 @@ class DownloadManager extends StateNotifier<DownloadState> {
           status:
               cancelled ? DownloadTaskStatus.paused : DownloadTaskStatus.failed,
           error: cancelled ? null : (e.message ?? '下载失败'),
+          clearError: cancelled,
           updatedAt: DateTime.now().millisecondsSinceEpoch,
         ));
       }
@@ -329,7 +336,7 @@ final downloadRepositoryProvider = Provider<DownloadRepository>((ref) {
   return DownloadRepository(
     playApi: ref.watch(kgPlayApiProvider),
     lyricRepository: ref.watch(lyricRepositoryProvider),
-    mvRepository: ref.watch(mvRepositoryProvider),
+    mvRepository: MvRepository(ref.watch(kugouApiClientProvider)),
   );
 });
 
@@ -339,7 +346,11 @@ final downloadManagerProvider =
   return DownloadManager(ref.watch(downloadRepositoryProvider));
 });
 
-/// 已下载音频列表
+/// 已下载（完成）音频列表
 final downloadedAudioProvider = Provider<List<DownloadTask>>((ref) {
-  return ref.watch(downloadManagerProvider).audios;
+  return ref
+      .watch(downloadManagerProvider)
+      .audios
+      .where((t) => t.status == DownloadTaskStatus.completed)
+      .toList();
 });

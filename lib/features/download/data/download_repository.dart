@@ -8,6 +8,8 @@ import '../../lyric/data/krc_parser.dart';
 import '../../lyric/data/lyric_repository.dart';
 import '../../mv/data/mv_repository.dart';
 import 'download_task.dart';
+import 'public_media_store.dart';
+import 'storage_permission_service.dart';
 
 /// 下载执行器。
 ///
@@ -164,7 +166,7 @@ class DownloadRepository {
     final safe = (base.isEmpty ? task.hash : base)
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
         .trim();
-    return '$safe${task.type.extension}';
+    return '$safe${task.type.fileExtension}';
   }
 
   /// KRC → 可读文本（原文 + 译文对照）

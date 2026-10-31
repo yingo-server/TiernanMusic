@@ -1,6 +1,14 @@
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/cache/cache_manager.dart';
 
+/// 宽松地转 int：数字直接取整，字符串解析，失败返回 fallback。
+int _toInt(dynamic v, {int fallback = 0}) {
+  if (v is int) return v;
+  if (v is num) return v.toInt();
+  if (v == null) return fallback;
+  return int.tryParse('$v') ?? fallback;
+}
+
 class PlaylistRepository {
   PlaylistRepository(this._api);
   final KugouApiClient _api;
@@ -26,13 +34,20 @@ class PlaylistRepository {
   }
 
   /// 我的歌单（需登录）
+  ///
+  /// 实测 `/user/playlist`：歌单位于 `data.info[]`，首项 `listid=1`，
+  /// 同时含 `global_collection_id`。
   Future<List<UserPlaylist>> fetchUserPlaylists(
       {int page = 1, int pageSize = 30}) async {
     final data = await _api.get('/user/playlist',
         query: {'page': page, 'pagesize': pageSize});
-    final list = data['data']?['info'] as List? ?? [];
+    final raw = data['data'];
+    final list = raw is Map && raw['info'] is List
+        ? raw['info'] as List
+        : (raw is List ? raw : const []);
     return list
-        .map((e) => UserPlaylist.fromJson(e as Map<String, dynamic>))
+        .whereType<Map>()
+        .map((e) => UserPlaylist.fromJson(Map<String, dynamic>.from(e)))
         .toList();
   }
 
@@ -98,24 +113,35 @@ class PlaylistDetail {
   final int trackCount;
   final String creatorName;
 
+  /// 实测 `/playlist/detail`：
+  /// - `data` 是**数组**，首项为歌单对象
+  /// - 名称 `name`；封面 `pic`（带 `{size}` 占位）；简介 `intro`
+  /// - 曲目数 `count`；创建者 `list_create_username`
+  /// - 全局 ID `global_collection_id`
+  /// （`playcount` / `play_count` 实测都不存在，播放数只有 `heat`）
   factory PlaylistDetail.fromJson(Map<String, dynamic> json, String id) {
-    final data = json['data'] is List && (json['data'] as List).isNotEmpty
-        ? (json['data'] as List).first as Map<String, dynamic>
-        : (json['data'] as Map<String, dynamic>?) ?? {};
-    var cover = '${data['imgurl'] ?? data['pic'] ?? data['flexible_cover'] ?? ''}';
+    final raw = json['data'];
+    Map<String, dynamic> data;
+    if (raw is List) {
+      data = raw.isNotEmpty && raw.first is Map
+          ? Map<String, dynamic>.from(raw.first as Map)
+          : <String, dynamic>{};
+    } else if (raw is Map) {
+      data = Map<String, dynamic>.from(raw);
+    } else {
+      data = <String, dynamic>{};
+    }
+    var cover = '${data['pic'] ?? data['imgurl'] ?? data['flexible_cover'] ?? data['cover'] ?? ''}';
     cover = cover.replaceAll('{size}', '480');
     return PlaylistDetail(
       id: '${data['global_collection_id'] ?? id}',
-      name: '${data['specialname'] ?? data['name'] ?? ''}',
+      name: '${data['name'] ?? data['specialname'] ?? ''}',
       cover: cover,
       intro: '${data['intro'] ?? ''}',
-      playCount: (data['playcount'] ?? data['play_count'] ?? 0) is int
-          ? data['playcount'] ?? data['play_count'] ?? 0
-          : int.tryParse('${data['playcount'] ?? data['play_count']}') ?? 0,
-      trackCount: (data['songcount'] ?? data['count'] ?? 0) is int
-          ? data['songcount'] ?? data['count'] ?? 0
-          : int.tryParse('${data['songcount'] ?? data['count']}') ?? 0,
-      creatorName: '${data['nickname'] ?? data['list_create_username'] ?? data['username'] ?? ''}',
+      playCount: _toInt(data['playcount'] ?? data['play_count'] ?? data['heat']),
+      trackCount: _toInt(data['count'] ?? data['songcount']),
+      creatorName:
+          '${data['list_create_username'] ?? data['nickname'] ?? data['username'] ?? ''}',
     );
   }
 }
@@ -125,15 +151,21 @@ class PlaylistTracks {
   final List<PlaylistSong> songs;
   final int total;
 
+  /// 实测两种歌单结构不同：
+  /// - 公共歌单 `/playlist/track/all` → `data.songs[]`，总数 `data.count`
+  /// - 用户歌单 `/playlist/track/all/new` → `data.info[]`，总数 `data.count`
   factory PlaylistTracks.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] as Map<String, dynamic>? ?? json;
-    final info = data['info'] as List? ?? data['songs'] as List? ?? [];
-    final songs = info
-        .map((e) => PlaylistSong.fromJson(e as Map<String, dynamic>))
+    final raw = json['data'];
+    final data = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+    // 用户歌单优先取 info，公共歌单取 songs；两者都兼容。
+    final rawList = data['info'] is List
+        ? data['info'] as List
+        : (data['songs'] is List ? data['songs'] as List : const []);
+    final songs = rawList
+        .whereType<Map>()
+        .map((e) => PlaylistSong.fromJson(Map<String, dynamic>.from(e)))
         .toList();
-    final total = (data['count'] ?? data['total'] ?? songs.length) is int
-        ? (data['count'] ?? data['total'] ?? songs.length)
-        : int.tryParse('${data['count'] ?? data['total']}') ?? songs.length;
+    final total = _toInt(data['count'] ?? data['total'], fallback: songs.length);
     return PlaylistTracks(songs: songs, total: total);
   }
 }
@@ -147,41 +179,84 @@ class PlaylistSong {
     required this.albumAudioId,
     required this.duration,
     required this.fileId,
+    this.cover = '',
   });
   final String hash;
   final String name;
   final String artist;
   final String albumId;
   final String albumAudioId;
-  final int duration;
+  final int duration; // 秒
   final String fileId;
 
+  /// 歌曲封面（歌单歌曲有直接 `cover` 字段）。
+  final String cover;
+
+  /// 实测公共/用户歌单歌曲字段：
+  /// `hash` / `name`（"歌手 - 歌名"）/ `singerinfo[].name` / `album_id` /
+  /// `mixsongid`（= album_audio_id）/ `timelen`（**毫秒**）/ `fileid` /
+  /// `cover` / `trans_param.union_cover`
   factory PlaylistSong.fromJson(Map<String, dynamic> json) {
     final rawName = '${json['name'] ?? json['filename'] ?? json['OriSongName'] ?? ''}';
-    final parts = rawName.split(' - ');
-    final name = parts.length > 1 ? parts.sublist(1).join(' - ') : rawName;
+
+    // 歌手：singerinfo[] 优先（实测歌单歌曲都有），其次显式字段。
     final singerInfo = json['singerinfo'];
-    final singers = singerInfo is List
-        ? singerInfo
-            .whereType<Map>()
-            .map((e) => '${e['name'] ?? ''}')
-            .where((name) => name.isNotEmpty)
-            .join('、')
-        : '';
-    final singer = '${json['singername'] ?? json['SingerName'] ?? json['author_name'] ?? singers}';
-    final duration = json.containsKey('timelen')
-        ? (int.tryParse('${json['timelen']}') ?? 0) ~/ 1000
-        : (int.tryParse('${json['duration'] ?? json['Duration'] ?? 0}') ?? 0);
+    var singers = '';
+    if (singerInfo is List) {
+      singers = singerInfo
+          .whereType<Map>()
+          .map((e) => '${e['name'] ?? ''}')
+          .where((n) => n.isNotEmpty)
+          .join('、');
+    }
+    final explicitSinger =
+        '${json['singername'] ?? json['SingerName'] ?? json['author_name'] ?? ''}';
+
+    // 歌名："歌手 - 歌名"。只剥一次前缀，歌名自身可能含分隔符。
+    var name = rawName;
+    var artist = explicitSinger.isNotEmpty ? explicitSinger : singers;
+    final sep = rawName.indexOf(' - ');
+    if (sep > 0) {
+      final prefix = rawName.substring(0, sep).trim();
+      name = rawName.substring(sep + 3).trim();
+      if (explicitSinger.isEmpty && singers.isEmpty) artist = prefix;
+      if (explicitSinger.isNotEmpty && prefix != explicitSinger) {
+        // 前缀与显式歌手不同：保留完整名，避免误删歌名。
+        name = rawName;
+      }
+    }
+
+    // 时长：timelen 是**毫秒**；duration / Duration 是**秒**。
+    var duration = 0;
+    if (json['timelen'] != null) {
+      duration = _toInt(json['timelen']) ~/ 1000;
+    } else if (json['timelength'] != null) {
+      duration = _toInt(json['timelength']) ~/ 1000;
+    } else {
+      duration = _toInt(json['duration'] ?? json['Duration']);
+    }
+
+    final transParam = json['trans_param'] is Map
+        ? Map<String, dynamic>.from(json['trans_param'] as Map)
+        : <String, dynamic>{};
+    var cover = '${json['cover'] ?? transParam['union_cover'] ?? ''}';
+    cover = cover.replaceAll('{size}', '300');
+
     return PlaylistSong(
       hash: '${json['hash'] ?? json['FileHash'] ?? ''}',
       name: name,
-      artist: singer.isNotEmpty
-          ? singer
-          : (parts.length > 1 ? parts.first : ''),
+      artist: artist.isEmpty
+          ? (name.isNotEmpty && rawName.contains(' - ')
+              ? rawName.substring(0, rawName.indexOf(' - ')).trim()
+              : '')
+          : artist,
       albumId: '${json['album_id'] ?? json['AlbumID'] ?? ''}',
-      albumAudioId: '${json['album_audio_id'] ?? json['mixsongid'] ?? json['MixSongID'] ?? ''}',
+      // mixsongid 才是 album_audio_id；audio_id 是另一套 id。
+      albumAudioId:
+          '${json['mixsongid'] ?? json['MixSongID'] ?? json['album_audio_id'] ?? ''}',
       duration: duration,
       fileId: '${json['fileid'] ?? json['FileID'] ?? ''}',
+      cover: cover,
     );
   }
 }
@@ -200,17 +275,17 @@ class UserPlaylist {
   final int count;
   final bool isMine;
 
+  /// 实测用户歌单项：`listid` / `name` / `pic` / `count` /
+  /// `list_create_type` / `global_collection_id`。
   factory UserPlaylist.fromJson(Map<String, dynamic> json) {
-    var cover = '${json['pic'] ?? json['imgurl'] ?? ''}';
+    var cover = '${json['pic'] ?? json['imgurl'] ?? json['cover'] ?? ''}';
     cover = cover.replaceAll('{size}', '240');
     return UserPlaylist(
       listid: '${json['listid'] ?? json['list_id'] ?? ''}',
       name: '${json['name'] ?? json['specialname'] ?? ''}',
       cover: cover,
-      count: (json['count'] ?? json['songcount'] ?? 0) is int
-          ? (json['count'] ?? json['songcount'] ?? 0)
-          : int.tryParse('${json['count'] ?? json['songcount']}') ?? 0,
-      isMine: (json['list_create_type'] ?? 0) == 0 ||
+      count: _toInt(json['count'] ?? json['songcount']),
+      isMine: _toInt(json['list_create_type'], fallback: 1) == 0 ||
           '${json['is_create'] ?? ''}' == '1',
     );
   }

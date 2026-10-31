@@ -240,8 +240,7 @@
         "type": "String"
       }
     }
-  }
-,
+  },
   "downloadManagement": "下载管理",
   "downloads": "已下载",
   "download": "下载",

@@ -17,23 +17,8 @@ enum DownloadTaskType {
 }
 
 extension DownloadTaskTypeX on DownloadTaskType {
-  String get label => switch (this) {
-        DownloadTaskType.audio => '音频',
-        DownloadTaskType.cover => '封面',
-        DownloadTaskType.lyric => '歌词',
-        DownloadTaskType.mv => 'MV',
-      };
-
-  /// 存储子目录名。
-  String get dirName => switch (this) {
-        DownloadTaskType.audio => 'audio',
-        DownloadTaskType.cover => 'covers',
-        DownloadTaskType.lyric => 'lyrics',
-        DownloadTaskType.mv => 'mv',
-      };
-
   /// 文件扩展名。
-  String get extension => switch (this) {
+  String get fileExtension => switch (this) {
         DownloadTaskType.audio => '.mp3',
         DownloadTaskType.cover => '.jpg',
         DownloadTaskType.lyric => '.txt',
@@ -67,6 +52,7 @@ class DownloadTask {
     this.title = '',
     this.artist = '',
     this.coverUrl = '',
+    this.mvHash = '',
     this.albumId = '',
     this.albumAudioId = '',
     this.quality = '128',
@@ -90,6 +76,9 @@ class DownloadTask {
   final String title;
   final String artist;
   final String coverUrl;
+
+  /// MV 视频 hash（仅 MV 任务使用）
+  final String mvHash;
   final String albumId;
   final String albumAudioId;
   final String quality;
@@ -144,6 +133,7 @@ class DownloadTask {
     String? title,
     String? artist,
     String? coverUrl,
+    String? mvHash,
     String? albumId,
     String? albumAudioId,
     String? quality,
@@ -167,6 +157,7 @@ class DownloadTask {
       title: title ?? this.title,
       artist: artist ?? this.artist,
       coverUrl: coverUrl ?? this.coverUrl,
+      mvHash: mvHash ?? this.mvHash,
       albumId: albumId ?? this.albumId,
       albumAudioId: albumAudioId ?? this.albumAudioId,
       quality: quality ?? this.quality,
@@ -191,6 +182,7 @@ class DownloadTask {
         'title': title,
         'artist': artist,
         'coverUrl': coverUrl,
+        'mvHash': mvHash,
         'albumId': albumId,
         'albumAudioId': albumAudioId,
         'quality': quality,
@@ -220,6 +212,7 @@ class DownloadTask {
       title: '${json['title'] ?? ''}',
       artist: '${json['artist'] ?? ''}',
       coverUrl: '${json['coverUrl'] ?? ''}',
+      mvHash: '${json['mvHash'] ?? ''}',
       albumId: '${json['albumId'] ?? ''}',
       albumAudioId: '${json['albumAudioId'] ?? ''}',
       quality: '${json['quality'] ?? '128'}',

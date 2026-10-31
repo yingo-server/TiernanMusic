@@ -75,6 +75,13 @@ class _DownloadTile extends ConsumerWidget {
     final manager = ref.read(downloadManagerProvider.notifier);
     final progress = task.progress;
 
+    final typeLabel = switch (task.type) {
+      DownloadTaskType.audio => context.l10n.downloadAudio,
+      DownloadTaskType.cover => context.l10n.downloadCover,
+      DownloadTaskType.lyric => context.l10n.downloadLyric,
+      DownloadTaskType.mv => context.l10n.downloadMv,
+    };
+
     final statusLabel = switch (task.status) {
       DownloadTaskStatus.queued => context.l10n.downloadQueued,
       DownloadTaskStatus.running => context.l10n.downloading,
@@ -102,7 +109,7 @@ class _DownloadTile extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${task.type.label} · $statusLabel'
+            '$typeLabel · $statusLabel'
             '${task.error != null ? ' · ${task.error}' : ''}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -132,10 +139,13 @@ class _DownloadTile extends ConsumerWidget {
           switch (value) {
             case 'pause':
               await manager.pause(task.id);
+              break;
             case 'resume':
               await manager.resume(task.id);
+              break;
             case 'retry':
               await manager.retry(task.id);
+              break;
             case 'open':
               await PublicMediaStore.instance.open(
                 PublicMediaStore.PublishedFile(
@@ -143,6 +153,7 @@ class _DownloadTile extends ConsumerWidget {
                   path: task.filePath.isEmpty ? null : task.filePath,
                 ),
               );
+              break;
             case 'folder':
               await PublicMediaStore.instance.viewFolder(
                 PublicMediaStore.PublishedFile(
@@ -150,8 +161,10 @@ class _DownloadTile extends ConsumerWidget {
                   path: task.filePath.isEmpty ? null : task.filePath,
                 ),
               );
+              break;
             case 'delete':
               await manager.remove(task.id);
+              break;
           }
         },
         itemBuilder: (context) => [

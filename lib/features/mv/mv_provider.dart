@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers.dart';
+import '../../core/providers.dart';
 import 'data/mv_repository.dart';
 
 /// MV 仓库（全局共享，播放页与全屏播放器共用）。

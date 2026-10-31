@@ -74,9 +74,16 @@ class Song {
   }
 
   /// 兼容 /search 和 /privilege/lite 的返回结构。
+  ///
+  /// 实测字段真值：
+  /// - `/search?type=song`：`FileHash` / `OriSongName`（纯歌名）/ `FileName`（"歌手 - 歌名"）
+  ///   / `SingerName` / `Duration`（**秒**）/ `Image` / `AlbumID` / `MixSongID`（= album_audio_id）
+  ///   / `Audioid`（= audio_id，**不是** album_audio_id）。
+  /// - `/privilege/lite`：`hash` / `album_id` / `album_audio_id` / `name`（"歌手 - 歌名"）
+  ///   / `singername` / `quality` / `info.duration`（**毫秒**）/ `info.image`。
   factory Song.fromJson(Map<String, dynamic> json) {
-    // /search 返回字段常见：FileHash / AudioID / SongName / SingerName / Image / Duration
-    // /privilege/lite 返回字段：hash / album_id / album_audio_id / songname / singername / cover / duration(秒或毫秒)
+    // /search 返回字段常见：FileHash / Audioid / OriSongName / SingerName / Image / Duration
+    // /privilege/lite 返回字段：hash / album_id / album_audio_id / name / singername / info.*
     String str(List<String> keys) {
       for (final k in keys) {
         final v = json[k];
@@ -87,34 +94,77 @@ class Song {
 
     // 歌手可能来自 singername 或 singer 列表
     var artist = str(['singername', 'SingerName', 'singer_name', 'author_name']);
-    if (artist.isEmpty && json['singer'] is List) {
-      artist = (json['singer'] as List)
-          .map((e) => e is Map ? '${e['name'] ?? ''}' : '$e')
-          .where((s) => s.isNotEmpty)
-          .join('、');
+    if (artist.isEmpty) {
+      final singer = json['singer'];
+      if (singer is List) {
+        artist = singer
+            .map((e) => e is Map ? '${e['name'] ?? ''}' : '$e')
+            .where((s) => s.isNotEmpty)
+            .join('、');
+      } else if (singer != null) {
+        artist = '$singer';
+      }
     }
 
     final info = json['info'] is Map ? json['info'] as Map : const {};
     var cover = str(['cover', 'Image', 'img', 'album_img']);
     if (cover.isEmpty) cover = '${info['image'] ?? ''}';
+    // /privilege/lite 的 trans_param.union_cover 同样是真实封面。
+    if (cover.isEmpty) {
+      final transParam = json['trans_param'];
+      if (transParam is Map) cover = '${transParam['union_cover'] ?? ''}';
+    }
     cover = cover.replaceAll('{size}', '400');
 
-    // /privilege/lite 的时长位于 info.duration（毫秒）。
-    var duration = Duration.zero;
-    final durRaw = json['duration'] ?? json['Duration'] ?? info['duration'];
-    if (durRaw is num) {
-      // 大于 10000 视为毫秒
-      duration = durRaw > 10000
-          ? Duration(milliseconds: durRaw.round())
-          : Duration(seconds: durRaw.round());
+    // 歌名：/search 有独立的 OriSongName；/privilege/lite 只有 "歌手 - 歌名" 形式的 name。
+    var name = str(['songname', 'SongName', 'song_name', 'OriSongName']);
+    if (name.isEmpty) {
+      final raw = str(['name', 'filename', 'FileName']);
+      // "周杰伦 - 晴天" → 去掉歌手前缀（歌名自身可能含分隔符，只剥一次前缀）。
+      final sep = raw.indexOf(' - ');
+      if (sep > 0 &&
+          (artist.isEmpty || raw.substring(0, sep) == artist)) {
+        name = raw.substring(sep + 3).trim();
+      } else {
+        name = raw;
+      }
     }
+
+    // 时长单位按字段区分，避免毫秒/秒混用：
+    // - duration / Duration / time_length 为**秒**
+    // - timelength / timelen / info.duration 为**毫秒**
+    var duration = Duration.zero;
+    void setDuration(dynamic raw, {required bool millis}) {
+      if (duration > Duration.zero) return;
+      if (raw is num) {
+        duration = millis
+            ? Duration(milliseconds: raw.round())
+            : Duration(seconds: raw.round());
+      } else if (raw != null) {
+        final v = int.tryParse('$raw');
+        if (v != null) {
+          duration = millis
+              ? Duration(milliseconds: v)
+              : Duration(seconds: v);
+        }
+      }
+    }
+
+    for (final key in ['duration', 'Duration', 'time_length']) {
+      if (json.containsKey(key)) setDuration(json[key], millis: false);
+    }
+    for (final key in ['timelength', 'timelen', 'timeLength']) {
+      if (json.containsKey(key)) setDuration(json[key], millis: true);
+    }
+    if (info['duration'] != null) setDuration(info['duration'], millis: true);
 
     return Song(
       hash: str(['hash', 'FileHash', 'file_hash', 'Hash']),
       albumId: str(['album_id', 'albumid', 'AlbumID', 'albumID']),
+      // MixSongID 才是 album_audio_id；Audioid/audio_id 是 audio_id（不同语义）。
       albumAudioId:
-          str(['album_audio_id', 'albumAudioId', 'AudioID', 'audio_id']),
-      name: str(['songname', 'SongName', 'song_name', 'filename', 'FileName']),
+          str(['album_audio_id', 'albumAudioId', 'MixSongID', 'MixSongId']),
+      name: name,
       artist: artist,
       cover: cover,
       duration: duration,

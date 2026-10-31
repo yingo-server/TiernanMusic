@@ -116,24 +116,40 @@ class CommentPage {
   final List<String>? hotWords;
 
   factory CommentPage.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] as Map<String, dynamic>? ?? json;
-    final list = data['list'] as List? ?? data['info'] as List? ?? [];
+    // 实测：顶层就有 `list`（无 data 层）；楼中楼总数是 `comments_num`。
+    final data = json['data'] is Map
+        ? Map<String, dynamic>.from(json['data'] as Map)
+        : json;
+    final raw = data['list'];
+    final list = raw is List ? raw : const [];
     final comments = list
-        .map((e) => Comment.fromJson(e as Map<String, dynamic>))
+        .whereType<Map>()
+        .map((e) => Comment.fromJson(Map<String, dynamic>.from(e)))
         .toList();
-    final total = _asInt(data['count'] ?? data['total'] ?? data['comments_num'],
+    final total = _asInt(data['count'] ??
+        data['total'] ??
+        data['comments_num'] ??
+        data['str_count'],
         fallback: comments.length);
 
+    // 实测分类标签字段名是 `classify_list`，项为 {id, label, icon, cnt}。
     List<CommentClassify>? classifies;
-    if (data['classify'] is List) {
-      classifies = (data['classify'] as List)
-          .map((e) => CommentClassify.fromJson(e as Map<String, dynamic>))
+    final classifyRaw = data['classify_list'] ?? data['classify'];
+    if (classifyRaw is List) {
+      classifies = classifyRaw
+          .whereType<Map>()
+          .map((e) => CommentClassify.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     }
+    // 实测热词项为 {content, count}（不是 hot_word）。
     List<String>? hotWords;
-    if (data['hotword_list'] is List) {
-      hotWords = (data['hotword_list'] as List)
-          .map((e) => '${e is Map ? e['hot_word'] ?? e : e}')
+    final hotRaw = data['hot_word_list'] ?? data['hotword_list'];
+    if (hotRaw is List) {
+      hotWords = hotRaw
+          .map((e) => e is Map
+              ? '${e['content'] ?? e['hot_word'] ?? e['word'] ?? ''}'
+              : '$e')
+          .where((s) => s.isNotEmpty)
           .toList();
     }
     return CommentPage(
@@ -171,6 +187,8 @@ class Comment {
   factory Comment.fromJson(Map<String, dynamic> json) {
     var avatar = '${json['user_pic'] ?? json['avatar'] ?? json['pic'] ?? ''}';
     avatar = avatar.replaceAll('{size}', '120');
+    // 实测 `like` 是**对象** {count, likenum, haslike, opposenum}；
+    // 旧实现当数字解析，导致点赞恒为 0。
     final like = json['like'];
     return Comment(
       id: '${json['id'] ?? json['cid'] ?? ''}',
@@ -178,9 +196,10 @@ class Comment {
       avatar: avatar,
       content: '${json['content'] ?? ''}',
       likeCount: _asInt(like is Map
-          ? like['count'] ?? like['likenum']
-          : like ?? json['likecount']),
+          ? (like['count'] ?? like['likenum'])
+          : (like ?? json['likecount'])),
       createTime: '${json['addtime'] ?? json['create_time'] ?? ''}',
+      // 实测顶层评论回复数是 `reply_num`；楼中楼项没有该字段。
       replyCount: _asInt(json['reply_num'] ?? json['replycount']),
       specialChildId: json['special_child_id'] != null
           ? '${json['special_child_id']}'
@@ -195,11 +214,10 @@ class CommentClassify {
   final String name;
   final int count;
 
+  /// 实测分类项为 `{id, label, icon, cnt}`（标签名是 `label`，数量是 `cnt`）。
   factory CommentClassify.fromJson(Map<String, dynamic> json) => CommentClassify(
-        id: '${json['type_id'] ?? json['id'] ?? ''}',
-        name: '${json['name'] ?? ''}',
-        count: (json['count'] ?? 0) is int
-            ? (json['count'] ?? 0)
-            : int.tryParse('${json['count']}') ?? 0,
+        id: '${json['id'] ?? json['type_id'] ?? ''}',
+        name: '${json['label'] ?? json['name'] ?? ''}',
+        count: _asInt(json['cnt'] ?? json['count']),
       );
 }

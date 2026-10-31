@@ -79,7 +79,7 @@ class FullPlayerPage extends ConsumerWidget {
                   tooltip: context.l10n.download,
                   onPressed: song == null
                       ? null
-                      : () => showDownloadSheet(context, song),
+                      : () => showDownloadSheet(context, song!),
                 ),
                 IconButton(
                   icon: const Icon(Icons.queue_music_rounded),

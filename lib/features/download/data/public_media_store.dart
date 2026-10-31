@@ -82,9 +82,8 @@ class PublicMediaStore {
   /// 降级目录：App 外部私有目录（Android/data/...），多数文件管理器可见。
   static Future<String> fallbackDir(DownloadTaskType type) async {
     final base = await getExternalStorageDirectory();
-    final dir = Directory(
-        '${base?.path ?? (await getApplicationDocumentsDirectory()).path}'
-        '/$folderName/${relativePathOf(type).split('/').last}');
+    final root = base?.path ?? (await getApplicationDocumentsDirectory()).path;
+    final dir = Directory('$root/${relativePathOf(type)}');
     if (!await dir.exists()) await dir.create(recursive: true);
     return dir.path;
   }
@@ -133,18 +132,19 @@ class PublicMediaStore {
     String displayName,
   ) async {
     final service = StoragePermissionService.instance;
-    var base = await service.publicDir(publicDirNameOf(type));
-    var display = '/sdcard/${relativePathOf(type)}';
-    if (base == null || base.isEmpty) {
-      base = await fallbackDir(type);
-      display = base;
+    final publicBase = await service.publicDir(publicDirNameOf(type));
+    String dirPath;
+    String display;
+    if (publicBase == null || publicBase.isEmpty) {
+      dirPath = await fallbackDir(type);
+      display = dirPath;
     } else {
+      var base = publicBase;
       // 歌词目录：Documents 不可用时退到 Download
       if (type == DownloadTaskType.lyric) {
         final target = Directory('$base/$folderName/Lyrics');
         if (!await target.exists()) {
-          final downloadBase =
-              await service.publicDir('downloads');
+          final downloadBase = await service.publicDir('downloads');
           if (downloadBase != null && downloadBase.isNotEmpty) {
             base = downloadBase;
           }
@@ -152,11 +152,11 @@ class PublicMediaStore {
       }
       final dir = Directory('$base/$folderName${_subSuffix(type)}');
       if (!await dir.exists()) await dir.create(recursive: true);
-      base = dir.path;
+      dirPath = dir.path;
       display = '/sdcard/${relativePathOf(type)}';
     }
 
-    final target = File('$base/$displayName');
+    final target = File('$dirPath/$displayName');
     await target.writeAsBytes(await File(tempFilePath).readAsBytes(),
         flush: true);
     return PublishedFile(path: target.path, displayPath: display);

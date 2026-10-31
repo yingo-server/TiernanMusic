@@ -7,6 +7,11 @@ class MvRepository {
   final KugouApiClient _api;
 
   /// 歌曲关联 MV
+  ///
+  /// 实测：`/kmr/audio/mv` 的 `data` 是**嵌套数组** `List<List<Mv>>`，
+  /// 每项含 `mv_name` / `authors[]` / `video_id` / `duration`（**毫秒**）
+  /// / `mkv` / `h264` / `h265` 三套 hash 容器。
+  /// 该接口要 **mixsongid**（传 audio_id 会返回 `[{}]`）。
   Future<List<MvInfo>> findBySong(String albumAudioId) async {
     final q = {
       'album_audio_id': albumAudioId,
@@ -17,21 +22,28 @@ class MvRepository {
     final data = cached ?? await _api.get('/kmr/audio/mv', query: q);
     if (cached == null) MemoryCache.instance.set(cacheKey, data);
 
-    final groups = data['data'] as List? ?? [];
+    final raw = data['data'];
+    final groups = raw is List ? raw : const [];
     final result = <MvInfo>[];
     for (final group in groups) {
       if (group is List) {
         for (final item in group) {
-          result.add(MvInfo.fromJson(item as Map<String, dynamic>));
+          if (item is Map) {
+            result.add(MvInfo.fromJson(Map<String, dynamic>.from(item)));
+          }
         }
       } else if (group is Map) {
-        result.add(MvInfo.fromJson(group as Map<String, dynamic>));
+        result.add(MvInfo.fromJson(Map<String, dynamic>.from(group)));
       }
     }
     return result;
   }
 
   /// 视频详情
+  ///
+  /// 实测：`/video/detail` 的 `data` 是**数组**（不是对象），首项为视频信息；
+  /// 清晰度 hash 平铺在顶层（`hd_hash` / `sd_hash` / `qhd_hash` / `fhd_hash`
+  /// / `ld_hash`），mkv 容器的 hash 另名为 `mkv_sd_hash` / `mkv_qhd_hash`。
   Future<MvDetail> fetchDetail(String videoId) async {
     final cacheKey = MemoryCache.keyOf('/video/detail', {'id': videoId});
     final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
@@ -41,20 +53,46 @@ class MvRepository {
   }
 
   /// 解析播放地址（HTTP → 代理 HTTPS）
-  Future<String> resolvePlayUrl(String videoHash) async {
-    final data = await _api.get('/video/url', query: {'hash': videoHash});
-    final d = data['data'] as Map<String, dynamic>?;
-    if (d == null) throw ApiException(-1, 'MV 解析失败');
-    final entry = d[videoHash.toLowerCase()] ??
-        d[videoHash.toUpperCase()] ??
+  ///
+  /// [videoIdOrHash] 可以是 video_id（117613）或视频 hash（C95D…）。
+  /// `/video/url` 只认 **hash**（传 video_id 返回 `Not found`），
+  /// `/video/detail` 只认 **video_id**（传 hash 返回 `invalid param`），
+  /// 因此这里做一次互转兜底。
+  Future<String> resolvePlayUrl(String videoIdOrHash) async {
+    var hash = videoIdOrHash;
+    if (!_looksLikeHash(hash)) {
+      // video_id → 通过详情接口换成视频 hash。
+      final detail = await fetchDetail(videoIdOrHash);
+      final resolved = detail.bestHash;
+      if (resolved == null || resolved.isEmpty) {
+        throw ApiException(-1, 'MV 暂无播放地址');
+      }
+      hash = resolved;
+    }
+    final data = await _api.get('/video/url', query: {'hash': hash});
+    final d = data['data'];
+    if (d is! Map) throw ApiException(-1, 'MV 解析失败');
+    final entry = d[hash.toLowerCase()] ??
+        d[hash.toUpperCase()] ??
         (d.isEmpty ? null : d.values.first);
-    if (entry is! Map<String, dynamic>) throw ApiException(-1, 'MV 解析失败');
+    if (entry is! Map) throw ApiException(-1, 'MV 解析失败');
+    final down = entry['downurl'];
     final backup = entry['backupdownurl'];
-    final url = '${entry['downurl'] ??
-        (backup is List && backup.isNotEmpty ? backup.first : '')}';
+    var url = '';
+    if (down is String && down.isNotEmpty) {
+      url = down;
+    } else if (backup is List && backup.isNotEmpty) {
+      url = '${backup.first}';
+    } else if (backup is String && backup.isNotEmpty) {
+      url = backup;
+    }
     if (url.isEmpty) throw ApiException(-1, 'MV 暂无播放地址');
     return AppConfig.proxyMvUrl(url);
   }
+
+  /// 32 位十六进制 hash（视频 hash 均为大写十六进制）。
+  static bool _looksLikeHash(String s) =>
+      s.length == 32 && RegExp(r'^[0-9a-fA-F]{32}$').hasMatch(s);
 }
 
 class MvInfo {
@@ -73,7 +111,7 @@ class MvInfo {
   final String name;
   final String artist;
   final String thumb;
-  final int duration;
+  final int duration; // 秒
   final String? sdHash;
   final String? hdHash;
   final String? qhdHash;
@@ -84,29 +122,66 @@ class MvInfo {
       .where((hash) => hash.isNotEmpty)
       .firstOrNull;
 
+  /// 实测 `/kmr/audio/mv` 单项字段：
+  /// `mv_name` / `authors[].author_name` / `singer` / `user_name` /
+  /// `video_id` / `duration`（**毫秒**）/ `thumb` / `hdpic` /
+  /// `mkv{sd,hd,qhd}_hash` 与 `h264{sd,hd,qhd,fhd,ld}_hash` / `h265{...}`。
   factory MvInfo.fromJson(Map<String, dynamic> json) {
-    final mkv = json['mkv'] as Map<String, dynamic>? ?? {};
-    final authors = json['authors'] as List? ?? [];
-    var thumb = '${json['thumb'] ?? json['imgurl'] ?? ''}';
+    final mkv = json['mkv'] is Map
+        ? Map<String, dynamic>.from(json['mkv'] as Map)
+        : <String, dynamic>{};
+    final h264 = json['h264'] is Map
+        ? Map<String, dynamic>.from(json['h264'] as Map)
+        : <String, dynamic>{};
+    final h265 = json['h265'] is Map
+        ? Map<String, dynamic>.from(json['h265'] as Map)
+        : <String, dynamic>{};
+
+    // 标题：mv_name 是实测字段（不是 name/songname）。
+    final name = '${json['mv_name'] ?? json['songname'] ?? json['name'] ?? json['filename'] ?? ''}';
+
+    // 艺人：优先 authors[]，其次 singer / user_name（用户视频只有后者）。
+    final authors = json['authors'];
+    var artist = '';
+    if (authors is List) {
+      artist = authors
+          .whereType<Map>()
+          .map((a) => '${a['author_name'] ?? a['name'] ?? ''}')
+          .where((s) => s.isNotEmpty)
+          .join('、');
+    }
+    if (artist.isEmpty) {
+      artist = '${json['singer'] ?? json['singername'] ?? json['user_name'] ?? ''}';
+    }
+
+    var thumb = '${json['thumb'] ?? json['hdpic'] ?? json['imgurl'] ?? ''}';
     thumb = thumb.replaceAll('{size}', '480');
+
+    // duration 实测为毫秒（317400），这里统一换算成秒。
+    final durRaw = json['duration'] ?? json['timelength'] ?? mkv['timelength'];
+    final durationMs = durRaw is num
+        ? durRaw.round()
+        : (int.tryParse('${durRaw ?? ''}') ?? 0);
+    final duration = durationMs > 10000 ? durationMs ~/ 1000 : durationMs;
+
+    String? pick(String key) {
+      final v = h264[key] ?? h265[key] ?? mkv[key];
+      if (v == null) return null;
+      final s = '$v';
+      return s.isEmpty ? null : s;
+    }
+
     return MvInfo(
-      videoId: '${json['mv_hash'] ?? json['id'] ?? json['video_id'] ?? ''}',
-      name: '${json['mv_name'] ?? json['songname'] ?? json['name'] ?? json['filename'] ?? ''}',
-      artist: authors.isNotEmpty
-          ? authors
-              .whereType<Map>()
-              .map((author) => '${author['author_name'] ?? ''}')
-              .where((name) => name.isNotEmpty)
-              .join('、')
-          : '${json['singername'] ?? json['singer'] ?? json['user_name'] ?? ''}',
+      videoId: '${json['video_id'] ?? json['mv_hash'] ?? json['id'] ?? ''}',
+      name: name,
+      artist: artist,
       thumb: thumb,
-      duration: (json['duration'] ?? mkv['timelength'] ?? 0) is int
-          ? (json['duration'] ?? mkv['timelength'] ?? 0)
-          : int.tryParse('${json['duration'] ?? mkv['timelength']}') ?? 0,
-      sdHash: mkv['sd_hash'] as String?,
-      hdHash: mkv['hd_hash'] as String?,
-      qhdHash: mkv['qhd_hash'] as String?,
-      sqHash: mkv['sq_hash'] as String?,
+      duration: duration,
+      sdHash: pick('sd_hash'),
+      hdHash: pick('hd_hash'),
+      qhdHash: pick('qhd_hash'),
+      // sq（Super Quality）实测不存在；mkv 有 qhd/sd，h264 有 fhd。
+      sqHash: pick('sq_hash'),
     );
   }
 }
@@ -124,27 +199,95 @@ class MvDetail {
   final String name;
   final String artist;
   final String cover;
-  final int duration;
+  final int duration; // 秒
   final Map<String, String> hashes; // quality -> hash
 
-  factory MvDetail.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] as Map<String, dynamic>? ?? json;
-    var cover = '${data['imgurl'] ?? data['thumb'] ?? ''}';
-    cover = cover.replaceAll('{size}', '480');
-    final hashes = <String, String>{};
-    final mkv = data['mkv'] as Map<String, dynamic>? ?? data;
-    for (final q in ['sd', 'hd', 'qhd', 'sq', 'fhd']) {
-      final h = mkv['${q}_hash'] as String?;
-      if (h != null && h.isNotEmpty) hashes[q] = h;
+  /// 最高画质的 hash（用于首次播放）。
+  String? get bestHash {
+    for (final q in const ['fhd', 'sq', 'qhd', 'hd', 'sd', 'ld']) {
+      final h = hashes[q];
+      if (h != null && h.isNotEmpty) return h;
     }
+    return null;
+  }
+
+  /// 实测 `/video/detail`：
+  /// - `data` 是**数组**（首项为视频对象）
+  /// - 标题 `video_name`，艺人 `author_name` / `authors[]`
+  /// - 封面 `cover` / `hdpic` / `pic`（pic 是裸文件名）
+  /// - 时长 `timelength`（**毫秒**，MV 时长）；`audio_timelength` 是音频时长
+  /// - 清晰度 hash 平铺在顶层：`hd_hash` / `sd_hash` / `qhd_hash` / `fhd_hash` /
+  ///   `ld_hash`，mkv 容器另名 `mkv_sd_hash` / `mkv_qhd_hash`
+  factory MvDetail.fromJson(Map<String, dynamic> json) {
+    final raw = json['data'];
+    Map<String, dynamic> data;
+    if (raw is List) {
+      data = raw.isNotEmpty && raw.first is Map
+          ? Map<String, dynamic>.from(raw.first as Map)
+          : <String, dynamic>{};
+    } else if (raw is Map) {
+      data = Map<String, dynamic>.from(raw);
+    } else {
+      data = json;
+    }
+
+    var cover = '${data['cover'] ?? data['hdpic'] ?? data['thumb'] ?? ''}';
+    if (cover.isEmpty) {
+      final pic = '${data['pic'] ?? ''}';
+      if (pic.isNotEmpty) {
+        cover = pic.startsWith('http')
+            ? pic
+            : 'http://imge.kugou.com/mvthumb/{size}/$pic';
+      }
+    }
+    cover = cover.replaceAll('{size}', '480');
+
+    final hashes = <String, String>{};
+    // 顶层平铺 hash 优先；mkv_* 是另一套（mkv 容器画质）。
+    void put(String key, String value) {
+      if (value.isNotEmpty && !hashes.containsKey(key)) hashes[key] = value;
+    }
+
+    put('hd', '${data['hd_hash'] ?? ''}');
+    put('sd', '${data['sd_hash'] ?? ''}');
+    put('qhd', '${data['qhd_hash'] ?? ''}');
+    put('fhd', '${data['fhd_hash'] ?? ''}');
+    put('ld', '${data['ld_hash'] ?? ''}');
+    put('sq', '${data['sq_hash'] ?? ''}');
+    // h264/h265 变体（部分视频只有这些）。
+    for (final key in ['hd', 'sd', 'qhd', 'fhd', 'ld']) {
+      final v = data['${key}_hash_265'] ?? data['${key}_hash'];
+      if (v != null) put(key, '$v');
+    }
+    // mkv 容器的同画质 hash 作为兜底（仅在顶层缺失时补）。
+    put('sd', '${data['mkv_sd_hash'] ?? ''}');
+    put('qhd', '${data['mkv_qhd_hash'] ?? ''}');
+
+    var artist = '${data['author_name'] ?? data['singername'] ?? ''}';
+    if (artist.isEmpty) {
+      final authors = data['authors'];
+      if (authors is List) {
+        artist = authors
+            .whereType<Map>()
+            .map((a) => '${a['author_name'] ?? a['name'] ?? ''}')
+            .where((s) => s.isNotEmpty)
+            .join('、');
+      }
+    }
+
+    // timelength 为毫秒（MV 时长），统一转秒。
+    final durRaw = data['timelength'] ?? data['duration'];
+    final durationMs = durRaw is num
+        ? durRaw.round()
+        : (int.tryParse('${durRaw ?? ''}') ?? 0);
+    final duration = durationMs > 10000 ? durationMs ~/ 1000 : durationMs;
+
     return MvDetail(
-      videoId: '${data['id'] ?? data['video_id'] ?? ''}',
-      name: '${data['songname'] ?? data['name'] ?? ''}',
-      artist: '${data['singername'] ?? data['author_name'] ?? ''}',
+      videoId: '${data['video_id'] ?? data['id'] ?? ''}',
+      name: '${data['video_name'] ?? data['mv_name'] ?? data['songname'] ?? data['name'] ?? ''}',
+      artist: artist,
       cover: cover,
-      duration: (data['duration'] ?? data['timelength'] ?? 0) is int
-          ? (data['duration'] ?? data['timelength'] ?? 0)
-          : int.tryParse('${data['duration'] ?? data['timelength']}') ?? 0,
+      duration: duration,
       hashes: hashes,
     );
   }
