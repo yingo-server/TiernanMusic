@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../home/data/models.dart';
-import '../../../core/widgets/song_tile.dart' show GradientChip, EmptyState;
+import '../../../core/widgets/song_tile.dart'
+    show GradientChip, EmptyState, ErrorRetry;
 import '../../player/play_helper.dart';
+import '../../../core/utils/toast.dart';
 import '../data/search_repository.dart';
 import '../../../l10n/l10n.dart';
 
@@ -383,6 +385,10 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
         _initialLoading = false;
         _error = e;
       });
+      // 列表已有内容时静默降级：仅弹一条去重 Toast，不打断浏览
+      if (_items.isNotEmpty) {
+        Toast.show(context, context.l10n.genericErrorTitle);
+      }
     }
   }
 
@@ -393,7 +399,7 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
       return const Center(child: CircularProgressIndicator());
     }
     if (_error != null && _items.isEmpty) {
-      return _ErrorRetry(onRetry: () {
+      return ErrorRetry(error: _error, onRetry: () {
         setState(() {
           _error = null;
           _initialLoading = true;
@@ -478,7 +484,8 @@ class _PlaylistResultTab extends ConsumerWidget {
     final result = ref.watch(_playlistSearchProvider(keyword));
     return result.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => _ErrorRetry(
+      error: (e, _) => ErrorRetry(
+          error: e,
           onRetry: () => ref.invalidate(_playlistSearchProvider(keyword))),
       data: (r) {
         if (r.items.isEmpty) {
@@ -551,7 +558,8 @@ class _GenericResultTab extends ConsumerWidget {
     final result = ref.watch(_genericSearchProvider((keyword, type)));
     return result.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => _ErrorRetry(
+      error: (e, _) => ErrorRetry(
+          error: e,
           onRetry: () =>
               ref.invalidate(_genericSearchProvider((keyword, type)))),
       data: (r) {
@@ -610,27 +618,3 @@ final _genericSearchProvider =
             .read(searchRepositoryProvider)
             .searchByType(arg.$1, arg.$2));
 
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.onRetry});
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.cloud_off_outlined, size: 56),
-          const SizedBox(height: 12),
-          Text(context.l10n.loadFailedNetwork),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: Text(context.l10n.retry),
-          ),
-        ],
-      ),
-    );
-  }
-}

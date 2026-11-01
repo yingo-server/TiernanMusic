@@ -25,6 +25,9 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      // 显式指定 Scaffold 底色，避免路由切换瞬间闪白
+      scaffoldBackgroundColor: scheme.surface,
+      canvasColor: scheme.surface,
       visualDensity: VisualDensity.adaptivePlatformDensity,
       splashFactory: InkSparkle.splashFactory,
       cardTheme: CardThemeData(

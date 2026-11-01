@@ -301,6 +301,10 @@ class KgDirectApiClient extends KugouApiClient {
   // ---------------- 评论 ----------------
 
   Future<KgResponse> _commentMusic(Map<String, dynamic> q) {
+    // 源码（comment_music.js）无 x-router/baseURL → 上游即打 gateway.kugou.com
+    // 的 /mcomment/v1/cmtlist（mcomment 服务本身挂在 gateway 根路径下，两标签）。
+    // 实测匿名/VIP 均 200 status=1；与 kapi 差异仅运行时字段（like.count ±1、
+    // config.input_hint、canUploadImg 等 A/B 文案），Repository 无感知。
     return kg.request('/mcomment/v1/cmtlist',
         method: 'POST',
         params: {
@@ -320,6 +324,10 @@ class KgDirectApiClient extends KugouApiClient {
     return kg.request('/index.php',
         method: 'GET',
         encryptType: 'web',
+        // 实测 sum.comment.service.kugou.com 为三标签域名，*.kugou.com 单层
+        // 通配证书不覆盖（openssl SAN 仅 *.kugou.com/*.kgimg.com，python/curl
+        // 一致 CERTIFICATE_VERIFY_FAILED Hostname mismatch）→ 保持 gateway +
+        // x-router（web 签名）。实测 200，与 kapi 逐字段一致（0 差异）。
         headers: {'x-router': 'sum.comment.service.kugou.com'},
         params: {
           'r': 'comments/getcommentsnum',
@@ -492,7 +500,10 @@ class KgDirectApiClient extends KugouApiClient {
     final ids = '${q['mixsongid'] ?? q['album_audio_id'] ?? ''}'.split(',');
     return kg.request('/kmr/v1/audio/mv',
         method: 'POST',
-        headers: {'x-router': 'openapi.kugou.com', 'KG-TID': '38'},
+        // 原生域名 openapi.kugou.com（两标签，*.kugou.com 证书覆盖，实测 TLS ok）：
+        // 去掉 x-router，匿名/VIP 实测 200 status=1，与 kapi 逐字段一致（0 差异）。
+        baseUrl: 'https://openapi.kugou.com',
+        headers: {'KG-TID': '38'},
         data: {
           'data': ids.map((s) => {'mixsongid': s}).toList(),
           'fields': q['fields'] ?? '',
@@ -503,7 +514,11 @@ class KgDirectApiClient extends KugouApiClient {
     final hash = '${q['hash'] ?? ''}';
     final r = await kg.request('/v2/interface/index',
         method: 'GET',
-        headers: {'x-router': 'trackermv.kugou.com'},
+        // 原生域名 trackermv.kugou.com（两标签，*.kugou.com 证书覆盖）：
+        // 匿名/VIP 实测 200 status=1，data[hash].downurl/backupdownurl 与 kapi
+        // 逐字段一致（0 差异）。downurl 为 http://，代理转换在 Repository 层
+        // AppConfig.proxyMvUrl 完成，URL 直连层只负责原样返回（不丢代理转换）。
+        baseUrl: 'https://trackermv.kugou.com',
         params: {
           'backupdomain': 1,
           'cmd': 123,
@@ -527,7 +542,12 @@ class KgDirectApiClient extends KugouApiClient {
   Future<KgResponse> _songUrl(Map<String, dynamic> q) {
     return kg.request('/v5/url',
         method: 'GET',
-        headers: {'x-router': 'trackercdn.kugou.com'},
+        // 原生域名 trackercdn.kugou.com（两标签，*.kugou.com 证书覆盖，实测 TLS ok）：
+        // 匿名/VIP 实测 200 status=1，返回真实 url/backupUrl（数组），
+        // key=KgSignature.keyOf(hash,mid,userid) 为必填（缺 key 报 error_code=20028
+        // 类风控/『illegal key』）。直连仍可能遇 20028（与 IP/风控相关），
+        // _directOrFallback 已兜底回退 kapi。
+        baseUrl: 'https://trackercdn.kugou.com',
         params: {
           'album_id': int.tryParse('${q['album_id'] ?? 0}') ?? 0,
           'area_code': 1,
@@ -572,6 +592,12 @@ class KgDirectApiClient extends KugouApiClient {
     }
     return kg.request('/v2/get_res_privilege/lite',
         method: 'POST',
+        // 实测 media.store.kugou.com 为三标签域名，*.kugou.com 单层通配证书
+        // 不覆盖（openssl: subject CN=*.kugou.com, SAN 仅 *.kugou.com/*.kgimg.com/
+        // kugou.com/kgimg.com；python/curl 一致报 CERTIFICATE_VERIFY_FAILED
+        // Hostname mismatch）→ 保持 gateway + x-router（实测 200 status=1，
+        // 与 kapi 逐字段一致 0 差异）。
+        headers: {'x-router': 'media.store.kugou.com', 'Content-Type': 'application/json'},
         data: {
           'appid': kg.lite ? KgConfig.liteAppid : KgConfig.appid,
           'area_code': 1,

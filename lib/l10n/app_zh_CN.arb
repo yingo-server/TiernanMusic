@@ -270,5 +270,11 @@
   "downloadRetry": "重试",
   "downloadPause": "暂停",
   "downloadResume": "继续",
-  "downloadedSongs": "已下载歌曲"
+  "downloadedSongs": "已下载歌曲",
+  "networkErrorTitle": "网络连接失败",
+  "networkErrorHint": "请检查网络设置后重试，或稍后再来",
+  "genericErrorTitle": "加载失败",
+  "genericErrorHint": "出了点小问题，请稍后重试",
+  "reload": "重新加载",
+  "techDetail": "技术详情"
 }

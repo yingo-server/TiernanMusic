@@ -478,52 +478,183 @@ class _HomeSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = Theme.of(context).colorScheme.surfaceContainerHighest;
-    Widget box(double h, {double? w, double r = 12}) => Container(
-          height: h,
-          width: w,
-          decoration: BoxDecoration(
-              color: base, borderRadius: BorderRadius.circular(r)),
-        );
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        box(150, r: 16),
-        const SizedBox(height: 24),
-        box(20, w: 120),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 180,
-          child: Row(children: [
-            box(130, w: 130, r: 16),
-            const SizedBox(width: 12),
-            box(130, w: 130, r: 16),
-            const SizedBox(width: 12),
-            box(130, w: 130, r: 16),
-          ]),
-        ),
-        const SizedBox(height: 24),
-        box(20, w: 100),
-        const SizedBox(height: 12),
-        for (var i = 0; i < 6; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+    final scheme = Theme.of(context).colorScheme;
+    return _Shimmer(
+      baseColor: scheme.surface,
+      highlightColor:
+          scheme.surfaceContainerHighest.withOpacity(0.4),
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Banner
+          _SkBox(height: 150, radius: 16),
+          const SizedBox(height: 24),
+          // 推荐歌单：130x130 圆角卡横排
+          _SkText(width: 120),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 176,
             child: Row(children: [
-              box(56, w: 56, r: 8),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    box(14),
-                    const SizedBox(height: 8),
-                    box(12, w: 120),
-                  ])),
+              for (var i = 0; i < 3; i++) ...[
+                if (i > 0) const SizedBox(width: 12),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _SkBox(width: 130, height: 130, radius: 16),
+                    SizedBox(height: 8),
+                    _SkText(width: 100),
+                  ],
+                ),
+              ],
             ]),
           ),
-      ],
+          const SizedBox(height: 24),
+          // 排行榜横排卡
+          _SkText(width: 100),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 150,
+            child: Row(children: [
+              for (var i = 0; i < 2; i++) ...[
+                if (i > 0) const SizedBox(width: 12),
+                const _SkBox(width: 200, height: 150, radius: 16),
+              ],
+            ]),
+          ),
+          const SizedBox(height: 24),
+          // 新歌列表行（56 封面 + 两行文字）
+          _SkText(width: 110),
+          const SizedBox(height: 12),
+          for (var i = 0; i < 5; i++)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 14),
+              child: Row(children: [
+                _SkBox(width: 56, height: 56, radius: 8),
+                SizedBox(width: 12),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      _SkText(width: double.infinity, height: 14),
+                      SizedBox(height: 8),
+                      _SkText(width: 120, height: 12),
+                    ])),
+              ]),
+            ),
+        ],
+      ),
     );
   }
+}
+
+/// 骨架占位块
+class _SkBox extends StatelessWidget {
+  const _SkBox(
+      {required this.height, this.width, this.radius = 12});
+  final double height;
+  final double? width;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      width: width,
+      decoration: BoxDecoration(
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withOpacity(0.4),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+}
+
+/// 骨架文字条
+class _SkText extends StatelessWidget {
+  const _SkText({required this.width, this.height = 16});
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      width: width,
+      decoration: BoxDecoration(
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withOpacity(0.4),
+        borderRadius: BorderRadius.circular(4),
+      ),
+    );
+  }
+}
+
+/// 微光扫过动画（3s 循环，无第三方依赖）
+class _Shimmer extends StatefulWidget {
+  const _Shimmer({required this.child, this.baseColor, this.highlightColor});
+  final Widget child;
+  final Color? baseColor;
+  final Color? highlightColor;
+
+  @override
+  State<_Shimmer> createState() => _ShimmerState();
+}
+
+class _ShimmerState extends State<_Shimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 3),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      child: widget.child,
+      builder: (context, child) {
+        final theme = Theme.of(context);
+        final base =
+            widget.baseColor ?? theme.colorScheme.surface;
+        final highlight = widget.highlightColor ??
+            theme.colorScheme.surfaceContainerHighest.withOpacity(0.4);
+        // 高光带从左侧 -1 推进到右侧 1，覆盖 child 后裁剪
+        final dx = -1.2 + _controller.value * 2.4;
+        return ShaderMask(
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (bounds) => LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [base, highlight, base],
+            stops: const [0.35, 0.5, 0.65],
+            transform: GradientTranslation(dx * bounds.width),
+          ).createShader(bounds),
+          child: child,
+        );
+      },
+    );
+  }
+}
+
+/// Gradient 平移：把渐变整体在 x 方向偏移 [dx]
+class GradientTranslation extends GradientTransform {
+  const GradientTranslation(this.dx);
+  final double dx;
+
+  @override
+  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) =>
+      Matrix4.translationValues(dx, 0, 0);
 }
 
 class _HomeError extends StatelessWidget {
@@ -533,25 +664,6 @@ class _HomeError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final message = '$error';
-    final isAuthError = message.contains('20028') ||
-        message.contains('登录') ||
-        message.contains('验证');
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.cloud_off_outlined, size: 56),
-          const SizedBox(height: 12),
-          Text(isAuthError ? context.l10n.authErrorRetry : context.l10n.loadFailedNetwork),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: Text(context.l10n.retry),
-          ),
-        ],
-      ),
-    );
+    return ErrorRetry(error: error, onRetry: onRetry);
   }
 }

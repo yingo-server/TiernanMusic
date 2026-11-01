@@ -240,5 +240,11 @@
   "loginToViewPlaylists": "Log in to view your playlist.",
   "queueEmpty": "The queue is empty. Go play a few songs first.",
   "cache": "Cache",
-  "replyPrefix": "Reply to {name}: {content}"
+  "replyPrefix": "Reply to {name}: {content}",
+  "networkErrorTitle": "Network Error",
+  "networkErrorHint": "Please check your connection and try again later",
+  "genericErrorTitle": "Something Went Wrong",
+  "genericErrorHint": "An unexpected error occurred. Please try again.",
+  "reload": "Reload",
+  "techDetail": "Technical Details"
 }
