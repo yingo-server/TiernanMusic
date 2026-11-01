@@ -220,7 +220,7 @@ class _CaptchaPageState extends State<CaptchaPage> {
             '如验证码未自动弹出，请点击页面中的「开始验证」',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ),
@@ -296,7 +296,7 @@ class _CaptchaPageState extends State<CaptchaPage> {
           Text('请输入接收到的验证码完成验证',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               )),
           const SizedBox(height: 28),
           TextField(
@@ -348,7 +348,7 @@ class _CaptchaPageState extends State<CaptchaPage> {
             '建议：先在官方 App 完成一次操作，再回到本应用重试。',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 24),
@@ -369,7 +369,7 @@ class _CaptchaPageState extends State<CaptchaPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.help_outline,
-              size: 56, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+              size: 56, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
           const SizedBox(height: 16),
           Text('未知验证类型（v_type=${s.vType}）',
               style: theme.textTheme.titleMedium),
@@ -378,7 +378,7 @@ class _CaptchaPageState extends State<CaptchaPage> {
             s.verifyUrl ?? '服务端未返回验证 url',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.5),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 20),
