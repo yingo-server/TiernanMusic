@@ -84,5 +84,101 @@
   "switchAccount": "Konto wechseln",
   "currentAccount": "Aktuelles Konto",
   "myPlaylists": "Meine Wiedergabelisten",
-  "createPlaylist": "Neue Wiedergabeliste erstellen"
+  "createPlaylist": "Neue Wiedergabeliste erstellen",
+  "moreActions": "Mehr",
+  "clearHistoryConfirm": "Gesamten Suchverlauf löschen?",
+  "commentFailed": "Kommentar fehlgeschlagen: {error}",
+  "@commentFailed": {
+    "description": "Kommentar fehlgeschlagen: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFailed": "Löschen fehlgeschlagen: {error}",
+  "@deleteFailed": {
+    "description": "Löschen fehlgeschlagen: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "Leeren fehlgeschlagen: {error}",
+  "@clearCacheFailed": {
+    "description": "Leeren fehlgeschlagen: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiConnectionOk": "Verbindung ok (HTTP {code})",
+  "@apiConnectionOk": {
+    "description": "Verbindung ok (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiServerReachable": "Server erreichbar (HTTP {code})",
+  "@apiServerReachable": {
+    "description": "Server erreichbar (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiConnectionFailed": "Verbindung fehlgeschlagen: {error}",
+  "@apiConnectionFailed": {
+    "description": "Verbindung fehlgeschlagen: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiSection": "API & Netzwerk",
+  "licenseBody": "Tiernan Music\n\nDer Quellcode dieses Repositories ist öffentlich einsehbar (Source Available), nur zu Lern- und Forschungszwecken.\n\n[Verboten]\n· Der Code oder daraus abgeleitete Werke dürfen weder kommerziell noch nicht-kommerziell genutzt werden;\n· Die Software darf nicht vervielfältigt, verändert oder neu veröffentlicht werden;\n· Die eingebundenen Schnittstellen dürfen nicht zum Crawlen oder Massen-Download genutzt werden.\n\nDieses Projekt steht in keiner Verbindung zur offiziellen Kugou Music. Bei Rechteinverletzungen kontaktieren Sie uns bitte.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "mvQualitySd": "SD",
+  "mvQualityHd": "HD",
+  "mvQualityQhd": "Ultra HD",
+  "mvQualitySq": "Full HD",
+  "mvQualityFhd": "Blu-ray",
+  "mvQualitySelect": "Qualität",
+  "qrLoadFailed": "QR-Code konnte nicht geladen werden: {error}",
+  "@qrLoadFailed": {
+    "description": "QR-Code konnte nicht geladen werden: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shuffle": "Zufall",
+  "repeat": "Alle wiederholen",
+  "repeatOne": "Titel wiederholen",
+  "closePlayer": "Player einklappen",
+  "expandPlayer": "Player ausklappen",
+  "showLyrics": "Liedtext anzeigen",
+  "showCover": "Cover anzeigen",
+  "commentsCount": "{count} Kommentare",
+  "@commentsCount": {
+    "description": "{count} Kommentare",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playlistIntro": "Playlist-Beschreibung",
+  "expand": "Ausklappen",
+  "collapse": "Einklappen",
+  "noSongsInPlaylist": "Keine Titel in dieser Playlist",
+  "playNext": "Als Nächstes",
+  "addToQueue": "Zur Warteschlange",
+  "songActions": "Titelaktionen"
 }

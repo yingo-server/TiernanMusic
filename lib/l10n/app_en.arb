@@ -246,5 +246,101 @@
   "genericErrorTitle": "Something Went Wrong",
   "genericErrorHint": "An unexpected error occurred. Please try again.",
   "reload": "Reload",
-  "techDetail": "Technical Details"
+  "techDetail": "Technical Details",
+  "moreActions": "More",
+  "clearHistoryConfirm": "Clear all search history?",
+  "commentFailed": "Comment failed: {error}",
+  "@commentFailed": {
+    "description": "Comment failed: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFailed": "Delete failed: {error}",
+  "@deleteFailed": {
+    "description": "Delete failed: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "Clear failed: {error}",
+  "@clearCacheFailed": {
+    "description": "Clear failed: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiConnectionOk": "Connection OK (HTTP {code})",
+  "@apiConnectionOk": {
+    "description": "Connection OK (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiServerReachable": "Server reachable (HTTP {code})",
+  "@apiServerReachable": {
+    "description": "Server reachable (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiConnectionFailed": "Connection failed: {error}",
+  "@apiConnectionFailed": {
+    "description": "Connection failed: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiSection": "API & Network",
+  "licenseBody": "Tiernan Music\n\nThe source code of this repository is publicly visible (Source Available), for study and research purposes only.\n\n[Prohibited]\n· Do not use this code or derivatives for any commercial or non-commercial purpose;\n· Do not distribute, copy, modify and republish this software in any form;\n· Do not use the integrated interfaces for crawling or bulk downloading.\n\nThis project is not affiliated with the official Kugou Music. Contact us for copyright issues.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "mvQualitySd": "SD",
+  "mvQualityHd": "HD",
+  "mvQualityQhd": "Ultra HD",
+  "mvQualitySq": "Full HD",
+  "mvQualityFhd": "Blue-ray",
+  "mvQualitySelect": "Quality",
+  "qrLoadFailed": "Failed to load QR code: {error}",
+  "@qrLoadFailed": {
+    "description": "Failed to load QR code: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shuffle": "Shuffle",
+  "repeat": "Repeat all",
+  "repeatOne": "Repeat one",
+  "closePlayer": "Collapse player",
+  "expandPlayer": "Expand player",
+  "showLyrics": "Show lyrics",
+  "showCover": "Show cover",
+  "commentsCount": "{count} comments",
+  "@commentsCount": {
+    "description": "{count} comments",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playlistIntro": "Playlist intro",
+  "expand": "Expand",
+  "collapse": "Collapse",
+  "noSongsInPlaylist": "No songs in this playlist",
+  "playNext": "Play next",
+  "addToQueue": "Add to queue",
+  "songActions": "Song actions"
 }

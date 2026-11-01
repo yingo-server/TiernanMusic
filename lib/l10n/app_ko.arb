@@ -84,5 +84,101 @@
   "switchAccount": "계정 전환",
   "currentAccount": "현재 계정",
   "myPlaylists": "내 플레이리스트",
-  "createPlaylist": "새 플레이리스트 만들기"
+  "createPlaylist": "새 플레이리스트 만들기",
+  "moreActions": "더 보기",
+  "clearHistoryConfirm": "모든 검색 기록을 삭제할까요?",
+  "commentFailed": "댓글 실패: {error}",
+  "@commentFailed": {
+    "description": "댓글 실패: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFailed": "삭제 실패: {error}",
+  "@deleteFailed": {
+    "description": "삭제 실패: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "삭제 실패: {error}",
+  "@clearCacheFailed": {
+    "description": "삭제 실패: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiConnectionOk": "연결 정상 (HTTP {code})",
+  "@apiConnectionOk": {
+    "description": "연결 정상 (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiServerReachable": "서버 응답 있음 (HTTP {code})",
+  "@apiServerReachable": {
+    "description": "서버 응답 있음 (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiConnectionFailed": "연결 실패: {error}",
+  "@apiConnectionFailed": {
+    "description": "연결 실패: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiSection": "API 및 네트워크",
+  "licenseBody": "Tiernan Music\n\n이 저장소의 소스 코드는 공개되어 있습니다 (Source Available). 학습 및 연구 목적으로만 사용할 수 있습니다.\n\n[금지 사항]\n· 본 코드나 파생 저작물을 상업·비상업 목적으로 사용할 수 없습니다;\n· 이 소프트웨어를 배포, 복제, 수정 후 재게시할 수 없습니다;\n· 내장된 인터페이스를 크롤링이나 대량 다운로드에 사용할 수 없습니다.\n\n이 프로젝트는 공식 쿠거 뮤직과 관련이 없습니다. 저작권 침해 시 연락 주세요.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "mvQualitySd": "SD",
+  "mvQualityHd": "HD",
+  "mvQualityQhd": "울트라HD",
+  "mvQualitySq": "풀HD",
+  "mvQualityFhd": "블루레이",
+  "mvQualitySelect": "화질",
+  "qrLoadFailed": "QR 코드 불러오기 실패: {error}",
+  "@qrLoadFailed": {
+    "description": "QR 코드 불러오기 실패: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shuffle": "셔플",
+  "repeat": "전체 반복",
+  "repeatOne": "한 곡 반복",
+  "closePlayer": "플레이어 접기",
+  "expandPlayer": "플레이어 펼치기",
+  "showLyrics": "가사 보기",
+  "showCover": "커버 보기",
+  "commentsCount": "댓글 {count}개",
+  "@commentsCount": {
+    "description": "댓글 {count}개",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playlistIntro": "플레이리스트 소개",
+  "expand": "펼치기",
+  "collapse": "접기",
+  "noSongsInPlaylist": "이 플레이리스트에 곡이 없습니다",
+  "playNext": "다음 재생",
+  "addToQueue": "재생 대기열에 추가",
+  "songActions": "곡 작업"
 }

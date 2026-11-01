@@ -84,5 +84,101 @@
   "switchAccount": "Cambiar de cuenta",
   "currentAccount": "Cuenta actual",
   "myPlaylists": "Mis listas de reproducción",
-  "createPlaylist": "Crear nueva lista de reproducción"
+  "createPlaylist": "Crear nueva lista de reproducción",
+  "moreActions": "Más",
+  "clearHistoryConfirm": "¿Borrar todo el historial de búsqueda?",
+  "commentFailed": "Error al comentar: {error}",
+  "@commentFailed": {
+    "description": "Error al comentar: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFailed": "Error al eliminar: {error}",
+  "@deleteFailed": {
+    "description": "Error al eliminar: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "Error al limpiar: {error}",
+  "@clearCacheFailed": {
+    "description": "Error al limpiar: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiConnectionOk": "Conexión correcta (HTTP {code})",
+  "@apiConnectionOk": {
+    "description": "Conexión correcta (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiServerReachable": "Servidor accesible (HTTP {code})",
+  "@apiServerReachable": {
+    "description": "Servidor accesible (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiConnectionFailed": "Error de conexión: {error}",
+  "@apiConnectionFailed": {
+    "description": "Error de conexión: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiSection": "API y red",
+  "licenseBody": "Tiernan Music\n\nEl código fuente de este repositorio es público (Source Available), solo para estudio e investigación.\n\n[Prohibido]\n· No usar este código ni obras derivadas con fines comerciales o no comerciales;\n· No distribuir, copiar, modificar ni republicar este software;\n· No usar las interfaces integradas para rastreo ni descarga masiva.\n\nEste proyecto no está afiliado a Kugou Music oficial. Contáctenos por derechos de autor.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "mvQualitySd": "SD",
+  "mvQualityHd": "HD",
+  "mvQualityQhd": "Ultra HD",
+  "mvQualitySq": "Full HD",
+  "mvQualityFhd": "Blu-ray",
+  "mvQualitySelect": "Calidad",
+  "qrLoadFailed": "Error al cargar el QR: {error}",
+  "@qrLoadFailed": {
+    "description": "Error al cargar el QR: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shuffle": "Aleatorio",
+  "repeat": "Repetir todo",
+  "repeatOne": "Repetir una",
+  "closePlayer": "Contraer reproductor",
+  "expandPlayer": "Expandir reproductor",
+  "showLyrics": "Ver letra",
+  "showCover": "Ver carátula",
+  "commentsCount": "{count} comentarios",
+  "@commentsCount": {
+    "description": "{count} comentarios",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playlistIntro": "Descripción de la lista",
+  "expand": "Expandir",
+  "collapse": "Contraer",
+  "noSongsInPlaylist": "No hay canciones en esta lista",
+  "playNext": "Reproducir después",
+  "addToQueue": "Añadir a la cola",
+  "songActions": "Acciones de la canción"
 }

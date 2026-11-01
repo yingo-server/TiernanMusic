@@ -125,6 +125,7 @@ class _LyricLineTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
+    final translation = line.translation ?? '';
 
     return GestureDetector(
       onTap: onTap,
@@ -137,7 +138,6 @@ class _LyricLineTile extends StatelessWidget {
             // 原文（逐字高亮）
             _buildOriginal(theme, primary),
             // 译文
-            final translation = line.translation ?? '';
             if (mode == LyricDisplayMode.bilingual &&
                 translation.isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -165,8 +165,7 @@ class _LyricLineTile extends StatelessWidget {
     );
   }
 
-  Widget _buildOriginal(ThemeData theme, Color primary) {
-    if (line.words.isEmpty) {
+  Widget _buildOriginal(ThemeData theme, Color primary) {    if (line.words.isEmpty) {
       return Text(
         line.text,
         style: theme.textTheme.titleMedium?.copyWith(

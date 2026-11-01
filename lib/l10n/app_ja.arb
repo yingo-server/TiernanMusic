@@ -240,5 +240,101 @@
   "recalculate": "再計算",
   "clearCacheDesc": "インターフェース、画像、歌詞翻訳のキャッシュをクリア",
   "resetToDefault": "デフォルトにリセット",
-  "resetToDefaultDone": "デフォルトのアドレスにリセットされました"
+  "resetToDefaultDone": "デフォルトのアドレスにリセットされました",
+  "moreActions": "その他",
+  "clearHistoryConfirm": "すべての検索履歴を消去しますか？",
+  "commentFailed": "コメントに失敗しました：{error}",
+  "@commentFailed": {
+    "description": "コメントに失敗しました：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFailed": "削除に失敗しました：{error}",
+  "@deleteFailed": {
+    "description": "削除に失敗しました：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "消去に失敗しました：{error}",
+  "@clearCacheFailed": {
+    "description": "消去に失敗しました：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiConnectionOk": "接続成功（HTTP {code}）",
+  "@apiConnectionOk": {
+    "description": "接続成功（HTTP {code}）",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiServerReachable": "サーバーに到達しました（HTTP {code}）",
+  "@apiServerReachable": {
+    "description": "サーバーに到達しました（HTTP {code}）",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiConnectionFailed": "接続に失敗しました：{error}",
+  "@apiConnectionFailed": {
+    "description": "接続に失敗しました：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiSection": "API とネットワーク",
+  "licenseBody": "Tiernan Music\n\n本リポジトリのソースコードは公開されています（Source Available）。学習と研究目的のみに使用してください。\n\n【禁止事項】\n· 本コードおよびその派生物を商業・非商業を問わず使用しないでください；\n· 本ソフトウェアを配布、複製、修正して再公開しないでください；\n· 組み込みの接口をクロールや一括ダウンロードに使用しないでください。\n\n本プロジェクトは公式の酷狗音楽とは一切関係ありません。著作権如有请联系ください。\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "mvQualitySd": "SD",
+  "mvQualityHd": "HD",
+  "mvQualityQhd": "ウルトラHD",
+  "mvQualitySq": "フルHD",
+  "mvQualityFhd": "ブルーレイ",
+  "mvQualitySelect": "画質",
+  "qrLoadFailed": "QRコードの読み込みに失敗：{error}",
+  "@qrLoadFailed": {
+    "description": "QRコードの読み込みに失敗：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shuffle": "シャッフル",
+  "repeat": "全曲リピート",
+  "repeatOne": "1曲リピート",
+  "closePlayer": "プレーヤーを閉じる",
+  "expandPlayer": "プレーヤーを拡大",
+  "showLyrics": "歌詞を表示",
+  "showCover": "ジャケットを表示",
+  "commentsCount": "{count} 件のコメント",
+  "@commentsCount": {
+    "description": "{count} 件のコメント",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playlistIntro": "プレイリスト紹介",
+  "expand": "展開",
+  "collapse": "折りたたむ",
+  "noSongsInPlaylist": "このプレイリストには曲がありません",
+  "playNext": "次に再生",
+  "addToQueue": "キューに追加",
+  "songActions": "曲の操作"
 }

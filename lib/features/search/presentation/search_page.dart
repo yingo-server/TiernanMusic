@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../home/data/models.dart';
 import '../../../core/widgets/song_tile.dart'
-    show GradientChip, EmptyState, ErrorRetry;
+    show GradientChip, EmptyState, ErrorRetry, ListSkeleton, SectionHeader;
 import '../../player/play_helper.dart';
 import '../../../core/utils/toast.dart';
 import '../data/search_repository.dart';
@@ -38,14 +38,21 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     super.initState();
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _focusNode.requestFocus());
+    _controller.addListener(_onControllerChanged);
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _controller.removeListener(_onControllerChanged);
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  /// SearchBar 的清除按钮依赖文本变化，需要主动刷新 trailing。
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onChanged(String text) {
@@ -83,11 +90,18 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     });
   }
 
+  void _clear() {
+    _controller.clear();
+    _onChanged('');
+    _focusNode.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       // Material 3 规范：搜索用 SearchBar 控件（自带展开/收起行为、
-      // 语音输入位、统一的焦点态），而不是在 AppBar 里塞裸 TextField。
+      // 统一的焦点态），而不是在 AppBar 里塞裸 TextField。
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -103,17 +117,19 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   if (_controller.text.isNotEmpty)
                     IconButton(
                       icon: const Icon(Icons.close),
-                      onPressed: () {
-                        _controller.clear();
-                        _onChanged('');
-                      },
+                      tooltip: context.l10n.clear,
+                      onPressed: _clear,
                     ),
                 ],
+                textInputAction: TextInputAction.search,
                 onChanged: _onChanged,
                 onSubmitted: _submit,
                 elevation: const WidgetStatePropertyAll(0),
                 backgroundColor: WidgetStatePropertyAll(
-                  Theme.of(context).colorScheme.surfaceContainerHigh,
+                  theme.colorScheme.surfaceContainerHigh,
+                ),
+                side: WidgetStatePropertyAll(
+                  BorderSide(color: theme.colorScheme.outlineVariant),
                 ),
                 padding: const WidgetStatePropertyAll(
                   EdgeInsets.symmetric(horizontal: 16),
@@ -181,58 +197,79 @@ class _SearchLandingState extends ConsumerState<_SearchLanding> {
     if (mounted) setState(() => _history = list);
   }
 
+  /// 清空历史属于破坏性操作：二次确认 Dialog。
+  Future<void> _confirmClearHistory() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.l10n.clearHistory),
+        content: Text(context.l10n.clearHistoryConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(context.l10n.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(context.l10n.clear),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await ref.read(searchRepositoryProvider).clearHistory();
+    _loadHistory();
+  }
+
   @override
   Widget build(BuildContext context) {
     final hotAsync = ref.watch(_hotSearchProvider);
+    final theme = Theme.of(context);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(top: 8, bottom: 24),
       children: [
         if (_history.isNotEmpty) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(context.l10n.searchHistory,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.bold)),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20),
-                tooltip: context.l10n.clearHistory,
-                onPressed: () async {
-                  await ref
-                      .read(searchRepositoryProvider)
-                      .clearHistory();
-                  _loadHistory();
-                },
+          SectionHeader(
+            title: context.l10n.searchHistory,
+            action: TextButton.icon(
+              onPressed: _confirmClearHistory,
+              icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+              label: Text(context.l10n.clear),
+              style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.error,
               ),
-            ],
+            ),
           ),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              for (final h in _history)
-                InputChip(
-                  label: Text(h),
-                  onPressed: () => widget.onTapKeyword(h),
-                  onDeleted: () async {
-                    await ref
-                        .read(searchRepositoryProvider)
-                        .removeHistory(h);
-                    _loadHistory();
-                  },
-                ),
-            ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final h in _history)
+                  InputChip(
+                    label: Text(h),
+                    onPressed: () => widget.onTapKeyword(h),
+                    onDeleted: () async {
+                      await ref
+                          .read(searchRepositoryProvider)
+                          .removeHistory(h);
+                      _loadHistory();
+                    },
+                  ),
+              ],
+            ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
         ],
-        Text(context.l10n.hotSearch,
-            style: Theme.of(context)
-                .textTheme
-                .titleSmall
-                ?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
+        SectionHeader(
+          title: context.l10n.hotSearch,
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+        ),
         hotAsync.when(
           loading: () => const Padding(
             padding: EdgeInsets.all(24),
@@ -244,32 +281,33 @@ class _SearchLandingState extends ConsumerState<_SearchLanding> {
             children: [
               for (final board in boards) ...[
                 const SizedBox(height: 12),
-                Text(board.name,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.primary)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(board.name,
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: theme.colorScheme.primary)),
+                ),
                 const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (var i = 0; i < board.keywords.length; i++)
-                      Badge(
-                        isLabelVisible: board.keywords[i].reason != null,
-                        label: Text(board.keywords[i].reason ?? '',
-                            style: const TextStyle(fontSize: 9)),
-                        offset: const Offset(8, -4),
-                        child: GradientChip(
-                          label: board.keywords[i].keyword,
-                          index: i,
-                          onTap: () =>
-                              widget.onTapKeyword(board.keywords[i].keyword),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (var i = 0; i < board.keywords.length; i++)
+                        Badge(
+                          isLabelVisible: board.keywords[i].reason != null,
+                          label: Text(board.keywords[i].reason ?? ''),
+                          offset: const Offset(8, -4),
+                          child: GradientChip(
+                            label: board.keywords[i].keyword,
+                            index: i,
+                            onTap: () =>
+                                widget.onTapKeyword(board.keywords[i].keyword),
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ],
@@ -401,7 +439,8 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
   Widget build(BuildContext context) {
     super.build(context);
     if (_initialLoading) {
-      return const Center(child: CircularProgressIndicator());
+      // 列表加载用骨架屏而非转圈，视觉更稳定
+      return const ListSkeleton(itemCount: 8);
     }
     if (_error != null && _items.isEmpty) {
       return ErrorRetry(error: _error, onRetry: () {
@@ -414,7 +453,8 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
       });
     }
     if (_items.isEmpty) {
-      return EmptyState(icon: Icons.search_off_rounded, message: context.l10n.noSearchResults);
+      return EmptyState(
+          icon: Icons.search_off_rounded, message: context.l10n.noSearchResults);
     }
     return Column(
       children: [
@@ -463,6 +503,7 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
                     Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                 subtitle: Text(s.singer,
                     maxLines: 1, overflow: TextOverflow.ellipsis),
+                // trailing 只承载次要信息（时长）
                 trailing: Text(s.durationText,
                     style: Theme.of(context).textTheme.bodySmall),
                 onTap: () {
@@ -488,7 +529,7 @@ class _PlaylistResultTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final result = ref.watch(_playlistSearchProvider(keyword));
     return result.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const ListSkeleton(itemCount: 6),
       error: (e, _) => ErrorRetry(
           error: e,
           onRetry: () => ref.invalidate(_playlistSearchProvider(keyword))),
@@ -508,36 +549,37 @@ class _PlaylistResultTab extends ConsumerWidget {
           itemCount: r.items.length,
           itemBuilder: (context, i) {
             final p = r.items[i];
-            return InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () =>
-                  context.push('/playlist/${p.globalCollectionId}'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: CachedNetworkImage(
-                        imageUrl: p.cover,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => Container(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
-                          child: const Icon(Icons.queue_music),
+            final theme = Theme.of(context);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () =>
+                            context.push('/playlist/${p.globalCollectionId}'),
+                        child: CachedNetworkImage(
+                          imageUrl: p.cover,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => Container(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            child: const Icon(Icons.queue_music),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(p.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
+                ),
+                const SizedBox(height: 6),
+                Text(p.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall),
+              ],
             );
           },
         );
@@ -562,7 +604,7 @@ class _GenericResultTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final result = ref.watch(_genericSearchProvider((keyword, type)));
     return result.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const ListSkeleton(itemCount: 6),
       error: (e, _) => ErrorRetry(
           error: e,
           onRetry: () =>
@@ -622,4 +664,3 @@ final _genericSearchProvider =
         (ref, arg) => ref
             .read(searchRepositoryProvider)
             .searchByType(arg.$1, arg.$2));
-

@@ -17,6 +17,7 @@ import '../../../core/utils/error_logger.dart';
 import '../../../core/utils/permission_gate.dart';
 import '../../../core/utils/toast.dart';
 import '../../../core/utils/update_checker.dart';
+import '../../../core/widgets/song_tile.dart' show SectionHeader;
 import '../../../l10n/l10n.dart';
 import 'settings_providers.dart';
 
@@ -98,8 +99,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               onPressed: () => Navigator.pop(ctx, false),
               child: Text(context.l10n.cancel)),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(context.l10n.clear)),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(context.l10n.clear),
+          ),
         ],
       ),
     );
@@ -124,14 +130,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         }
       }
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(context.l10n.cacheCleared)));
+        Toast.show(context, context.l10n.cacheCleared);
       }
       _loadCacheSize();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('清除失败：$e')));
+        Toast.show(context, context.l10n.clearCacheFailed('$e'));
       }
     }
   }
@@ -141,6 +145,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.settings)),
       body: ListView(
+        padding: const EdgeInsets.only(bottom: 32),
         children: [
           _buildAccountSection(),
           _buildAppearanceSection(),
@@ -150,7 +155,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _buildApiSection(),
           _buildDiagnosticsSection(),
           _buildAboutSection(),
-          const SizedBox(height: 32),
         ],
       ),
     );
@@ -161,9 +165,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final avatar = _account?['avatar'] as String?;
     final nickname = _account?['nickname'] as String?;
     final loggedIn = nickname != null && nickname.isNotEmpty;
-    return _Section(
-      title: context.l10n.account,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SectionHeader(title: context.l10n.account),
         ListTile(
           leading: CircleAvatar(
             radius: 22,
@@ -174,7 +179,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 : null,
           ),
           title: Text(loggedIn ? nickname : context.l10n.notLoggedIn),
-          subtitle: Text(loggedIn ? context.l10n.userIdLabel('${_account?['userid'] ?? '-'}') : context.l10n.login),
+          subtitle: Text(
+              loggedIn
+                  ? context.l10n.userIdLabel('${_account?['userid'] ?? '-'}')
+                  : context.l10n.login),
           trailing: const Icon(Icons.chevron_right),
           onTap: () async {
             await context.push<void>('/login');
@@ -210,19 +218,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ? '${locale.languageCode}_${locale.countryCode}'
                 : locale.languageCode] ??
             locale.toString();
-    return _Section(
-      title: context.l10n.appearance,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SectionHeader(title: context.l10n.appearance),
         ListTile(
           leading: const Icon(Icons.dark_mode_outlined),
           title: Text(context.l10n.themeMode),
           subtitle: Text(themeLabel),
+          trailing: const Icon(Icons.chevron_right),
           onTap: () => _showThemeDialog(themeMode),
         ),
         ListTile(
           leading: const Icon(Icons.language_outlined),
           title: Text(context.l10n.appLanguage),
           subtitle: Text(localeLabel),
+          trailing: const Icon(Icons.chevron_right),
           onTap: () => _showLocaleDialog(locale),
         ),
       ],
@@ -266,32 +277,34 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           SizedBox(
             width: double.maxFinite,
             height: 420,
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                RadioListTile<String>(
-                  value: 'system',
-                  groupValue: codeOf(current),
-                  title: Text(context.l10n.themeSystem),
-                  onChanged: (_) {
-                    ref.read(localeProvider.notifier).set(null);
-                    Navigator.pop(ctx);
-                  },
-                ),
-                for (final code in AppConfig.supportedLocales)
-                  RadioListTile<String>(
-                    value: code,
+            child: ListView.builder(
+              itemCount: AppConfig.supportedLocales.length + 1,
+              itemBuilder: (_, i) {
+                if (i == 0) {
+                  return RadioListTile<String>(
+                    value: 'system',
                     groupValue: codeOf(current),
-                    title: Text(AppConfig.localeNames[code] ?? code),
+                    title: Text(context.l10n.themeSystem),
                     onChanged: (_) {
-                      final parts = code.split('_');
-                      ref.read(localeProvider.notifier).set(parts.length == 2
-                          ? Locale(parts[0], parts[1])
-                          : Locale(parts[0]));
+                      ref.read(localeProvider.notifier).set(null);
                       Navigator.pop(ctx);
                     },
-                  ),
-              ],
+                  );
+                }
+                final code = AppConfig.supportedLocales[i - 1];
+                return RadioListTile<String>(
+                  value: code,
+                  groupValue: codeOf(current),
+                  title: Text(AppConfig.localeNames[code] ?? code),
+                  onChanged: (_) {
+                    final parts = code.split('_');
+                    ref.read(localeProvider.notifier).set(parts.length == 2
+                        ? Locale(parts[0], parts[1])
+                        : Locale(parts[0]));
+                    Navigator.pop(ctx);
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -310,21 +323,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       LyricDisplayMode.bilingual => context.l10n.lyricModeBilingual,
       LyricDisplayMode.translation => context.l10n.lyricModeTranslation,
     };
-    return _Section(
-      title: context.l10n.playback,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SectionHeader(title: context.l10n.playback),
         ListTile(
           leading: const Icon(Icons.lyrics_outlined),
           title: Text(context.l10n.lyricDisplayMode),
           subtitle: Text(lyricLabel),
+          trailing: const Icon(Icons.chevron_right),
           onTap: () => _showLyricModeDialog(lyricMode),
         ),
         ListTile(
           leading: const Icon(Icons.high_quality_outlined),
           title: Text(context.l10n.defaultQuality),
           subtitle: Text(qualityNames[quality] ?? quality),
+          trailing: const Icon(Icons.chevron_right),
           onTap: () => _showQualityDialog(quality),
         ),
+        // 状态切换用 SwitchListTile（label 在左，switch 在右）
         SwitchListTile(
           secondary: const Icon(Icons.wifi),
           title: Text(context.l10n.wifiAutoHighQuality),
@@ -391,13 +408,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   // ---------- 下载 ----------
   Widget _buildDownloadSection() {
-    return _Section(
-      title: context.l10n.downloadManagement,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SectionHeader(title: context.l10n.downloadManagement),
         ListTile(
           leading: const Icon(Icons.download_for_offline_outlined),
-          title: Text(context.l10n.downloadManagement),
-          subtitle: Text(context.l10n.downloads),
+          title: Text(context.l10n.downloads),
+          subtitle: Text(context.l10n.downloadManagement),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push<void>('/downloads'),
         ),
@@ -407,9 +425,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   // ---------- 缓存 ----------
   Widget _buildCacheSection() {
-    return _Section(
-      title: context.l10n.cache,
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SectionHeader(title: context.l10n.cache),
         ListTile(
           leading: const Icon(Icons.storage_outlined),
           title: Text(context.l10n.cacheUsage),
@@ -423,10 +443,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             },
           ),
         ),
+        // 危险操作：删除类用红色 + 二次确认
         ListTile(
-          leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
           title: Text(context.l10n.clearCache,
-              style: TextStyle(color: Colors.redAccent)),
+              style: TextStyle(color: theme.colorScheme.error)),
           subtitle: Text(context.l10n.clearCacheDesc),
           onTap: _clearCache,
         ),
@@ -438,21 +459,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget _buildApiSection() {
     final kugouApi = ref.watch(kugouApiProvider);
     final translateApi = ref.watch(translateApiProvider);
-    return _Section(
-      title: 'API',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SectionHeader(title: context.l10n.apiSection),
         ListTile(
           leading: const Icon(Icons.api_outlined),
           title: Text(context.l10n.kugouApiUrl),
-          subtitle: Text(kugouApi, maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle:
+              Text(kugouApi, maxLines: 1, overflow: TextOverflow.ellipsis),
           trailing: IconButton(
             icon: const Icon(Icons.restart_alt),
             tooltip: context.l10n.resetToDefault,
             onPressed: () async {
               await ref.read(kugouApiProvider.notifier).reset();
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(context.l10n.resetToDefaultDone)));
+                Toast.show(context, context.l10n.resetToDefaultDone);
               }
             },
           ),
@@ -468,6 +490,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           title: Text(context.l10n.translateApiUrl),
           subtitle:
               Text(translateApi, maxLines: 1, overflow: TextOverflow.ellipsis),
+          trailing: const Icon(Icons.chevron_right),
           onTap: () => _showApiEditDialog(
             title: context.l10n.translateApiUrl,
             initial: translateApi,
@@ -485,13 +508,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (!target.startsWith('http')) target = 'https://$target';
       final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 8)));
       final resp = await dio.get<dynamic>(target);
-      return '连通正常（HTTP ${resp.statusCode}）';
+      return context.l10n.apiConnectionOk(resp.statusCode ?? 0);
     } on DioException catch (e) {
       final code = e.response?.statusCode;
-      if (code != null) return '服务器可达（HTTP $code）';
-      return '连接失败：${e.message ?? e}';
+      if (code != null) return context.l10n.apiServerReachable(code);
+      return context.l10n.apiConnectionFailed(e.message ?? e.toString());
     } catch (e) {
-      return '连接失败：$e';
+      return context.l10n.apiConnectionFailed(e.toString());
     }
   }
 
@@ -522,31 +545,32 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 keyboardType: TextInputType.url,
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  TextButton.icon(
-                    icon: testing
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.network_check, size: 18),
-                    label: Text(testing ? context.l10n.testing : context.l10n.testConnectivity),
-                    onPressed: testing
-                        ? null
-                        : () async {
-                            setDialogState(() {
-                              testing = true;
-                              testResult = null;
-                            });
-                            final r = await onTest(controller.text);
-                            setDialogState(() {
-                              testing = false;
-                              testResult = r;
-                            });
-                          },
-                  ),
-                ],
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  icon: testing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.network_check, size: 18),
+                  label: Text(testing
+                      ? context.l10n.testing
+                      : context.l10n.testConnectivity),
+                  onPressed: testing
+                      ? null
+                      : () async {
+                          setDialogState(() {
+                            testing = true;
+                            testResult = null;
+                          });
+                          final r = await onTest(controller.text);
+                          setDialogState(() {
+                            testing = false;
+                            testResult = r;
+                          });
+                        },
+                ),
               ),
               if (testResult != null)
                 Padding(
@@ -573,12 +597,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  // ---------- 关于 ----------
   // ---------- 诊断 ----------
   Widget _buildDiagnosticsSection() {
-    return _Section(
-      title: context.l10n.diagnostics,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SectionHeader(title: context.l10n.diagnostics),
         ListTile(
           leading: const Icon(Icons.bug_report_outlined),
           title: Text(context.l10n.errorLogLocation),
@@ -614,7 +638,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           leading: const Icon(Icons.storage_outlined),
           title: Text(context.l10n.storagePermissions),
           subtitle: FutureBuilder<bool>(
-            future: PermissionGate.instance.ensureStorageWrite(),
+            future: PermissionGate.instance.hasStorageWriteAccess(),
             builder: (context, snap) {
               final granted = snap.data ?? false;
               return Text(granted
@@ -640,7 +664,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           leading: const Icon(Icons.info_outline),
           title: Text(context.l10n.recentErrors),
           subtitle: Text(context.l10n.recentErrorsCount(
-              ErrorLogger.instance.recent.length.toString())),
+              ErrorLogger.recent.length.toString())),
+          trailing: const Icon(Icons.chevron_right),
           onTap: () => _showRecentErrors(),
         ),
       ],
@@ -648,7 +673,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   void _showRecentErrors() {
-    final entries = ErrorLogger.instance.recent;
+    final entries = ErrorLogger.recent;
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -664,7 +689,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     dense: true,
                     title: Text(
                       entries[i].split('\n').take(3).join('\n'),
-                      style: const TextStyle(fontSize: 11),
+                      style: Theme.of(ctx).textTheme.labelSmall,
                     ),
                     onTap: () => Toast.copy(ctx, entries[i]),
                   ),
@@ -680,9 +705,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _buildAboutSection() {    return _Section(
-      title: context.l10n.about,
+  // ---------- 关于 ----------
+  Widget _buildAboutSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SectionHeader(title: context.l10n.about),
         ListTile(
           leading: const Icon(Icons.music_note_outlined),
           title: const Text(AppConfig.appNameCn),
@@ -692,6 +720,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           leading: const Icon(Icons.description_outlined),
           title: Text(context.l10n.openSourceLicenses),
           subtitle: Text(context.l10n.licenseDesc),
+          trailing: const Icon(Icons.chevron_right),
           onTap: _showLicenseDialog,
         ),
         ListTile(
@@ -738,7 +767,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               if (info.releaseNotes != null) ...[
                 const SizedBox(height: 12),
                 Text(info.releaseNotes!,
-                    style: const TextStyle(fontSize: 12, height: 1.4)),
+                    style: Theme.of(ctx).textTheme.bodySmall),
               ],
             ],
           ),
@@ -770,49 +799,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(context.l10n.openSourceLicenses),
-        content: const SingleChildScrollView(
-          child: Text(
-            '汀澜音乐 Tiernan Music\n\n'
-            '本仓库源代码公开可见（Source Available），仅供学习与研究用途。\n\n'
-            '【禁止事项】\n'
-            '· 禁止将本代码或其衍生作品用于任何商业或非商业用途；\n'
-            '· 禁止以任何形式分发、复制、修改后发布本软件；\n'
-            '· 禁止将本项目接入的接口用于爬取或批量下载。\n\n'
-            '本项目与酷狗音乐官方无任何关联，如有侵权请联系删除。\n\n'
-            'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.',
-          ),
+        content: SingleChildScrollView(
+          child: Text(context.l10n.licenseBody),
         ),
         actions: [
           FilledButton(
               onPressed: () => Navigator.pop(ctx), child: Text(context.l10n.knowIt)),
         ],
       ),
-    );
-  }
-}
-
-/// 分组标题卡片
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.primary),
-          ),
-        ),
-        ...children,
-      ],
     );
   }
 }

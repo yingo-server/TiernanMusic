@@ -15,7 +15,7 @@ import '../../download/presentation/download_sheet.dart';
 import '../data/recent_play_store.dart';
 import '../../../l10n/l10n.dart';
 
-/// 音乐库页：账号卡片 + 我的歌单 + 最近播放 + 收藏 MV 占位。
+/// 音乐库页：账号卡片 + 我的歌单 + 最近播放 + 已下载 + 收藏 MV 占位。
 class LibraryPage extends ConsumerStatefulWidget {
   const LibraryPage({super.key});
 
@@ -44,9 +44,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final downloaded = ref.watch(downloadedAudioProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.library,
-          style: theme.textTheme.headlineSmall
-              ?.copyWith(fontWeight: FontWeight.bold))),
+      appBar: AppBar(
+        title: Text(context.l10n.library,
+            style: theme.textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold)),
+      ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
@@ -56,7 +58,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
           // ---- 我的歌单 ----
           if (account != null) ...[
-            _sectionTitle(context, context.l10n.myPlaylists),
+            SectionHeader(title: context.l10n.myPlaylists),
             playlistsAsync.when(
               loading: () => const _PlaylistRowSkeleton(),
               error: (e, _) => _PlaylistRowError(
@@ -66,50 +68,71 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               data: (list) => _MyPlaylistRow(playlists: list),
             ),
           ] else ...[
-            _sectionTitle(context, context.l10n.myPlaylists),
+            SectionHeader(title: context.l10n.myPlaylists),
             const _LoginGuideCard(),
           ],
 
           // ---- 最近播放 ----
-          _sectionTitle(context, context.l10n.recentlyPlayed),
+          SectionHeader(
+            title: context.l10n.recentlyPlayed,
+            action: _recent.isEmpty
+                ? null
+                : TextButton.icon(
+                    onPressed: _confirmClearRecent,
+                    icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+                    label: Text(context.l10n.clear),
+                    style: TextButton.styleFrom(
+                      foregroundColor: theme.colorScheme.error,
+                    ),
+                  ),
+          ),
           if (_recent.isEmpty)
             EmptyState(
               icon: Icons.history_rounded,
               message: context.l10n.noRecentlyPlayed,
             )
-          else ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _confirmClearRecent,
-                  icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-                  label: Text(context.l10n.clear),
-                ),
-              ),
-            ),
+          else
             for (final r in _recent.take(20))
               SongTile(
                 title: r.name,
                 artist: r.artist,
                 cover: r.cover,
                 onTap: () => _playRecent(r),
-                onDownload: () => showDownloadSheet(
-                  context,
-                  Song(
-                    hash: r.hash,
-                    albumAudioId: r.albumAudioId,
-                    name: r.name,
-                    artist: r.artist,
-                    cover: r.cover,
+                // 下载是次要但高频的操作，收进「更多」菜单避免与时长冲突
+                menuItems: [
+                  SongTileMenuItem(
+                    value: 'download',
+                    label: context.l10n.download,
+                    icon: Icons.download_outlined,
                   ),
-                ),
+                ],
+                onMenuSelected: (v) {
+                  if (v == 'download') {
+                    showDownloadSheet(
+                      context,
+                      Song(
+                        hash: r.hash,
+                        albumAudioId: r.albumAudioId,
+                        name: r.name,
+                        artist: r.artist,
+                        cover: r.cover,
+                      ),
+                    );
+                  }
+                },
               ),
-          ],
 
           // ---- 已下载 ----
-          _sectionTitle(context, context.l10n.downloadedSongs),
+          SectionHeader(
+            title: context.l10n.downloadedSongs,
+            action: downloaded.isEmpty
+                ? null
+                : TextButton.icon(
+                    onPressed: () => context.push<void>('/downloads'),
+                    icon: const Icon(Icons.folder_open_outlined, size: 18),
+                    label: Text(context.l10n.downloadManagement),
+                  ),
+          ),
           if (downloaded.isEmpty)
             EmptyState(
               icon: Icons.download_for_offline_outlined,
@@ -117,7 +140,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               actionLabel: context.l10n.downloadManagement,
               onAction: () => context.push<void>('/downloads'),
             )
-          else ...[
+          else
             for (final task in downloaded.take(20))
               SongTile(
                 title: task.title.isEmpty ? task.hash : task.title,
@@ -126,21 +149,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 onTap: () => _playDownloaded(task),
                 trailing: const Icon(Icons.offline_pin_outlined, size: 20),
               ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => context.push<void>('/downloads'),
-                  icon: const Icon(Icons.folder_open_outlined, size: 18),
-                  label: Text(context.l10n.downloadManagement),
-                ),
-              ),
-            ),
-          ],
 
           // ---- 我收藏的 MV ----
-          _sectionTitle(context, context.l10n.myFavoriteMvs),
+          SectionHeader(title: context.l10n.myFavoriteMvs),
           EmptyState(
             icon: Icons.movie_outlined,
             message: context.l10n.mvComingSoon,
@@ -179,7 +190,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     context.push('/player');
   }
 
-  /// 清空最近播放（带确认弹窗）。
+  /// 清空最近播放（危险操作：红色强调 + 二次确认 Dialog）。
   Future<void> _confirmClearRecent() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -192,6 +203,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             child: Text(context.l10n.cancel),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(context.l10n.clear),
           ),
@@ -209,17 +224,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     } catch (_) {
       return null;
     }
-  }
-
-  Widget _sectionTitle(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-      child: Text(title,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold)),
-    );
   }
 }
 
@@ -239,7 +243,10 @@ class _AccountCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [scheme.primary.withOpacity(0.25), scheme.surfaceContainerHigh],
+            colors: [
+              scheme.primary.withValues(alpha: 0.25),
+              scheme.surfaceContainerHigh
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -271,7 +278,9 @@ class _AccountCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    account == null ? context.l10n.loginToSync : context.l10n.userIdLabel('${account!.userid}'),
+                    account == null
+                        ? context.l10n.loginToSync
+                        : context.l10n.userIdLabel('${account!.userid}'),
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: scheme.onSurfaceVariant),
                     maxLines: 1,
@@ -335,8 +344,10 @@ class _MyPlaylistRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     if (playlists.isEmpty) {
-      return EmptyState(icon: Icons.queue_music_outlined, message: context.l10n.noPlaylistsYet);
+      return EmptyState(
+          icon: Icons.queue_music_outlined, message: context.l10n.noPlaylistsYet);
     }
     return SizedBox(
       height: 170,
@@ -348,57 +359,51 @@ class _MyPlaylistRow extends StatelessWidget {
         itemBuilder: (context, i) {
           final p = playlists[i];
           // TODO(跳转): 用户歌单详情页待接入
-          return InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () {},
-            child: SizedBox(
-              width: 120,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: CachedNetworkImage(
-                          imageUrl: p.cover,
+          return SizedBox(
+            width: 120,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: CachedNetworkImage(
+                        imageUrl: p.cover,
+                        width: 120,
+                        height: 120,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Container(
                           width: 120,
                           height: 120,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => Container(
-                            width: 120,
-                            height: 120,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
-                            child: const Icon(Icons.queue_music_rounded),
-                          ),
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: const Icon(Icons.queue_music_rounded),
                         ),
                       ),
-                      Positioned(
-                        right: 6,
-                        bottom: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(context.l10n.songCountSuffix(p.count),
-                              style: const TextStyle(
-                                  fontSize: 10, color: Colors.white)),
+                    ),
+                    Positioned(
+                      right: 6,
+                      bottom: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        child: Text(context.l10n.songCountSuffix(p.count),
+                            style: theme.textTheme.labelSmall
+                                ?.copyWith(color: Colors.white)),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(p.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(p.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall),
+              ],
             ),
           );
         },

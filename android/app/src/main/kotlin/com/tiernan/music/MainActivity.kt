@@ -212,6 +212,11 @@ class MainActivity : FlutterActivity() {
                     }
                     val os = contentResolver.openOutputStream(uri, "rwt") ?: return null
                     os.use { it.write((old + content).toByteArray(Charsets.UTF_8)) }
+                    // 重写后必须补一次 IS_PENDING=0：上次进程若在 finalize 前被杀，
+                    // 文件会一直处于 pending 状态（文件管理器里看不到）。
+                    val done = ContentValues()
+                    done.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                    contentResolver.update(uri, done, null, null)
                     return "/sdcard/$relativePath"
                 }
 
@@ -231,7 +236,10 @@ class MainActivity : FlutterActivity() {
                 "/sdcard/$relativePath"
             } else {
                 val base = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-                val dir = File(base, relativePath)
+                // relativePath 形如 "Documents/<folder>/<logs>"，而 base 已经是 Documents 根，
+                // 直接拼接会得到 /sdcard/Documents/Documents/... —— 这里去掉前缀 "Documents/"。
+                val relative = relativePath.removePrefix("Documents/").removePrefix("/")
+                val dir = File(base, relative)
                 if (!dir.exists()) dir.mkdirs()
                 val target = File(dir, displayName)
                 if (maxBytes > 0 && target.exists() &&
@@ -242,7 +250,7 @@ class MainActivity : FlutterActivity() {
                     target.renameTo(rotated)
                 }
                 target.appendText(content)
-                "${dir.absolutePath}"
+                dir.absolutePath
             }
         } catch (e: Exception) {
             null

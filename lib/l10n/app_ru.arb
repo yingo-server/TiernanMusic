@@ -84,5 +84,101 @@
   "switchAccount": "Переключить аккаунт",
   "currentAccount": "Текущий аккаунт",
   "myPlaylists": "Мои плейлисты",
-  "createPlaylist": "Создать новый плейлист"
+  "createPlaylist": "Создать новый плейлист",
+  "moreActions": "Ещё",
+  "clearHistoryConfirm": "Очистить всю историю поиска?",
+  "commentFailed": "Не удалось отправить комментарий: {error}",
+  "@commentFailed": {
+    "description": "Не удалось отправить комментарий: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFailed": "Не удалось удалить: {error}",
+  "@deleteFailed": {
+    "description": "Не удалось удалить: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "Не удалось очистить: {error}",
+  "@clearCacheFailed": {
+    "description": "Не удалось очистить: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiConnectionOk": "Соединение в порядке (HTTP {code})",
+  "@apiConnectionOk": {
+    "description": "Соединение в порядке (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiServerReachable": "Сервер доступен (HTTP {code})",
+  "@apiServerReachable": {
+    "description": "Сервер доступен (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiConnectionFailed": "Ошибка соединения: {error}",
+  "@apiConnectionFailed": {
+    "description": "Ошибка соединения: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiSection": "API и сеть",
+  "licenseBody": "Tiernan Music\n\nИсходный код этого репозитория общедоступен (Source Available) и предназначен только для обучения и исследований.\n\n[Запрещено]\n· Использовать этот код или производные работы в любых коммерческих или некоммерческих целях;\n· Распространять, копировать, изменять и перепубликовывать это ПО;\n· Использовать встроенные интерфейсы для сканирования или массовой загрузки.\n\nПроект не связан с официальным Kugou Music. Свяжитесь с нами при нарушении авторских прав.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "mvQualitySd": "SD",
+  "mvQualityHd": "HD",
+  "mvQualityQhd": "Ultra HD",
+  "mvQualitySq": "Full HD",
+  "mvQualityFhd": "Blu-ray",
+  "mvQualitySelect": "Качество",
+  "qrLoadFailed": "Не удалось загрузить QR-код: {error}",
+  "@qrLoadFailed": {
+    "description": "Не удалось загрузить QR-код: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shuffle": "Перемешать",
+  "repeat": "Повтор всех",
+  "repeatOne": "Повтор трека",
+  "closePlayer": "Свернуть плеер",
+  "expandPlayer": "Развернуть плеер",
+  "showLyrics": "Показать текст",
+  "showCover": "Показать обложку",
+  "commentsCount": "Комментариев: {count}",
+  "@commentsCount": {
+    "description": "Комментариев: {count}",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playlistIntro": "Описание плейлиста",
+  "expand": "Развернуть",
+  "collapse": "Свернуть",
+  "noSongsInPlaylist": "В этом плейлисте нет треков",
+  "playNext": "Играть следующим",
+  "addToQueue": "В очередь",
+  "songActions": "Действия с треком"
 }

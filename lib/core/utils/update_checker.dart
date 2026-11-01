@@ -88,17 +88,23 @@ class UpdateChecker {
   }
 
   Future<Map<String, dynamic>?> _fetchLatestRelease() async {
-    // 优先走 GitHub API（拿结构化数据），失败再退回 releases/latest 页面
+    // 通过 GitHub API 获取结构化 release 信息（走前缀代理加速）
     final apiUrl =
-        '$_proxyPrefixhttps://api.github.com/repos/$_repoPath/releases/latest';
+        '$_proxyPrefix' 'https://api.github.com/repos/$_repoPath/releases/latest';
     try {
       final res = await _dio.get<Map<String, dynamic>>(apiUrl);
       final data = res.data;
       if (data != null && data['tag_name'] != null) return data;
+      return null;
+    } on DioException catch (e) {
+      // 404 = 仓库还没有发布任何 Release（不是网络故障）
+      if (e.response?.statusCode == 404) return null;
+      debugPrint('[UpdateChecker] api failed: $e');
+      rethrow;
     } catch (e) {
       debugPrint('[UpdateChecker] api failed: $e');
+      rethrow;
     }
-    return null;
   }
 
   /// 从 release 的 assets 里挑一个 APK
@@ -125,23 +131,73 @@ class UpdateChecker {
   }
 
   /// 语义化版本比较：a > b 返回正数
+  ///
+  /// 规则（对齐 semver）：
+  ///  - 先比较三段数字版本号（`1.2.3`）
+  ///  - 数字相同时，**带预发布后缀的版本更旧**：`1.0.0-rc1 < 1.0.0`
+  ///  - 两边都有预发布后缀时，逐段比较预发布标识（数字按数值比，其余按 ASCII 比）
+  ///  - build number（`1.0.0+42`）不参与比较
   static int _compareVersion(String a, String b) {
-    final pa = _parts(a);
-    final pb = _parts(b);
-    final len = pa.length > pb.length ? pa.length : pb.length;
+    final va = _splitVersion(a);
+    final vb = _splitVersion(b);
+
+    final len = va.core.length > vb.core.length
+        ? va.core.length
+        : vb.core.length;
     for (var i = 0; i < len; i++) {
-      final x = i < pa.length ? pa[i] : 0;
-      final y = i < pb.length ? pb[i] : 0;
+      final x = i < va.core.length ? va.core[i] : 0;
+      final y = i < vb.core.length ? vb.core[i] : 0;
       if (x != y) return x - y;
+    }
+
+    // 核心版本相同：比较预发布后缀
+    final pa = va.pre;
+    final pb = vb.pre;
+    if (pa.isEmpty && pb.isEmpty) return 0;
+    // 1.0.0-rc1 < 1.0.0（正式版比预发布版新）
+    if (pa.isEmpty) return 1;
+    if (pb.isEmpty) return -1;
+
+    final plen = pa.length > pb.length ? pa.length : pb.length;
+    for (var i = 0; i < plen; i++) {
+      if (i >= pa.length) return -1; // 标识更少者更旧
+      if (i >= pb.length) return 1;
+      final x = pa[i];
+      final y = pb[i];
+      final nx = int.tryParse(x);
+      final ny = int.tryParse(y);
+      if (nx != null && ny != null) {
+        if (nx != ny) return nx - ny;
+      } else {
+        final cmp = x.compareTo(y);
+        if (cmp != 0) return cmp;
+      }
     }
     return 0;
   }
 
-  static List<int> _parts(String v) {
-    final cleaned = v.split('-').first.split('+').first;
-    return cleaned
+  /// 拆分版本号：`1.0.0-rc.1+42` → core=[1,0,0], pre=['rc',1]
+  static ({List<int> core, List<String> pre}) _splitVersion(String v) {
+    var s = v.trim();
+    if (s.startsWith('v') || s.startsWith('V')) s = s.substring(1);
+    // 去掉 build number
+    final plus = s.indexOf('+');
+    if (plus >= 0) s = s.substring(0, plus);
+    // 拆分预发布后缀
+    var pre = <String>[];
+    final dash = s.indexOf('-');
+    if (dash >= 0) {
+      final preStr = s.substring(dash + 1);
+      s = s.substring(0, dash);
+      pre = preStr
+          .split('.')
+          .where((e) => e.isNotEmpty)
+          .toList(growable: false);
+    }
+    final core = s
         .split('.')
         .map((e) => int.tryParse(e.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0)
-        .toList();
+        .toList(growable: false);
+    return (core: core, pre: pre);
   }
 }

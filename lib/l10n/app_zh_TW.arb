@@ -240,5 +240,101 @@
   "loginToViewPlaylists": "登入後查看你的歌單",
   "queueEmpty": "隊列為空，先去播放幾首歌吧",
   "cache": "快取",
-  "replyPrefix": "回覆 {name}：{content}"
+  "replyPrefix": "回覆 {name}：{content}",
+  "moreActions": "更多",
+  "clearHistoryConfirm": "確定要清空全部搜尋歷史嗎？",
+  "commentFailed": "留言失敗：{error}",
+  "@commentFailed": {
+    "description": "留言失敗：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFailed": "刪除失敗：{error}",
+  "@deleteFailed": {
+    "description": "刪除失敗：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "清除失敗：{error}",
+  "@clearCacheFailed": {
+    "description": "清除失敗：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiConnectionOk": "連線正常（HTTP {code}）",
+  "@apiConnectionOk": {
+    "description": "連線正常（HTTP {code}）",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiServerReachable": "伺服器可達（HTTP {code}）",
+  "@apiServerReachable": {
+    "description": "伺服器可達（HTTP {code}）",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiConnectionFailed": "連線失敗：{error}",
+  "@apiConnectionFailed": {
+    "description": "連線失敗：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiSection": "API 與網路",
+  "licenseBody": "汀瀾音樂 Tiernan Music\n\n本倉庫原始碼公開可見（Source Available），僅供學習與研究用途。\n\n【禁止事項】\n· 禁止將本程式碼或其衍生作品用於任何商業或非商業用途；\n· 禁止以任何形式散布、複製、修改後發布本軟體；\n· 禁止將本專案接入的介面用於爬取或批次下載。\n\n本專案與酷狗音樂官方無任何關聯，如有侵權請聯絡刪除。\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "mvQualitySd": "標清",
+  "mvQualityHd": "高清",
+  "mvQualityQhd": "超清",
+  "mvQualitySq": "全高畫質",
+  "mvQualityFhd": "藍光",
+  "mvQualitySelect": "畫質",
+  "qrLoadFailed": "QR Code 載入失敗：{error}",
+  "@qrLoadFailed": {
+    "description": "QR Code 載入失敗：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shuffle": "隨機播放",
+  "repeat": "循環播放",
+  "repeatOne": "單曲循環",
+  "closePlayer": "收起播放頁",
+  "expandPlayer": "展開播放頁",
+  "showLyrics": "查看歌詞",
+  "showCover": "查看封面",
+  "commentsCount": "共 {count} 則留言",
+  "@commentsCount": {
+    "description": "共 {count} 則留言",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playlistIntro": "歌單簡介",
+  "expand": "展開",
+  "collapse": "收合",
+  "noSongsInPlaylist": "歌單中暫無歌曲",
+  "playNext": "下一首播放",
+  "addToQueue": "加入播放佇列",
+  "songActions": "歌曲操作"
 }

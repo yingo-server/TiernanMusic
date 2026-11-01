@@ -84,5 +84,101 @@
   "quality": "Qualidade do som",
   "quality128": "Fluente 128K",
   "quality320": "Alta qualidade 320K",
-  "qualityFlac": "Sem perdas FLAC"
+  "qualityFlac": "Sem perdas FLAC",
+  "moreActions": "Mais",
+  "clearHistoryConfirm": "Limpar todo o histórico de pesquisa?",
+  "commentFailed": "Falha ao comentar: {error}",
+  "@commentFailed": {
+    "description": "Falha ao comentar: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFailed": "Falha ao excluir: {error}",
+  "@deleteFailed": {
+    "description": "Falha ao excluir: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "Falha ao limpar: {error}",
+  "@clearCacheFailed": {
+    "description": "Falha ao limpar: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiConnectionOk": "Conexão ok (HTTP {code})",
+  "@apiConnectionOk": {
+    "description": "Conexão ok (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiServerReachable": "Servidor acessível (HTTP {code})",
+  "@apiServerReachable": {
+    "description": "Servidor acessível (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiConnectionFailed": "Falha de conexão: {error}",
+  "@apiConnectionFailed": {
+    "description": "Falha de conexão: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiSection": "API e rede",
+  "licenseBody": "Tiernan Music\n\nO código-fonte deste repositório é publicamente visível (Source Available), apenas para estudo e pesquisa.\n\n[Proibido]\n· Não usar este código ou obras derivadas para fins comerciais ou não comerciais;\n· Não distribuir, copiar, modificar ou republicar este software;\n· Não usar as interfaces integradas para varredura ou download em massa.\n\nEste projeto não tem ligação com o Kugou Music oficial. Contate-nos em caso de violação de direitos.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "mvQualitySd": "SD",
+  "mvQualityHd": "HD",
+  "mvQualityQhd": "Ultra HD",
+  "mvQualitySq": "Full HD",
+  "mvQualityFhd": "Blu-ray",
+  "mvQualitySelect": "Qualidade",
+  "qrLoadFailed": "Falha ao carregar o QR code: {error}",
+  "@qrLoadFailed": {
+    "description": "Falha ao carregar o QR code: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shuffle": "Aleatório",
+  "repeat": "Repetir tudo",
+  "repeatOne": "Repetir uma",
+  "closePlayer": "Recolher player",
+  "expandPlayer": "Expandir player",
+  "showLyrics": "Ver letra",
+  "showCover": "Ver capa",
+  "commentsCount": "{count} comentários",
+  "@commentsCount": {
+    "description": "{count} comentários",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playlistIntro": "Descrição da playlist",
+  "expand": "Expandir",
+  "collapse": "Recolher",
+  "noSongsInPlaylist": "Nenhuma música nesta playlist",
+  "playNext": "Tocar depois",
+  "addToQueue": "Adicionar à fila",
+  "songActions": "Ações da música"
 }

@@ -250,7 +250,7 @@ class _PlayerMock extends StatelessWidget {
         Text('周杰伦',
             style: TextStyle(color: scheme.onSurfaceVariant)),
         const SizedBox(height: 40),
-        const Slider(value: 0.4),
+        const Slider(value: 0.4, onChanged: null),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [

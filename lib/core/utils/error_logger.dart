@@ -109,7 +109,7 @@ class ErrorLogger {
   /// 写入公共目录：Android 10+ 用原生 MediaStore；≤9 直写公共 Documents。
   Future<bool> _appendPublic(String fileName, String text) async {
     try {
-      final apiLevel = _apiLevel;
+      final apiLevel = await apiLevel;
       if (apiLevel >= 29) {
         // MediaStore 每次插入都是新文件，无法追加 —— 所以按天聚合，
         // 由 Dart 侧缓存当日内容，退出/超限时整份重写。
@@ -215,17 +215,22 @@ class ErrorLogger {
     // 公共目录写入成功后，原生会返回实际路径，优先用它
     final public = _publicDirPath;
     if (public != null && public.isNotEmpty) return public;
-    if (_apiLevel >= 29) {
+    if (await apiLevel >= 29) {
       return '/sdcard/Documents/$folderName/$logsDirName';
     }
     return _fallbackDir?.path;
   }
 
   /// Android API 级别
-  static int get _apiLevel {
-    final match =
-        RegExp(r'Android\s+(\d+)').firstMatch(Platform.operatingSystemVersion);
-    return int.tryParse(match?.group(1) ?? '') ?? 29;
+  ///
+  /// 优先走原生通道（返回真实 Build.VERSION.SDK_INT）；
+  /// 通道不可用时退回 [StoragePermissionService] 的版本名映射兜底。
+  static Future<int> get apiLevel async {
+    try {
+      final level = await StoragePermissionService.instance.apiLevel();
+      if (level > 0) return level;
+    } catch (_) {}
+    return 29;
   }
 
   static String _dateTag(DateTime t) =>

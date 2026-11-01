@@ -37,14 +37,25 @@ class StoragePermissionService {
     } catch (_) {
       level = 0;
     }
-    // 原生通道失败时用 operatingSystemVersion 兜底
+    // 原生通道失败时用 operatingSystemVersion 兜底。
+    // 注意：Platform.operatingSystemVersion 返回的是**版本名**（如 "Android 13"），
+    // 不是 API level，必须做版本名 → API level 映射，否则会把 Android 10(API 29)
+    // 误判成 API 10，从而走错存储分支。
     if (level <= 0) {
-      final match = RegExp(r'Android\s+(\d+)')
-          .firstMatch(Platform.operatingSystemVersion);
-      level = int.tryParse(match?.group(1) ?? '') ?? 29;
+      level = _apiLevelFromOsVersion(Platform.operatingSystemVersion);
     }
     _apiLevel = level;
     return level;
+  }
+
+  /// Android 版本名 → API level 映射（仅作为原生通道不可用时的兜底）。
+  static int _apiLevelFromOsVersion(String osVersion) {
+    final match = RegExp(r'Android\s+(\d+)').firstMatch(osVersion);
+    final name = int.tryParse(match?.group(1) ?? '');
+    if (name == null) return 29; // 认不出来时按 Android 10+ 处理（最安全的分支）
+    if (name <= 9) return name; // Android 9 == API 28
+    // Android 10 → API 29，逐版本递增
+    return name + 19;
   }
 
   /// Android 10 及以上

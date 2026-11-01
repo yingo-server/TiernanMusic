@@ -12,6 +12,9 @@ import '../data/auth_providers.dart';
 import '../data/auth_repository.dart';
 import 'captcha_page.dart';
 
+/// 登录方式：短信 / 密码 / 二维码。
+enum _LoginMode { sms, password, qr }
+
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -22,6 +25,7 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  late _LoginMode _mode = _LoginMode.sms;
 
   @override
   void initState() {
@@ -42,6 +46,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -60,7 +65,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: scheme.primary.withOpacity(0.35),
+                    color: scheme.primary.withValues(alpha: 0.35),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -71,34 +76,52 @@ class _LoginPageState extends ConsumerState<LoginPage>
             ),
             const SizedBox(height: 16),
             Text(context.l10n.appName,
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
+                style: textTheme.headlineSmall
                     ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(
               context.l10n.unofficialClient,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: scheme.onSurfaceVariant),
+              style:
+                  textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 24),
+            // 登录方式切换：M3 用 SegmentedButton（互斥模式），比 TabBar 更贴合
+            // 「在少量选项间做单选」的语义。
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: TabBar(
-                controller: _tabController,
-                dividerColor: Colors.transparent,
-                tabs: [
-                  Tab(text: context.l10n.smsLogin),
-                  Tab(text: context.l10n.passwordLogin),
-                  Tab(text: context.l10n.qrLogin),
-                ],
+              child: SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<_LoginMode>(
+                  segments: [
+                    ButtonSegment<_LoginMode>(
+                      value: _LoginMode.sms,
+                      label: Text(context.l10n.smsLogin),
+                    ),
+                    ButtonSegment<_LoginMode>(
+                      value: _LoginMode.password,
+                      label: Text(context.l10n.passwordLogin),
+                    ),
+                    ButtonSegment<_LoginMode>(
+                      value: _LoginMode.qr,
+                      label: Text(context.l10n.qrLogin),
+                    ),
+                  ],
+                  selected: {_mode},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (selection) {
+                    final mode = selection.first;
+                    if (mode == _mode) return;
+                    setState(() => _mode = mode);
+                    _tabController.animateTo(mode.index);
+                  },
+                ),
               ),
             ),
+            const SizedBox(height: 8),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
+                physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _SmsLoginTab(onSuccess: _onLoginSuccess),
                   _PasswordLoginTab(onSuccess: _onLoginSuccess),
@@ -261,7 +284,7 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
           decoration: InputDecoration(
             labelText: context.l10n.phoneNumber,
             hintText: context.l10n.phoneHintCn,
-            prefixIcon: Icon(Icons.phone_iphone),
+            prefixIcon: const Icon(Icons.phone_iphone),
             counterText: '',
           ),
           onChanged: (_) => setState(() {}),
@@ -276,7 +299,7 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
                 maxLength: 6,
                 decoration: InputDecoration(
                   labelText: context.l10n.verificationCode,
-                  prefixIcon: Icon(Icons.pin_outlined),
+                  prefixIcon: const Icon(Icons.pin_outlined),
                   counterText: '',
                 ),
               ),
@@ -289,10 +312,11 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
           ],
         ),
         const SizedBox(height: 24),
+        // 主操作：FilledButton + 内联 CircularProgressIndicator
         FilledButton(
           onPressed: _loading ? null : () => _login(),
           style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            minimumSize: const Size.fromHeight(48),
           ),
           child: _loading
               ? const SizedBox(
@@ -378,7 +402,7 @@ class _PasswordLoginTabState extends ConsumerState<_PasswordLoginTab> {
           controller: _usernameCtrl,
           decoration: InputDecoration(
             labelText: context.l10n.usernameLabel,
-            prefixIcon: Icon(Icons.person_outline),
+            prefixIcon: const Icon(Icons.person_outline),
           ),
         ),
         const SizedBox(height: 16),
@@ -391,6 +415,7 @@ class _PasswordLoginTabState extends ConsumerState<_PasswordLoginTab> {
             suffixIcon: IconButton(
               icon: Icon(
                   _obscure ? Icons.visibility_off : Icons.visibility),
+              tooltip: context.l10n.password,
               onPressed: () => setState(() => _obscure = !_obscure),
             ),
           ),
@@ -400,7 +425,7 @@ class _PasswordLoginTabState extends ConsumerState<_PasswordLoginTab> {
         FilledButton(
           onPressed: _loading ? null : _login,
           style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            minimumSize: const Size.fromHeight(48),
           ),
           child: _loading
               ? const SizedBox(
@@ -470,7 +495,7 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = '二维码加载失败：$e';
+        _error = context.l10n.qrLoadFailed('$e');
       });
     }
   }
@@ -514,6 +539,7 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
   Widget build(BuildContext context) {
     super.build(context);
     final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
@@ -553,7 +579,7 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
                   _error ?? _statusText,
                   key: ValueKey(_error ?? _statusText),
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge,
+                  style: theme.textTheme.bodyLarge,
                 ),
               ),
             ),
@@ -574,6 +600,7 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
   }
 
   Widget _buildQrContent() {
+    final theme = Theme.of(context);
     if (_loading) return const Center(child: CircularProgressIndicator());
     final b64 = _qrBase64;
     if (_error != null || b64 == null || b64.isEmpty) {
@@ -592,7 +619,8 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
               color: Colors.black87,
               alignment: Alignment.center,
               child: Text(context.l10n.qrExpiredShort,
-                  style: TextStyle(color: Colors.white, fontSize: 18)),
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(color: Colors.white)),
             ),
         ],
       );

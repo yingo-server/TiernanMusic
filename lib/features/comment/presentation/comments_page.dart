@@ -116,6 +116,7 @@ class CommentsPage extends ConsumerStatefulWidget {
 
 class _CommentsPageState extends ConsumerState<CommentsPage> {
   final _inputCtrl = TextEditingController();
+  final _inputFocus = FocusNode();
   Comment? _replyTo;
 
   late final _args = _CommentArgs(
@@ -130,6 +131,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
   @override
   void dispose() {
     _inputCtrl.dispose();
+    _inputFocus.dispose();
     super.dispose();
   }
 
@@ -149,7 +151,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
             child: state.when(
               loading: () => const ListSkeleton(),
               error: (e, _) => ErrorRetry(
-                message: '$e',
+                error: e,
                 onRetry: () => ref
                     .read(_commentsProvider(_args).notifier)
                     .load(refresh: true),
@@ -207,7 +209,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
         children: [
           if (_replyTo != null)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
               color: theme.colorScheme.surfaceContainerHighest,
               child: Row(
                 children: [
@@ -219,9 +221,10 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                       style: theme.textTheme.bodySmall,
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () => setState(() => _replyTo = null),
-                    child: const Icon(Icons.close, size: 18),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    tooltip: context.l10n.cancel,
+                    onPressed: () => setState(() => _replyTo = null),
                   ),
                 ],
               ),
@@ -233,8 +236,11 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                 Expanded(
                   child: TextField(
                     controller: _inputCtrl,
+                    focusNode: _inputFocus,
                     decoration: InputDecoration(
-                      hintText: _isLoggedIn ? context.l10n.commentHint : context.l10n.loginToComment,
+                      hintText: _isLoggedIn
+                          ? context.l10n.commentHint
+                          : context.l10n.loginToComment,
                       isDense: true,
                     ),
                     maxLines: null,
@@ -244,6 +250,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                 ),
                 const SizedBox(width: 8),
                 IconButton.filled(
+                  tooltip: context.l10n.send,
                   onPressed: _send,
                   icon: const Icon(Icons.send),
                 ),
@@ -288,7 +295,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('评论失败：$e')));
+            .showSnackBar(SnackBar(content: Text(context.l10n.commentFailed('$e'))));
       }
     }
   }
@@ -303,9 +310,14 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
               child: Text(context.l10n.cancel)),
+          // 危险操作：红色强调
           FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(context.l10n.delete)),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(context.l10n.delete)),
         ],
       ),
     );
@@ -321,7 +333,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('删除失败：$e')));
+            .showSnackBar(SnackBar(content: Text(context.l10n.deleteFailed('$e'))));
       }
     }
   }
@@ -361,8 +373,7 @@ class _CommentTile extends StatelessWidget {
           Text(
             comment.createTime,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.4),
-              fontSize: 11,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -376,11 +387,12 @@ class _CommentTile extends StatelessWidget {
           Row(
             children: [
               Icon(Icons.thumb_up_outlined,
-                  size: 14, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+                  size: 14,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
               const SizedBox(width: 4),
               Text('${comment.likeCount}',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.4),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                   )),
               if (comment.replyCount > 0) ...[
                 const SizedBox(width: 16),
@@ -390,24 +402,33 @@ class _CommentTile extends StatelessWidget {
                     )),
               ],
               const Spacer(),
+              // 次要操作用 TextButton（而非裸 GestureDetector 文本）：
+              // 有涟漪反馈、有 48dp 触控目标、有语义。
               if (onReply != null)
-                GestureDetector(
-                  onTap: onReply,
+                TextButton(
+                  onPressed: onReply,
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(48, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    visualDensity: VisualDensity.compact,
+                  ),
                   child: Text(context.l10n.reply,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                      )),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: theme.colorScheme.primary)),
                 ),
-              if (onDelete != null) ...[
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: onDelete,
+              if (onDelete != null)
+                TextButton(
+                  onPressed: onDelete,
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(48, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: theme.colorScheme.error,
+                  ),
                   child: Text(context.l10n.delete,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.error,
-                      )),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: theme.colorScheme.error)),
                 ),
-              ],
             ],
           ),
         ],

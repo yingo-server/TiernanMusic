@@ -84,5 +84,101 @@
   "quality": "Qualité audio",
   "quality128": "Fluide 128K",
   "quality320": "Haute qualité 320K",
-  "qualityFlac": "Sans perte FLAC"
+  "qualityFlac": "Sans perte FLAC",
+  "moreActions": "Plus",
+  "clearHistoryConfirm": "Effacer tout l'historique de recherche ?",
+  "commentFailed": "Échec du commentaire : {error}",
+  "@commentFailed": {
+    "description": "Échec du commentaire : {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFailed": "Échec de la suppression : {error}",
+  "@deleteFailed": {
+    "description": "Échec de la suppression : {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "Échec du nettoyage : {error}",
+  "@clearCacheFailed": {
+    "description": "Échec du nettoyage : {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiConnectionOk": "Connexion OK (HTTP {code})",
+  "@apiConnectionOk": {
+    "description": "Connexion OK (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiServerReachable": "Serveur accessible (HTTP {code})",
+  "@apiServerReachable": {
+    "description": "Serveur accessible (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "apiConnectionFailed": "Échec de connexion : {error}",
+  "@apiConnectionFailed": {
+    "description": "Échec de connexion : {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiSection": "API et réseau",
+  "licenseBody": "Tiernan Music\n\nLe code source de ce dépôt est publiquement visible (Source Available), uniquement à des fins d'apprentissage et de recherche.\n\n[Interdit]\n· Toute utilisation commerciale ou non commerciale de ce code ou de ses dérivés est interdite ;\n· Toute distribution, copie, modification ou republication du logiciel est interdite ;\n· Les interfaces intégrées ne doivent pas servir au scraping ni au téléchargement massif.\n\nCe projet n'est pas affilié à Kugou Music officiel. Contactez-nous en cas de violation de droits.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "mvQualitySd": "SD",
+  "mvQualityHd": "HD",
+  "mvQualityQhd": "Ultra HD",
+  "mvQualitySq": "Full HD",
+  "mvQualityFhd": "Blu-ray",
+  "mvQualitySelect": "Qualité",
+  "qrLoadFailed": "Échec du chargement du QR code : {error}",
+  "@qrLoadFailed": {
+    "description": "Échec du chargement du QR code : {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shuffle": "Aléatoire",
+  "repeat": "Tout répéter",
+  "repeatOne": "Répéter une piste",
+  "closePlayer": "Réduire le lecteur",
+  "expandPlayer": "Agrandir le lecteur",
+  "showLyrics": "Afficher les paroles",
+  "showCover": "Afficher la pochette",
+  "commentsCount": "{count} commentaires",
+  "@commentsCount": {
+    "description": "{count} commentaires",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playlistIntro": "Description de la playlist",
+  "expand": "Développer",
+  "collapse": "Réduire",
+  "noSongsInPlaylist": "Aucun titre dans cette playlist",
+  "playNext": "Lire ensuite",
+  "addToQueue": "Ajouter à la file",
+  "songActions": "Actions du titre"
 }

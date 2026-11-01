@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers.dart' show kugouApiClientProvider;
 import '../../../core/widgets/song_tile.dart';
 import '../../../l10n/l10n.dart';
+import '../../download/presentation/download_sheet.dart';
+import '../../player/data/models.dart';
 import '../../player/play_helper.dart';
 import '../data/playlist_repository.dart';
 
@@ -38,7 +40,7 @@ class PlaylistDetailPage extends ConsumerWidget {
       body: detailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorRetry(
-          message: '$e',
+          error: e,
           onRetry: () => ref.invalidate(playlistDetailProvider(id)),
         ),
         data: (detail) => CustomScrollView(
@@ -51,10 +53,11 @@ class PlaylistDetailPage extends ConsumerWidget {
                   detail.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    shadows: [Shadow(color: Colors.black54, blurRadius: 8)],
+                    shadows: const [
+                      Shadow(color: Colors.black54, blurRadius: 8),
+                    ],
                   ),
                 ),
                 background: Stack(
@@ -96,23 +99,15 @@ class PlaylistDetailPage extends ConsumerWidget {
                 ),
               ),
             ),
+            // 简介：M3 中「需要解释的内容」用 ExpansionTile（可展开区块）
             if (detail.intro.isNotEmpty)
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    detail.intro,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+                child: _ExpandableIntro(text: detail.intro),
               ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                // 主操作：FilledButton（播放全部）
                 child: FilledButton.icon(
                   onPressed: () {
                     final tracks = ref.read(playlistTracksProvider(id)).value;
@@ -125,8 +120,6 @@ class PlaylistDetailPage extends ConsumerWidget {
                   label: Text(context.l10n.playAll),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24)),
                   ),
                 ),
               ),
@@ -139,32 +132,117 @@ class PlaylistDetailPage extends ConsumerWidget {
                 child: SizedBox(
                   height: 200,
                   child: ErrorRetry(
-                    message: '$e',
+                    error: e,
                     onRetry: () => ref.invalidate(playlistTracksProvider(id)),
                   ),
                 ),
               ),
-              data: (tracks) => SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final song = tracks.songs[index];
-                    return SongTile(
-                      title: song.name,
-                      artist: song.artist,
-                      duration: song.duration,
-                      onTap: () {
-                        ref.read(playHelperProvider).playPlaylistQueue(
-                            tracks.songs, index, cover: detail.cover);
-                      },
-                    );
-                  },
-                  childCount: tracks.songs.length,
-                ),
-              ),
+              data: (tracks) => tracks.songs.isEmpty
+                  ? const SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 200,
+                        child: EmptyState(
+                          icon: Icons.queue_music_outlined,
+                          message: '歌单中暂无歌曲',
+                        ),
+                      ),
+                    )
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final song = tracks.songs[index];
+                          return SongTile(
+                            title: song.name,
+                            artist: song.artist,
+                            duration: song.duration,
+                            onTap: () {
+                              ref.read(playHelperProvider).playPlaylistQueue(
+                                  tracks.songs, index, cover: detail.cover);
+                            },
+                            // 多个次要操作收进「更多」菜单
+                            menuItems: [
+                              SongTileMenuItem(
+                                value: 'download',
+                                label: context.l10n.download,
+                                icon: Icons.download_outlined,
+                              ),
+                            ],
+                            onMenuSelected: (v) {
+                              if (v == 'download') {
+                                showDownloadSheet(
+                                  context,
+                                  Song(
+                                    hash: song.hash,
+                                    albumAudioId: song.albumAudioId,
+                                    name: song.name,
+                                    artist: song.artist,
+                                    cover: song.cover,
+                                  ),
+                                );
+                              }
+                            },
+                          );
+                        },
+                        childCount: tracks.songs.length,
+                      ),
+                    ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 歌单简介：默认 3 行，可展开/收起。
+class _ExpandableIntro extends StatefulWidget {
+  const _ExpandableIntro({required this.text});
+  final String text;
+
+  @override
+  State<_ExpandableIntro> createState() => _ExpandableIntroState();
+}
+
+class _ExpandableIntroState extends State<_ExpandableIntro> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.playlistIntro,
+            style: theme.textTheme.labelLarge
+                ?.copyWith(color: theme.colorScheme.primary),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            widget.text,
+            maxLines: _expanded ? null : 3,
+            overflow: _expanded ? null : TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 4),
+          // 展开/收起用 TextButton（次要操作）
+          TextButton(
+            onPressed: () => setState(() => _expanded = !_expanded),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(48, 36),
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: Text(_expanded
+                ? context.l10n.collapse
+                : context.l10n.expand),
+          ),
+        ],
       ),
     );
   }
@@ -177,6 +255,7 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -189,7 +268,8 @@ class _InfoChip extends StatelessWidget {
           Icon(icon, size: 14, color: Colors.white),
           const SizedBox(width: 4),
           Text(label,
-              style: const TextStyle(color: Colors.white, fontSize: 12)),
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: Colors.white)),
         ],
       ),
     );

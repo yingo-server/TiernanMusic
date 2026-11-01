@@ -23,6 +23,21 @@ class PermissionGate {
     return _service.requestStoragePermission();
   }
 
+  /// 检查当前是否已具备公共存储写入能力（**不申请、不弹窗**）。
+  ///
+  /// 用于「只读展示」场景（如诊断页的状态显示）——
+  /// 不能因为用户只是看了一眼状态就弹出权限框。
+  Future<bool> hasStorageWriteAccess() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      final strategy = await _service.currentStrategy();
+      return strategy != StorageStrategy.appFallback;
+    } catch (e) {
+      debugPrint('[PermissionGate] hasStorageWriteAccess failed: $e');
+      return false;
+    }
+  }
+
   /// 需要发通知时调用（Android 13+ 才有意义）
   Future<bool> ensureNotification() async {
     if (!Platform.isAndroid) return true;

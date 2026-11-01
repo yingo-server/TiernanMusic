@@ -32,9 +32,10 @@ class HomePage extends ConsumerWidget {
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
+                // 大标题层级：M3 顶层页面使用 headline 样式的标题栏
                 SliverAppBar(
                   floating: true,
-                  title: Text(context.l10n.appName,
+                  title: Text(context.l10n.home,
                       style: Theme.of(context)
                           .textTheme
                           .headlineSmall
@@ -42,6 +43,7 @@ class HomePage extends ConsumerWidget {
                   actions: [
                     IconButton(
                       icon: const Icon(Icons.search),
+                      tooltip: context.l10n.search,
                       onPressed: () => context.push('/search'),
                     ),
                   ],
@@ -56,6 +58,8 @@ class HomePage extends ConsumerWidget {
                     child: EmptyState(
                       icon: Icons.explore_outlined,
                       message: context.l10n.noRecommend,
+                      actionLabel: context.l10n.reload,
+                      onAction: () => ref.invalidate(homeDataProvider),
                     ),
                   ),
                 if (data.banners.isNotEmpty)
@@ -93,14 +97,7 @@ class HomePage extends ConsumerWidget {
 
   Widget _sectionTitle(BuildContext context, String title) {
     return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-        child: Text(title,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold)),
-      ),
+      child: SectionHeader(title: title),
     );
   }
 }
@@ -148,6 +145,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         SizedBox(
@@ -164,7 +162,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                   imageUrl: widget.banners[i].imageUrl,
                   fit: BoxFit.cover,
                   errorWidget: (_, __, ___) =>
-                      Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                      Container(color: theme.colorScheme.surfaceContainerHighest),
                 ),
               ),
             ),
@@ -181,8 +179,8 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(3),
                   color: i == _index
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.outlineVariant,
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.outlineVariant,
                 ),
               ),
           ],
@@ -203,14 +201,7 @@ class _DailyRecommend extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-          child: Text(context.l10n.dailyRecommend,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-        ),
+        SectionHeader(title: context.l10n.dailyRecommend),
         SizedBox(
           height: 110,
           child: ListView.separated(
@@ -220,25 +211,23 @@ class _DailyRecommend extends ConsumerWidget {
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, i) {
               final s = songs[i];
-              return InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  ref.read(playHelperProvider).playHomeQueue(songs, i);
-                  context.push('/player');
-                },
-                child: SizedBox(
-                  width: 220,
-                  child: Card(
-                    margin: EdgeInsets.zero,
+              return SizedBox(
+                width: 220,
+                child: Card(
+                  margin: EdgeInsets.zero,
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () {
+                      ref.read(playHelperProvider).playHomeQueue(songs, i);
+                      context.push('/player');
+                    },
                     child: Row(
                       children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.horizontal(
-                              left: Radius.circular(12)),
+                        SizedBox(
+                          width: 78,
+                          height: 78,
                           child: CachedNetworkImage(
                             imageUrl: s.cover,
-                            width: 78,
-                            height: 78,
                             fit: BoxFit.cover,
                             errorWidget: (_, __, ___) => const SizedBox(
                                 width: 78,
@@ -291,6 +280,7 @@ class _PlaylistRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return SizedBox(
       height: 180,
       child: ListView.separated(
@@ -300,39 +290,39 @@ class _PlaylistRow extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, i) {
           final p = playlists[i];
-          return InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () =>
-                context.push('/playlist/${p.globalCollectionId}'),
-            child: SizedBox(
-              width: 130,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: CachedNetworkImage(
-                      imageUrl: p.cover,
-                      width: 130,
-                      height: 130,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => Container(
+          return SizedBox(
+            width: 130,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () =>
+                          context.push('/playlist/${p.globalCollectionId}'),
+                      child: CachedNetworkImage(
+                        imageUrl: p.cover,
                         width: 130,
                         height: 130,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        child: const Icon(Icons.queue_music),
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Container(
+                          width: 130,
+                          height: 130,
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: const Icon(Icons.queue_music),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(p.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
+                ),
+                const SizedBox(height: 6),
+                Text(p.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall),
+              ],
             ),
           );
         },
@@ -365,57 +355,59 @@ class _RankRow extends StatelessWidget {
         itemBuilder: (context, i) {
           final r = ranks[i];
           final c = _hue(i);
-          return InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => context.push('/playlist/${r.id}'),
-            child: SizedBox(
-              width: 200,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // 渐变主题色背景（每张不同色相）
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [c, _hue2(i)],
-                        ),
-                      ),
-                    ),
-                    Opacity(
-                      opacity: 0.5,
-                      child: CachedNetworkImage(
-                        imageUrl: r.cover,
-                        fit: BoxFit.cover,
-                        colorBlendMode: BlendMode.luminosity,
-                        errorWidget: (_, __, ___) => const SizedBox.shrink(),
-                      ),
-                    ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
+          return SizedBox(
+            width: 200,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => context.push('/playlist/${r.id}'),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // 渐变主题色背景（每张不同色相）
+                      DecoratedBox(
+                        decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Colors.black87],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [c, _hue2(i)],
                           ),
                         ),
-                        child: Text(r.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)),
                       ),
-                    ),
-                  ],
+                      Opacity(
+                        opacity: 0.5,
+                        child: CachedNetworkImage(
+                          imageUrl: r.cover,
+                          fit: BoxFit.cover,
+                          colorBlendMode: BlendMode.luminosity,
+                          errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                        ),
+                      ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Colors.transparent, Colors.black87],
+                            ),
+                          ),
+                          child: Text(r.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -456,6 +448,7 @@ class _SongTile extends ConsumerWidget {
       title: Text(song.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(song.singer,
           maxLines: 1, overflow: TextOverflow.ellipsis),
+      // trailing 只放次要信息（时长），操作收进 PopupMenu
       trailing: Text(song.durationText,
           style: Theme.of(context).textTheme.bodySmall),
       onTap: () {
@@ -482,7 +475,7 @@ class _HomeSkeleton extends StatelessWidget {
     return _Shimmer(
       baseColor: scheme.surface,
       highlightColor:
-          scheme.surfaceContainerHighest.withOpacity(0.4),
+          scheme.surfaceContainerHighest.withValues(alpha: 0.4),
       child: ListView(
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
@@ -536,10 +529,10 @@ class _HomeSkeleton extends StatelessWidget {
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                      _SkText(width: double.infinity, height: 14),
-                      SizedBox(height: 8),
-                      _SkText(width: 120, height: 12),
-                    ])),
+                          _SkText(width: double.infinity, height: 14),
+                          SizedBox(height: 8),
+                          _SkText(width: 120, height: 12),
+                        ])),
               ]),
             ),
         ],
@@ -565,7 +558,7 @@ class _SkBox extends StatelessWidget {
         color: Theme.of(context)
             .colorScheme
             .surfaceContainerHighest
-            .withOpacity(0.4),
+            .withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(radius),
       ),
     );
@@ -587,7 +580,7 @@ class _SkText extends StatelessWidget {
         color: Theme.of(context)
             .colorScheme
             .surfaceContainerHighest
-            .withOpacity(0.4),
+            .withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(4),
       ),
     );
@@ -628,7 +621,7 @@ class _ShimmerState extends State<_Shimmer>
         final base =
             widget.baseColor ?? theme.colorScheme.surface;
         final highlight = widget.highlightColor ??
-            theme.colorScheme.surfaceContainerHighest.withOpacity(0.4);
+            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4);
         // 高光带从左侧 -1 推进到右侧 1，覆盖 child 后裁剪
         final dx = -1.2 + _controller.value * 2.4;
         return ShaderMask(

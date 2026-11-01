@@ -67,12 +67,14 @@ class FullPlayerPage extends ConsumerWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.keyboard_arrow_down),
+                  tooltip: context.l10n.closePlayer,
                   onPressed: () => Navigator.of(context).pop(),
                 ),
                 Expanded(
                   child: Text(context.l10n.nowPlaying,
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600)),
                 ),
                 IconButton(
                   icon: const Icon(Icons.download_outlined),
@@ -123,9 +125,8 @@ class FullPlayerPage extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(quality.label,
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color: theme.colorScheme.primary)),
+                              style: theme.textTheme.labelSmall
+                                  ?.copyWith(color: theme.colorScheme.primary)),
                         ),
                         const SizedBox(width: 8),
                       ],
@@ -158,11 +159,13 @@ class FullPlayerPage extends ConsumerWidget {
                         color: shuffle
                             ? theme.colorScheme.primary
                             : theme.colorScheme.onSurfaceVariant),
+                    tooltip: context.l10n.shuffle,
                     onPressed: controller.toggleShuffle,
                   ),
                   IconButton(
                     iconSize: 36,
                     icon: const Icon(Icons.skip_previous_rounded),
+                    tooltip: context.l10n.previous,
                     onPressed: controller.prev,
                   ),
                   SizedBox(
@@ -170,6 +173,7 @@ class FullPlayerPage extends ConsumerWidget {
                     height: 72,
                     child: FloatingActionButton(
                       heroTag: 'play-pause-fab',
+                      tooltip: isPlaying ? context.l10n.pause : context.l10n.play,
                       onPressed: controller.togglePlay,
                       child: Icon(
                         isPlaying
@@ -182,6 +186,7 @@ class FullPlayerPage extends ConsumerWidget {
                   IconButton(
                     iconSize: 36,
                     icon: const Icon(Icons.skip_next_rounded),
+                    tooltip: context.l10n.next,
                     onPressed: controller.next,
                   ),
                   IconButton(
@@ -194,6 +199,9 @@ class FullPlayerPage extends ConsumerWidget {
                           ? theme.colorScheme.primary
                           : theme.colorScheme.onSurfaceVariant,
                     ),
+                    tooltip: loopMode == LoopMode.one
+                        ? context.l10n.repeatOne
+                        : context.l10n.repeat,
                     onPressed: controller.cycleRepeatMode,
                   ),
                 ],
@@ -223,30 +231,28 @@ class _MvEntry extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: SizedBox(
-          height: 30,
-          child: OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              visualDensity: VisualDensity.compact,
-            ),
-            icon: const Icon(Icons.movie_outlined, size: 16),
-            label: const Text('MV', style: TextStyle(fontSize: 12)),
-            onPressed: () {
-              final title = mv.name.isNotEmpty ? mv.name : (song?.name ?? '');
-              final artist =
-                  mv.artist.isNotEmpty ? mv.artist : (song?.artist ?? '');
-              // /video/url 只认视频 hash，故 path 用 hash；
-              // videoId 走 query 供清晰度列表使用
-              final hash = mv.bestHash ?? mv.sdHash ?? '';
-              context.push(
-                '/mv/${Uri.encodeComponent(hash.isEmpty ? mv.videoId : hash)}'
-                '?videoId=${Uri.encodeComponent(mv.videoId)}'
-                '&title=${Uri.encodeComponent(title)}'
-                '&artist=${Uri.encodeComponent(artist)}',
-              );
-            },
+        child: OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 40),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            visualDensity: VisualDensity.compact,
           ),
+          icon: const Icon(Icons.movie_outlined, size: 18),
+          label: Text(context.l10n.playMv),
+          onPressed: () {
+            final title = mv.name.isNotEmpty ? mv.name : (song?.name ?? '');
+            final artist =
+                mv.artist.isNotEmpty ? mv.artist : (song?.artist ?? '');
+            // /video/url 只认视频 hash，故 path 用 hash；
+            // videoId 走 query 供清晰度列表使用
+            final hash = mv.bestHash ?? mv.sdHash ?? '';
+            context.push(
+              '/mv/${Uri.encodeComponent(hash.isEmpty ? mv.videoId : hash)}'
+              '?videoId=${Uri.encodeComponent(mv.videoId)}'
+              '&title=${Uri.encodeComponent(title)}'
+              '&artist=${Uri.encodeComponent(artist)}',
+            );
+          },
         ),
       ),
     );
@@ -286,31 +292,59 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
     final lyricMode = ref.watch(lyricModeProvider);
     final lyricAsync = ref.watch(currentLyricProvider);
     final position = ref.watch(positionProvider).value ?? Duration.zero;
+    final theme = Theme.of(context);
 
     return GestureDetector(
       onTap: () {
         setState(() => _showLyric = !_showLyric);
         if (_showLyric) _fadeCtrl.forward(from: 0);
       },
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: _showLyric && lyricAsync.value?.lyric != null
-            ? FadeTransition(
-                opacity: CurvedAnimation(
-                    parent: _fadeCtrl, curve: Curves.easeOutCubic),
-                child: ClipRect(
-                  key: const ValueKey('lyric'),
-                  child: LyricView(
-                    lyric: lyricAsync.value!.lyric!,
-                    position: position,
-                    mode: lyricMode,
-                    onTapLine: (ms) => ref
-                        .read(playerControllerProvider)
-                        .seekTo(Duration(milliseconds: ms)),
-                  ),
-                ),
-              )
-            : _buildCover(context),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: _showLyric && lyricAsync.value?.lyric != null
+                ? FadeTransition(
+                    opacity: CurvedAnimation(
+                        parent: _fadeCtrl, curve: Curves.easeOutCubic),
+                    child: ClipRect(
+                      key: const ValueKey('lyric'),
+                      child: LyricView(
+                        lyric: lyricAsync.value!.lyric!,
+                        position: position,
+                        mode: lyricMode,
+                        onTapLine: (ms) => ref
+                            .read(playerControllerProvider)
+                            .seekTo(Duration(milliseconds: ms)),
+                      ),
+                    ),
+                  )
+                : _buildCover(context),
+          ),
+          // 明确的切换入口（不只靠「点封面」这一隐藏手势）
+          Positioned(
+            right: 16,
+            bottom: 8,
+            child: TextButton.icon(
+              onPressed: () {
+                setState(() => _showLyric = !_showLyric);
+                if (_showLyric) _fadeCtrl.forward(from: 0);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.onSurfaceVariant,
+                minimumSize: const Size(48, 40),
+              ),
+              icon: Icon(
+                _showLyric ? Icons.album_outlined : Icons.lyrics_outlined,
+                size: 18,
+              ),
+              label: Text(_showLyric
+                  ? context.l10n.showCover
+                  : context.l10n.showLyrics),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -327,7 +361,7 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 blurRadius: 30,
                 offset: const Offset(0, 12),
               ),
@@ -379,9 +413,9 @@ class _ProgressBar extends ConsumerWidget {
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
               // 缓冲颜色
               inactiveTrackColor:
-                  theme.colorScheme.onSurfaceVariant.withOpacity(0.2),
+                  theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.2),
               secondaryActiveTrackColor:
-                  theme.colorScheme.onSurfaceVariant.withOpacity(0.45),
+                  theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
             ),
             child: Slider(
               value: posMs,
