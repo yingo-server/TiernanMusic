@@ -278,5 +278,26 @@
   "reload": "重新加载",
   "techDetail": "技术详情",
   "copiedToClipboard": "已复制到剪贴板",
-  "copyDetails": "复制详情"
+  "copyDetails": "复制详情",
+  "diagnostics": "诊断",
+  "errorLogLocation": "错误日志位置",
+  "copyPath": "复制路径",
+  "storagePermissions": "存储权限",
+  "permissionGranted": "已授权",
+  "permissionDenied": "未授权",
+  "requestPermission": "申请权限",
+  "recentErrors": "最近的错误",
+  "recentErrorsCount": "共 {count} 条，点击查看",
+  "noRecentErrors": "暂无错误记录",
+  "unknown": "未知",
+  "close": "关闭",
+  "@recentErrorsCount": {
+    "description": "最近的错误条数",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "12"
+      }
+    }
+  }
 }

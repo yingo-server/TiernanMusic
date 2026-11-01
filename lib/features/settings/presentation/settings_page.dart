@@ -13,6 +13,9 @@ import '../../../core/cache/cache_manager.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../core/theme/settings_provider.dart';
+import '../../../core/utils/error_logger.dart';
+import '../../../core/utils/permission_gate.dart';
+import '../../../core/utils/toast.dart';
 import '../../../l10n/l10n.dart';
 import 'settings_providers.dart';
 
@@ -144,6 +147,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _buildDownloadSection(),
           _buildCacheSection(),
           _buildApiSection(),
+          _buildDiagnosticsSection(),
           _buildAboutSection(),
           const SizedBox(height: 32),
         ],
@@ -569,8 +573,113 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   // ---------- 关于 ----------
-  Widget _buildAboutSection() {
+  // ---------- 诊断 ----------
+  Widget _buildDiagnosticsSection() {
     return _Section(
+      title: context.l10n.diagnostics,
+      children: [
+        ListTile(
+          leading: const Icon(Icons.bug_report_outlined),
+          title: Text(context.l10n.errorLogLocation),
+          subtitle: FutureBuilder<String?>(
+            future: ErrorLogger.instance.currentDirPath(),
+            builder: (context, snap) {
+              final path = snap.data;
+              return Text(
+                path ?? context.l10n.unknown,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              );
+            },
+          ),
+          trailing: IconButton(
+            icon: const Icon(Icons.copy_all_outlined),
+            tooltip: context.l10n.copyPath,
+            onPressed: () async {
+              final path = await ErrorLogger.instance.currentDirPath();
+              if (path == null) {
+                Toast.show(context, context.l10n.unknown);
+                return;
+              }
+              await Toast.copy(context, path);
+            },
+          ),
+          onTap: () async {
+            final path = await ErrorLogger.instance.currentDirPath();
+            if (path != null) await Toast.copy(context, path);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.storage_outlined),
+          title: Text(context.l10n.storagePermissions),
+          subtitle: FutureBuilder<bool>(
+            future: PermissionGate.instance.ensureStorageWrite(),
+            builder: (context, snap) {
+              final granted = snap.data ?? false;
+              return Text(granted
+                  ? context.l10n.permissionGranted
+                  : context.l10n.permissionDenied);
+            },
+          ),
+          trailing: TextButton(
+            onPressed: () async {
+              final ok = await PermissionGate.instance.ensureStorageWrite();
+              if (!context.mounted) return;
+              Toast.show(
+                context,
+                ok
+                    ? context.l10n.permissionGranted
+                    : context.l10n.permissionDenied,
+              );
+            },
+            child: Text(context.l10n.requestPermission),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.info_outline),
+          title: Text(context.l10n.recentErrors),
+          subtitle: Text(context.l10n.recentErrorsCount(
+              ErrorLogger.instance.recent.length.toString())),
+          onTap: () => _showRecentErrors(),
+        ),
+      ],
+    );
+  }
+
+  void _showRecentErrors() {
+    final entries = ErrorLogger.instance.recent;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.l10n.recentErrors),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: entries.isEmpty
+              ? Center(child: Text(context.l10n.noRecentErrors))
+              : ListView.builder(
+                  itemCount: entries.length,
+                  itemBuilder: (_, i) => ListTile(
+                    dense: true,
+                    title: Text(
+                      entries[i].split('\n').take(3).join('\n'),
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    onTap: () => Toast.copy(ctx, entries[i]),
+                  ),
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(context.l10n.close),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutSection() {    return _Section(
       title: context.l10n.about,
       children: [
         ListTile(
