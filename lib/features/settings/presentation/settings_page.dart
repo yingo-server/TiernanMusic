@@ -13,6 +13,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../core/theme/settings_provider.dart';
 import '../../../core/utils/error_logger.dart';
+import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/permission_gate.dart';
 import '../../../core/utils/toast.dart';
 import '../../../core/utils/update_checker.dart';
@@ -350,7 +351,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       // 该账号 token 已失效/被清理，需要重新登录
       if (mounted) Toast.show(context, context.l10n.accountNeedRelogin);
     } catch (e) {
-      if (mounted) Toast.show(context, context.l10n.switchAccountFailed('$e'));
+      if (mounted) Toast.show(context, context.l10n.switchAccountFailed(friendlyError(e)));
     }
   }
 

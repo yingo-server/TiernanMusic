@@ -16,8 +16,10 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/settings_provider.dart';
 import 'core/utils/error_logger.dart';
+import 'core/storage/secure_storage.dart';
 import 'features/auth/data/auth_providers.dart';
 import 'features/download/download_provider.dart';
+import 'features/player/player_provider.dart' show recentPlayRecorderProvider;
 import 'l10n/l10n.dart';
 
 /// 启动阶段致命错误（用于在 UI 上直接展示，而不是白屏卡死）
@@ -204,6 +206,8 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
 
   @override
   Widget build(BuildContext context) {
+    // 激活最近播放记录器（F2：监听 onSongStarted 写最近播放，全局一次即可）
+    ref.watch(recentPlayRecorderProvider);
     // 登录态变化时同步到直连客户端（仅在有值时创建 client，避免启动期强依赖）
     ref.listen(authStateProvider, (_, next) {
       // loading 期间不做任何事（避免把已登录态误清空）
@@ -214,9 +218,19 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
         // 退出登录时必须清空，否则会继续以旧账号身份请求
         client.token = user?.token ?? '';
         client.userid = user?.userid ?? '0';
-        // AuthUser 不携带 t1：登录/恢复时由 loginByToken → cookie 刷新；
-        // 退出（user == null）时必须清空，否则残留旧 t1。
-        if (user == null) client.t1 = '';
+        if (user == null) {
+          // 退出时必须清空，否则残留旧 t1。
+          client.t1 = '';
+        } else {
+          // W3：登录/恢复时异步补 t1（AuthUser 不携带 t1，
+          // 从 SecureStorage credentials 读取），失败不阻塞。
+          SecureStorage.instance.readCredentials().then((c) {
+            client.t1 =
+                (c != null && c.userId == user.userid) ? (c.t1 ?? '') : '';
+          }).catchError((e) {
+            debugPrint('[auth-sync] readCredentials failed: $e');
+          });
+        }
       } catch (e) {
         debugPrint('[auth-sync] $e');
       }

@@ -1,31 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../home/data/models.dart';
-import '../library/data/recent_play_store.dart';
 import '../playlist/data/playlist_repository.dart';
 import 'data/models.dart';
 import 'player_provider.dart';
 
 /// 统一把各模块数据转换为 Song 并调用播放。
+///
+/// 最近播放记录已由 [recentPlayRecorderProvider] 监听
+/// audioHandler.onSongStarted 统一写入（F2：播放真正出声后才记录，
+/// 自动切歌 / 上下一首同样覆盖），此处不再单独写。
 class PlayHelper {
   PlayHelper(this._ref);
   final Ref _ref;
 
   PlayerController get _controller => _ref.read(playerControllerProvider);
-
-  /// 播放成功后写入最近播放（去重置顶，最多 50 条）。
-  Future<void> _record(Song song) async {
-    if (song.hash.isEmpty) return;
-    await RecentPlayStore.add(RecentPlay(
-      hash: song.hash,
-      name: song.name,
-      artist: song.artist,
-      cover: song.cover,
-      albumAudioId: song.albumAudioId,
-      ts: DateTime.now().millisecondsSinceEpoch,
-    ));
-    RecentPlayStore.notifyListeners();
-  }
 
   /// 首页单曲
   Future<void> playHomeSong(HomeSong s) async {
@@ -39,7 +28,6 @@ class PlayHelper {
       duration: Duration(seconds: s.duration),
     );
     await _controller.playSong(song);
-    await _record(song);
   }
 
   /// 首页列表（队列播放）
@@ -56,10 +44,9 @@ class PlayHelper {
             ))
         .toList();
     await _controller.playQueue(songs, index);
-    if (index >= 0 && index < songs.length) await _record(songs[index]);
   }
 
-  /// 歌单单曲
+  /// 歌单单曲。[cover] 仅当歌单项无 cover 时兜底。
   Future<void> playPlaylistSong(PlaylistSong s, {String cover = ''}) async {
     final song = Song(
       hash: s.hash,
@@ -67,14 +54,13 @@ class PlayHelper {
       albumAudioId: s.albumAudioId,
       name: s.name,
       artist: s.artist,
-      cover: cover,
+      cover: s.cover.isNotEmpty ? s.cover : cover,
       duration: Duration(seconds: s.duration),
     );
     await _controller.playSong(song);
-    await _record(song);
   }
 
-  /// 歌单队列
+  /// 歌单队列。[cover] 仅当歌单项无 cover 时兜底。
   Future<void> playPlaylistQueue(List<PlaylistSong> list, int index,
       {String cover = ''}) async {
     final songs = list
@@ -84,18 +70,16 @@ class PlayHelper {
               albumAudioId: s.albumAudioId,
               name: s.name,
               artist: s.artist,
-              cover: cover,
+              cover: s.cover.isNotEmpty ? s.cover : cover,
               duration: Duration(seconds: s.duration),
             ))
         .toList();
     await _controller.playQueue(songs, index);
-    if (index >= 0 && index < songs.length) await _record(songs[index]);
   }
 
   /// 直接播放 Song
   Future<void> playSong(Song song) async {
     await _controller.playSong(song);
-    await _record(song);
   }
 }
 
