@@ -6,6 +6,8 @@ library;
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import 'kg_client.dart';
 import 'kg_crypto.dart';
 import '../api/kugou_api_client.dart';
@@ -33,42 +35,81 @@ class KgDirectApiClient extends KugouApiClient {
     return body;
   }
 
+  /// 直连失败时是否自动回退 kapi 中转（真机网络/风控差异的兜底）
+  static bool fallbackToKapi = true;
+
+  /// 记录最近一次错误（供"网络诊断"页展示）
+  static final List<String> lastErrors = <String>[];
+
+  void _logError(String where, Object e) {
+    final msg = '[${DateTime.now().toIso8601String()}] $where: $e';
+    lastErrors.insert(0, msg);
+    if (lastErrors.length > 20) lastErrors.removeLast();
+    debugPrint(msg);
+  }
+
+  /// 先直连，失败则回退 kapi
+  Future<Map<String, dynamic>> _directOrFallback(
+    Future<KgResponse> Function() direct,
+    Future<Map<String, dynamic>> Function() kapi,
+    String label,
+  ) async {
+    try {
+      return _wrap(await direct());
+    } catch (e) {
+      _logError(label, e);
+      if (!fallbackToKapi) rethrow;
+      try {
+        return await kapi();
+      } catch (e2) {
+        _logError('$label (kapi 回退)', e2);
+        rethrow;
+      }
+    }
+  }
+
   @override
   Future<Map<String, dynamic>> get(String path,
       {Map<String, dynamic>? query}) async {
     final q = query ?? const <String, dynamic>{};
-    switch (_norm(path)) {
+    final n = _norm(path);
+    final kapi = () => super.get(path, query: query);
+    switch (n) {
       case 'search':
-        return _wrap(await _search(q));
+        return _directOrFallback(() => _search(q), kapi, '/search');
       case 'search/lyric':
-        return _wrap(await _searchLyric(q));
+        return _directOrFallback(() => _searchLyric(q), kapi, '/search/lyric');
       case 'lyric':
-        return _wrap(await _lyric(q));
+        return _directOrFallback(() => _lyric(q), kapi, '/lyric');
       case 'comment/count':
-        return _wrap(await _commentCount(q));
+        return _directOrFallback(() => _commentCount(q), kapi, '/comment/count');
       case 'yueku':
-        return _wrap(await _yueku());
+        return _directOrFallback(() => _yueku(), kapi, '/yueku');
       case 'rank/list':
-        return _wrap(await _rankList(q));
+        return _directOrFallback(() => _rankList(q), kapi, '/rank/list');
       case 'playlist/track/all':
-        return _wrap(await _playlistTrackAll(q));
+        return _directOrFallback(
+            () => _playlistTrackAll(q), kapi, '/playlist/track/all');
       case 'video/url':
-        return _wrap(await _videoUrl(q));
+        return _directOrFallback(() => _videoUrl(q), kapi, '/video/url');
       case 'comment/floor':
-        return _wrap(await _commentFloor(q));
+        return _directOrFallback(() => _commentFloor(q), kapi, '/comment/floor');
       case 'song/url':
-        return _wrap(await _songUrl(q));
-      // 仓库既有 Repository 用 get() 调这些接口（B 代理实测发现），
-      // 直连必须在这里也接住，否则漏到 kapi 回退
+        return _directOrFallback(() => _songUrl(q), kapi, '/song/url');
       case 'playlist/detail':
-        return _wrap(await _playlistDetail(q));
+        return _directOrFallback(
+            () => _playlistDetail(q), kapi, '/playlist/detail');
       case 'kmr/audio/mv':
-        return _wrap(await _kmrAudioMv(q));
+        return _directOrFallback(() => _kmrAudioMv(q), kapi, '/kmr/audio/mv');
       case 'comment/music':
-        return _wrap(await _commentMusic(q));
+        return _directOrFallback(() => _commentMusic(q), kapi, '/comment/music');
       case 'top/playlist':
-        // 实测 GET 恒 200101，必须 POST
-        return _wrap(await _topPlaylist(q));
+        return _directOrFallback(() => _topPlaylist(q), kapi, '/top/playlist');
+      case 'everyday/recommend':
+        return _directOrFallback(
+            () => _everydayRecommend(q), kapi, '/everyday/recommend');
+      case 'privilege/lite':
+        return _directOrFallback(() => _privilege(q), kapi, '/privilege/lite');
     }
     return super.get(path, query: query);
   }
@@ -77,26 +118,27 @@ class KgDirectApiClient extends KugouApiClient {
   Future<Map<String, dynamic>> post(String path, dynamic data,
       {Map<String, dynamic>? query}) async {
     final q = query ?? const <String, dynamic>{};
-    switch (_norm(path)) {
+    final n = _norm(path);
+    final kapi = () => super.post(path, data, query: query);
+    switch (n) {
       case 'comment/music':
-        return _wrap(await _commentMusic(q));
+        return _directOrFallback(() => _commentMusic(q), kapi, '/comment/music');
       case 'kmr/audio/mv':
-        return _wrap(await _kmrAudioMv(q));
+        return _directOrFallback(() => _kmrAudioMv(q), kapi, '/kmr/audio/mv');
       case 'everyday/recommend':
-        return _wrap(await _everydayRecommend(q));
+        return _directOrFallback(
+            () => _everydayRecommend(q), kapi, '/everyday/recommend');
       case 'top/playlist':
-        return _wrap(await _topPlaylist(q));
+        return _directOrFallback(() => _topPlaylist(q), kapi, '/top/playlist');
       case 'privilege/lite':
-        return _wrap(await _privilege(q));
-    }
-    // 部分接口客户端用 POST 但实际是 GET 语义
-    switch (_norm(path)) {
+        return _directOrFallback(() => _privilege(q), kapi, '/privilege/lite');
       case 'search':
-        return _wrap(await _search(q));
+        return _directOrFallback(() => _search(q), kapi, '/search');
       case 'comment/floor':
-        return _wrap(await _commentFloor(q));
+        return _directOrFallback(() => _commentFloor(q), kapi, '/comment/floor');
       case 'playlist/detail':
-        return _wrap(await _playlistDetail(q));
+        return _directOrFallback(
+            () => _playlistDetail(q), kapi, '/playlist/detail');
     }
     return super.post(path, data, query: query);
   }
