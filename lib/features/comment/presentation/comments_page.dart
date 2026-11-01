@@ -119,6 +119,7 @@ class CommentsPage extends ConsumerStatefulWidget {
 class _CommentsPageState extends ConsumerState<CommentsPage> {
   final _inputCtrl = TextEditingController();
   final _inputFocus = FocusNode();
+  final _scroll = ScrollController();
   Comment? _replyTo;
 
   late final _args = _CommentArgs(
@@ -131,7 +132,25 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    // 滚动到底时加载下一页（而不是在 itemBuilder 里触发 ——
+    // 后者每次重建都会调用，导致重复请求与状态抖动）
+    _scroll.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!_scroll.hasClients) return;
+    final pos = _scroll.position;
+    if (pos.pixels >= pos.maxScrollExtent - 300) {
+      ref.read(_commentsProvider(_args).notifier).loadMore();
+    }
+  }
+
+  @override
   void dispose() {
+    _scroll.removeListener(_onScroll);
+    _scroll.dispose();
     _inputCtrl.dispose();
     _inputFocus.dispose();
     super.dispose();
@@ -169,13 +188,11 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                           .read(_commentsProvider(_args).notifier)
                           .load(refresh: true),
                       child: ListView.builder(
+                        controller: _scroll,
                         itemCount: page.comments.length + 1,
                         itemBuilder: (context, index) {
                           if (index == page.comments.length) {
                             if (page.comments.length < page.total) {
-                              ref
-                                  .read(_commentsProvider(_args).notifier)
-                                  .loadMore();
                               return const Padding(
                                 padding: EdgeInsets.all(16),
                                 child: Center(
