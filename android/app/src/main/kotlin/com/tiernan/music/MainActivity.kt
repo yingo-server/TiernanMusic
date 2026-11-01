@@ -68,6 +68,19 @@ class MainActivity : FlutterActivity() {
                             val relativePath = call.argument<String>("relativePath") ?: ""
                             result.success(query(collection, displayName, relativePath))
                         }
+                        "appendText" -> {
+                            // 追加文本到公共目录文件（用于日志）。
+                            // Android 10+ 走 MediaStore Downloads（无需权限）；
+                            // ≤28 直接写公共 Documents 路径。
+                            val displayName = call.argument<String>("displayName") ?: ""
+                            val relativePath = call.argument<String>("relativePath") ?: ""
+                            val content = call.argument<String>("content") ?: ""
+                            result.success(appendText(displayName, relativePath, content))
+                        }
+                        "publicDirWritable" -> {
+                            // 该公共目录在当前系统版本下是否可直接写入
+                            result.success(isPublicDirWritable(call.argument<String>("type") ?: "documents"))
+                        }
                         else -> result.notImplemented()
                     }
                 } catch (e: Exception) {
@@ -136,8 +149,75 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun guessMime(uri: String?, path: String?): String {
-        val name = path ?: uri ?: ""
+    /** 公共目录在当前系统版本下是否可直接写文件 */
+    private fun isPublicDirWritable(type: String): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) return false
+        val dir = when (type) {
+            "music" -> Environment.DIRECTORY_MUSIC
+            "pictures" -> Environment.DIRECTORY_PICTURES
+            "movies" -> Environment.DIRECTORY_MOVIES
+            "documents" -> Environment.DIRECTORY_DOCUMENTS
+            "downloads" -> Environment.DIRECTORY_DOWNLOADS
+            else -> return false
+        }
+        val path = File(Environment.getExternalStoragePublicDirectory(dir), "probe")
+        return try {
+            path.parentFile?.mkdirs()
+            path.writeText("")
+            path.delete()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * 追加文本到公共目录文件（用于日志）。
+     * Android 10+：MediaStore Downloads 集合（无需任何权限）。
+     *   先按 DISPLAY_NAME + RELATIVE_PATH 查已有文件，命中则读出旧内容再整份重写
+     *   （MediaStore 的 "wa" 追加模式在部分机型不可靠，用读写更稳），未命中则走
+     *   IS_PENDING 插入流程。
+     * ≤28：直接追加写公共 Documents 路径（需 WRITE_EXTERNAL_STORAGE）。
+     */
+    private fun appendText(displayName: String, relativePath: String, content: String): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val existing = query(MediaStore.Downloads.EXTERNAL_CONTENT_URI.toString(), displayName, relativePath)
+                if (existing != null) {
+                    val uri = Uri.parse(existing)
+                    val old = try {
+                        contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } ?: ""
+                    } catch (e: Exception) { "" }
+                    val os = contentResolver.openOutputStream(uri, "rwt") ?: return false
+                    os.use { it.write((old + content).toByteArray(Charsets.UTF_8)) }
+                    return true
+                }
+                val values = ContentValues()
+                values.put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                values.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                values.put(MediaStore.MediaColumns.IS_PENDING, 1)
+                val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    ?: return false
+                val os = contentResolver.openOutputStream(uri, "w") ?: return false
+                os.use { it.write(content.toByteArray(Charsets.UTF_8)) }
+                val done = ContentValues()
+                done.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                contentResolver.update(uri, done, null, null)
+                true
+            } else {
+                val base = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+                val dir = File(base, relativePath)
+                if (!dir.exists()) dir.mkdirs()
+                File(dir, displayName).appendText(content)
+                true
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun guessMime(uri: String?, path: String?): String {        val name = path ?: uri ?: ""
         return when {
             name.endsWith(".mp3") -> "audio/mpeg"
             name.endsWith(".m4a") -> "audio/mp4"
@@ -197,6 +277,11 @@ class MainActivity : FlutterActivity() {
 
     private fun query(collection: String, displayName: String, relativePath: String): String? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        val target = if (collection.startsWith("content://")) {
+            Uri.parse(collection)
+        } else {
+            collectionUri(collection)
+        }
         val projection = arrayOf(
             MediaStore.MediaColumns._ID,
             MediaStore.MediaColumns.DISPLAY_NAME,
@@ -204,10 +289,10 @@ class MainActivity : FlutterActivity() {
         )
         val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
         val args = arrayOf(displayName, "$relativePath%")
-        contentResolver.query(collectionUri(collection), projection, selection, args, null)?.use { cursor ->
+        contentResolver.query(target, projection, selection, args, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
                 val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID))
-                return android.content.ContentUris.withAppendedId(collectionUri(collection), id).toString()
+                return android.content.ContentUris.withAppendedId(target, id).toString()
             }
         }
         return null
