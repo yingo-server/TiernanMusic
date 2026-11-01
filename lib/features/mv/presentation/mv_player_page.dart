@@ -95,7 +95,7 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
         try {
           await _controller?.play();
         } catch (_) {}
-        Toast.show(context, context.l10n.qualitySwitchFailed);
+        if (mounted) Toast.show(context, context.l10n.qualitySwitchFailed);
       } else {
         setState(() => _error = '$e');
       }

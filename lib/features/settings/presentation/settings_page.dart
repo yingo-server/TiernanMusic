@@ -660,6 +660,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             tooltip: context.l10n.copyPath,
             onPressed: () async {
               final path = await ErrorLogger.instance.currentDirPath();
+              if (!context.mounted) return;
               if (path == null) {
                 Toast.show(context, context.l10n.unknown);
                 return;
