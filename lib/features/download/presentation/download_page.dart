@@ -213,7 +213,7 @@ class _DownloadTile extends ConsumerWidget {
                   path: task.filePath.isEmpty ? null : task.filePath,
                 ),
               );
-              if (!opened && mounted) {
+              if (!opened && context.mounted) {
                 Toast.show(context, context.l10n.downloadOpenFileFailed);
               }
               break;
@@ -224,7 +224,7 @@ class _DownloadTile extends ConsumerWidget {
                   path: task.filePath.isEmpty ? null : task.filePath,
                 ),
               );
-              if (!ok && mounted) {
+              if (!ok && context.mounted) {
                 // 多数文件管理器不支持以 FileProvider uri 打开目录，
                 // 失败时复制路径到剪贴板作为兜底
                 final path = task.filePath.isNotEmpty

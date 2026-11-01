@@ -211,7 +211,7 @@ class Comment {
           : null,
       // 是否本人评论：userid 与当前登录用户一致
       // （优先用调用方传入的 currentUserId，缺省用 API 客户端的 cookie userid）
-      isMine: _currentUserId.isNotEmpty &&
+      isMine: currentUserId.isNotEmpty &&
           '${json['userid'] ?? json['user_id'] ?? ''}' == currentUserId,
     );
   }
