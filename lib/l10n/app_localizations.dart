@@ -2685,6 +2685,8 @@ const _strings_zh = <String, String>{
   'operateFailed': '操作失败：{error}',
   'commentVerifiedRetryHint': '验证已通过，请重新点击发送',
   'qualitySwitchFailed': '切换清晰度失败',
+  'downloadOpenFileFailed': '打开文件失败',
+  'downloadFallbackHint': '文件位于应用私有目录（Android/data），部分文件管理器可能无法访问',
   'logoutConfirm': '确定要退出当前账号吗？',
   'logoutSuccess': '已退出登录',
   'logoutFailed': '退出登录失败：{error}',
