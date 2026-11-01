@@ -82,8 +82,8 @@ class HomeSong {
             .where((s) => s.isNotEmpty)
             .join('、');
       } else if (singerInfo is Map) {
-        // Map 形态的 singerinfo（取 name）；其余未知类型一律置空，
-        // 避免 _toStr 把对象 toString 成 '{name: xxx}' 这类脏值。
+        // Map 形态的 singerinfo 取 name；其余未知类型一律置空，避免
+        // _toStr 把对象 toString 成 '{name: xxx}' 这类脏值。
         singer = _toStr(singerInfo['name']);
       }
     }
