@@ -5,11 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/l10n.dart';
 import '../player_provider.dart';
 import 'queue_sheet.dart';
-import '../../../l10n/l10n.dart';
 
 /// 底部迷你播放器（高 64）。无播放内容时不显示。
+///
+/// 性能：播放进度每秒 tick 若干次，若整棵子树都跟着重建会浪费。
+/// 这里把进度条拆成独立组件，只让它监听 position；
+/// 其余部分仅在歌曲/播放状态变化时重建。
 class MiniPlayer extends ConsumerStatefulWidget {
   const MiniPlayer({super.key});
 
@@ -20,19 +24,12 @@ class MiniPlayer extends ConsumerStatefulWidget {
 class _MiniPlayerState extends ConsumerState<MiniPlayer> {
   @override
   Widget build(BuildContext context) {
-    final songAsync = ref.watch(currentSongProvider);
-    final song = songAsync.value;
+    final song = ref.watch(currentSongProvider).value;
     if (song == null) return const SizedBox.shrink();
 
     final isPlaying = ref.watch(isPlayingProvider).value ?? false;
-    final position = ref.watch(positionProvider).value ?? Duration.zero;
-    final total = ref.watch(durationProvider).value ?? Duration.zero;
     final controller = ref.read(playerControllerProvider);
     final theme = Theme.of(context);
-
-    final progress = total.inMilliseconds > 0
-        ? position.inMilliseconds / total.inMilliseconds
-        : 0.0;
 
     return GestureDetector(
       onTap: () => context.push('/player'),
@@ -43,87 +40,112 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
           child: Container(
             height: 64,
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHigh.withOpacity(0.55),
+              color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.55),
               border: Border(
                 top: BorderSide(
-                    color: theme.dividerColor.withOpacity(0.3), width: 0.5),
+                  color: theme.dividerColor.withValues(alpha: 0.3),
+                  width: 0.5,
+                ),
               ),
             ),
             child: Column(
               children: [
-                // 底部 2px 线性进度条
-                SizedBox(
-                  height: 2,
-                  child: LinearProgressIndicator(
-                    value: progress.clamp(0.0, 1.0),
-                    minHeight: 2,
-                    backgroundColor: Colors.transparent,
+                // 进度条独立：只有它随 position 重建
+                const _MiniProgressBar(),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        Hero(
+                          tag: 'album-art',
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: song.cover.isNotEmpty
+                                  ? CachedNetworkImage(
+                                      imageUrl: song.cover,
+                                      fit: BoxFit.cover,
+                                      fadeInDuration:
+                                          const Duration(milliseconds: 180),
+                                      memCacheWidth: 132,
+                                      errorWidget: (_, __, ___) =>
+                                          const _MiniPlaceholder(),
+                                    )
+                                  : const _MiniPlaceholder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                song.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                song.artist.isEmpty
+                                    ? context.l10n.unknownArtist
+                                    : song.artist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            isPlaying
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                          ),
+                          onPressed: controller.togglePlay,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.skip_next_rounded),
+                          onPressed: controller.next,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  children: [
-                    Hero(
-                      tag: 'album-art',
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: song.cover.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: song.cover,
-                                  fit: BoxFit.cover,
-                                  errorWidget: (_, __, ___) =>
-                                      const _MiniPlaceholder(),
-                                )
-                              : const _MiniPlaceholder(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            song.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          Text(
-                            song.artist.isEmpty ? context.l10n.unknownArtist : song.artist,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(isPlaying
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded),
-                      onPressed: controller.togglePlay,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.skip_next_rounded),
-                      onPressed: controller.next,
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
-          ],
-        ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 迷你播放器顶部进度条：单独监听 position，避免整棵子树重建。
+class _MiniProgressBar extends ConsumerWidget {
+  const _MiniProgressBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final position = ref.watch(positionProvider).value ?? Duration.zero;
+    final total = ref.watch(durationProvider).value ?? Duration.zero;
+    final progress = total.inMilliseconds > 0
+        ? (position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0)
+        : 0.0;
+    return SizedBox(
+      height: 2,
+      child: LinearProgressIndicator(
+        value: progress,
+        minHeight: 2,
+        backgroundColor: Colors.transparent,
       ),
     );
   }

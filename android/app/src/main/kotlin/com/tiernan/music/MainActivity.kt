@@ -75,7 +75,8 @@ class MainActivity : FlutterActivity() {
                             val displayName = call.argument<String>("displayName") ?: ""
                             val relativePath = call.argument<String>("relativePath") ?: ""
                             val content = call.argument<String>("content") ?: ""
-                            result.success(appendText(displayName, relativePath, content))
+                            val maxBytes = call.argument<Int>("maxBytes") ?: 0
+                            result.success(appendText(displayName, relativePath, content, maxBytes.toLong()))
                         }
                         "publicDirWritable" -> {
                             // 该公共目录在当前系统版本下是否可直接写入
@@ -173,47 +174,78 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 追加文本到公共目录文件（用于日志）。
-     * Android 10+：MediaStore Downloads 集合（无需任何权限）。
-     *   先按 DISPLAY_NAME + RELATIVE_PATH 查已有文件，命中则读出旧内容再整份重写
-     *   （MediaStore 的 "wa" 追加模式在部分机型不可靠，用读写更稳），未命中则走
-     *   IS_PENDING 插入流程。
+     *
+     * Android 10+：MediaStore.Files + RELATIVE_PATH（无需任何权限）。
+     *   RELATIVE_PATH 是**相对于 collection 根**的，所以要用 Files collection
+     *   才能真正落在 /sdcard/Documents/xxx；用 Downloads collection 会落到
+     *   /sdcard/Download/xxx。
+     *   先按 DISPLAY_NAME + RELATIVE_PATH 查已有文件，命中则读旧内容再整份重写；
+     *   未命中走 IS_PENDING 插入流程。
+     *   超过 maxBytes 时丢弃旧内容（等价轮转）。
      * ≤28：直接追加写公共 Documents 路径（需 WRITE_EXTERNAL_STORAGE）。
+     *
+     * @return 实际写入位置（失败返回 null）
      */
-    private fun appendText(displayName: String, relativePath: String, content: String): Boolean {
+    private fun appendText(
+        displayName: String,
+        relativePath: String,
+        content: String,
+        maxBytes: Long
+    ): String? {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val existing = query(MediaStore.Downloads.EXTERNAL_CONTENT_URI.toString(), displayName, relativePath)
+                val filesUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                var existing = query(filesUri.toString(), displayName, relativePath)
+                if (existing == null) {
+                    // Files collection 不支持时回退 Downloads（落在 /sdcard/Download）
+                    existing = query(MediaStore.Downloads.EXTERNAL_CONTENT_URI.toString(), displayName, relativePath)
+                }
                 if (existing != null) {
                     val uri = Uri.parse(existing)
-                    val old = try {
+                    var old = try {
                         contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } ?: ""
                     } catch (e: Exception) { "" }
-                    val os = contentResolver.openOutputStream(uri, "rwt") ?: return false
+                    if (maxBytes > 0 &&
+                        old.toByteArray(Charsets.UTF_8).size + content.toByteArray(Charsets.UTF_8).size > maxBytes
+                    ) {
+                        old = ""
+                    }
+                    val os = contentResolver.openOutputStream(uri, "rwt") ?: return null
                     os.use { it.write((old + content).toByteArray(Charsets.UTF_8)) }
-                    return true
+                    return "/sdcard/$relativePath"
                 }
+
                 val values = ContentValues()
                 values.put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
                 values.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
                 values.put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
                 values.put(MediaStore.MediaColumns.IS_PENDING, 1)
-                val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                    ?: return false
-                val os = contentResolver.openOutputStream(uri, "w") ?: return false
+                val uri = contentResolver.insert(filesUri, values)
+                    ?: contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    ?: return null
+                val os = contentResolver.openOutputStream(uri, "w") ?: return null
                 os.use { it.write(content.toByteArray(Charsets.UTF_8)) }
                 val done = ContentValues()
                 done.put(MediaStore.MediaColumns.IS_PENDING, 0)
                 contentResolver.update(uri, done, null, null)
-                true
+                "/sdcard/$relativePath"
             } else {
                 val base = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
                 val dir = File(base, relativePath)
                 if (!dir.exists()) dir.mkdirs()
-                File(dir, displayName).appendText(content)
-                true
+                val target = File(dir, displayName)
+                if (maxBytes > 0 && target.exists() &&
+                    target.length() + content.toByteArray(Charsets.UTF_8).size > maxBytes
+                ) {
+                    val rotated = File(dir, "$displayName.1")
+                    if (rotated.exists()) rotated.delete()
+                    target.renameTo(rotated)
+                }
+                target.appendText(content)
+                "${dir.absolutePath}"
             }
         } catch (e: Exception) {
-            false
+            null
         }
     }
 

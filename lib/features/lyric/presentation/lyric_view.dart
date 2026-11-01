@@ -6,7 +6,11 @@ import '../data/krc_parser.dart';
 /// KRC 逐字歌词视图
 ///
 /// 支持原文/双语/译文三种模式，当前行高亮，逐字渐变。
-class LyricView extends StatelessWidget {
+///
+/// 性能：播放位置每秒 tick 多次，若整棵 ListView 跟着重建会明显掉帧。
+/// 这里用 `ListView.builder` + 逐行组件，只让「当前行」随位置变化，
+/// 其余行保持不变（元素 identity 稳定，Flutter 会跳过重建）。
+class LyricView extends StatefulWidget {
   const LyricView({
     super.key,
     required this.lyric,
@@ -21,32 +25,76 @@ class LyricView extends StatelessWidget {
   final ValueChanged<int>? onTapLine;
 
   @override
+  State<LyricView> createState() => _LyricViewState();
+}
+
+class _LyricViewState extends State<LyricView> {
+  final ScrollController _scroll = ScrollController();
+
+  /// 上一次渲染的当前行，用于只在行号变化时 setState
+  int _currentIndex = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = _findCurrentLine(_posMs);
+  }
+
+  @override
+  void didUpdateWidget(covariant LyricView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.lyric != widget.lyric) {
+      _currentIndex = _findCurrentLine(_posMs);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  int get _posMs => widget.position.inMilliseconds + widget.lyric.offsetMs;
+
+  @override
   Widget build(BuildContext context) {
-    final posMs = position.inMilliseconds + lyric.offsetMs;
-    final currentIndex = _findCurrentLine(posMs);
+    final posMs = _posMs;
+    final index = _findCurrentLine(posMs);
+
+    // 行号变化时才重建（逐字高亮由行内组件自己处理）
+    if (index != _currentIndex) {
+      _currentIndex = index;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    }
 
     return ListView.builder(
+      controller: _scroll,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 120),
-      itemCount: lyric.lines.length,
-      itemBuilder: (context, index) {
-        final line = lyric.lines[index];
-        final isCurrent = index == currentIndex;
+      itemCount: widget.lyric.lines.length,
+      itemBuilder: (context, i) {
+        final line = widget.lyric.lines[i];
         return _LyricLineTile(
           line: line,
-          isCurrent: isCurrent,
-          mode: mode,
+          isCurrent: i == index,
+          mode: widget.mode,
           posMs: posMs,
-          onTap: onTapLine != null ? () => onTapLine!(line.startMs) : null,
+          onTap: widget.onTapLine != null
+              ? () => widget.onTapLine!(line.startMs)
+              : null,
         );
       },
     );
   }
 
   int _findCurrentLine(int posMs) {
-    var lo = 0, hi = lyric.lines.length - 1, result = 0;
+    final lines = widget.lyric.lines;
+    if (lines.isEmpty) return 0;
+    var lo = 0, hi = lines.length - 1, result = 0;
     while (lo <= hi) {
       final mid = (lo + hi) >> 1;
-      if (lyric.lines[mid].startMs <= posMs) {
+      if (lines[mid].startMs <= posMs) {
         result = mid;
         lo = mid + 1;
       } else {
@@ -59,6 +107,7 @@ class LyricView extends StatelessWidget {
 
 class _LyricLineTile extends StatelessWidget {
   const _LyricLineTile({
+    super.key,
     required this.line,
     required this.isCurrent,
     required this.mode,
@@ -75,31 +124,38 @@ class _LyricLineTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = isCurrent
-        ? theme.colorScheme.primary
-        : theme.colorScheme.onSurface.withOpacity(0.55);
-
-    final showOriginal = mode != LyricDisplayMode.translation;
-    final showTranslation = mode != LyricDisplayMode.original &&
-        line.translation != null &&
-        line.translation != line.text;
+    final primary = theme.colorScheme.primary;
 
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (showOriginal)
-              _buildLine(theme, color, isCurrent),
-            if (showTranslation) ...[
+            // 原文（逐字高亮）
+            _buildOriginal(theme, primary),
+            // 译文
+            final translation = line.translation ?? '';
+            if (mode == LyricDisplayMode.bilingual &&
+                translation.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
-                line.translation!,
+                translation,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: color.withOpacity(0.85),
-                  fontSize: isCurrent ? 15 : 14,
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                ),
+              ),
+            ] else if (mode == LyricDisplayMode.translation &&
+                translation.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                translation,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: primary,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -109,71 +165,40 @@ class _LyricLineTile extends StatelessWidget {
     );
   }
 
-  Widget _buildLine(ThemeData theme, Color color, bool isCurrent) {
-    // 当前行且是逐字歌词时做逐字高亮
-    if (isCurrent && line.words.isNotEmpty) {
-      return Wrap(
-        children: [
-          for (final word in line.words)
-            _WordSpan(
-              word: word,
-              lineStartMs: line.startMs,
-              posMs: posMs,
-              style: theme.textTheme.titleLarge!.copyWith(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-              ),
-              activeColor: theme.colorScheme.primary,
-              inactiveColor: theme.colorScheme.onSurface.withOpacity(0.55),
-            ),
-        ],
+  Widget _buildOriginal(ThemeData theme, Color primary) {
+    if (line.words.isEmpty) {
+      return Text(
+        line.text,
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: isCurrent
+              ? primary
+              : theme.colorScheme.onSurface.withValues(alpha: 0.55),
+          fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+          height: 1.35,
+        ),
       );
     }
-    return Text(
-      line.text,
-      style: (isCurrent ? theme.textTheme.titleLarge : theme.textTheme.bodyLarge)
-          ?.copyWith(
-        color: color,
-        fontSize: isCurrent ? 22 : 17,
-        fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w400,
-      ),
-    );
-  }
-}
 
-class _WordSpan extends StatelessWidget {
-  const _WordSpan({
-    required this.word,
-    required this.lineStartMs,
-    required this.posMs,
-    required this.style,
-    required this.activeColor,
-    required this.inactiveColor,
-  });
+    // 逐字：已唱部分用主色，未唱部分用弱化色
+    final spans = <TextSpan>[];
+    for (final w in line.words) {
+      final isPast = posMs >= w.startMs + w.durationMs;
+      final isNow = posMs >= w.startMs && posMs < w.startMs + w.durationMs;
+      spans.add(TextSpan(
+        text: w.text,
+        style: TextStyle(
+          color: isPast || isNow
+              ? primary
+              : theme.colorScheme.onSurface.withValues(alpha: 0.45),
+          fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+          fontSize: isCurrent ? 17 : 16,
+        ),
+      ));
+    }
 
-  final KrcWord word;
-  final int lineStartMs;
-  final int posMs;
-  final TextStyle style;
-  final Color activeColor;
-  final Color inactiveColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final absStart = lineStartMs + word.startMs;
-    final absEnd = absStart + word.durationMs;
-    final progress = posMs <= absStart
-        ? 0.0
-        : posMs >= absEnd
-            ? 1.0
-            : (posMs - absStart) / word.durationMs;
-
-    return ShaderMask(
-      shaderCallback: (bounds) => LinearGradient(
-        colors: [activeColor, inactiveColor],
-        stops: [progress, progress],
-      ).createShader(bounds),
-      child: Text(word.text, style: style.copyWith(color: Colors.white)),
+    return Text.rich(
+      TextSpan(children: spans),
+      style: theme.textTheme.titleMedium?.copyWith(height: 1.35),
     );
   }
 }

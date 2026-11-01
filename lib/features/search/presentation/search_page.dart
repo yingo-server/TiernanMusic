@@ -86,48 +86,53 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsets.only(right: 16),
-          child: TextField(
-            controller: _controller,
-            focusNode: _focusNode,
-            textInputAction: TextInputAction.search,
-            onChanged: _onChanged,
-            onSubmitted: _submit,
-            decoration: InputDecoration(
-              hintText: context.l10n.searchSongsHint,
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: _controller.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 20),
+      // Material 3 规范：搜索用 SearchBar 控件（自带展开/收起行为、
+      // 语音输入位、统一的焦点态），而不是在 AppBar 里塞裸 TextField。
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+              child: SearchBar(
+                controller: _controller,
+                focusNode: _focusNode,
+                hintText: context.l10n.searchSongsHint,
+                leading: const Icon(Icons.search),
+                trailing: [
+                  if (_controller.text.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.close),
                       onPressed: () {
                         _controller.clear();
                         _onChanged('');
                       },
-                    )
-                  : null,
-              isDense: true,
-              filled: true,
-              fillColor:
-                  Theme.of(context).colorScheme.surfaceContainerHighest,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24),
-                borderSide: BorderSide.none,
+                    ),
+                ],
+                onChanged: _onChanged,
+                onSubmitted: _submit,
+                elevation: const WidgetStatePropertyAll(0),
+                backgroundColor: WidgetStatePropertyAll(
+                  Theme.of(context).colorScheme.surfaceContainerHigh,
+                ),
+                padding: const WidgetStatePropertyAll(
+                  EdgeInsets.symmetric(horizontal: 16),
+                ),
               ),
             ),
-          ),
+            Expanded(
+              child: _submittedKeyword != null
+                  ? _SearchResults(
+                      key: ValueKey(_submittedKeyword),
+                      keyword: _submittedKeyword!,
+                    )
+                  : _showSuggest
+                      ? _SuggestList(suggestions: _suggestions, onTap: _submit)
+                      : _SearchLanding(onTapKeyword: _submit),
+            ),
+          ],
         ),
       ),
-      body: _submittedKeyword != null
-          ? _SearchResults(
-              key: ValueKey(_submittedKeyword),
-              keyword: _submittedKeyword!,
-            )
-          : _showSuggest
-              ? _SuggestList(suggestions: _suggestions, onTap: _submit)
-              : _SearchLanding(onTapKeyword: _submit),
     );
   }
 }

@@ -30,11 +30,34 @@ class PermissionGate {
   }
 
   /// 读取媒体（Android 13+ 细分权限；本 App 只读自己写入的文件，通常不需要）
-  Future<bool> ensureMediaRead() async {
+  ///
+  /// 仅查询、**不弹窗**；未授权时返回 false，由调用方决定是否引导用户。
+  Future<bool> hasMediaReadAccess() async {
     if (!Platform.isAndroid) return true;
     final level = await _service.apiLevel();
     if (level < 33) return true;
-    return true;
+    try {
+      final status = await Permission.audio.status;
+      return status.isGranted || status.isLimited;
+    } catch (e) {
+      debugPrint('[PermissionGate] media read check failed: $e');
+      return false;
+    }
+  }
+
+  /// 只查询当前是否具备公共目录写入能力（**不弹权限框**）。
+  ///
+  /// 用于「设置 → 诊断 → 存储权限」的**只读展示**；
+  /// 真正的申请请显式调用 [ensureStorageWrite]。
+  Future<bool> hasStorageWriteAccess() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      final strategy = await _service.currentStrategy();
+      return strategy != StorageStrategy.appFallback;
+    } catch (e) {
+      debugPrint('[PermissionGate] storage check failed: $e');
+      return false;
+    }
   }
 
   /// 带上下文提示地申请（UI 层用）

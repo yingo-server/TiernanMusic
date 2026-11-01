@@ -30,16 +30,31 @@
 -keep class * implements com.google.gson.JsonSerializer
 -keep class * implements com.google.gson.JsonDeserializer
 
-# --- Flutter 插件入口 ---
+# --- Flutter 引擎与插件 ---
+# Flutter Gradle 插件会自动注入 io.flutter 的 consumer rules，
+# 这里额外保留关键入口，避免第三方插件反射找不到实现。
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
 -keep class com.ryanheise.** { *; }
 -keep class com.ryanheise.audioservice.** { *; }
 -dontwarn com.ryanheise.**
+-keep class io.flutter.plugin.** { *; }
+-keep class io.flutter.embedding.** { *; }
+-keep class io.flutter.util.** { *; }
+-keep class io.flutter.view.** { *; }
+-keep class io.flutter.window.** { *; }
 
 # --- WebView（人机验证页用 TCaptcha） ---
 -keep class com.tencent.tcaptcha.** { *; }
 -dontwarn com.tencent.**
+
+# --- 视频播放（ExoPlayer/Media3 反射） ---
+-keep class androidx.media3.** { *; }
+-dontwarn androidx.media3.**
+
+# --- 权限处理器 ---
+-keep class com.baseflow.permissionhandler.** { *; }
+-dontwarn com.baseflow.permissionhandler.**
 
 # --- Kotlin 元数据 ---
 -keepattributes *Annotation*, InnerClasses, Signature, Exceptions

@@ -6,18 +6,43 @@ import '../api/kugou_api_client.dart';
 import '../utils/toast.dart';
 import '../../l10n/l10n.dart';
 
+/// 列表项二级操作（收进 PopupMenuButton 的菜单项）。
+class SongTileMenuItem {
+  const SongTileMenuItem({
+    required this.value,
+    required this.label,
+    this.icon,
+    this.isDestructive = false,
+  });
+
+  final String value;
+  final String label;
+  final IconData? icon;
+
+  /// 危险操作（删除等）用 error 色强调。
+  final bool isDestructive;
+}
+
 /// 统一歌曲列表项
+///
+/// Material 3 约定：
+/// - trailing 默认只承载「时长」这类次要信息；
+/// - 多个操作收进 [PopupMenuButton]，而不是排一排 IconButton；
+/// - 单一高频操作（下载）可直接作为 trailing 图标按钮，并带 tooltip。
 class SongTile extends StatelessWidget {
   const SongTile({
     super.key,
     required this.title,
     required this.artist,
     this.cover,
-    this.duration,
+    this.duration, // 秒
     this.trailing,
     this.onTap,
     this.onDownload,
+    this.menuItems,
+    this.onMenuSelected,
     this.isPlaying = false,
+    this.selected = false,
   });
 
   final String title;
@@ -27,13 +52,23 @@ class SongTile extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
   final VoidCallback? onDownload;
+
+  /// 需要收进「更多」菜单的操作。
+  final List<SongTileMenuItem>? menuItems;
+  final void Function(String value)? onMenuSelected;
+
   final bool isPlaying;
+  final bool selected;
+
+  bool get _hasMenu => menuItems != null && menuItems!.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return ListTile(
       onTap: onTap,
+      selected: selected,
+      selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.08),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(8),
@@ -62,25 +97,62 @@ class SongTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurface.withOpacity(0.6),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
-      trailing: trailing ??
-          (onDownload != null
-              ? IconButton(
-                  icon: const Icon(Icons.download_outlined, size: 20),
-                  tooltip: context.l10n.download,
-                  onPressed: onDownload,
-                )
-              : (duration != null
-                  ? Text(
-                      _fmt(duration!),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.5),
-                      ),
-                    )
-                  : null)),
+      trailing: trailing ?? _buildTrailing(context, theme),
     );
+  }
+
+  Widget? _buildTrailing(BuildContext context, ThemeData theme) {
+    if (_hasMenu) {
+      return PopupMenuButton<String>(
+        tooltip: context.l10n.moreActions,
+        onSelected: (v) => onMenuSelected?.call(v),
+        itemBuilder: (context) => [
+          for (final item in menuItems!)
+            PopupMenuItem<String>(
+              value: item.value,
+              child: Row(
+                children: [
+                  if (item.icon != null) ...[
+                    Icon(
+                      item.icon,
+                      size: 20,
+                      color: item.isDestructive
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Text(
+                    item.label,
+                    style: item.isDestructive
+                        ? TextStyle(color: theme.colorScheme.error)
+                        : null,
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
+    }
+    if (onDownload != null) {
+      return IconButton(
+        icon: const Icon(Icons.download_outlined, size: 20),
+        tooltip: context.l10n.download,
+        onPressed: onDownload,
+      );
+    }
+    if (duration != null) {
+      return Text(
+        _fmt(duration!),
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
+      );
+    }
+    return null;
   }
 
   Widget _placeholder(ThemeData theme) => Container(
@@ -91,11 +163,113 @@ class SongTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(Icons.music_note,
-            color: theme.colorScheme.onSurface.withOpacity(0.3)),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
       );
 
   String _fmt(int sec) =>
       '${(sec ~/ 60).toString().padLeft(1, '0')}:${(sec % 60).toString().padLeft(2, '0')}';
+}
+
+/// 统一的分区标题（设置页 / 音乐库 / 首页共用）。
+///
+/// Material 3 建议分区标题使用 titleMedium/labelLarge 这类层级 token，
+/// 而不是硬编码字号；右侧可放一个次要操作按钮。
+class SectionHeader extends StatelessWidget {
+  const SectionHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.action,
+    this.padding = const EdgeInsets.fromLTRB(16, 20, 16, 8),
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget? action;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: padding,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (action != null) action!,
+        ],
+      ),
+    );
+  }
+}
+
+/// 渐变色 Chip（色相随 index 变化），用于热门搜索等场景
+class GradientChip extends StatelessWidget {
+  const GradientChip({
+    super.key,
+    required this.label,
+    required this.index,
+    this.onTap,
+  });
+
+  final String label;
+  final int index;
+  final VoidCallback? onTap;
+
+  static HSLColor _hue(int i) =>
+      HSLColor.fromAHSL(1, (i * 47.0) % 360, 0.65, 0.5);
+
+  @override
+  Widget build(BuildContext context) {
+    final a = _hue(index).toColor();
+    final b = _hue(index + 1).toColor();
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [a, b]),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// 统一加载骨架
@@ -170,75 +344,42 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 56, color: theme.colorScheme.onSurface.withOpacity(0.35)),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
-            ),
-          ),
-          if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: 16),
-            FilledButton.tonalIcon(
-              onPressed: onAction,
-              icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-              label: Text(actionLabel!),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// 渐变色 Chip（色相随 index 变化），用于热门搜索等场景
-class GradientChip extends StatelessWidget {
-  const GradientChip({
-    super.key,
-    required this.label,
-    required this.index,
-    this.onTap,
-  });
-
-  final String label;
-  final int index;
-  final VoidCallback? onTap;
-
-  static HSLColor _hue(int i) =>
-      HSLColor.fromAHSL(1, (i * 47.0) % 360, 0.65, 0.5);
-
-  @override
-  Widget build(BuildContext context) {
-    final a = _hue(index).toColor();
-    final b = _hue(index + 1).toColor();
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [a, b]),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
+    // 既要能作为全屏占位（垂直居中），也要能直接放进 ListView（高度无界）；
+    // 后者用 Center 会触发无限高度断言，所以按约束是否有限分支处理。
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final content = Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon,
+                  size: 56,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.35)),
+              const SizedBox(height: 16),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
               ),
-            ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 16),
+                FilledButton.tonalIcon(
+                  onPressed: onAction,
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                  label: Text(actionLabel!),
+                ),
+              ],
+            ],
           ),
-        ),
-      ),
+        );
+        if (constraints.maxHeight.isFinite) {
+          return Center(child: content);
+        }
+        return content;
+      },
     );
   }
 }
@@ -275,12 +416,12 @@ class ErrorRetry extends StatelessWidget {
               height: 88,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: theme.colorScheme.errorContainer.withOpacity(0.5),
+                color: theme.colorScheme.errorContainer.withValues(alpha: 0.5),
               ),
               child: Icon(
                 c.icon,
                 size: 44,
-                color: theme.colorScheme.onErrorContainer.withOpacity(0.7),
+                color: theme.colorScheme.onErrorContainer.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 20),
@@ -295,7 +436,7 @@ class ErrorRetry extends StatelessWidget {
             _CopyableText(
               text: c.hint,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.55),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
               ),
             ),
             const SizedBox(height: 24),
@@ -348,13 +489,13 @@ class _TechDetailState extends State<_TechDetail> {
                       ? Icons.expand_less_rounded
                       : Icons.expand_more_rounded,
                   size: 18,
-                  color: theme.colorScheme.onSurface.withOpacity(0.45),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   context.l10n.techDetail,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.45),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
                   ),
                 ),
               ],
@@ -367,15 +508,15 @@ class _TechDetailState extends State<_TechDetail> {
             margin: const EdgeInsets.only(top: 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.4),
+              color:
+                  theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(12),
             ),
             child: SelectableText(
               widget.raw,
               style: theme.textTheme.bodySmall?.copyWith(
                 fontFamily: 'monospace',
-                fontSize: 11,
-                color: theme.colorScheme.onSurface.withOpacity(0.5),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ),

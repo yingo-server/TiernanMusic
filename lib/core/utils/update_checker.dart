@@ -1,10 +1,6 @@
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-
-import '../config/app_config.dart';
 
 /// 版本检查结果
 class UpdateInfo {
@@ -13,6 +9,7 @@ class UpdateInfo {
     required this.latestVersion,
     required this.latestTag,
     this.downloadUrl,
+    this.acceleratedUrl,
     this.releaseNotes,
     this.publishedAt,
   });
@@ -147,10 +144,4 @@ class UpdateChecker {
         .map((e) => int.tryParse(e.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0)
         .toList();
   }
-
-  /// 应用名（用于更新提示）
-  static String get appName => AppConfig.appNameCn;
-
-  /// 调试输出用
-  static String encode(Object o) => jsonEncode(o);
 }

@@ -4,6 +4,7 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:cookie_jar/cookie_jar.dart';
 
 import '../config/app_config.dart';
+
 class ApiException implements Exception {
   ApiException(
     this.errorCode,
@@ -33,10 +34,12 @@ class ApiException implements Exception {
 
 class KugouApiClient {
   /// [cookieStoragePath] 必须是**可写**的 App 私有目录（如 documents/cookies）。
-  /// 不传时退化为内存 CookieJar——cookie 不持久化且部分设备上
-  /// PersistCookieJar 默认目录不可写，登录会报「Read-only file system」。
+  /// 不传时使用全局静态 [cookieStoragePath]；两者都没有则退化为内存 CookieJar
+  /// —— cookie 不持久化，但绝不会写只读路径（登录曾因此报
+  /// 「Read-only file system」）。
   KugouApiClient({String? baseUrl, String? cookieStoragePath})
-      : _dio = Dio(BaseOptions(
+      : _cookieJar = _createCookieJar(cookieStoragePath),
+        _dio = Dio(BaseOptions(
           baseUrl: baseUrl ?? AppConfig.kugouApiBase,
           connectTimeout: const Duration(seconds: 20),
           receiveTimeout: const Duration(seconds: 30),
@@ -99,10 +102,10 @@ class KugouApiClient {
   /// cookie 存储：
   /// - 有可写路径 → PersistCookieJar + FileStorage（应用私有目录，三层存储规范第 2 层）
   /// - 无路径 → 内存 CookieJar（不持久化，但绝不写只读路径）
-  final CookieJar _cookieJar = _initCookieJar;
+  final CookieJar _cookieJar;
 
-  static CookieJar get _initCookieJar {
-    final path = KugouApiClient.cookieStoragePath;
+  static CookieJar _createCookieJar(String? explicitPath) {
+    final path = explicitPath ?? KugouApiClient.cookieStoragePath;
     if (path != null && path.isNotEmpty) {
       try {
         return PersistCookieJar(storage: FileStorage(path));

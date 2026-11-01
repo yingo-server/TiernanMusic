@@ -317,5 +317,109 @@
         "example": "1.0.1"
       }
     }
-  }
+  },
+  "moreActions": "更多",
+  "clearHistoryConfirm": "确定要清空全部搜索历史吗？",
+  "commentFailed": "评论失败：{error}",
+  "@commentFailed": {
+    "description": "评论失败：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "网络错误"
+      }
+    }
+  },
+  "deleteFailed": "删除失败：{error}",
+  "@deleteFailed": {
+    "description": "删除失败：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "网络错误"
+      }
+    }
+  },
+  "clearCacheFailed": "清除失败：{error}",
+  "@clearCacheFailed": {
+    "description": "清除失败：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "权限不足"
+      }
+    }
+  },
+  "apiConnectionOk": "连通正常（HTTP {code}）",
+  "@apiConnectionOk": {
+    "description": "连通正常（HTTP {code}）",
+    "placeholders": {
+      "code": {
+        "type": "int",
+        "example": "200"
+      }
+    }
+  },
+  "apiServerReachable": "服务器可达（HTTP {code}）",
+  "@apiServerReachable": {
+    "description": "服务器可达（HTTP {code}）",
+    "placeholders": {
+      "code": {
+        "type": "int",
+        "example": "404"
+      }
+    }
+  },
+  "apiConnectionFailed": "连接失败：{error}",
+  "@apiConnectionFailed": {
+    "description": "连接失败：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "超时"
+      }
+    }
+  },
+  "apiSection": "API 与网络",
+  "licenseBody": "汀澜音乐 Tiernan Music\n\n本仓库源代码公开可见（Source Available），仅供学习与研究用途。\n\n【禁止事项】\n· 禁止将本代码或其衍生作品用于任何商业或非商业用途；\n· 禁止以任何形式分发、复制、修改后发布本软件；\n· 禁止将本项目接入的接口用于爬取或批量下载。\n\n本项目与酷狗音乐官方无任何关联，如有侵权请联系删除。\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "mvQualitySd": "标清",
+  "mvQualityHd": "高清",
+  "mvQualityQhd": "超清",
+  "mvQualitySq": "全高清",
+  "mvQualityFhd": "蓝光",
+  "mvQualitySelect": "清晰度",
+  "qrLoadFailed": "二维码加载失败：{error}",
+  "@qrLoadFailed": {
+    "description": "二维码加载失败：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "网络错误"
+      }
+    }
+  },
+  "shuffle": "随机播放",
+  "repeat": "循环播放",
+  "repeatOne": "单曲循环",
+  "closePlayer": "收起播放页",
+  "expandPlayer": "展开播放页",
+  "showLyrics": "查看歌词",
+  "showCover": "查看封面",
+  "commentsCount": "共 {count} 条评论",
+  "@commentsCount": {
+    "description": "共 {count} 条评论",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "120"
+      }
+    }
+  },
+  "playlistIntro": "歌单简介",
+  "expand": "展开",
+  "collapse": "收起",
+  "noSongsInPlaylist": "歌单中暂无歌曲",
+  "playNext": "下一首播放",
+  "addToQueue": "加入播放队列",
+  "songActions": "歌曲操作"
 }

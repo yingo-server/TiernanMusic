@@ -37,6 +37,9 @@ class ErrorLogger {
   bool _initialized = false;
   Directory? _fallbackDir;
 
+  /// 原生返回的实际公共写入位置（公共目录写入成功后才有值）
+  String? _publicDirPath;
+
   /// 初始化日志目录（应用私有降级目录）
   ///
   /// 失败时**不置 _initialized**，保证下次调用会重试——
@@ -112,8 +115,10 @@ class ErrorLogger {
         // 由 Dart 侧缓存当日内容，退出/超限时整份重写。
         return await _rewriteMediaStore(fileName, text);
       }
-      // ≤9：写公共 Documents 需要 WRITE_EXTERNAL_STORAGE，先申请
-      if (!await _ensureStoragePermission()) return false;
+      // ≤9：写公共 Documents 需要 WRITE_EXTERNAL_STORAGE。
+      // 这里**不主动弹权限框**（日志是隐式路径，突然弹窗体验很差），
+      // 只读取当前授权状态；未授权则直接降级到 App 私有目录。
+      if (!await _hasStoragePermission()) return false;
       final base = await _channel.invokeMethod<String>(
           'publicDir', {'type': 'documents'});
       if (base == null || base.isEmpty) return false;
@@ -126,6 +131,7 @@ class ErrorLogger {
         await file.rename(rotated.path);
       }
       await file.writeAsString(text, mode: FileMode.append, flush: true);
+      _publicDirPath = dir.path;
       return true;
     } catch (e) {
       debugPrint('[ErrorLogger] public write failed: $e');
@@ -133,32 +139,41 @@ class ErrorLogger {
     }
   }
 
-  /// 申请存储权限（仅 Android 9 及以下需要；≥29 MediaStore 免权限）
-  Future<bool> _ensureStoragePermission() async {
+  /// 检查是否已有存储权限（不弹窗）
+  ///
+  /// 日志写入属于隐式路径，绝不能突然弹出权限请求框。
+  /// 用户可在「设置 → 诊断 → 存储权限」手动授权。
+  Future<bool> _hasStoragePermission() async {
     try {
       final service = StoragePermissionService.instance;
-      return await service.requestStoragePermission();
+      final strategy = await service.currentStrategy();
+      return strategy != StorageStrategy.appFallback;
     } catch (e) {
-      debugPrint('[ErrorLogger] permission request failed: $e');
+      debugPrint('[ErrorLogger] permission check failed: $e');
       return false;
     }
   }
 
-  /// Android 10+：MediaStore Downloads 写入。
-  /// 原生层先查询同名文件并整份重写（真追加），这里无需缓存内容。
+  /// Android 10+：MediaStore 写入。
+  /// 原生层负责「读旧内容 + 超限轮转 + 整份重写」，并返回实际写入位置。
   Future<bool> _rewriteMediaStore(String fileName, String text) async {
     try {
-      final ok = await _channel.invokeMethod<bool>('appendText', {
+      final ok = await _channel.invokeMethod<String>('appendText', {
         'displayName': fileName,
         'relativePath': _relativePath,
         'content': text,
+        'maxBytes': maxBytes,
       });
-      return ok == true;
+      if (ok != null && ok.isNotEmpty) {
+        _publicDirPath = ok;
+      }
+      return ok != null;
     } catch (e) {
       debugPrint('[ErrorLogger] media store write failed: $e');
       return false;
     }
   }
+
 
   /// 记录 API 错误（含错误码与请求路径）
   Future<void> logApi(
@@ -197,8 +212,10 @@ class ErrorLogger {
   /// 当前日志目录（展示给用户）
   Future<String?> currentDirPath() async {
     await init();
-    final apiLevel = _apiLevel;
-    if (apiLevel >= 29) {
+    // 公共目录写入成功后，原生会返回实际路径，优先用它
+    final public = _publicDirPath;
+    if (public != null && public.isNotEmpty) return public;
+    if (_apiLevel >= 29) {
       return '/sdcard/Documents/$folderName/$logsDirName';
     }
     return _fallbackDir?.path;
