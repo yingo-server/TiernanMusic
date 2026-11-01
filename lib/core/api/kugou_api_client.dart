@@ -38,7 +38,9 @@ class KugouApiClient {
   /// —— cookie 不持久化，但绝不会写只读路径（登录曾因此报
   /// 「Read-only file system」）。
   KugouApiClient({String? baseUrl, String? cookieStoragePath})
-      : _cookieJar = _createCookieJar(cookieStoragePath),
+      : _cookieJar = cookieStoragePath == null
+            ? sharedCookieJar
+            : _createCookieJar(cookieStoragePath),
         _dio = Dio(BaseOptions(
           baseUrl: baseUrl ?? AppConfig.kugouApiBase,
           connectTimeout: const Duration(seconds: 20),
@@ -116,6 +118,17 @@ class KugouApiClient {
     return CookieJar();
   }
 
+  /// 进程级共享的 CookieJar。
+  ///
+  /// 登录态必须在**所有** KugouApiClient 实例之间共享：
+  /// 各实例各建一个 PersistCookieJar 时，内存里的 hostCookies 互不可见，
+  /// 而 FileStorage 又指向同一目录互相覆盖 —— 结果就是「登录写入的 token，
+  /// 播放器/评论等其它 client 完全读不到」。
+  static CookieJar? _sharedJar;
+
+  /// 共享 cookie 存储（首次调用时按全局路径创建）。
+  static CookieJar get sharedCookieJar => _sharedJar ??= _createCookieJar(null);
+
   /// 全局 cookie 存储路径（main() 启动时用 getApplicationDocumentsDirectory 设置一次）
   static String? cookieStoragePath;
 
@@ -192,6 +205,9 @@ class KugouApiClient {
   }
 
   Future<void> clearCredentials() async {
-    await _cookieJar.deleteAll();
+    await sharedCookieJar.deleteAll();
+    mid = '';
+    userid = '';
+    dfid = '';
   }
 }

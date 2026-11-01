@@ -4,12 +4,17 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../core/api/kugou_api_client.dart';
 import '../../core/direct/kg_providers.dart';
+import '../../core/providers.dart' show kugouApiClientProvider;
 import 'data/audio_handler.dart';
 import 'data/models.dart';
 import 'data/player_repository.dart';
 
 /// API 客户端单例。
-final _apiClientProvider = Provider<KugouApiClient>((ref) => KugouApiClient());
+///
+/// 复用 [kugouApiClientProvider]（core/providers.dart），
+/// 保证与认证模块**共享同一个 CookieJar** —— 否则登录态不会带到播放/评论请求里。
+final _apiClientProvider = Provider<KugouApiClient>(
+    (ref) => ref.watch(kugouApiClientProvider));
 
 /// 播放器仓库（直连播放 + kapi 内容接口）。
 final playerRepositoryProvider = Provider<PlayerRepository>((ref) {
