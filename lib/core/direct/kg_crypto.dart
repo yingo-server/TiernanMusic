@@ -70,17 +70,22 @@ class KgSignature {
   }
 
   /// Web 版签名
+  ///
+  /// 对齐 Node signatureWebParams（helper.js:40-46）：先把每个参数格式化成
+  /// "k=v" 字符串，再整体 sort()。不能先 sort key 再拼——当某 key 是另一 key
+  /// 的前缀且下个字符 ASCII < '='（如 'a' 与 'a-b'）时两种顺序不同（实测签名
+  /// 不一致）。android 版不受影响：Node 就是先 sort key（helper.js:63-67）。
   static String web(Map<String, dynamic> params, {String data = ''}) {
     const salt = KgConfig.webSalt;
-    final keys = params.keys.toList()..sort();
-    final sb = StringBuffer();
-    for (final k in keys) {
-      sb.write('$k=${params[k]}');
-    }
-    return KgCrypto.md5('$salt${sb.toString()}$data$salt');
+    final parts =
+        params.keys.map((k) => '$k=${params[k]}').toList()..sort();
+    return KgCrypto.md5('$salt${parts.join()}$data$salt');
   }
 
   /// 设备注册签名：md5("1014" + 排序后的值串 + "1014")
+  ///
+  /// currently unused：注册实际走 [android]（含 body），符合 register_dev.js
+  /// 实测结论。保留时勿在新代码中误用为注册路径。
   static String register(Map<String, dynamic> params) {
     final values = params.values.map((v) => '$v').toList()..sort();
     return KgCrypto.md5('1014${values.join()}1014');

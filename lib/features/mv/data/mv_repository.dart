@@ -162,7 +162,11 @@ class MvInfo {
     final durationMs = durRaw is num
         ? durRaw.round()
         : (int.tryParse('${durRaw ?? ''}') ?? 0);
-    final duration = durationMs > 10000 ? durationMs ~/ 1000 : durationMs;
+    // duration 在 kmr/audio/mv 与 video/detail 实测恒为毫秒
+    // （docs/api_report_comment_mv_lyric.md），直接换算秒。
+    // 不再用 ">10000 才当毫秒" 启发式：<10 秒的短视频 MV（实测 8~9 秒项）
+    // 会被误保留成毫秒。0 视为无时长，保持 0。
+    final duration = durationMs <= 0 ? 0 : durationMs ~/ 1000;
 
     String? pick(String key) {
       final v = h264[key] ?? h265[key] ?? mkv[key];
@@ -280,7 +284,9 @@ class MvDetail {
     final durationMs = durRaw is num
         ? durRaw.round()
         : (int.tryParse('${durRaw ?? ''}') ?? 0);
-    final duration = durationMs > 10000 ? durationMs ~/ 1000 : durationMs;
+    // timelength 实测恒为毫秒（MV 时长，docs/api_report_comment_mv_lyric.md），
+    // 直接换算秒（MvInfo.fromJson 同此口径）；备用字段 duration 同为毫秒口径。
+    final duration = durationMs <= 0 ? 0 : durationMs ~/ 1000;
 
     return MvDetail(
       videoId: '${data['video_id'] ?? data['id'] ?? ''}',

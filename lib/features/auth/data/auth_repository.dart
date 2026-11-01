@@ -37,21 +37,6 @@ class MultiAccountException implements Exception {
   final List<Map<String, dynamic>> users;
 }
 
-/// 人机验证信息
-class VerifyInfo {
-  const VerifyInfo({
-    required this.vType,
-    this.txappid = '',
-    this.mobile = '',
-    this.raw = const {},
-  });
-
-  final int vType; // 23 = 腾讯 TCaptcha，32 = 二次短信，38 = 其它类型
-  final String txappid;
-  final String mobile;
-  final Map<String, dynamic> raw;
-}
-
 /// 二维码登录结果
 class QrKeyResult {
   const QrKeyResult({required this.key, required this.qrImgBase64});
@@ -90,7 +75,8 @@ class AuthRepository {
         return dfid;
       }
     } catch (_) {}
-    return '-';
+    // 失败返回空串且不落盘：'-' 占位符会被服务端拒绝且永久缓存
+    return '';
   }
 
   /// 发送短信验证码
@@ -152,49 +138,6 @@ class AuthRepository {
       }
       rethrow;
     }
-  }
-
-  /// 获取人机验证信息
-  Future<VerifyInfo> getVerifyInfo(String eventid) async {
-    final res = await _api.get('/get/verify/info', query: {'eventid': eventid});
-    final d = (res['data'] as Map<String, dynamic>?) ?? {};
-    return VerifyInfo(
-      vType: int.tryParse('${d['v_type'] ?? 0}') ?? 0,
-      txappid: '${d['txappid'] ?? d['appid'] ?? ''}',
-      mobile: '${d['mobile'] ?? ''}',
-      raw: d,
-    );
-  }
-
-  /// 提交人机验证结果；eventid 直接使用 20028 返回的 ssaCode。
-  /// 部署版不提供 /sidedt，不额外请求 sid / edt。
-  Future<void> submitVerify({
-    required String eventid,
-    required int vType,
-    required String verifycode,
-  }) async {
-    if (vType != 23 && vType != 32) {
-      throw ApiException(-1, '暂不支持的验证类型（v_type=$vType）');
-    }
-    await _api.post('/verify/user/info', {
-      'eventid': eventid,
-      'v_type': vType,
-      'verifycode': verifycode,
-    });
-  }
-
-  /// 生成 TCaptcha verifycode
-  static String buildTencentVerifyCode({
-    required String ticket,
-    required String randstr,
-    required String txappid,
-  }) {
-    final payload = jsonEncode({
-      'ticket': ticket,
-      'randstr': randstr,
-      'txappid': txappid,
-    });
-    return Uri.encodeComponent('KGCodeTX|$payload');
   }
 
   /// 获取扫码登录 key 与二维码图
@@ -276,6 +219,20 @@ class AuthRepository {
       final user =
           await loginByToken(token: cred.token, userid: cred.userId);
       return user;
+    } on DioException catch (e) {
+      final err = e.error;
+      // 网络异常（断网/超时）不得清凭证：返回降级用户，保留登录态
+      final networkError = e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout;
+      final confirmedInvalid = err is ApiException &&
+          _isTokenInvalidCode(err.errorCode, err.message);
+      if (!networkError && confirmedInvalid) {
+        await logout();
+        return null;
+      }
+      return _degradedUser(cred);
     } catch (_) {
       // 静默刷新失败，尝试用现有凭证请求用户信息确认是否仍有效
       try {
@@ -286,11 +243,40 @@ class AuthRepository {
           nickname: detail.nickname,
           avatar: detail.avatar,
         );
+      } on DioException catch (e) {
+        final err = e.error;
+        final confirmedInvalid = err is ApiException &&
+            _isTokenInvalidCode(err.errorCode, err.message);
+        if (confirmedInvalid) {
+          await logout();
+          return null;
+        }
+        return _degradedUser(cred);
       } catch (_) {
-        await logout();
-        return null;
+        return _degradedUser(cred);
       }
     }
+  }
+
+  /// 已知「凭证失效」的 error_code（401 类/token 过期），网络错误绝不算
+  bool _isTokenInvalidCode(int code, String message) {
+    const invalidCodes = {1011, 20010, 30791, 401};
+    if (invalidCodes.contains(code)) return true;
+    return code == -1 && message.contains('token');
+  }
+
+  /// 弱网降级：用缓存资料构造用户，凭证保持不动
+  AuthUser _degradedUser(Credentials cred) {
+    AccountRecord? record;
+    try {
+      record = AccountManager.instance.currentAccount;
+    } catch (_) {}
+    return AuthUser(
+      userid: cred.userId,
+      token: cred.token,
+      nickname: record?.nickname ?? '',
+      avatar: record?.avatar ?? '',
+    );
   }
 
   /// 退出当前账号（保留多账号记录可选）
@@ -298,6 +284,12 @@ class AuthRepository {
     final cred = await _storage.readCredentials();
     if (removeAccount && cred != null) {
       await AccountManager.instance.remove(cred.userId);
+      try {
+        await _storage.deleteAccountToken(cred.userId);
+      } catch (_) {}
+    } else {
+      // 保留账号列表，但清掉当前账号指针，避免「已退出」仍可静默切回旧账号
+      await AccountManager.instance.clearCurrent();
     }
     await _storage.clearCredentials();
     await _api.clearCredentials();
@@ -320,20 +312,26 @@ class AuthRepository {
     }
 
     final dfid = await getDfid();
+    final auth = d['auth']?.toString();
     await _storage.saveCredentials(
       token: token,
       userId: userid,
       t1: t1,
+      auth: auth,
       dfid: dfid,
     );
     await _api.setCredentials(
       token: token,
       userid: userid,
       t1: t1,
+      auth: auth,
       dfid: dfid,
     );
 
-    // 写入多账号列表
+    // 写入多账号列表（token 存 SecureStorage，不进 Hive）
+    try {
+      await _storage.saveAccountToken(userid: userid, token: token);
+    } catch (_) {}
     await AccountManager.instance.upsert(AccountRecord(
       userid: userid,
       token: token,
@@ -371,4 +369,8 @@ class AuthRepository {
   }
 
   KugouApiClient get api => _api;
+
+  /// 读取指定账号的 token（SecureStorage，按 userid）
+  Future<String?> getAccountToken(String userid) =>
+      _storage.readAccountToken(userid);
 }

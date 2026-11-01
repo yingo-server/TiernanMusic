@@ -39,7 +39,8 @@ class HomeRepository {
     final json = await _cachedGet('/yueku');
     final info = (json['data']?['info'] as Map?) ?? {};
     final songs = _asList(info['song'])
-        .map((e) => HomeSong.fromJson(Map<String, dynamic>.from(e as Map)))
+        .whereType<Map>()
+        .map((e) => HomeSong.fromJson(Map<String, dynamic>.from(e)))
         .toList();
     return songs;
   }
@@ -48,8 +49,8 @@ class HomeRepository {
     final json = await _cachedGet('/yueku');
     final info = (json['data']?['info'] as Map?) ?? {};
     final raw = _asList(info['special'] ?? info['playlist'] ?? info['recommend']);
-    return raw.map((e) {
-      final item = Map<String, dynamic>.from(e as Map);
+    return raw.whereType<Map>().map((e) {
+      final item = Map<String, dynamic>.from(e);
       // 乐库推荐歌单的实际内容包在 extra 中。
       return HomePlaylist.fromJson(item['extra'] is Map
           ? Map<String, dynamic>.from(item['extra'] as Map)
@@ -65,8 +66,8 @@ class HomeRepository {
       final raw = _asList(json['data']?['special_list'] ?? json['data']?['info']);
       if (raw.isNotEmpty) {
         return raw
-            .map((e) =>
-                HomePlaylist.fromJson(Map<String, dynamic>.from(e as Map)))
+            .whereType<Map>()
+            .map((e) => HomePlaylist.fromJson(Map<String, dynamic>.from(e)))
             .toList();
       }
     } catch (_) {
@@ -81,7 +82,8 @@ class HomeRepository {
     final data = json['data'];
     final raw = data is Map ? _asList(data['info']) : _asList(data);
     return raw
-        .map((e) => HomeRank.fromJson(Map<String, dynamic>.from(e as Map)))
+        .whereType<Map>()
+        .map((e) => HomeRank.fromJson(Map<String, dynamic>.from(e)))
         .toList();
   }
 
@@ -93,7 +95,8 @@ class HomeRepository {
       final raw = _asList(
           data is Map ? (data['banner'] ?? data['list'] ?? data['info']) : data);
       return raw
-          .map((e) => HomeBanner.fromJson(Map<String, dynamic>.from(e as Map)))
+          .whereType<Map>()
+          .map((e) => HomeBanner.fromJson(Map<String, dynamic>.from(e)))
           .where((b) => b.imageUrl.isNotEmpty)
           .toList();
     } catch (_) {
@@ -112,7 +115,8 @@ class HomeRepository {
               : data);
       if (raw.isEmpty) return null;
       return raw
-          .map((e) => HomeSong.fromJson(Map<String, dynamic>.from(e as Map)))
+          .whereType<Map>()
+          .map((e) => HomeSong.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     } catch (_) {
       return null;
@@ -128,7 +132,8 @@ class HomeRepository {
           data is Map ? (data['info'] ?? data['list'] ?? data['songs']) : data);
       if (raw.isNotEmpty) {
         return raw
-            .map((e) => HomeSong.fromJson(Map<String, dynamic>.from(e as Map)))
+            .whereType<Map>()
+            .map((e) => HomeSong.fromJson(Map<String, dynamic>.from(e)))
             .toList();
       }
     } catch (_) {

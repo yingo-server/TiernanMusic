@@ -163,6 +163,12 @@ class KgDirectApiClient extends KugouApiClient {
       case 'get/verify/info':
         return _directOrFallback(
             () => _getVerifyInfo(q), kapi, '/get/verify/info');
+      case 'search/hot':
+        return _directOrFallback(() => _searchHot(q), kapi, '/search/hot');
+      case 'yueku/banner':
+        return _directOrFallback(() => _yuekuBanner(q), kapi, '/yueku/banner');
+      case 'video/detail':
+        return _directOrFallback(() => _videoDetail(q), kapi, '/video/detail');
     }
     return super.get(path, query: query);
   }
@@ -486,9 +492,73 @@ class KgDirectApiClient extends KugouApiClient {
         });
   }
 
-  // ---------------- 歌单 ----------------
+  /// 热搜（search_hot.js）。
+  /// 原生域名 msearch.kugou.com（两标签，*.kugou.com 通配证书覆盖，实测 TLS OK），
+  /// gateway 路由前缀 msearch/ 需去掉。实测 200 status=1，data.list[] 每项
+  /// 含 name + keywords[]，与 kapi /search/hot 结构一致。
+  Future<KgResponse> _searchHot(Map<String, dynamic> q) {
+    return kg.request('/api/v3/search/hot_tab',
+        method: 'GET',
+        baseUrl: 'https://msearch.kugou.com',
+        params: {
+          'navid': q['navid'] ?? 1,
+          'plat': q['plat'] ?? 2,
+        });
+  }
 
-  /// 歌单详情。
+  /// 乐库 banner（yueku_banner.js）。
+  /// 源码无 x-router/baseURL → gateway 的 /ads.gateway/v3/listen_banner。
+  /// 【实测】匿名态恒返回 error_code=31136（无数据）——Node 版同样如此
+  /// （依赖登录态/风控态），属上游行为非实现差异；失败由 _wrap 抛出 →
+  /// _directOrFallback 回退 kapi（同样 31136）→ fetchBanners 容错置空。
+  Future<KgResponse> _yuekuBanner(Map<String, dynamic> q) {
+    return kg.request('/ads.gateway/v3/listen_banner',
+        method: 'POST',
+        data: {
+          'plat': 0,
+          'channel': 201,
+          'operator': 7,
+          'networktype': 2,
+          'userid': q['userid'] ?? kg.userid,
+          'vip_type': 0,
+          'm_type': 0,
+          'tags': const <String>[],
+          'apiver': 5,
+          'ability': 2,
+          'mode': 'normal',
+        });
+  }
+
+  /// 视频详情（video_detail.js）。
+  /// 原生域名 kmr.service.kugou.com 为三标签域名，*.kugou.com 单层通配证书
+  /// 不覆盖（docs/api_report_player.md：TLS 硬失败）→ 保持 gateway + x-router。
+  /// 实测 200 status=1，data 数组首项含 hd/sd/qhd/ld_hash、timelength 等，
+  /// 与 kapi /video/detail 结构一致（既往验证 + 本轮复核）。
+  Future<KgResponse> _videoDetail(Map<String, dynamic> q) {
+    final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final dfid = kg.device.dfid.isEmpty ? '-' : kg.device.dfid;
+    return kg.request('/v1/video',
+        method: 'POST',
+        clearDefaultParams: true,
+        headers: {'x-router': 'kmr.service.kugou.com'},
+        data: {
+          'appid': kg.lite ? KgConfig.liteAppid : KgConfig.appid,
+          'clientver': kg.lite ? KgConfig.liteClientver : KgConfig.clientver,
+          'clienttime': clienttime,
+          'mid': kg.device.mid,
+          'uuid': KgCrypto.md5('$dfid${kg.device.mid}'),
+          'dfid': dfid,
+          'token': kg.token,
+          'key': KgSignature.paramsKey('$clienttime', lite: kg.lite),
+          'show_resolution': 1,
+          'data': [
+            for (final id in '${q['id'] ?? q['ids'] ?? ''}'.split(','))
+              if (id.trim().isNotEmpty) {'video_id': id.trim()},
+          ],
+        });
+  }
+
+  // ---------------- 歌单 ----------------  /// 歌单详情。
   ///
   /// 实测：载荷必须是 `{"data": [{"global_collection_id": "<gid>"}]}`。
   /// 旧写法 `{"listid": [...]}` 不管传 gid 还是数字 specialid、不管 v1/v2/v3

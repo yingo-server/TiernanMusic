@@ -152,6 +152,9 @@ class KgClient {
     final defaultParams = <String, dynamic>{
       'dfid': device.dfid.isEmpty ? '-' : device.dfid,
       'mid': device.mid,
+      // uuid 实测保留 '-'：匿名态 A/B（/v5/url 免费曲，uuid='-' vs guid）
+      // 两者均 status=1 返回 url、无差异；Node 版虽注入 uuid=guid，
+      // 但改 guid 未见任何收益，维持既往实测结论（勿盲改）。
       'uuid': '-',
       'appid': appid,
       'clientver': clientver,

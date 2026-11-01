@@ -92,7 +92,7 @@ class _CaptchaPageState extends State<CaptchaPage> {
   String? _extractTxAppId(VerifySession s) {
     // url 形如 KGCodeTX|xxx 或包含 txappid 参数
     final url = s.verifyUrl ?? '';
-    final m = RegExp(r'txappid=([0-9]+)').firstMatch(url);
+    final m = RegExp(r'txappid=([0-9A-Za-z_-]+)').firstMatch(url);
     if (m != null) return m.group(1);
     return null;
   }

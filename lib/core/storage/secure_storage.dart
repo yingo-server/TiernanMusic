@@ -56,6 +56,22 @@ class SecureStorage {
       _storage.write(key: _kDfid, value: dfid);
 
   Future<String?> readDfid() => _storage.read(key: _kDfid);
+
+  // ----- 多账号 token（按 userid 存取，替代 Hive accounts 盒明文存储）-----
+
+  static const _kAcctTokenPrefix = 'acct_token_';
+
+  Future<void> saveAccountToken({
+    required String userid,
+    required String token,
+  }) =>
+      _storage.write(key: '$_kAcctTokenPrefix$userid', value: token);
+
+  Future<String?> readAccountToken(String userid) =>
+      _storage.read(key: '$_kAcctTokenPrefix$userid');
+
+  Future<void> deleteAccountToken(String userid) =>
+      _storage.delete(key: '$_kAcctTokenPrefix$userid');
 }
 
 class Credentials {

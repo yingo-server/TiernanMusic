@@ -32,6 +32,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    // 切换登录方式时重建，让 QR Tab 通过 active 参数启停轮询
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging && mounted) setState(() {});
+    });
   }
 
   @override
@@ -439,7 +443,9 @@ class _PasswordLoginTabState extends ConsumerState<_PasswordLoginTab> {
               onPressed: () => setState(() => _obscure = !_obscure),
             ),
           ),
-          onSubmitted: (_) => _login(),
+          onSubmitted: (_) {
+            if (!_loading) _login();
+          },
         ),
         const SizedBox(height: 24),
         FilledButton(
@@ -464,8 +470,11 @@ class _PasswordLoginTabState extends ConsumerState<_PasswordLoginTab> {
 // 二维码登录
 // ---------------------------------------------------------------------------
 class _QrLoginTab extends ConsumerStatefulWidget {
-  const _QrLoginTab({required this.onSuccess});
+  const _QrLoginTab({required this.onSuccess, this.active = true});
   final VoidCallback onSuccess;
+
+  /// 当前 Tab 是否可见；false 时暂停二维码轮询
+  final bool active;
 
   @override
   ConsumerState<_QrLoginTab> createState() => _QrLoginTabState();
@@ -487,6 +496,18 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
   void initState() {
     super.initState();
     _loadQr();
+  }
+
+  @override
+  void didUpdateWidget(covariant _QrLoginTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active != widget.active) {
+      if (widget.active && _status != 0 && _status != 4) {
+        _startPolling();
+      } else {
+        _pollTimer?.cancel();
+      }
+    }
   }
 
   @override
@@ -520,10 +541,23 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
     }
   }
 
+  /// 自驱动轮询链：上次请求完成后再排下一次，避免慢网络下请求重叠
   void _startPolling() {
     _pollTimer?.cancel();
-    _pollTimer =
-        Timer.periodic(const Duration(seconds: 2), (_) => _checkOnce());
+    _scheduleNextPoll();
+  }
+
+  void _scheduleNextPoll() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer(const Duration(seconds: 3), _pollOnce);
+  }
+
+  Future<void> _pollOnce() async {
+    if (!mounted || !widget.active) return;
+    await _checkOnce();
+    if (mounted && _status != 0 && _status != 4) {
+      _scheduleNextPoll();
+    }
   }
 
   Future<void> _checkOnce() async {
@@ -535,11 +569,16 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
       setState(() => _status = res.status);
       if (res.status == 4) {
         _pollTimer?.cancel();
-        await ref.read(loginControllerProvider.notifier).loginByQrToken(
-              token: res.token ?? '',
-              userid: res.userid ?? '',
-            );
-        widget.onSuccess();
+        // status==4 只表示扫码成功，token 换登录态仍可能失败，必须提示
+        try {
+          await ref.read(loginControllerProvider.notifier).loginByQrToken(
+                token: res.token ?? '',
+                userid: res.userid ?? '',
+              );
+          widget.onSuccess();
+        } catch (e) {
+          if (mounted) _showError(context, e);
+        }
       } else if (res.status == 0) {
         _pollTimer?.cancel();
       }

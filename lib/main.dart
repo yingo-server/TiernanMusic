@@ -176,6 +176,9 @@ class TiernanMusicApp extends ConsumerWidget {
         // 退出登录时必须清空，否则会继续以旧账号身份请求
         client.token = user?.token ?? '';
         client.userid = user?.userid ?? '0';
+        // AuthUser 不携带 t1：登录/恢复时由 loginByToken → cookie 刷新；
+        // 退出（user == null）时必须清空，否则残留旧 t1。
+        if (user == null) client.t1 = '';
       } catch (e) {
         debugPrint('[auth-sync] $e');
       }

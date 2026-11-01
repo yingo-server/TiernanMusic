@@ -35,15 +35,17 @@ class AuthStateNotifier extends AsyncNotifier<AuthUser?> {
     state = const AsyncData(null);
   }
 
-  /// 切换到另一个账号
+  /// 切换到另一个账号（token 从 SecureStorage 按 userid 读取）
   Future<void> switchAccount(String userid) async {
     final record = await AccountManager.instance.switchTo(userid);
     if (record == null) return;
+    final token = await ref.read(authRepositoryProvider).getAccountToken(userid);
+    if (token == null || token.isEmpty) {
+      // 该账号无可用 token（未登录过或已被清理），需要重新登录
+      throw StateError('该账号需要重新登录');
+    }
     final repo = ref.read(authRepositoryProvider);
-    final user = await repo.loginByToken(
-      token: record.token,
-      userid: record.userid,
-    );
+    final user = await repo.loginByToken(token: token, userid: userid);
     state = AsyncData(user);
   }
 }

@@ -4,32 +4,31 @@ import 'package:hive_flutter/hive_flutter.dart';
 class AccountRecord {
   AccountRecord({
     required this.userid,
-    required this.token,
+    this.token = '',
     this.nickname = '',
     this.avatar = '',
     this.t1,
   });
 
   final String userid;
-  final String token;
+
+  /// 仅内存使用（登录成功后传给 upsert 供本次会话切换）；
+  /// **不持久化** —— token 存 SecureStorage（按 userid），Hive 只存展示信息。
+  String token;
   String nickname;
   String avatar;
   String? t1;
 
   Map<String, dynamic> toJson() => {
         'userid': userid,
-        'token': token,
         'nickname': nickname,
         'avatar': avatar,
-        't1': t1,
       };
 
   factory AccountRecord.fromJson(Map<dynamic, dynamic> json) => AccountRecord(
         userid: '${json['userid'] ?? ''}',
-        token: '${json['token'] ?? ''}',
         nickname: '${json['nickname'] ?? ''}',
         avatar: '${json['avatar'] ?? ''}',
-        t1: json['t1'] as String?,
       );
 }
 
@@ -50,6 +49,10 @@ class AccountManager {
     } else {
       _box = Hive.box(_boxName);
     }
+    // 兼容清洗：历史版本曾把 token 明文写进 accounts 盒，重写一次去掉
+    try {
+      await _saveList(accounts);
+    } catch (_) {}
   }
 
   Box<dynamic> get _b {
@@ -106,6 +109,11 @@ class AccountManager {
       }
     }
     return null;
+  }
+
+  /// 清除「当前账号」指针（退出登录时用，保留账号列表）
+  Future<void> clearCurrent() async {
+    await _b.delete(_kCurrent);
   }
 
   /// 移除账号；若移除的是当前账号，自动切到剩余的第一个
