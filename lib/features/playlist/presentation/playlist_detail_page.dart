@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/providers.dart' show kugouApiClientProvider;
 import '../../../core/utils/toast.dart';
 import '../../../core/widgets/song_tile.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../l10n/l10n.dart';
 import '../../download/presentation/download_sheet.dart';
 import '../../player/data/models.dart';

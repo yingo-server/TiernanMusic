@@ -70,7 +70,7 @@ class RecentPlayStore {
 
   static Future<void> add(RecentPlay item) async {
     final box = Hive.isBoxOpen(_boxName) ? _box : await Hive.openBox(_boxName);
-    final list = read()
+    final list = await read()
       ..removeWhere((e) => e.hash == item.hash)
       ..insert(0, item);
     if (list.length > _max) list.removeRange(_max, list.length);

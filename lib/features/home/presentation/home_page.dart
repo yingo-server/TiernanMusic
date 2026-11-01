@@ -513,7 +513,7 @@ class _HomeSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    Widget header(String width) => Padding(
+    Widget header(double width) => Padding(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
           child: SkeletonText(width: width),
         );
@@ -534,7 +534,7 @@ class _HomeSkeleton extends StatelessWidget {
                   // Banner
                   const SkeletonBox(height: 150, radius: 16),
                   // 每日推荐
-                  header('110'),
+                  header(110),
                   SizedBox(
                     height: 110,
                     child: Row(children: [
@@ -545,7 +545,7 @@ class _HomeSkeleton extends StatelessWidget {
                     ]),
                   ),
                   // 推荐歌单：130x130 圆角卡横排（高 180 与实际一致）
-                  header('140'),
+                  header(140),
                   SizedBox(
                     height: 180,
                     child: Row(children: [
@@ -563,7 +563,7 @@ class _HomeSkeleton extends StatelessWidget {
                     ]),
                   ),
                   // 排行榜横排卡
-                  header('90'),
+                  header(90),
                   SizedBox(
                     height: 150,
                     child: Row(children: [
@@ -574,7 +574,7 @@ class _HomeSkeleton extends StatelessWidget {
                     ]),
                   ),
                   // 新歌列表行（56 封面 + 两行文字）
-                  header('120'),
+                  header(120),
                   for (var i = 0; i < 5; i++)
                     const Padding(
                       padding: EdgeInsets.only(bottom: 14),
