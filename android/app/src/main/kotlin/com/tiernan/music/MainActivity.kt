@@ -8,7 +8,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
-import io.flutter.embedding.engine.dart.FlutterEngine
+import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
@@ -202,8 +202,7 @@ class MainActivity : FlutterActivity() {
             MediaStore.MediaColumns.DISPLAY_NAME,
             MediaStore.MediaColumns.RELATIVE_PATH
         )
-        val selection = MediaStore.MediaColumns.DISPLAY_NAME + " = ? AND "
-                + MediaStore.MediaColumns.RELATIVE_PATH + " LIKE ?"
+        val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
         val args = arrayOf(displayName, "$relativePath%")
         contentResolver.query(collectionUri(collection), projection, selection, args, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
