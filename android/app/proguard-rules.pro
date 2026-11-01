@@ -39,6 +39,12 @@
 -keep class io.flutter.view.** { *; }
 -keep class io.flutter.window.** { *; }
 
+# --- Google Play Core（deferred components，App 不用但引擎引用） ---
+# FlutterPlayStoreSplitApplication / PlayStoreDeferredComponentManager 引用
+# com.google.android.play.core.*，未引入该依赖时 R8 报 Missing class。
+# 本项目不用 deferred components，dontwarn 即可。
+-dontwarn com.google.android.play.core.**
+
 # --- WebView（人机验证页为 TCaptcha，纯 JS 实现，无原生类，R2 已清理死规则） ---
 
 # --- 视频播放（ExoPlayer/Media3 反射） ---
