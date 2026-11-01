@@ -445,9 +445,9 @@ FriendlyError errorClassification(BuildContext context, Object? error) {
   if (error is DioException) {
     final t = error.type;
     if (t == DioExceptionType.connectionTimeout ||
-            t == DioExceptionType.receiveTimeout ||
-            t == DioExceptionType.sendTimeout ||
-            t == DioExceptionType.connectionError)) {
+        t == DioExceptionType.receiveTimeout ||
+        t == DioExceptionType.sendTimeout ||
+        t == DioExceptionType.connectionError) {
       return FriendlyError(
         friendly: l.networkErrorTitle,
         hint: l.networkErrorHint,
