@@ -31,6 +31,15 @@ class LyricView extends StatefulWidget {
 class _LyricViewState extends State<LyricView> {
   final ScrollController _scroll = ScrollController();
 
+  /// 行高近似值（原文 + 可选译文 + 内边距）。歌词行高不固定，滚动定位取近似即可。
+  static const double _itemExtentApprox = 64.0;
+
+  /// 用户手动滚动后暂停自动跟随时长
+  static const Duration _userScrollPause = Duration(seconds: 5);
+
+  DateTime _lastUserScrollAt = DateTime.fromMillisecondsSinceEpoch(0);
+  bool _didInitialScroll = false;
+
   /// 上一次渲染的当前行，用于只在行号变化时 setState
   int _currentIndex = -1;
 
@@ -56,6 +65,19 @@ class _LyricViewState extends State<LyricView> {
 
   int get _posMs => widget.position.inMilliseconds + widget.lyric.offsetMs;
 
+  void _scrollTo(int index, {bool jump = false}) {
+    if (!_scroll.hasClients) return;
+    final target = (index * _itemExtentApprox)
+        .clamp(0.0, _scroll.position.maxScrollExtent);
+    if (jump) {
+      _scroll.jumpTo(target);
+    } else {
+      _scroll.animateTo(target,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final posMs = _posMs;
@@ -65,26 +87,42 @@ class _LyricViewState extends State<LyricView> {
     if (index != _currentIndex) {
       _currentIndex = index;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() {});
+        if (!mounted) return;
+        setState(() {});
+        // 首帧直接定位，之后平滑跟随；用户手动滚动后 5 秒内暂停自动跟随
+        final first = !_didInitialScroll;
+        if (first) _didInitialScroll = true;
+        final paused =
+            DateTime.now().difference(_lastUserScrollAt) < _userScrollPause;
+        if (first || !paused) _scrollTo(index, jump: first);
       });
     }
 
-    return ListView.builder(
-      controller: _scroll,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 120),
-      itemCount: widget.lyric.lines.length,
-      itemBuilder: (context, i) {
-        final line = widget.lyric.lines[i];
-        return _LyricLineTile(
-          line: line,
-          isCurrent: i == index,
-          mode: widget.mode,
-          posMs: posMs,
-          onTap: widget.onTapLine != null
-              ? () => widget.onTapLine!(line.startMs)
-              : null,
-        );
+    return NotificationListener<ScrollNotification>(
+      onNotification: (n) {
+        if (n is ScrollStartNotification && n.dragDetails != null ||
+            n is UserScrollNotification) {
+          _lastUserScrollAt = DateTime.now();
+        }
+        return false;
       },
+      child: ListView.builder(
+        controller: _scroll,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 120),
+        itemCount: widget.lyric.lines.length,
+        itemBuilder: (context, i) {
+          final line = widget.lyric.lines[i];
+          return _LyricLineTile(
+            line: line,
+            isCurrent: i == index,
+            mode: widget.mode,
+            posMs: posMs,
+            onTap: widget.onTapLine != null
+                ? () => widget.onTapLine!(line.startMs)
+                : null,
+          );
+        },
+      ),
     );
   }
 

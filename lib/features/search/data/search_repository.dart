@@ -98,9 +98,13 @@ class SearchRepository {
     return _maps(raw);
   }
 
-  int _totalOf(Map<String, dynamic> json) {
+  /// 解析 total；接口未返回 total（<=0）但本页已返回满页数据时兜底 -1，
+  /// 表示「总数未知、可能还有更多」，避免分页被截断为一页。
+  int _totalOf(Map<String, dynamic> json, {int returned = 0, int pageSize = 30}) {
     final data = json['data'];
-    return _toInt(data is Map ? data['total'] : null);
+    final total = _toInt(data is Map ? data['total'] : null);
+    if (total <= 0 && returned >= pageSize) return -1;
+    return total;
   }
 
   /// 专辑搜索项。
@@ -177,7 +181,7 @@ class SearchRepository {
     final items = _listsOf(json)
         .map((e) => HomeSong.fromJson(e))
         .toList();
-    return SearchResult(items: items, total: _totalOf(json));
+    return SearchResult(items: items, total: _totalOf(json, returned: items.length, pageSize: pageSize));
   }
 
   /// 搜索歌单
@@ -193,7 +197,7 @@ class SearchRepository {
     final items = _listsOf(json)
         .map((e) => HomePlaylist.fromJson(e))
         .toList();
-    return SearchPlaylistResult(items: items, total: _totalOf(json));
+    return SearchPlaylistResult(items: items, total: _totalOf(json, returned: items.length, pageSize: pageSize));
   }
 
   /// 通用搜索（专辑/歌手/MV），返回归一化后的单曲列表。
@@ -226,7 +230,8 @@ class SearchRepository {
           return HomeSong.fromJson(e);
       }
     }).toList();
-    return SearchResult(items: items, total: _totalOf(json));
+    return SearchResult(
+        items: items, total: _totalOf(json, returned: items.length, pageSize: pageSize));
   }
 
   /// 热搜

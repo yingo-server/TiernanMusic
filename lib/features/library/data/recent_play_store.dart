@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:hive_flutter/hive_flutter.dart';
 
 /// 最近播放记录
@@ -48,8 +50,16 @@ class RecentPlayStore {
       ? Hive.box(_boxName)
       : throw StateError('recent_plays box 未打开');
 
-  static List<RecentPlay> read() {
-    if (!Hive.isBoxOpen(_boxName)) return const [];
+  static final _changesCtrl = StreamController<void>.broadcast();
+
+  /// 最近播放变化广播：add / clear 后触发，供 UI 订阅刷新。
+  static Stream<void> get changes => _changesCtrl.stream;
+
+  static void notifyListeners() => _changesCtrl.add(null);
+
+  /// box 未打开时先懒打开，避免冷启动首次进入永远读到空列表。
+  static Future<List<RecentPlay>> read() async {
+    if (!Hive.isBoxOpen(_boxName)) await Hive.openBox(_boxName);
     final raw = _box.get(_kList, defaultValue: <dynamic>[]) as List<dynamic>;
     return raw
         .whereType<Map<dynamic, dynamic>>()
@@ -65,11 +75,13 @@ class RecentPlayStore {
       ..insert(0, item);
     if (list.length > _max) list.removeRange(_max, list.length);
     await box.put(_kList, list.map((e) => e.toJson()).toList());
+    notifyListeners();
   }
 
   /// 清空全部最近播放记录。
   static Future<void> clear() async {
     if (!Hive.isBoxOpen(_boxName)) return;
     await _box.delete(_kList);
+    notifyListeners();
   }
 }

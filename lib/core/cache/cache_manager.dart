@@ -28,6 +28,14 @@ class MemoryCache {
 
   void clear() => _cache.clear();
 
+  /// 按前缀清除（如刷新首页时清掉 '/yueku'、'/top/playlist'、'/rank/list' 等 key）。
+  void removeWhere(bool Function(String key) test) {
+    final keys = _cache.keys.where(test).toList();
+    for (final k in keys) {
+      _cache.remove(k);
+    }
+  }
+
   static String keyOf(String path, [Map<String, dynamic>? query]) {
     if (query == null || query.isEmpty) return path;
     final sorted = Map.fromEntries(

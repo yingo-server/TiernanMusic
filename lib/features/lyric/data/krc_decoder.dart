@@ -42,8 +42,12 @@ class KrcDecoder {
       decrypted[i] = body[i] ^ _key[i % 16];
     }
 
-    // zlib 解压
-    final decompressed = const ZLibDecoder().decodeBytes(decrypted);
-    return utf8.decode(decompressed, allowMalformed: true);
+    // zlib 解压（数据损坏时抛 ArchiveException，捕获后返回空串）
+    try {
+      final decompressed = const ZLibDecoder().decodeBytes(decrypted);
+      return utf8.decode(decompressed, allowMalformed: true);
+    } catch (_) {
+      return '';
+    }
   }
 }

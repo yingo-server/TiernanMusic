@@ -24,6 +24,7 @@ class PlayHelper {
       albumAudioId: song.albumAudioId,
       ts: DateTime.now().millisecondsSinceEpoch,
     ));
+    RecentPlayStore.notifyListeners();
   }
 
   /// 首页单曲

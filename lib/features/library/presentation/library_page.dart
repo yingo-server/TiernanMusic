@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,15 +29,36 @@ class LibraryPage extends ConsumerStatefulWidget {
 
 class _LibraryPageState extends ConsumerState<LibraryPage> {
   List<RecentPlay> _recent = [];
+  StreamSubscription<AccountRecord?>? _authSub;
+  StreamSubscription<void>? _recentSub;
 
   @override
   void initState() {
     super.initState();
     _loadRecent();
+    // 登录/登出后刷新账号卡片与「我的歌单」（StatefulShellRoute 保活，build 不依赖 auth）。
+    _authSub = AccountManager.instance.onCurrentAccountChanged.listen((_) {
+      if (!mounted) return;
+      setState(() {});
+      ref.invalidate(_userPlaylistsProvider);
+    });
+    // 播放记录写入后刷新最近播放。
+    _recentSub = RecentPlayStore.changes.listen((_) {
+      if (mounted) _loadRecent();
+    });
   }
 
-  void _loadRecent() {
-    setState(() => _recent = RecentPlayStore.read());
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    _recentSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadRecent() async {
+    final list = await RecentPlayStore.read();
+    if (!mounted) return;
+    setState(() => _recent = list);
   }
 
   @override
@@ -374,6 +397,14 @@ class _MyPlaylistRow extends StatelessWidget {
                         width: 120,
                         height: 120,
                         fit: BoxFit.cover,
+                        memCacheWidth:
+                            (120 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
+                        placeholder: (_, __) => Container(
+                          width: 120,
+                          height: 120,
+                          color: theme.colorScheme.surfaceContainerHighest,
+                        ),
                         errorWidget: (_, __, ___) => Container(
                           width: 120,
                           height: 120,

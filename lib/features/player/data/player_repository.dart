@@ -163,14 +163,16 @@ class PlayerRepository {
         return PlayableResult(
           // 直连拿到的是 http://fsandroid... ，走代理转 https
           url: _proxyHttp(result.bestUrl!),
-          quality: _qualityFromBitrate(result.bitrate, q),
+          quality: _qualityFromBitrate(result, q),
           isPreview: result.isPreview,
         );
       }
       lastErrorCode = result.errorCode;
       lastMessage = result.message.isNotEmpty ? result.message : lastMessage;
-      // 20028（需验证）/ 权益不足：不再继续降级（继续也没权限）
+      // 20028（需验证）/ 权益不足（fail_process 非空，需购买/无版权）：
+      // 不再继续降级（继续也没权限），直接退出后由调用方决定回退或上抛
       if (result.errorCode == 20028) break;
+      if (result.failProcess.isNotEmpty) break;
     }
     if (lastErrorCode != null && lastErrorCode != 0) {
       throw ApiException(lastErrorCode, lastMessage.isEmpty ? '直连获取播放地址失败' : lastMessage);
@@ -178,11 +180,15 @@ class PlayerRepository {
     return null;
   }
 
-  static AudioQuality _qualityFromBitrate(int bitrate, AudioQuality requested) {
-    if (bitrate >= 2000) return AudioQuality.flac;
-    if (bitrate >= 900) return AudioQuality.high;
-    if (bitrate >= 300) return AudioQuality.q320;
-    return requested == AudioQuality.q128 ? AudioQuality.q128 : requested;
+  static AudioQuality _qualityFromBitrate(PlayUrlResult r, AudioQuality requested) {
+    // 服务端给了明确 extName/quality 时优先采信
+    final q = AudioQuality.fromString(r.extName.isNotEmpty ? r.extName : r.quality);
+    if (q != AudioQuality.q128) return q;
+    // 否则按码率推断；未知/0 一律按最低，避免把试听错标为高音质
+    if (r.bitrate >= 2000) return AudioQuality.flac;
+    if (r.bitrate >= 900) return AudioQuality.high;
+    if (r.bitrate >= 300) return AudioQuality.q320;
+    return AudioQuality.q128;
   }
 
   /// 获取可播放 URL。从期望音质起逐级降级（super→high→flac→320→128）。
@@ -204,7 +210,7 @@ class PlayerRepository {
         'album_id': song.albumId,
         'album_audio_id': song.albumAudioId,
         'quality': q.value,
-        'free_part': '1',
+        // 不带 free_part：需要试听时由调用方显式传入（默认拿全曲）
       });
       final data = res['data'] is Map ? res['data'] as Map : res;
       final errorCode = _int(data['errcode'] ?? data['error_code']);

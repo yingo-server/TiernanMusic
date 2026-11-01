@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/cache/cache_manager.dart';
 import '../../../l10n/l10n.dart';
 
 import '../../player/play_helper.dart';
@@ -31,7 +32,13 @@ class HomePage extends ConsumerWidget {
             onRetry: () => ref.invalidate(homeDataProvider),
           ),
           data: (data) => RefreshIndicator(
-            onRefresh: () async => ref.invalidate(homeDataProvider),
+            // refresh.future 保留旧数据等待新结果（不闪回骨架屏），指示器跟随真实完成。
+            onRefresh: () {
+              // 清掉首页相关接口的 MemoryCache，避免 90s TTL 内"刷新无效果"。
+              MemoryCache.instance
+                  .removeWhere((k) => k.startsWith('/yueku') || k.startsWith('/top/playlist') || k.startsWith('/rank/list'));
+              return ref.refresh(homeDataProvider.future);
+            },
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -126,6 +133,9 @@ class _BannerCarouselState extends State<_BannerCarousel> {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted || widget.banners.length < 2) return;
+      // StatefulShellRoute 用 IndexedStack 保活：非当前 Tab 时不要后台翻页（省电、避免 setState 堆积）。
+      final route = ModalRoute.of(context);
+      if (route != null && !route.isCurrent) return;
       final next = (_index + 1) % widget.banners.length;
       _controller.animateToPage(
         next,
@@ -160,6 +170,10 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                 child: CachedNetworkImage(
                   imageUrl: widget.banners[i].imageUrl,
                   fit: BoxFit.cover,
+                  memCacheWidth:
+                      (400 * MediaQuery.devicePixelRatioOf(context)).round(),
+                  placeholder: (_, __) => Container(
+                      color: theme.colorScheme.surfaceContainerHighest),
                   errorWidget: (_, __, ___) =>
                       Container(color: theme.colorScheme.surfaceContainerHighest),
                 ),
@@ -228,6 +242,13 @@ class _DailyRecommend extends ConsumerWidget {
                           child: CachedNetworkImage(
                             imageUrl: s.cover,
                             fit: BoxFit.cover,
+                            memCacheWidth:
+                                (78 * MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
+                            placeholder: (_, __) => Container(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest),
                             errorWidget: (_, __, ___) => const SizedBox(
                                 width: 78,
                                 height: 78,
@@ -306,6 +327,14 @@ class _PlaylistRow extends StatelessWidget {
                         width: 130,
                         height: 130,
                         fit: BoxFit.cover,
+                        memCacheWidth:
+                            (130 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
+                        placeholder: (_, __) => Container(
+                          width: 130,
+                          height: 130,
+                          color: theme.colorScheme.surfaceContainerHighest,
+                        ),
                         errorWidget: (_, __, ___) => Container(
                           width: 130,
                           height: 130,
@@ -381,6 +410,10 @@ class _RankRow extends StatelessWidget {
                           imageUrl: r.cover,
                           fit: BoxFit.cover,
                           colorBlendMode: BlendMode.luminosity,
+                          memCacheWidth:
+                              (200 * MediaQuery.devicePixelRatioOf(context))
+                                  .round(),
+                          placeholder: (_, __) => const SizedBox.shrink(),
                           errorWidget: (_, __, ___) => const SizedBox.shrink(),
                         ),
                       ),
@@ -471,75 +504,96 @@ class _SongTile extends ConsumerWidget {
 
 // ---------- 骨架屏 & 错误 ----------
 
+/// 骨架屏：与内容页同为 CustomScrollView + SliverAppBar.large 结构，
+/// 各区块尺寸对齐（歌单 180、SectionHeader padding 20/8），切换时不跳动。
 class _HomeSkeleton extends StatelessWidget {
   const _HomeSkeleton();
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    Widget header(String width) => Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+          child: SkeletonText(width: width),
+        );
     return Shimmer(
       baseColor: scheme.surface,
       highlightColor:
           scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-      child: ListView(
+      child: CustomScrollView(
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Banner
-          const SkeletonBox(height: 150, radius: 16),
-          const SizedBox(height: 24),
-          // 推荐歌单：130x130 圆角卡横排
-          const SkeletonText(width: 120),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 176,
-            child: Row(children: [
-              for (var i = 0; i < 3; i++) ...[
-                if (i > 0) const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SkeletonBox(width: 130, height: 130, radius: 16),
-                    SizedBox(height: 8),
-                    SkeletonText(width: 100),
-                  ],
-                ),
-              ],
-            ]),
-          ),
-          const SizedBox(height: 24),
-          // 排行榜横排卡
-          const SkeletonText(width: 100),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 150,
-            child: Row(children: [
-              for (var i = 0; i < 2; i++) ...[
-                if (i > 0) const SizedBox(width: 12),
-                const SkeletonBox(width: 200, height: 150, radius: 16),
-              ],
-            ]),
-          ),
-          const SizedBox(height: 24),
-          // 新歌列表行（56 封面 + 两行文字）
-          const SkeletonText(width: 110),
-          const SizedBox(height: 12),
-          for (var i = 0; i < 5; i++)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 14),
-              child: Row(children: [
-                SkeletonBox(width: 56, height: 56, radius: 8),
-                SizedBox(width: 12),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SkeletonText(width: double.infinity, height: 14),
-                          SizedBox(height: 8),
-                          SkeletonText(width: 120, height: 12),
-                        ])),
-              ]),
+        slivers: [
+          const SliverAppBar.large(title: SizedBox.shrink()),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Banner
+                  const SkeletonBox(height: 150, radius: 16),
+                  // 每日推荐
+                  header('110'),
+                  SizedBox(
+                    height: 110,
+                    child: Row(children: [
+                      for (var i = 0; i < 2; i++) ...[
+                        if (i > 0) const SizedBox(width: 12),
+                        const SkeletonBox(width: 220, height: 110, radius: 12),
+                      ],
+                    ]),
+                  ),
+                  // 推荐歌单：130x130 圆角卡横排（高 180 与实际一致）
+                  header('140'),
+                  SizedBox(
+                    height: 180,
+                    child: Row(children: [
+                      for (var i = 0; i < 3; i++) ...[
+                        if (i > 0) const SizedBox(width: 12),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SkeletonBox(width: 130, height: 130, radius: 16),
+                            SizedBox(height: 6),
+                            SkeletonText(width: 100),
+                          ],
+                        ),
+                      ],
+                    ]),
+                  ),
+                  // 排行榜横排卡
+                  header('90'),
+                  SizedBox(
+                    height: 150,
+                    child: Row(children: [
+                      for (var i = 0; i < 2; i++) ...[
+                        if (i > 0) const SizedBox(width: 12),
+                        const SkeletonBox(width: 200, height: 150, radius: 16),
+                      ],
+                    ]),
+                  ),
+                  // 新歌列表行（56 封面 + 两行文字）
+                  header('120'),
+                  for (var i = 0; i < 5; i++)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 14),
+                      child: Row(children: [
+                        SkeletonBox(width: 56, height: 56, radius: 8),
+                        SizedBox(width: 12),
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SkeletonText(width: double.infinity, height: 14),
+                                  SizedBox(height: 8),
+                                  SkeletonText(width: 120, height: 12),
+                                ])),
+                      ]),
+                    ),
+                ],
+              ),
             ),
+          ),
         ],
       ),
     );

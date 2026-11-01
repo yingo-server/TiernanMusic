@@ -276,7 +276,15 @@ class _SearchLandingState extends ConsumerState<_SearchLanding> {
             padding: EdgeInsets.all(24),
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (_, __) => const SizedBox.shrink(),
+          error: (_, __) => Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: EmptyState(
+              icon: Icons.wifi_off_rounded,
+              message: context.l10n.hotSearchLoadFailed,
+              actionLabel: context.l10n.reload,
+              onAction: () => ref.invalidate(_hotSearchProvider),
+            ),
+          ),
           data: (boards) {
             final visible = _board == null
                 ? boards
@@ -420,6 +428,8 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
     super.initState();
     _loadMore();
     _scroll.addListener(() {
+      // 失败态不自动重试（避免每次微滚都发请求+Toast 刷屏），只走 footer「重试」按钮。
+      if (_error != null) return;
       if (_scroll.position.pixels >=
               _scroll.position.maxScrollExtent - 200 &&
           !_loading &&
@@ -663,6 +673,13 @@ class _GenericResultTab extends ConsumerWidget {
                   width: 48,
                   height: 48,
                   fit: BoxFit.cover,
+                  memCacheWidth:
+                      (48 * MediaQuery.devicePixelRatioOf(context)).round(),
+                  placeholder: (_, __) => Container(
+                    width: 48,
+                    height: 48,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  ),
                   errorWidget: (_, __, ___) => Container(
                     width: 48,
                     height: 48,
@@ -680,8 +697,11 @@ class _GenericResultTab extends ConsumerWidget {
               onTap: () {
                 if (type == 'mv' && s.hash != null) {
                   context.push('/mv/${s.hash}');
-                } else if (type == 'album' && s.albumId != null) {
-                  context.push('/playlist/${s.albumId}');
+                } else if (type == 'album') {
+                  // 专辑 albumid 是数字 ID，/playlist/:id 需要
+                  // global_collection_id 形式，跳过去会拿到空详情。
+                  // 专辑专页接入前不响应跳转。
+                  Toast.show(context, context.l10n.albumPageComingSoon);
                 }
                 // TODO(播放模块): 歌手页跳接待补充
               },
@@ -698,3 +718,4 @@ final _genericSearchProvider =
         (ref, arg) => ref
             .read(searchRepositoryProvider)
             .searchByType(arg.$1, arg.$2));
+

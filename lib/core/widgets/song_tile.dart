@@ -84,6 +84,7 @@ class SongTile extends StatelessWidget {
                 width: 52,
                 height: 52,
                 fit: BoxFit.cover,
+                memCacheWidth: (52 * MediaQuery.devicePixelRatioOf(context)).round(),
                 placeholder: (_, __) => _placeholder(theme),
                 errorWidget: (_, __, ___) => _placeholder(theme),
               )

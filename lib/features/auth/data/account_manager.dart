@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:hive_flutter/hive_flutter.dart';
 
 /// 账号记录（存 Hive box 'accounts'）
@@ -63,6 +65,21 @@ class AccountManager {
     return b;
   }
 
+  static final _changedCtrl = StreamController<AccountRecord?>.broadcast();
+
+  /// 当前账号变化广播：upsert / switchTo / clearCurrent / remove / clear 后触发。
+  /// 值为变化后的当前账号（可能为 null = 未登录）。
+  Stream<AccountRecord?> get onCurrentAccountChanged =>
+      _changedCtrl.stream;
+
+  void _notifyChanged() {
+    try {
+      _changedCtrl.add(currentAccount);
+    } catch (_) {
+      _changedCtrl.add(null);
+    }
+  }
+
   /// 全部账号
   List<AccountRecord> get accounts {
     final raw = _b.get(_kList, defaultValue: <dynamic>[]) as List<dynamic>;
@@ -98,6 +115,7 @@ class AccountManager {
     }
     await _saveList(list);
     await _b.put(_kCurrent, record.userid);
+    _notifyChanged();
   }
 
   /// 切换当前账号（返回账号记录，不存在返回 null）
@@ -105,6 +123,7 @@ class AccountManager {
     for (final a in accounts) {
       if (a.userid == userid) {
         await _b.put(_kCurrent, userid);
+        _notifyChanged();
         return a;
       }
     }
@@ -114,6 +133,7 @@ class AccountManager {
   /// 清除「当前账号」指针（退出登录时用，保留账号列表）
   Future<void> clearCurrent() async {
     await _b.delete(_kCurrent);
+    _notifyChanged();
   }
 
   /// 移除账号；若移除的是当前账号，自动切到剩余的第一个
@@ -123,9 +143,11 @@ class AccountManager {
     if (currentUserid == userid) {
       if (list.isNotEmpty) {
         await _b.put(_kCurrent, list.first.userid);
+        _notifyChanged();
         return list.first;
       } else {
         await _b.delete(_kCurrent);
+        _notifyChanged();
         return null;
       }
     }
@@ -135,5 +157,6 @@ class AccountManager {
   Future<void> clear() async {
     await _b.delete(_kList);
     await _b.delete(_kCurrent);
+    _notifyChanged();
   }
 }

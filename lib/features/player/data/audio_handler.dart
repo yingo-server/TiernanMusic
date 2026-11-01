@@ -149,6 +149,8 @@ class TiernanAudioHandler extends BaseAudioHandler
   /// 设置队列并从 [index] 开始播放。
   Future<void> playQueue(List<Song> songs, int index) async {
     ensureInitialized();
+    // 新的播放请求会清掉 20028 挂起状态，避免验证后跳回旧歌
+    _pendingSongIndex = null;
     _songs
       ..clear()
       ..addAll(songs);
@@ -159,6 +161,8 @@ class TiernanAudioHandler extends BaseAudioHandler
   /// 播放单曲（追加到队列或替换当前位置）。
   Future<void> playSong(Song song) async {
     ensureInitialized();
+    // 新的播放请求会清掉 20028 挂起状态，避免验证后跳回旧歌
+    _pendingSongIndex = null;
     final existing = _songs.indexOf(song);
     if (existing >= 0) {
       await _playAt(existing);
