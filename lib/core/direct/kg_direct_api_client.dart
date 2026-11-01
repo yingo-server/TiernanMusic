@@ -342,12 +342,19 @@ class KgDirectApiClient extends KugouApiClient {
     final resourceType = '${q['resource_type'] ?? 'song'}';
     final isPlaylistOrAlbum =
         resourceType == 'playlist' || resourceType == 'album';
+    // 源码（comment_floor.js）：song → /mcomment/v1/hot_replylist（gateway 根路径，
+    // 无独立 baseURL）；playlist/album → gateway 路由前缀 m.comment.service/。
+    // 实测 song 分支必须带 childrenid（=special_child_id，Repository 传的
+    // special_id 即它；只传 mixsongid 报 err_code=10002『歌曲不存在』）。
+    // 带 childrenid 后与 kapi（/comment/floor?special_id=&tid=）逐字段一致（0 差异）。
     return kg.request(
         isPlaylistOrAlbum
             ? '/m.comment.service/v1/hot_replylist'
             : '/mcomment/v1/hot_replylist',
         method: 'POST',
         params: {
+          // childrenid：song 分支取 special_id（special_child_id），
+          // playlist/album 分支源码同样传 special_id
           'childrenid': q['special_id'],
           'need_show_image': 1,
           'p': q['page'] ?? 1,
@@ -889,7 +896,7 @@ class KgDirectApiClient extends KugouApiClient {
   }
 
   /// 用户信息（对应 module/user_detail.js）
-  Future<KgResponse> _userDetail(Map<String, dynamic> q) {
+  Future<KgResponse> _userDetail(Map<String, dynamic> q) async {
     final token = '${q['token'] ?? (kg.token.isNotEmpty ? kg.token : '')}';
     final userid = int.tryParse(
             '${q['userid'] ?? (kg.userid.isNotEmpty ? kg.userid : '0')}') ??

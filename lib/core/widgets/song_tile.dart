@@ -385,14 +385,22 @@ class _TechDetailState extends State<_TechDetail> {
 }
 
 class FriendlyError {
-  const FriendlyError(
-      {required this.friendly, required this.hint, this.icon, this.raw});
+  const FriendlyError({
+    required this.friendly,
+    required this.hint,
+    required this.icon,
+    this.raw,
+  });
+
   /// 用户可见主文案
   final String friendly;
+
   /// 用户可见副文案
   final String hint;
+
   /// 大图标
   final IconData icon;
+
   /// 原始错误串（仅技术详情用）
   final String? raw;
 }

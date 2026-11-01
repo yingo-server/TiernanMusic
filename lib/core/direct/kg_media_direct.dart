@@ -65,6 +65,11 @@ extension KgMediaDirect on KgClient {
     return request('/v1/video',
         method: 'POST',
         clearDefaultParams: true,
+        // 实测 kmr.service.kugou.com 为三标签域名，*.kugou.com 单层通配证书不覆盖
+        // （openssl: subject CN=*.kugou.com, SAN 仅 *.kugou.com/*.kgimg.com/kugou.com/
+        // kgimg.com；python urllib 报 CERTIFICATE_VERIFY_FAILED Hostname mismatch，
+        // 证书 not valid for 'kmr.service.kugou.com'）→ 保持 gateway + x-router
+        // （实测 200 status=1，data 数组与 kapi /video/detail 一致）。
         headers: {'x-router': 'kmr.service.kugou.com'},
         data: {
           'appid': lite ? KgConfig.liteAppid : KgConfig.appid,
