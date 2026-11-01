@@ -1,7 +1,7 @@
 name: tiernan_music
 description: 汀澜音乐 Tiernan Music — 非官方酷狗音乐第三方客户端
 publish_to: 'none'
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
