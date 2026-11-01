@@ -1,3 +1,8 @@
+// CupertinoPageTransitionsBuilder 定义在 flutter/cupertino 的 route.dart
+// （由 package:flutter/cupertino.dart 导出），**material.dart 并不导出它**
+// —— Flutter 自己的 material/page_transitions_theme.dart 也是 import cupertino
+// 才能用到。用 `show` 精确引入，避免与 material 的同名导出产生歧义。
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
 /// 应用主题：Material 3 + Expressive 风格。
@@ -82,7 +87,11 @@ class AppTheme {
         padding: const WidgetStatePropertyAll(
           EdgeInsets.symmetric(horizontal: 16),
         ),
-        textStyle: const TextStyle(fontWeight: FontWeight.w400),
+        // SearchBarThemeData.textStyle 是 WidgetStateProperty<TextStyle?>，
+        // 不能直接赋 TextStyle（编译错误：类型不匹配）。
+        textStyle: const WidgetStatePropertyAll<TextStyle?>(
+          TextStyle(fontWeight: FontWeight.w400),
+        ),
       ),
 
       // ---------- 按钮 ----------
@@ -190,23 +199,25 @@ class AppTheme {
       ),
 
       // ---------- 芯片 / 徽章 ----------
-      chipTheme: ChipThemeData(
-        side: BorderSide.none,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radiusSmall),
-        ),
-        labelStyle: const TextStyle(fontSize: 13),
-      ),
-
       // M3 规范：筛选类选择用 FilterChip（带选中态图标 + 描边），
       // 分段选择用 SegmentedButton，多标签切换用 TabBar。
-      filterChipTheme: FilterChipThemeData(
+      //
+      // 【注意】ThemeData **没有** filterChipTheme 参数，Flutter 也**没有**
+      // FilterChipThemeData 这个类（FilterChip 复用 ChipThemeData）。
+      // 所以筛选芯片的 side / shape / labelStyle 统一并进 chipTheme。
+      chipTheme: ChipThemeData(
+        // 描边 + 圆角（FilterChip 未选中时的描边来自这里）
         side: BorderSide(color: scheme.outlineVariant),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusSmall),
         ),
-        showCheckmark: true,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w500),
+        // 注意：labelStyle **不要**写死 color —— Flutter 的 chip 默认
+        // labelStyle 带状态色（选中 onSecondaryContainer / 未选中
+        // onSurfaceVariant）。主题里一旦给了带 color 的 labelStyle，
+        // 就会把状态色覆盖掉（chip.dart: `chipTheme.labelStyle ??
+        // chipDefaults.labelStyle`，且不再回退到 chipDefaults）。
+        // 这里只给字号/字重，颜色交回 Flutter 状态默认。
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(

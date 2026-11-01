@@ -11,6 +11,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import 'kg_client.dart';
 import 'kg_crypto.dart';
+import 'kg_play_api.dart';
 import '../api/kugou_api_client.dart';
 
 class KgDirectApiClient extends KugouApiClient {
@@ -19,12 +20,30 @@ class KgDirectApiClient extends KugouApiClient {
   final KgClient kg;
 
   /// 依据响应构造与 kapi 一致的 Map（业务失败抛 ApiException）
+  ///
+  /// 成功判定看 **`status == 1`**。
+  /// `errcode`/`error_code` 为 151/152 等**警告码**时，只要响应里**有数据**
+  /// （data 非空）就不算失败 —— 实测这两个码常与有效数据同时出现，
+  /// 按「errcode != 0 即失败」判定会误杀正常响应。
   Map<String, dynamic> _wrap(KgResponse r) {
     final body = r.body;
     final status = body['status'];
     final rawCode = body['error_code'] ?? body['errcode'] ?? 0;
     final errorCode =
         rawCode is int ? rawCode : int.tryParse('$rawCode') ?? 0;
+
+    // status == 1 → 成功
+    if (status == 1) {
+      // 警告码 + 有数据 → 放过；无数据且有错码 → 视为失败
+      if (errorCode == 0 || _hasData(body)) return body;
+      throw ApiException(
+        errorCode,
+        '${body['error'] ?? body['error_msg'] ?? body['errmsg'] ?? body['info'] ?? '请求失败'}',
+        ssaCode: r.ssaCode,
+        body: body,
+      );
+    }
+
     if (status == 0 || status == 2 || errorCode != 0) {
       throw ApiException(
         errorCode,
@@ -34,6 +53,15 @@ class KgDirectApiClient extends KugouApiClient {
       );
     }
     return body;
+  }
+
+  /// 响应里是否带有有效数据（用于判断 151/152 警告码是否可忽略）
+  static bool _hasData(Map<String, dynamic> body) {
+    final d = body['data'];
+    if (d == null) return false;
+    if (d is List) return d.isNotEmpty;
+    if (d is Map) return d.isNotEmpty;
+    return true;
   }
 
   /// 直连失败时是否自动回退 kapi 中转（真机网络/风控差异的兜底）
@@ -416,10 +444,13 @@ class KgDirectApiClient extends KugouApiClient {
   Future<KgResponse> _everydayRecommend(Map<String, dynamic> q) {
     // 实测 everydayrec.service.kugou.com 为三标签域名，*.kugou.com 通配符证书
     // 不覆盖 → Dart/Dio TLS 拒绝，保持 gateway + x-router。
+    //
+    // 【实测】`platform` 必须是 **query 参数**（放 body 里无效，上游不认），
+    // 默认 'ios'。
     return kg.request('/everyday_song_recommend',
         method: 'POST',
         headers: {'x-router': 'everydayrec.service.kugou.com'},
-        params: {'platform': q['platform'] ?? 'ios'});
+        params: {'platform': '${q['platform'] ?? 'ios'}'});
   }
 
   Future<KgResponse> _topPlaylist(Map<String, dynamic> q) {
@@ -481,30 +512,45 @@ class KgDirectApiClient extends KugouApiClient {
   }
 
   Future<KgResponse> _playlistTrackAll(Map<String, dynamic> q) {
-    final pagesize = q['pagesize'] ?? 30;
+    final pagesize = int.tryParse('${q['pagesize'] ?? 30}') ?? 30;
     final page = int.tryParse('${q['page'] ?? 1}') ?? 1;
+    final rawId = '${q['id'] ?? q['global_collection_id'] ?? ''}'.trim();
+
+    // 【实测】`global_collection_id` 只接受 `collection_...` 形式；
+    // 传纯数字（specialid）时上游返回空 → 改用 `specialid` 参数键。
+    final isCollection = rawId.startsWith('collection_');
+    final params = <String, dynamic>{
+      'area_code': 1,
+      'begin_idx': (page - 1) * pagesize,
+      'plat': 1,
+      'type': 1,
+      'mode': 1,
+      'personal_switch': 1,
+      'extend_fields': 'abtags,hot_cmt,popularization',
+      'pagesize': pagesize,
+      if (isCollection)
+        'global_collection_id': rawId
+      else
+        'specialid': rawId,
+    };
+
     return kg.request('/v2/get_other_list_file_nofilt',
         method: 'GET',
         // 原生域名 pubsongs.kugou.com：gateway 路由前缀 pubsongs/ 需去掉（带前缀 404）。
         baseUrl: 'https://pubsongs.kugou.com',
-        params: {
-          'area_code': 1,
-          'begin_idx': (page - 1) * (pagesize is int ? pagesize : 30),
-          'plat': 1,
-          'type': 1,
-          'mode': 1,
-          'personal_switch': 1,
-          'extend_fields': 'abtags,hot_cmt,popularization',
-          'pagesize': pagesize,
-          'global_collection_id': q['id'],
-        });
+        params: params);
   }
 
   // ---------------- MV ----------------
 
   Future<KgResponse> _kmrAudioMv(Map<String, dynamic> q) {
-    // B 代理实测：该接口要 mixsongid（传 album_audio_id 返回 [{}]）
-    final ids = '${q['mixsongid'] ?? q['album_audio_id'] ?? ''}'.split(',');
+    // 【实测】body 必须是 `{'data':[{'album_audio_id':X}],'fields':...}`，
+    // **不是** `mixsongid`（传 mixsongid 上游返回 [{}] 空对象）。
+    final ids = '${q['album_audio_id'] ?? q['mixsongid'] ?? ''}'
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty && e != 'null')
+        .toList();
     return kg.request('/kmr/v1/audio/mv',
         method: 'POST',
         // 原生域名 openapi.kugou.com（两标签，*.kugou.com 证书覆盖，实测 TLS ok）：
@@ -512,7 +558,7 @@ class KgDirectApiClient extends KugouApiClient {
         baseUrl: 'https://openapi.kugou.com',
         headers: {'KG-TID': '38'},
         data: {
-          'data': ids.map((s) => {'mixsongid': s}).toList(),
+          'data': ids.map((s) => {'album_audio_id': s}).toList(),
           'fields': q['fields'] ?? '',
         });
   }
@@ -547,56 +593,40 @@ class KgDirectApiClient extends KugouApiClient {
   // ---------------- 播放/权益（供 kapi 回退路径复用） ----------------
 
   Future<KgResponse> _songUrl(Map<String, dynamic> q) {
+    // 参数构造与 KgPlayApi.songUrl **共用** KgSharedParams（别写两份）。
+    //
+    // 【实测】key 用**小写 hash** + `userid` 字符串（匿名 '0'），
+    // signature 必填（由 kg.request 用 android 签名自动补）。
+    final params = KgSharedParams.songUrl(
+      client: kg,
+      hash: '${q['hash'] ?? ''}',
+      albumId: int.tryParse('${q['album_id'] ?? 0}') ?? 0,
+      albumAudioId: int.tryParse('${q['album_audio_id'] ?? 0}') ?? 0,
+      quality: '${q['quality'] ?? '128'}',
+      freePart: '${q['free_part']}' == '1' || '${q['free_part']}' == 'true',
+    );
     return kg.request('/v5/url',
         method: 'GET',
         // 原生域名 trackercdn.kugou.com（两标签，*.kugou.com 证书覆盖，实测 TLS ok）：
-        // 匿名/VIP 实测 200 status=1，返回真实 url/backupUrl（数组），
-        // key=KgSignature.keyOf(hash,mid,userid) 为必填（缺 key 报 error_code=20028
-        // 类风控/『illegal key』）。直连仍可能遇 20028（与 IP/风控相关），
-        // _directOrFallback 已兜底回退 kapi。
+        // 匿名/VIP 实测 200 status=1，返回真实 url/backupUrl（数组）。
+        // 直连仍可能遇 20028（与 IP/风控相关），_directOrFallback 已兜底回退 kapi。
         baseUrl: 'https://trackercdn.kugou.com',
-        params: {
-          'album_id': int.tryParse('${q['album_id'] ?? 0}') ?? 0,
-          'area_code': 1,
-          'hash': '${q['hash'] ?? ''}'.toLowerCase(),
-          'ssa_flag': 'is_fromtrack',
-          'version': 11430,
-          'page_id': kg.lite ? 967177915 : 151369488,
-          'quality': q['quality'] ?? '128',
-          'album_audio_id': int.tryParse('${q['album_audio_id'] ?? 0}') ?? 0,
-          'behavior': 'play',
-          'pid': kg.lite ? 411 : 2,
-          'cmd': 26,
-          'pidversion': 3001,
-          'IsFreePart': '${q['free_part']}' == '1' ? 1 : 0,
-          'ppage_id': kg.lite
-              ? '356753938,823673182,967485191'
-              : '463467626,350369493,788954147',
-          'cdnBackup': 1,
-          'module': '',
-          'clientver': 11430,
-          'key': KgSignature.keyOf(
-            hash: '${q['hash'] ?? ''}'.toLowerCase(),
-            mid: kg.device.mid,
-            userid: kg.userid,
-            lite: kg.lite,
-          ),
-        });
+        params: params);
   }
 
   Future<KgResponse> _privilege(Map<String, dynamic> q) {
+    // 参数构造与 KgPlayApi.privilege **共用** KgSharedParams（别写两份）。
+    //
+    // 【实测】resource 过滤空 hash（避免把字符串 "null" 传上去）、
+    // page_id 必须是 0、qualities 必须是数组（逗号串要拆）。
     final hashes = '${q['hash'] ?? ''}'.split(',');
     final albums = '${q['album_id'] ?? ''}'.split(',');
-    final resource = <Map<String, dynamic>>[];
-    for (var i = 0; i < hashes.length; i++) {
-      if (hashes[i].isEmpty) continue;
-      resource.add({
-        'type': 'audio',
-        'page_id': 1,
-        'hash': hashes[i].toLowerCase(),
-        'album_id': i < albums.length ? albums[i] : '0',
-      });
-    }
+    final body = KgSharedParams.privilege(
+      client: kg,
+      hashes: hashes,
+      albumIds: albums,
+      qualities: KgSharedParams.parseQualities(q['qualities']),
+    );
     return kg.request('/v2/get_res_privilege/lite',
         method: 'POST',
         // 实测 media.store.kugou.com 为三标签域名，*.kugou.com 单层通配证书
@@ -605,21 +635,7 @@ class KgDirectApiClient extends KugouApiClient {
         // Hostname mismatch）→ 保持 gateway + x-router（实测 200 status=1，
         // 与 kapi 逐字段一致 0 差异）。
         headers: {'x-router': 'media.store.kugou.com', 'Content-Type': 'application/json'},
-        data: {
-          'appid': kg.lite ? KgConfig.liteAppid : KgConfig.appid,
-          'area_code': 1,
-          'behavior': 'play',
-          'clientver':
-              kg.lite ? KgConfig.liteClientver : KgConfig.clientver,
-          'need_hash_offset': 1,
-          'relate': 1,
-          'support_verify': 1,
-          'resource': resource,
-          'qualities': const [
-            '128', '320', 'flac', 'high',
-            'viper_atmos', 'viper_tape', 'viper_clear', 'super', 'multitrack',
-          ],
-        });
+        data: body);
   }
 
   // ---------------- 账号 / 登录 / 验证 ----------------

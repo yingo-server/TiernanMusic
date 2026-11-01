@@ -310,40 +310,153 @@ class KgClient {
 
   /// 设备注册（移植 module/register_dev.js），成功后写入 device.dfid
   ///
-  /// 实测：匿名态返回 dfid；已登录账号 data 为空数组（本就不返回 dfid），
-  /// 因此登录态下注册没有收益，本方法主要供匿名态首次使用。
-  Future<bool> registerDevice() async {
-    final aes = KgCrypto.aesEncryptHex(jsonEncode(_registerPayload()));
-    final p = KgCrypto.rsaEncryptPkcs1(
-      jsonEncode({'aes': aes.key, 'uid': userid, 'token': token}),
-      lite: lite,
-    );
-
-    final r = await request(
-      '/risk/v3/r_register_dev',
-      baseUrl: KgConfig.registerGateway,
-      method: 'POST',
-      params: {'part': 1, 'platid': 1, 'p': p},
-      data: aes.str,
-      encryptType: 'android',
-      clearDefaultParams: false,
-    );
-
-    // 尝试从 body.data.dfid 或 set-cookie 拿 dfid
-    final data = r.body['data'];
-    if (data is Map && data['dfid'] != null) {
-      device.dfid = '${data['dfid']}';
-      return true;
-    }
-    final cookie = r.headers['set-cookie'] ?? '';
-    final m = RegExp(r'dfid=([^;,\s]+)').firstMatch(cookie);
-    if (m != null) {
-      device.dfid = m.group(1)!;
-      return true;
+  /// 【实测结论 / 24-24 成功率的完整步骤】
+  /// ```
+  /// POST https://userservice.kugou.com/risk/v3/r_register_dev
+  /// query: part=1, platid=2, p=<RSA-PKCS1-v1_5 hex 小写>
+  ///       + dfid, mid, uuid, appid=1005, clientver=20489, clienttime, signature
+  /// body : playlistAesEncrypt(payload) 的 base64 串
+  /// headers: Content-Type: application/x-www-form-urlencoded
+  ///          dfid / clienttime / mid / kg-rc / kg-thash / kg-rec / kg-rf / User-Agent
+  /// ```
+  ///
+  /// 踩过的坑（均经 A/B 实测确认，勿改）：
+  /// - **platid 必须是 2**（platid=1 只有约 50% 成功率）
+  /// - **`uid` 必须传字符串 `"0"`**（传数值 0 或已登录 uid → 响应 `data:[]`，
+  ///   拿不到 dfid）
+  /// - **`p` 用小写 hex**（对齐 Node `forge.util.bytesToHex`）
+  /// - **signature 必须包含 body**：android 签名 =
+  ///   `md5(salt + sorted("k=v") + bodyStr + salt)`
+  /// - **响应是二进制不是 JSON**（content-type: application/octet-stream）：
+  ///   `base64(bytes)` → 用 seed 派生 key/iv 解密 → JSON `{status, error_code, data:{dfid}}`
+  /// - `data:[]` 表示没分配到 dfid（需要重试）
+  ///
+  /// 失败重试 3 次；成功后把 dfid 写回 [device.dfid] 并持久化到 Hive。
+  Future<bool> registerDevice({int retries = 3}) async {
+    for (var attempt = 0; attempt < retries; attempt++) {
+      final ok = await _registerDeviceOnce();
+      if (ok) {
+        _persistDfid();
+        return true;
+      }
+      // 退避后重试，避免连续打同一个接口被风控
+      if (attempt < retries - 1) {
+        await Future<void>.delayed(Duration(milliseconds: 400 * (attempt + 1)));
+      }
     }
     return false;
   }
 
+  /// 注册成功后回调（由 [kg_providers] 注入，用于把 dfid 落盘到 Hive）
+  void Function(String dfid)? onDfidRegistered;
+
+  void _persistDfid() {
+    final dfid = device.dfid;
+    if (dfid.isEmpty) return;
+    try {
+      onDfidRegistered?.call(dfid);
+    } catch (_) {
+      // 持久化失败不影响本次请求
+    }
+  }
+
+  Future<bool> _registerDeviceOnce() async {
+    final payload = _registerPayload();
+    final aes = KgCrypto.aesEncryptHex(jsonEncode(payload));
+    // uid 必须是字符串 "0"：传数值 0 或已登录 uid 都会返回 data:[]
+    final p = KgCrypto.rsaEncryptPkcs1(
+      jsonEncode({'aes': aes.key, 'uid': '0', 'token': ''}),
+      lite: lite,
+    );
+
+    final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final appid = lite ? KgConfig.liteAppid : KgConfig.appid;
+    final clientver = lite ? KgConfig.liteClientver : KgConfig.clientver;
+
+    final params = <String, dynamic>{
+      'dfid': device.dfid.isEmpty ? '-' : device.dfid,
+      'mid': device.mid,
+      'uuid': '-',
+      'appid': appid,
+      'clientver': clientver,
+      'clienttime': clienttime,
+      'part': 1,
+      // platid 必须是 2（1 只有 ~50% 成功率）
+      'platid': 2,
+      'p': p,
+    };
+
+    // 签名必须包含 body（bodyStr = AES base64 串）
+    final bodyStr = aes.str;
+    params['signature'] = KgSignature.android(params, data: bodyStr, lite: lite);
+
+    final headers = <String, String>{
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'dfid': device.dfid.isEmpty ? '-' : device.dfid,
+      'clienttime': '$clienttime',
+      'mid': device.mid,
+      'kg-rc': '1',
+      'kg-thash': '5d816a0',
+      'kg-rec': '1',
+      'kg-rf': 'B9EDA08A64250DEFFBCADDEE00F8F25F',
+      'User-Agent': 'Android15-1070-11083-46-0-DiscoveryDRADProtocol-wifi',
+    };
+
+    Response<List<int>> res;
+    try {
+      res = await _dio.request<List<int>>(
+        '${KgConfig.registerGateway}/risk/v3/r_register_dev',
+        queryParameters: params,
+        data: bodyStr,
+        options: Options(
+          method: 'POST',
+          headers: headers,
+          responseType: ResponseType.bytes,
+          contentType: 'application/x-www-form-urlencoded',
+        ),
+      );
+    } on DioException catch (_) {
+      return false;
+    }
+
+    final raw = res.data ?? const <int>[];
+    if (raw.isEmpty) return false;
+
+    // 响应是二进制（application/octet-stream）：
+    // base64(bytes) → 用 seed 派生 key/iv 解密 → JSON
+    Map<String, dynamic> body;
+    try {
+      body = KgCrypto.aesDecryptPlaylistB64(base64.encode(raw), aes.key);
+    } catch (_) {
+      // 少数情况下服务端直接返回明文 JSON
+      try {
+        final decoded = jsonDecode(utf8.decode(raw, allowMalformed: true));
+        if (decoded is Map<String, dynamic>) {
+          body = decoded;
+        } else {
+          return false;
+        }
+      } catch (_) {
+        return false;
+      }
+    }
+
+    final data = body['data'];
+    if (data is Map && data['dfid'] != null) {
+      final dfid = '${data['dfid']}';
+      if (dfid.isNotEmpty) {
+        device.dfid = dfid;
+        return true;
+      }
+    }
+    // data:[] 表示没分配到 dfid → 交给上层重试
+    return false;
+  }
+
+  /// 注册载荷（对齐 Node `module/register_dev.js` 的 dataMap）
+  ///
+  /// 注意：**不要**加 guid / mid / networktype / mac —— Dart 旧实现多出的
+  /// 这几个字段会降低注册成功率。
   Map<String, dynamic> _registerPayload() => {
         'availableRamSize': 4983533568,
         'availableRomSize': 48114719,

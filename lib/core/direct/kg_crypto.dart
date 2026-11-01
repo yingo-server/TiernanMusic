@@ -157,18 +157,28 @@ LgFVxtzIY41Pe7lPOgsfTCn5kZcvKhYKJesKnnJDNr5/abvTGf+rHG3YRwsCHcQ0
     return (modulus, exponent);
   }
 
-  /// RSA-PKCS1 加密，输出十六进制大写（对应 rsaEncrypt2）
-  static String rsaEncryptPkcs1(String data, {bool lite = false}) {
+  /// RSA-PKCS1 加密（对应 rsaEncrypt2）
+  ///
+  /// 十六进制大小写由 [uppercase] 控制，**默认小写**（对齐 Node 的
+  /// `forge.util.bytesToHex`，后者输出小写）。设备注册接口的 `p` 参数
+  /// 必须是小写 hex。
+  ///
+  /// 注意：登录用的 [rsaEncryptRawHex]（无 PKCS1 填充）是另一个函数，不要混用。
+  static String rsaEncryptPkcs1(
+    String data, {
+    bool lite = false,
+    bool uppercase = false,
+  }) {
     final (modulus, exponent) = _rsaPublicKey(lite);
     final publicKey = RSAPublicKey(modulus, exponent);
 
     final cipher = PKCS1Encoding(RSAEngine())
       ..init(true, PublicKeyParameter<RSAPublicKey>(publicKey));
     final encrypted = cipher.process(Uint8List.fromList(utf8.encode(data)));
-    return encrypted
+    final hex = encrypted
         .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join()
-        .toUpperCase();
+        .join();
+    return uppercase ? hex.toUpperCase() : hex;
   }
 
   /// 裸 RSA 加密（对应 Node 的 cryptoRSAEncrypt）。
@@ -302,6 +312,53 @@ LgFVxtzIY41Pe7lPOgsfTCn5kZcvKhYKJesKnnJDNr5/abvTGf+rHG3YRwsCHcQ0
     } catch (_) {
       return text;
     }
+  }
+
+  /// 播放列表 AES 解密（对应 Node 的 playlistAesDecrypt）。
+  ///
+  /// key = md5(seed).substring(0, 16) —— **16 个 ASCII 字符**（AES-128 的
+  /// 16 字节密钥），iv = md5(seed).substring(16, 32)（同样 16 个 ASCII 字符）。
+  /// 注意：这里的 key/iv 是**字符串直接当字节**用，不是 hex 解析，
+  /// 与 [aesEncryptCbcHex]（key 为 32 位 hex 字符串、AES-256）不同。
+  ///
+  /// [base64Str] 为 Base64 密文（Node 侧是 `Buffer.toString('base64')`），
+  /// 解密后按 UTF-8 解码并尝试解析为 JSON Map；解析失败则抛出。
+  static Map<String, dynamic> aesDecryptPlaylistB64(
+    String base64Str,
+    String seed,
+  ) {
+    final bytes = base64.decode(base64Str);
+    final text = _aesDecryptPlaylistBytes(bytes, seed);
+    final decoded = jsonDecode(text);
+    if (decoded is! Map<String, dynamic>) {
+      throw FormatException('播放列表 AES 解密结果不是 JSON 对象');
+    }
+    return decoded;
+  }
+
+  /// 与 [aesDecryptPlaylistB64] 相同，但直接吃**原始密文字节**。
+  ///
+  /// 设备注册接口的响应体是二进制（content-type: application/octet-stream），
+  /// Node 侧是 `body.toString('base64')` 后再解密 —— 等价于直接解密原始字节。
+  static String _aesDecryptPlaylistBytes(List<int> bytes, String seed) {
+    final md5Key = md5(seed);
+    final useKey = md5Key.substring(0, 16);
+    final useIv = md5Key.substring(16, 32);
+    final cipher = PaddedBlockCipherImpl(
+      PKCS7Padding(),
+      CBCBlockCipher(AESEngine()),
+    )..init(
+        false,
+        PaddedBlockCipherParameters<ParametersWithIV<KeyParameter>, Null>(
+          ParametersWithIV<KeyParameter>(
+            KeyParameter(Uint8List.fromList(utf8.encode(useKey))),
+            Uint8List.fromList(utf8.encode(useIv)),
+          ),
+          null,
+        ),
+      );
+    final out = cipher.process(Uint8List.fromList(bytes));
+    return utf8.decode(out, allowMalformed: true);
   }
 
   /// randomString：字符表 1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ

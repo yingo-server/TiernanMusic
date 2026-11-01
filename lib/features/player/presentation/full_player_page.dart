@@ -180,8 +180,8 @@ class FullPlayerPage extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // 状态切换用 IconButton.toggle（带 selected 语义 + 状态色）
-                  IconButton.toggle(
+                  // 状态切换用 IconButton 的 isSelected 语义（选中态用主题色）
+                  IconButton(
                     isSelected: shuffle,
                     icon: const Icon(Icons.shuffle),
                     selectedIcon: const Icon(Icons.shuffle),
@@ -215,7 +215,7 @@ class FullPlayerPage extends ConsumerWidget {
                     tooltip: context.l10n.next,
                     onPressed: controller.next,
                   ),
-                  IconButton.toggle(
+                  IconButton(
                     isSelected: loopMode != LoopMode.off,
                     icon: Icon(
                       switch (loopMode) {
