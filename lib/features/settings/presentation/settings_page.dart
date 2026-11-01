@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +19,8 @@ import '../../../core/utils/update_checker.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart' show SectionHeader;
 import '../../../l10n/l10n.dart';
+import '../../auth/data/account_manager.dart';
+import '../../auth/data/auth_providers.dart';
 import 'settings_providers.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -33,6 +34,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   String _cacheSize = '';
   String _version = '';
   Map<String, dynamic>? _account;
+
+  /// 音质档位名称（运行时从 l10n 取，随语言切换；替代原硬编码中文常量）
+  Map<String, String> _qualityNames(BuildContext c) => {
+        '128': c.l10n.quality128,
+        '320': c.l10n.quality320,
+        'flac': c.l10n.qualityFlac,
+        'hires': c.l10n.qualityHigh,
+      };
 
   /// 日志目录路径（**必须是 State 字段**）
   ///
@@ -75,8 +84,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<void> _loadCacheSize() async {
     try {
       var total = 0;
+      // 统计口径 = 可清理缓存：ApplicationSupport（Hive 缓存 box）+ Temporary。
+      // Documents 里是下载的音乐/MV 与错误日志，不能被「清除缓存」清理；
+      // 计入会导致「清了不变小」——统计口径须与清理口径一致（审查报告 F3）。
       final dirs = [
-        await getApplicationDocumentsDirectory(),
         await getApplicationSupportDirectory(),
         await getTemporaryDirectory(),
       ];
@@ -162,7 +173,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   _buildPlaybackSection(),
                   _buildDownloadSection(),
                   _buildCacheSection(),
-                  _buildApiSection(),
                   _buildDiagnosticsSection(),
                   _buildAboutSection(),
                 ],
@@ -193,9 +203,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   // ---------- 账号 ----------
   Widget _buildAccountSection() {
-    final avatar = _account?['avatar'] as String?;
-    final nickname = _account?['nickname'] as String?;
-    final loggedIn = nickname != null && nickname.isNotEmpty;
+    // 登录态单一事实源：watch authStateProvider，退出/切换后即时刷新（F5）
+    final user = ref.watch(authStateProvider).value;
+    final loggedIn = user != null && user.userid.isNotEmpty;
+    // 昵称/头像优先用 authState，缺失时回退 Hive settings 盒（本地缓存资料）
+    final avatar = (user?.avatar.isNotEmpty ?? false)
+        ? user!.avatar
+        : _account?['avatar'] as String?;
+    final nickname = (user?.nickname.isNotEmpty ?? false)
+        ? user!.nickname
+        : _account?['nickname'] as String?;
+    final userid = loggedIn ? user!.userid : '${_account?['userid'] ?? '-'}';
+    // 可切换的账号列表（排除当前账号）
+    final otherAccounts = loggedIn
+        ? AccountManager.instance.accounts
+            .where((a) => a.userid != user!.userid)
+            .toList()
+        : <AccountRecord>[];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -209,10 +233,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ? const Icon(Icons.person_outline)
                 : null,
           ),
-          title: Text(loggedIn ? nickname : context.l10n.notLoggedIn),
+          title: Text(loggedIn
+              ? ((nickname != null && nickname.isNotEmpty)
+                  ? nickname
+                  : user!.userid)
+              : context.l10n.notLoggedIn),
           subtitle: Text(
               loggedIn
-                  ? context.l10n.userIdLabel('${_account?['userid'] ?? '-'}')
+                  ? context.l10n.userIdLabel(userid)
                   : context.l10n.login),
           trailing: const Icon(Icons.chevron_right),
           onTap: () async {
@@ -229,8 +257,101 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             _loadAccount();
           },
         ),
+        // 切换账号：仅已登录且存在其他账号时显示（F3）
+        if (loggedIn && otherAccounts.isNotEmpty)
+          _navTile(
+            leading: Icons.swap_horiz_outlined,
+            title: context.l10n.switchAccount,
+            subtitle: null,
+            onTap: _showSwitchAccountDialog,
+          ),
+        // 退出登录：仅已登录时显示，红色 + 二次确认（F3）
+        if (loggedIn)
+          ListTile(
+            leading: Icon(Icons.logout,
+                color: Theme.of(context).colorScheme.error),
+            title: Text(context.l10n.logout,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.error)),
+            onTap: _logout,
+          ),
       ],
     );
+  }
+
+  /// 退出登录（二次确认）
+  Future<void> _logout() async {
+    final ok = await showDestructiveConfirm(
+      context,
+      title: context.l10n.logout,
+      message: context.l10n.logoutConfirm,
+      confirmLabel: context.l10n.logout,
+    );
+    if (!ok || !mounted) return;
+    try {
+      await ref.read(authStateProvider.notifier).logout();
+      if (mounted) Toast.show(context, context.l10n.logoutSuccess);
+    } catch (e) {
+      if (mounted) Toast.show(context, context.l10n.logoutFailed('$e'));
+    }
+  }
+
+  /// 多账号切换（底部弹层选择账号）
+  Future<void> _showSwitchAccountDialog() async {
+    final current = ref.read(authStateProvider).value;
+    final accounts = AccountManager.instance.accounts
+        .where((a) => a.userid != current?.userid)
+        .toList();
+    if (accounts.isEmpty) return;
+    final selected = await showModalBottomSheet<AccountRecord>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(context.l10n.switchAccount,
+                  style: Theme.of(ctx).textTheme.titleMedium),
+            ),
+            const Divider(height: 1),
+            for (final a in accounts)
+              ListTile(
+                leading: CircleAvatar(
+                  radius: 18,
+                  backgroundImage: a.avatar.isNotEmpty
+                      ? NetworkImage(a.avatar)
+                      : null,
+                  child: a.avatar.isEmpty
+                      ? const Icon(Icons.person_outline)
+                      : null,
+                ),
+                title: Text(a.nickname.isNotEmpty ? a.nickname : a.userid),
+                subtitle: Text(context.l10n.userIdLabel(a.userid)),
+                onTap: () => Navigator.pop(ctx, a),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    try {
+      await ref
+          .read(authStateProvider.notifier)
+          .switchAccount(selected.userid);
+      if (mounted) {
+        Toast.show(context, context.l10n.switchAccountSuccess);
+        _loadAccount();
+      }
+    } on StateError {
+      // 该账号 token 已失效/被清理，需要重新登录
+      if (mounted) Toast.show(context, context.l10n.accountNeedRelogin);
+    } catch (e) {
+      if (mounted) Toast.show(context, context.l10n.switchAccountFailed('$e'));
+    }
   }
 
   // ---------- 外观 ----------
@@ -406,7 +527,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         _navTile(
           leading: Icons.high_quality_outlined,
           title: context.l10n.defaultQuality,
-          subtitle: qualityNames[quality] ?? quality,
+          subtitle: _qualityNames(context)[quality] ?? quality,
           onTap: () => _showQualityDialog(quality),
         ),
         // 状态切换用 SwitchListTile（label 在左，switch 在右）
@@ -444,7 +565,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   style: Theme.of(ctx).textTheme.titleMedium),
             ),
             const Divider(height: 1),
-            for (final entry in qualityNames.entries)
+            for (final entry in _qualityNames(context).entries)
               RadioListTile<String>(
                 value: entry.key,
                 groupValue: current,
@@ -510,146 +631,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   // ---------- API ----------
-  Widget _buildApiSection() {
-    final kugouApi = ref.watch(kugouApiProvider);
-    final translateApi = ref.watch(translateApiProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(title: context.l10n.apiSection),
-        ListTile(
-          leading: const Icon(Icons.api_outlined),
-          title: Text(context.l10n.kugouApiUrl),
-          subtitle:
-              Text(kugouApi, maxLines: 1, overflow: TextOverflow.ellipsis),
-          trailing: IconButton(
-            icon: const Icon(Icons.restart_alt),
-            tooltip: context.l10n.resetToDefault,
-            onPressed: () async {
-              await ref.read(kugouApiProvider.notifier).reset();
-              if (mounted) {
-                Toast.show(context, context.l10n.resetToDefaultDone);
-              }
-            },
-          ),
-          onTap: () => _showApiEditDialog(
-            title: context.l10n.kugouApiUrl,
-            initial: kugouApi,
-            onSave: (v) => ref.read(kugouApiProvider.notifier).set(v),
-            onTest: _testConnectivity,
-          ),
-        ),
-        ListTile(
-          leading: const Icon(Icons.translate_outlined),
-          title: Text(context.l10n.translateApiUrl),
-          subtitle:
-              Text(translateApi, maxLines: 1, overflow: TextOverflow.ellipsis),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => _showApiEditDialog(
-            title: context.l10n.translateApiUrl,
-            initial: translateApi,
-            onSave: (v) => ref.read(translateApiProvider.notifier).set(v),
-            onTest: _testConnectivity,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<String> _testConnectivity(String url) async {
-    try {
-      var target = url.trim();
-      if (!target.startsWith('http')) target = 'https://$target';
-      final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 8)));
-      final resp = await dio.get<dynamic>(target);
-      return context.l10n.apiConnectionOk(resp.statusCode ?? 0);
-    } on DioException catch (e) {
-      final code = e.response?.statusCode;
-      if (code != null) return context.l10n.apiServerReachable(code);
-      return context.l10n.apiConnectionFailed(e.message ?? e.toString());
-    } catch (e) {
-      return context.l10n.apiConnectionFailed(e.toString());
-    }
-  }
-
-  void _showApiEditDialog({
-    required String title,
-    required String initial,
-    required Future<void> Function(String) onSave,
-    required Future<String> Function(String) onTest,
-  }) {
-    final controller = TextEditingController(text: initial);
-    String? testResult;
-    bool testing = false;
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(
-                  hintText: 'https://…',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.url,
-              ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  icon: testing
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.network_check, size: 18),
-                  label: Text(testing
-                      ? context.l10n.testing
-                      : context.l10n.testConnectivity),
-                  onPressed: testing
-                      ? null
-                      : () async {
-                          setDialogState(() {
-                            testing = true;
-                            testResult = null;
-                          });
-                          final r = await onTest(controller.text);
-                          setDialogState(() {
-                            testing = false;
-                            testResult = r;
-                          });
-                        },
-                ),
-              ),
-              if (testResult != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(testResult!,
-                      style: Theme.of(ctx).textTheme.bodySmall),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx), child: Text(context.l10n.cancel)),
-            FilledButton(
-              onPressed: () async {
-                final v = controller.text.trim();
-                if (v.isNotEmpty) await onSave(v);
-                if (ctx.mounted) Navigator.pop(ctx);
-              },
-              child: Text(context.l10n.save),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // 批3检3 F1/F2：删除「API 地址」设置。当前直连架构下 API 地址由
+  // AppConfig 常量决定，此设置项从未生效，删除以免误导用户。
 
   // ---------- 诊断 ----------
   Widget _buildDiagnosticsSection() {
@@ -840,8 +823,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               Text(context.l10n.versionLabel(info.latestVersion)),
               if (info.releaseNotes != null) ...[
                 const SizedBox(height: 12),
-                Text(info.releaseNotes!,
-                    style: Theme.of(ctx).textTheme.bodySmall),
+                Text(
+                  // E4：release notes 是 Markdown，去掉 **粗体**/标题#/列表- 符号，
+                  // 列表项统一为「· 」，不引入 markdown 依赖。
+                  info.releaseNotes!
+                      .replaceAll(RegExp(r'\*\*(.+?)\*\*'), r'$1')
+                      .replaceAll(RegExp(r'^#{1,6}\s*', multiLine: true), '')
+                      .replaceAll(RegExp(r'^[-*]\s?', multiLine: true), '· '),
+                  style: Theme.of(ctx).textTheme.bodySmall,
+                ),
               ],
             ],
           ),

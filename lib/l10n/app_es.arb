@@ -415,9 +415,9 @@
   "versionLabel": "Última versión: {version}",
   "downloadNow": "Descargar ahora",
   "later": "Más tarde",
-  "all": "全部",
-  "showPassword": "显示密码",
-  "hidePassword": "隐藏密码",
+  "all": "Todo",
+  "showPassword": "Mostrar contraseña",
+  "hidePassword": "Ocultar contraseña",
   "albumPageComingSoon": "La página del álbum está en desarrollo.",
   "@albumPageComingSoon": {
     "description": "Shown when tapping an album search result while the album page is not yet available"
@@ -476,5 +476,29 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "No se pudo abrir: no hay una app compatible",
-  "downloadFallbackHint": "Guardado en el directorio específico de la app (Android/data), invisible para algunos gestores de archivos"
+  "downloadFallbackHint": "Guardado en el directorio específico de la app (Android/data), invisible para algunos gestores de archivos",
+  "logoutConfirm": "¿Cerrar sesión de la cuenta actual?",
+  "@logoutConfirm": {
+    "type": "text",
+    "description": "退出登录确认弹窗文案"
+  },
+  "logoutSuccess": "Sesión cerrada",
+  "logoutFailed": "Error al cerrar sesión: {error}",
+  "@logoutFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "switchAccountSuccess": "Cuenta cambiada",
+  "switchAccountFailed": "Error al cambiar de cuenta: {error}",
+  "@switchAccountFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "accountNeedRelogin": "Esta cuenta debe iniciar sesión de nuevo"
 }

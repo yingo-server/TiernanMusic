@@ -1,5 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
 import '../../../core/utils/toast.dart';
@@ -231,7 +233,14 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
                               leading: CircleAvatar(
                                 radius: 16,
                                 backgroundImage: c.avatar.isNotEmpty
-                                    ? NetworkImage(c.avatar)
+                                    ? CachedNetworkImageProvider(
+                                        c.avatar,
+                                        // 头像显示尺寸约 32px × dpr
+                                        maxWidth: (32 *
+                                                MediaQuery.devicePixelRatioOf(
+                                                    context))
+                                            .round(),
+                                      )
                                     : null,
                                 child: c.avatar.isEmpty
                                     ? const Icon(Icons.person, size: 16)
@@ -243,8 +252,9 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
                               subtitle: Text(c.content),
                               trailing: (_isLoggedIn && c.isMine)
                                   ? IconButton(
-                                      icon: const Icon(Icons.delete_outline,
-                                          size: 20),
+                                      icon: Icon(Icons.delete_outline,
+                                          size: 20,
+                                          color: theme.colorScheme.error),
                                       tooltip: context.l10n.delete,
                                       onPressed: () => _deleteComment(c),
                                     )

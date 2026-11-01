@@ -40,7 +40,7 @@ def main():
         ph = list(template.get('@' + key, {}).get('placeholders', {}))
         if not ph:
             return f"_t('{key}')"
-        args = ', '.join(ph)
+        args = '{' + ', '.join(f"'{p}': {p}" for p in ph) + '}'
         return f"_t('{key}').r({args})"
 
     out = []
@@ -66,16 +66,12 @@ def main():
     out.append('class _Msg {')
     out.append('  _Msg(this.text);')
     out.append('  final String text;')
-    out.append('  String r(Object p0, [Object? p1, Object? p2, Object? p3]) {')
-    out.append('    var s = text;')
-    out.append('    final args = [p0, p1, p2, p3];')
-    out.append('    var i = 0;')
-    out.append(r"    s = s.replaceAllMapped(RegExp(r'\{(\w+)\}'), (m) {")
-    out.append('      final idx = i++;')
-    out.append('      return idx < args.length && args[idx] != null ? args[idx].toString() : m.group(0)!;')
-    out.append('    });')
-    out.append('    return s;')
-    out.append('  }')
+    out.append('  // 按占位符【名字】替换（与 flutter gen-l10n 语义一致，避免翻译调整')
+    out.append('  // 占位符顺序后参数错位）。')
+    out.append('  String r(Map<String, Object?> args) => text.replaceAllMapped(')
+    out.append(r"        RegExp(r'\{(\w+)\}'),")
+    out.append("        (m) => args[m.group(1)]?.toString() ?? m.group(0)!,")
+    out.append('      );')
     out.append('}')
     out.append('')
     out.append('class AppLocalizations {')
@@ -113,7 +109,7 @@ def main():
     for k in keys:
         ph = template.get('@' + k, {}).get('placeholders', {})
         if ph:
-            args = ', '.join(ph)
+            args = '{' + ', '.join(f"'{p}': {p}" for p in ph) + '}'
             items = list(ph.items())
             if len(items) == 1:
                 (p0, meta0), = items

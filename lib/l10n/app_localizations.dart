@@ -279,9 +279,9 @@ const _strings_de = <String, String>{
   'playNext': 'Nächstes abspielen',
   'addToQueue': 'Zur Wiedergabeliste hinzufügen',
   'songActions': 'Songaktionen',
-  'all': '全部',
-  'showPassword': '显示密码',
-  'hidePassword': '隐藏密码',
+  'all': 'Alle',
+  'showPassword': 'Passwort anzeigen',
+  'hidePassword': 'Passwort verbergen',
   'albumPageComingSoon': 'Die Albumseite ist in Entwicklung.',
   'hotSearchLoadFailed': 'Hot Searches konnten nicht geladen werden',
   'noMore': 'Keine weiteren',
@@ -295,6 +295,12 @@ const _strings_de = <String, String>{
   'qualitySwitchFailed': 'Qualitätswechsel fehlgeschlagen',
   'downloadOpenFileFailed': 'Öffnen fehlgeschlagen: keine passende App gefunden',
   'downloadFallbackHint': 'Im app-spezifischen Verzeichnis (Android/data) gespeichert, für einige Dateimanager unsichtbar',
+  'logoutConfirm': 'Aktuelles Konto abmelden?',
+  'logoutSuccess': 'Abgemeldet',
+  'logoutFailed': 'Abmeldung fehlgeschlagen: {error}',
+  'switchAccountSuccess': 'Konto gewechselt',
+  'switchAccountFailed': 'Kontowechsel fehlgeschlagen: {error}',
+  'accountNeedRelogin': 'Dieses Konto muss sich erneut anmelden',
 };
 
 const _strings_en = <String, String>{
@@ -572,9 +578,9 @@ const _strings_en = <String, String>{
   'playNext': 'Play next',
   'addToQueue': 'Add to playback queue',
   'songActions': 'Song Actions',
-  'all': '全部',
-  'showPassword': '显示密码',
-  'hidePassword': '隐藏密码',
+  'all': 'All',
+  'showPassword': 'Show password',
+  'hidePassword': 'Hide password',
   'albumPageComingSoon': 'Album page is under development. Stay tuned.',
   'hotSearchLoadFailed': 'Failed to load hot searches',
   'noMore': 'No more',
@@ -588,6 +594,12 @@ const _strings_en = <String, String>{
   'qualitySwitchFailed': 'Failed to switch quality',
   'downloadOpenFileFailed': 'Open failed: no app available for this file',
   'downloadFallbackHint': 'Saved to the app-specific directory (Android/data), invisible to some file managers',
+  'logoutConfirm': 'Log out of the current account?',
+  'logoutSuccess': 'Logged out',
+  'logoutFailed': 'Logout failed: {error}',
+  'switchAccountSuccess': 'Account switched',
+  'switchAccountFailed': 'Account switch failed: {error}',
+  'accountNeedRelogin': 'This account needs to sign in again',
 };
 
 const _strings_es = <String, String>{
@@ -865,9 +877,9 @@ const _strings_es = <String, String>{
   'playNext': 'Reproducir siguiente',
   'addToQueue': 'Añadir a la cola de reproducción',
   'songActions': 'Acciones de canción',
-  'all': '全部',
-  'showPassword': '显示密码',
-  'hidePassword': '隐藏密码',
+  'all': 'Todo',
+  'showPassword': 'Mostrar contraseña',
+  'hidePassword': 'Ocultar contraseña',
   'albumPageComingSoon': 'La página del álbum está en desarrollo.',
   'hotSearchLoadFailed': 'Error al cargar búsquedas populares',
   'noMore': 'No hay más',
@@ -881,6 +893,12 @@ const _strings_es = <String, String>{
   'qualitySwitchFailed': 'Error al cambiar la calidad',
   'downloadOpenFileFailed': 'No se pudo abrir: no hay una app compatible',
   'downloadFallbackHint': 'Guardado en el directorio específico de la app (Android/data), invisible para algunos gestores de archivos',
+  'logoutConfirm': '¿Cerrar sesión de la cuenta actual?',
+  'logoutSuccess': 'Sesión cerrada',
+  'logoutFailed': 'Error al cerrar sesión: {error}',
+  'switchAccountSuccess': 'Cuenta cambiada',
+  'switchAccountFailed': 'Error al cambiar de cuenta: {error}',
+  'accountNeedRelogin': 'Esta cuenta debe iniciar sesión de nuevo',
 };
 
 const _strings_fr = <String, String>{
@@ -1158,9 +1176,9 @@ const _strings_fr = <String, String>{
   'playNext': 'Lire la suivante',
   'addToQueue': 'Ajouter à la file d\'attente',
   'songActions': 'Actions sur la chanson',
-  'all': '全部',
-  'showPassword': '显示密码',
-  'hidePassword': '隐藏密码',
+  'all': 'Tout',
+  'showPassword': 'Afficher le mot de passe',
+  'hidePassword': 'Masquer le mot de passe',
   'albumPageComingSoon': 'La page d\'album est en cours de développement.',
   'hotSearchLoadFailed': 'Échec du chargement des recherches populaires',
   'noMore': 'Plus rien à charger',
@@ -1174,6 +1192,12 @@ const _strings_fr = <String, String>{
   'qualitySwitchFailed': 'Échec du changement de qualité',
   'downloadOpenFileFailed': 'Échec de l\'ouverture : aucune application compatible',
   'downloadFallbackHint': 'Enregistré dans le dossier spécifique à l\'application (Android/data), invisible pour certains gestionnaires de fichiers',
+  'logoutConfirm': 'Se déconnecter du compte actuel ?',
+  'logoutSuccess': 'Déconnecté',
+  'logoutFailed': 'Échec de la déconnexion : {error}',
+  'switchAccountSuccess': 'Compte changé',
+  'switchAccountFailed': 'Échec du changement de compte : {error}',
+  'accountNeedRelogin': 'Ce compte doit se reconnecter',
 };
 
 const _strings_ja = <String, String>{
@@ -1451,9 +1475,9 @@ const _strings_ja = <String, String>{
   'playNext': '次に再生',
   'addToQueue': '再生キューに追加',
   'songActions': '曲の操作',
-  'all': '全部',
-  'showPassword': '显示密码',
-  'hidePassword': '隐藏密码',
+  'all': 'すべて',
+  'showPassword': 'パスワードを表示',
+  'hidePassword': 'パスワードを非表示',
   'albumPageComingSoon': 'アルバムページは開発中です。お楽しみに',
   'hotSearchLoadFailed': 'ホット検索の読み込みに失敗しました',
   'noMore': 'これ以上ありません',
@@ -1467,6 +1491,12 @@ const _strings_ja = <String, String>{
   'qualitySwitchFailed': '画質の切り替えに失敗しました',
   'downloadOpenFileFailed': '開けません：このファイルを扱えるアプリがありません',
   'downloadFallbackHint': 'アプリ専用ディレクトリ（Android/data）に保存されました。一部のファイルマネージャーでは表示されません',
+  'logoutConfirm': '現在のアカウントからログアウトしますか？',
+  'logoutSuccess': 'ログアウトしました',
+  'logoutFailed': 'ログアウトに失敗しました：{error}',
+  'switchAccountSuccess': 'アカウントを切り替えました',
+  'switchAccountFailed': 'アカウントの切り替えに失敗しました：{error}',
+  'accountNeedRelogin': 'このアカウントは再ログインが必要です',
 };
 
 const _strings_ko = <String, String>{
@@ -1744,9 +1774,9 @@ const _strings_ko = <String, String>{
   'playNext': '다음 곡 재생',
   'addToQueue': '재생 목록에 추가',
   'songActions': '곡 조작',
-  'all': '全部',
-  'showPassword': '显示密码',
-  'hidePassword': '隐藏密码',
+  'all': '전체',
+  'showPassword': '비밀번호 표시',
+  'hidePassword': '비밀번호 숨기기',
   'albumPageComingSoon': '앨범 페이지 준비 중입니다.',
   'hotSearchLoadFailed': '인기 검색 로드 실패',
   'noMore': '더 이상 없습니다',
@@ -1760,6 +1790,12 @@ const _strings_ko = <String, String>{
   'qualitySwitchFailed': '화질 전환 실패',
   'downloadOpenFileFailed': '열기 실패: 이 파일을 처리할 앱이 없습니다',
   'downloadFallbackHint': '앱 전용 디렉터리(Android/data)에 저장되었습니다. 일부 파일 관리자에서는 보이지 않습니다',
+  'logoutConfirm': '현재 계정에서 로그아웃하시겠습니까?',
+  'logoutSuccess': '로그아웃되었습니다',
+  'logoutFailed': '로그아웃 실패: {error}',
+  'switchAccountSuccess': '계정이 전환되었습니다',
+  'switchAccountFailed': '계정 전환 실패: {error}',
+  'accountNeedRelogin': '이 계정은 다시 로그인해야 합니다',
 };
 
 const _strings_pt = <String, String>{
@@ -2037,9 +2073,9 @@ const _strings_pt = <String, String>{
   'playNext': 'Próxima música',
   'addToQueue': 'Adicionar à fila de reprodução',
   'songActions': 'Ações da música',
-  'all': '全部',
-  'showPassword': '显示密码',
-  'hidePassword': '隐藏密码',
+  'all': 'Tudo',
+  'showPassword': 'Mostrar senha',
+  'hidePassword': 'Ocultar senha',
   'albumPageComingSoon': 'A página do álbum está em desenvolvimento.',
   'hotSearchLoadFailed': 'Falha ao carregar buscas populares',
   'noMore': 'Não há mais',
@@ -2053,6 +2089,12 @@ const _strings_pt = <String, String>{
   'qualitySwitchFailed': 'Falha ao mudar a qualidade',
   'downloadOpenFileFailed': 'Falha ao abrir: nenhum app compatível',
   'downloadFallbackHint': 'Salvo no diretório específico do app (Android/data), invisível para alguns gerenciadores de arquivos',
+  'logoutConfirm': 'Sair da conta atual?',
+  'logoutSuccess': 'Sessão encerrada',
+  'logoutFailed': 'Falha ao sair: {error}',
+  'switchAccountSuccess': 'Conta alterada',
+  'switchAccountFailed': 'Falha ao alternar conta: {error}',
+  'accountNeedRelogin': 'Esta conta precisa entrar novamente',
 };
 
 const _strings_ru = <String, String>{
@@ -2330,9 +2372,9 @@ const _strings_ru = <String, String>{
   'playNext': 'Следующая песня',
   'addToQueue': 'Добавить в очередь воспроизведения',
   'songActions': 'Действия с песней',
-  'all': '全部',
-  'showPassword': '显示密码',
-  'hidePassword': '隐藏密码',
+  'all': 'Все',
+  'showPassword': 'Показать пароль',
+  'hidePassword': 'Скрыть пароль',
   'albumPageComingSoon': 'Страница альбома в разработке.',
   'hotSearchLoadFailed': 'Не удалось загрузить популярные запросы',
   'noMore': 'Больше нет',
@@ -2346,6 +2388,12 @@ const _strings_ru = <String, String>{
   'qualitySwitchFailed': 'Не удалось изменить качество',
   'downloadOpenFileFailed': 'Не удалось открыть: нет подходящего приложения',
   'downloadFallbackHint': 'Сохранено в каталог приложения (Android/data), невидим для некоторых файловых менеджеров',
+  'logoutConfirm': 'Выйти из текущего аккаунта?',
+  'logoutSuccess': 'Вы вышли из аккаунта',
+  'logoutFailed': 'Не удалось выйти: {error}',
+  'switchAccountSuccess': 'Аккаунт переключён',
+  'switchAccountFailed': 'Не удалось переключить аккаунт: {error}',
+  'accountNeedRelogin': 'Этот аккаунт требует повторного входа',
 };
 
 const _strings_zh = <String, String>{
@@ -2637,6 +2685,12 @@ const _strings_zh = <String, String>{
   'operateFailed': '操作失败：{error}',
   'commentVerifiedRetryHint': '验证已通过，请重新点击发送',
   'qualitySwitchFailed': '切换清晰度失败',
+  'logoutConfirm': '确定要退出当前账号吗？',
+  'logoutSuccess': '已退出登录',
+  'logoutFailed': '退出登录失败：{error}',
+  'switchAccountSuccess': '已切换账号',
+  'switchAccountFailed': '切换账号失败：{error}',
+  'accountNeedRelogin': '该账号需要重新登录',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -2930,6 +2984,12 @@ const _strings_zh_CN = <String, String>{
   'qualitySwitchFailed': '切换清晰度失败',
   'downloadOpenFileFailed': '打开失败，未找到可用的应用',
   'downloadFallbackHint': '已保存到应用专属目录（Android/data），部分文件管理器不可见',
+  'logoutConfirm': '确定要退出当前账号吗？',
+  'logoutSuccess': '已退出登录',
+  'logoutFailed': '退出登录失败：{error}',
+  'switchAccountSuccess': '已切换账号',
+  'switchAccountFailed': '切换账号失败：{error}',
+  'accountNeedRelogin': '该账号需要重新登录',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3208,8 +3268,8 @@ const _strings_zh_TW = <String, String>{
   'addToQueue': '加入播放隊列',
   'songActions': '歌曲操作',
   'all': '全部',
-  'showPassword': '显示密码',
-  'hidePassword': '隐藏密码',
+  'showPassword': '顯示密碼',
+  'hidePassword': '隱藏密碼',
   'albumPageComingSoon': '專輯詳情頁開發中，敬請期待',
   'hotSearchLoadFailed': '熱搜載入失敗',
   'noMore': '沒有更多了',
@@ -3223,6 +3283,12 @@ const _strings_zh_TW = <String, String>{
   'qualitySwitchFailed': '切換清晰度失敗',
   'downloadOpenFileFailed': '開啟失敗，未找到可用的應用',
   'downloadFallbackHint': '已儲存到應用專屬目錄（Android/data），部分檔案管理器不可見',
+  'logoutConfirm': '確定要登出目前帳號嗎？',
+  'logoutSuccess': '已登出',
+  'logoutFailed': '登出失敗：{error}',
+  'switchAccountSuccess': '已切換帳號',
+  'switchAccountFailed': '切換帳號失敗：{error}',
+  'accountNeedRelogin': '該帳號需要重新登入',
 };
 
 const _template = _strings_zh_CN;
@@ -3230,16 +3296,12 @@ const _template = _strings_zh_CN;
 class _Msg {
   _Msg(this.text);
   final String text;
-  String r(Object p0, [Object? p1, Object? p2, Object? p3]) {
-    var s = text;
-    final args = [p0, p1, p2, p3];
-    var i = 0;
-    s = s.replaceAllMapped(RegExp(r'\{(\w+)\}'), (m) {
-      final idx = i++;
-      return idx < args.length && args[idx] != null ? args[idx].toString() : m.group(0)!;
-    });
-    return s;
-  }
+  // 按占位符【名字】替换（与 flutter gen-l10n 语义一致，避免翻译调整
+  // 占位符顺序后参数错位）。
+  String r(Map<String, Object?> args) => text.replaceAllMapped(
+        RegExp(r'\{(\w+)\}'),
+        (m) => args[m.group(1)]?.toString() ?? m.group(0)!,
+      );
 }
 
 class AppLocalizations {
@@ -3456,18 +3518,18 @@ class AppLocalizations {
   String get playFailed => _t('playFailed');
   String get back => _t('back');
   String get loadFailed => _t('loadFailed');
-  String playCountSuffix(int count) => _t('playCountSuffix').r(count);
-  String trackCountSuffix(int count) => _t('trackCountSuffix').r(count);
-  String songCountSuffix(int count) => _t('songCountSuffix').r(count);
-  String totalSongs(int count) => _t('totalSongs').r(count);
-  String repliesCount(int count) => _t('repliesCount').r(count);
-  String resendIn(int seconds) => _t('resendIn').r(seconds);
-  String userIdLabel(String id) => _t('userIdLabel').r(id);
+  String playCountSuffix(int count) => _t('playCountSuffix').r({'count': count});
+  String trackCountSuffix(int count) => _t('trackCountSuffix').r({'count': count});
+  String songCountSuffix(int count) => _t('songCountSuffix').r({'count': count});
+  String totalSongs(int count) => _t('totalSongs').r({'count': count});
+  String repliesCount(int count) => _t('repliesCount').r({'count': count});
+  String resendIn(int seconds) => _t('resendIn').r({'seconds': seconds});
+  String userIdLabel(String id) => _t('userIdLabel').r({'id': id});
   String get noRecentlyPlayed => _t('noRecentlyPlayed');
   String get loginToViewPlaylists => _t('loginToViewPlaylists');
   String get queueEmpty => _t('queueEmpty');
   String get cache => _t('cache');
-  String replyPrefix(String name, String content) => _t('replyPrefix').r(name, content);
+  String replyPrefix(String name, String content) => _t('replyPrefix').r({'name': name, 'content': content});
   String get downloadManagement => _t('downloadManagement');
   String get downloads => _t('downloads');
   String get download => _t('download');
@@ -3515,7 +3577,7 @@ class AppLocalizations {
   String get permissionDenied => _t('permissionDenied');
   String get requestPermission => _t('requestPermission');
   String get recentErrors => _t('recentErrors');
-  String recentErrorsCount(String count) => _t('recentErrorsCount').r(count);
+  String recentErrorsCount(String count) => _t('recentErrorsCount').r({'count': count});
   String get noRecentErrors => _t('noRecentErrors');
   String get unknown => _t('unknown');
   String get close => _t('close');
@@ -3525,17 +3587,17 @@ class AppLocalizations {
   String get updateCheckFailed => _t('updateCheckFailed');
   String get alreadyLatestVersion => _t('alreadyLatestVersion');
   String get newVersionAvailable => _t('newVersionAvailable');
-  String versionLabel(String version) => _t('versionLabel').r(version);
+  String versionLabel(String version) => _t('versionLabel').r({'version': version});
   String get downloadNow => _t('downloadNow');
   String get later => _t('later');
   String get moreActions => _t('moreActions');
   String get clearHistoryConfirm => _t('clearHistoryConfirm');
-  String commentFailed(String error) => _t('commentFailed').r(error);
-  String deleteFailed(String error) => _t('deleteFailed').r(error);
-  String clearCacheFailed(String error) => _t('clearCacheFailed').r(error);
-  String apiConnectionOk(int code) => _t('apiConnectionOk').r(code);
-  String apiServerReachable(int code) => _t('apiServerReachable').r(code);
-  String apiConnectionFailed(String error) => _t('apiConnectionFailed').r(error);
+  String commentFailed(String error) => _t('commentFailed').r({'error': error});
+  String deleteFailed(String error) => _t('deleteFailed').r({'error': error});
+  String clearCacheFailed(String error) => _t('clearCacheFailed').r({'error': error});
+  String apiConnectionOk(int code) => _t('apiConnectionOk').r({'code': code});
+  String apiServerReachable(int code) => _t('apiServerReachable').r({'code': code});
+  String apiConnectionFailed(String error) => _t('apiConnectionFailed').r({'error': error});
   String get apiSection => _t('apiSection');
   String get licenseBody => _t('licenseBody');
   String get mvQualitySd => _t('mvQualitySd');
@@ -3544,7 +3606,7 @@ class AppLocalizations {
   String get mvQualitySq => _t('mvQualitySq');
   String get mvQualityFhd => _t('mvQualityFhd');
   String get mvQualitySelect => _t('mvQualitySelect');
-  String qrLoadFailed(String error) => _t('qrLoadFailed').r(error);
+  String qrLoadFailed(String error) => _t('qrLoadFailed').r({'error': error});
   String get shuffle => _t('shuffle');
   String get repeat => _t('repeat');
   String get repeatOne => _t('repeatOne');
@@ -3552,7 +3614,7 @@ class AppLocalizations {
   String get expandPlayer => _t('expandPlayer');
   String get showLyrics => _t('showLyrics');
   String get showCover => _t('showCover');
-  String commentsCount(int count) => _t('commentsCount').r(count);
+  String commentsCount(int count) => _t('commentsCount').r({'count': count});
   String get playlistIntro => _t('playlistIntro');
   String get expand => _t('expand');
   String get collapse => _t('collapse');
@@ -3567,15 +3629,21 @@ class AppLocalizations {
   String get hotSearchLoadFailed => _t('hotSearchLoadFailed');
   String get noMore => _t('noMore');
   String get loadMore => _t('loadMore');
-  String onlyShowsFirstN(int loaded, int total) => _t('onlyShowsFirstN').r(loaded, total);
+  String onlyShowsFirstN(int loaded, int total) => _t('onlyShowsFirstN').r({'loaded': loaded, 'total': total});
   String get collectSuccess => _t('collectSuccess');
   String get collectPlaylistConfirm => _t('collectPlaylistConfirm');
   String get uncollectPlaylistConfirm => _t('uncollectPlaylistConfirm');
-  String operateFailed(String error) => _t('operateFailed').r(error);
+  String operateFailed(String error) => _t('operateFailed').r({'error': error});
   String get commentVerifiedRetryHint => _t('commentVerifiedRetryHint');
   String get qualitySwitchFailed => _t('qualitySwitchFailed');
   String get downloadOpenFileFailed => _t('downloadOpenFileFailed');
   String get downloadFallbackHint => _t('downloadFallbackHint');
+  String get logoutConfirm => _t('logoutConfirm');
+  String get logoutSuccess => _t('logoutSuccess');
+  String logoutFailed(String error) => _t('logoutFailed').r({'error': error});
+  String get switchAccountSuccess => _t('switchAccountSuccess');
+  String switchAccountFailed(String error) => _t('switchAccountFailed').r({'error': error});
+  String get accountNeedRelogin => _t('accountNeedRelogin');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

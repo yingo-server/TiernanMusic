@@ -8,6 +8,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'core/cache/cache_manager.dart';
 import 'core/api/kugou_api_client.dart';
 import 'core/direct/kg_client.dart';
 import 'core/direct/kg_providers.dart';
@@ -16,6 +17,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/settings_provider.dart';
 import 'core/utils/error_logger.dart';
 import 'features/auth/data/auth_providers.dart';
+import 'features/download/download_provider.dart';
 import 'l10n/l10n.dart';
 
 /// 启动阶段致命错误（用于在 UI 上直接展示，而不是白屏卡死）
@@ -23,6 +25,9 @@ Object? _startupError;
 
 /// 首帧是否已渲染（用于启动看门狗）
 bool _firstFrameRendered = false;
+
+/// 启动看门狗 Timer（首帧渲染后取消，避免无谓持有）
+Timer? _watchdog;
 
 Future<void> main() async {
   // 任何未捕获异常都记录下来，保证仍能 runApp 显示错误页
@@ -146,8 +151,11 @@ Future<void> main() async {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _firstFrameRendered = true;
       debugPrint('[startup] first frame rendered');
+      // 首帧已渲染，看门狗使命完成：取消以免无谓持有（W4）
+      _watchdog?.cancel();
+      _watchdog = null;
     });
-    Timer(const Duration(seconds: 15), () {
+    _watchdog = Timer(const Duration(seconds: 15), () {
       if (!_firstFrameRendered) {
         debugPrint(
           '[startup][watchdog] 15 秒内未渲染首帧，疑似卡在启动屏。'
@@ -161,11 +169,41 @@ Future<void> main() async {
   });
 }
 
-class TiernanMusicApp extends ConsumerWidget {
+class TiernanMusicApp extends ConsumerStatefulWidget {
   const TiernanMusicApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TiernanMusicApp> createState() => _TiernanMusicAppState();
+}
+
+class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 转发给下载管理器（resume 时重置写入策略缓存，见 W1/批2 下载页逻辑）
+    ref.read(downloadManagerProvider.notifier).onAppLifecycle(state);
+  }
+
+  @override
+  void didHaveMemoryPressure() {
+    // 系统内存告警：清空进程内内存缓存
+    MemoryCache.instance.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // 登录态变化时同步到直连客户端（仅在有值时创建 client，避免启动期强依赖）
     ref.listen(authStateProvider, (_, next) {
       // loading 期间不做任何事（避免把已登录态误清空）
@@ -196,7 +234,9 @@ class TiernanMusicApp extends ConsumerWidget {
     }
 
     return MaterialApp.router(
-      title: '汀澜音乐',
+      // E5：用 onGenerateTitle 拿到 localization context，任务栏标题随语言切换；
+      // StartupErrorPage 早退分支没有 delegates，保留硬编码。
+      onGenerateTitle: (ctx) => ctx.l10n.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

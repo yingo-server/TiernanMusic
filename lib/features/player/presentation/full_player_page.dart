@@ -421,6 +421,10 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
                 ? CachedNetworkImage(
                     imageUrl: song.cover,
                     fit: BoxFit.cover,
+                    // 封面约屏宽（减去边距）× dpr，限制解码分辨率
+                    memCacheWidth: (MediaQuery.sizeOf(context).width *
+                            MediaQuery.devicePixelRatioOf(context))
+                        .round(),
                     errorWidget: (_, __, ___) => const _CoverPlaceholder(),
                   )
                 : const _CoverPlaceholder(),
@@ -495,8 +499,10 @@ class _CoverPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: const Center(
-          child: Icon(Icons.music_note_rounded, size: 96, color: Colors.grey)),
+      child: Center(
+          child: Icon(Icons.music_note_rounded,
+              size: 96,
+              color: Theme.of(context).colorScheme.onSurfaceVariant)),
     );
   }
 }

@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-import '../../../core/config/app_config.dart';
-
 /// 安全获取 settings box：未打开时返回 null，绝不抛异常（否则会拖垮首帧/设置页 build）。
 Box<dynamic>? _box() {
   try {
@@ -27,13 +25,8 @@ final defaultQualityProvider =
     StateNotifierProvider<DefaultQualityNotifier, String>(
         (ref) => DefaultQualityNotifier());
 
-/// 音质档位名称
-const Map<String, String> qualityNames = {
-  '128': '标准音质 128K',
-  '320': '高品质 320K',
-  'flac': '无损音质 FLAC',
-  'hires': 'Hi-Res 高解析',
-};
+/// 音质档位名称：运行时从 l10n 取（不得硬编码中文），
+/// 见 settings_page.dart 的 `_qualityNames(BuildContext)`。
 
 /// WIFI 下自动使用最高音质（预留策略开关）
 class WifiQualityNotifier extends StateNotifier<bool> {
@@ -67,39 +60,4 @@ final cellularQualityProvider =
     StateNotifierProvider<CellularQualityNotifier, bool>(
         (ref) => CellularQualityNotifier());
 
-/// 酷狗 API 地址
-class KugouApiNotifier extends StateNotifier<String> {
-  KugouApiNotifier()
-      : super((_box()?.get('kugouApiBase',
-                    defaultValue: AppConfig.kugouApiBase) as String?) ??
-            AppConfig.kugouApiBase);
 
-  Future<void> set(String url) async {
-    state = url;
-    await _box()?.put('kugouApiBase', url);
-  }
-
-  Future<void> reset() => set(AppConfig.kugouApiBase);
-}
-
-final kugouApiProvider = StateNotifierProvider<KugouApiNotifier, String>(
-    (ref) => KugouApiNotifier());
-
-/// 翻译 API 地址
-class TranslateApiNotifier extends StateNotifier<String> {
-  TranslateApiNotifier()
-      : super((_box()?.get('translateApiBase',
-                    defaultValue: AppConfig.translateApiBase) as String?) ??
-            AppConfig.translateApiBase);
-
-  Future<void> set(String url) async {
-    state = url;
-    await _box()?.put('translateApiBase', url);
-  }
-
-  Future<void> reset() => set(AppConfig.translateApiBase);
-}
-
-final translateApiProvider =
-    StateNotifierProvider<TranslateApiNotifier, String>(
-        (ref) => TranslateApiNotifier());

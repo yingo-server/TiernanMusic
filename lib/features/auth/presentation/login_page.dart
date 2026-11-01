@@ -140,7 +140,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 children: [
                   _SmsLoginTab(onSuccess: _onLoginSuccess),
                   _PasswordLoginTab(onSuccess: _onLoginSuccess),
-                  _QrLoginTab(onSuccess: _onLoginSuccess),
+                  _QrLoginTab(
+                    onSuccess: _onLoginSuccess,
+                    active: _mode == _LoginMode.qr,
+                  ),
                 ],
               ),
             ),

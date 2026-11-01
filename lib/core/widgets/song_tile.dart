@@ -104,7 +104,7 @@ class SongTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
       trailing: trailing ?? _buildTrailing(context, theme),
@@ -118,7 +118,7 @@ class SongTile extends StatelessWidget {
         ? Text(
             _fmt(duration!),
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           )
         : null;
@@ -191,7 +191,7 @@ class SongTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(Icons.music_note,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+            color: theme.colorScheme.onSurfaceVariant),
       );
 
   String _fmt(int sec) =>
@@ -268,7 +268,7 @@ class GradientChip extends StatelessWidget {
   final VoidCallback? onTap;
 
   static HSLColor _hue(int i) =>
-      HSLColor.fromAHSL(1, (i * 47.0) % 360, 0.65, 0.5);
+      HSLColor.fromAHSL(1, (i * 47.0) % 360, 0.65, 0.42);
 
   @override
   Widget build(BuildContext context) {
@@ -367,13 +367,13 @@ class EmptyState extends StatelessWidget {
             children: [
               Icon(icon,
                   size: 56,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.35)),
+                  color: theme.colorScheme.onSurfaceVariant),
               const SizedBox(height: 16),
               Text(
                 message,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
               if (actionLabel != null && onAction != null) ...[
@@ -448,7 +448,7 @@ class ErrorRetry extends StatelessWidget {
             _CopyableText(
               text: c.hint,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 24),
@@ -501,13 +501,13 @@ class _TechDetailState extends State<_TechDetail> {
                       ? Icons.expand_less_rounded
                       : Icons.expand_more_rounded,
                   size: 18,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   context.l10n.techDetail,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -528,7 +528,7 @@ class _TechDetailState extends State<_TechDetail> {
               widget.raw,
               style: theme.textTheme.bodySmall?.copyWith(
                 fontFamily: 'monospace',
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),

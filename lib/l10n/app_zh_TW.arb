@@ -416,8 +416,8 @@
   "downloadNow": "立即下載",
   "later": "稍後",
   "all": "全部",
-  "showPassword": "显示密码",
-  "hidePassword": "隐藏密码",
+  "showPassword": "顯示密碼",
+  "hidePassword": "隱藏密碼",
   "albumPageComingSoon": "專輯詳情頁開發中，敬請期待",
   "@albumPageComingSoon": {
     "description": "Shown when tapping an album search result while the album page is not yet available"
@@ -476,5 +476,29 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "開啟失敗，未找到可用的應用",
-  "downloadFallbackHint": "已儲存到應用專屬目錄（Android/data），部分檔案管理器不可見"
+  "downloadFallbackHint": "已儲存到應用專屬目錄（Android/data），部分檔案管理器不可見",
+  "logoutConfirm": "確定要登出目前帳號嗎？",
+  "@logoutConfirm": {
+    "type": "text",
+    "description": "退出登录确认弹窗文案"
+  },
+  "logoutSuccess": "已登出",
+  "logoutFailed": "登出失敗：{error}",
+  "@logoutFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "switchAccountSuccess": "已切換帳號",
+  "switchAccountFailed": "切換帳號失敗：{error}",
+  "@switchAccountFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "accountNeedRelogin": "該帳號需要重新登入"
 }

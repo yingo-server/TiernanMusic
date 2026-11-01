@@ -482,5 +482,29 @@
   "qualitySwitchFailed": "切换清晰度失败",
   "@qualitySwitchFailed": {
     "description": "Toast when MV quality switch fails"
-  }
+  },
+  "logoutConfirm": "确定要退出当前账号吗？",
+  "@logoutConfirm": {
+    "type": "text",
+    "description": "退出登录确认弹窗文案"
+  },
+  "logoutSuccess": "已退出登录",
+  "logoutFailed": "退出登录失败：{error}",
+  "@logoutFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "switchAccountSuccess": "已切换账号",
+  "switchAccountFailed": "切换账号失败：{error}",
+  "@switchAccountFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "accountNeedRelogin": "该账号需要重新登录"
 }

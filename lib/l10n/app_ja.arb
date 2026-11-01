@@ -415,9 +415,9 @@
   "errorLogLocation": "エラーログの場所",
   "copyPath": "パスをコピー",
   "storagePermissions": "ストレージ権限",
-  "all": "全部",
-  "showPassword": "显示密码",
-  "hidePassword": "隐藏密码",
+  "all": "すべて",
+  "showPassword": "パスワードを表示",
+  "hidePassword": "パスワードを非表示",
   "albumPageComingSoon": "アルバムページは開発中です。お楽しみに",
   "@albumPageComingSoon": {
     "description": "Shown when tapping an album search result while the album page is not yet available"
@@ -476,5 +476,29 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "開けません：このファイルを扱えるアプリがありません",
-  "downloadFallbackHint": "アプリ専用ディレクトリ（Android/data）に保存されました。一部のファイルマネージャーでは表示されません"
+  "downloadFallbackHint": "アプリ専用ディレクトリ（Android/data）に保存されました。一部のファイルマネージャーでは表示されません",
+  "logoutConfirm": "現在のアカウントからログアウトしますか？",
+  "@logoutConfirm": {
+    "type": "text",
+    "description": "退出登录确认弹窗文案"
+  },
+  "logoutSuccess": "ログアウトしました",
+  "logoutFailed": "ログアウトに失敗しました：{error}",
+  "@logoutFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "switchAccountSuccess": "アカウントを切り替えました",
+  "switchAccountFailed": "アカウントの切り替えに失敗しました：{error}",
+  "@switchAccountFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "accountNeedRelogin": "このアカウントは再ログインが必要です"
 }

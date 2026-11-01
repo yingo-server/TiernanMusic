@@ -415,9 +415,9 @@
   "recentErrorsCount": "Insgesamt {count} Einträge, zum Anzeigen klicken",
   "noRecentErrors": "Derzeit keine Fehlerprotokolle",
   "unknown": "Unbekannt",
-  "all": "全部",
-  "showPassword": "显示密码",
-  "hidePassword": "隐藏密码",
+  "all": "Alle",
+  "showPassword": "Passwort anzeigen",
+  "hidePassword": "Passwort verbergen",
   "albumPageComingSoon": "Die Albumseite ist in Entwicklung.",
   "@albumPageComingSoon": {
     "description": "Shown when tapping an album search result while the album page is not yet available"
@@ -476,5 +476,29 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "Öffnen fehlgeschlagen: keine passende App gefunden",
-  "downloadFallbackHint": "Im app-spezifischen Verzeichnis (Android/data) gespeichert, für einige Dateimanager unsichtbar"
+  "downloadFallbackHint": "Im app-spezifischen Verzeichnis (Android/data) gespeichert, für einige Dateimanager unsichtbar",
+  "logoutConfirm": "Aktuelles Konto abmelden?",
+  "@logoutConfirm": {
+    "type": "text",
+    "description": "退出登录确认弹窗文案"
+  },
+  "logoutSuccess": "Abgemeldet",
+  "logoutFailed": "Abmeldung fehlgeschlagen: {error}",
+  "@logoutFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "switchAccountSuccess": "Konto gewechselt",
+  "switchAccountFailed": "Kontowechsel fehlgeschlagen: {error}",
+  "@switchAccountFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "accountNeedRelogin": "Dieses Konto muss sich erneut anmelden"
 }

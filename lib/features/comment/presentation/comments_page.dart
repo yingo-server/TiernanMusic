@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -456,7 +457,11 @@ class _CommentTile extends StatelessWidget {
       leading: CircleAvatar(
         radius: 20,
         backgroundImage: comment.avatar.isNotEmpty
-            ? NetworkImage(comment.avatar)
+            ? CachedNetworkImageProvider(
+                comment.avatar,
+                // 头像显示尺寸约 40px × dpr，限制解码尺寸
+                maxWidth: (40 * MediaQuery.devicePixelRatioOf(context)).round(),
+              )
             : null,
         child: comment.avatar.isEmpty
             ? const Icon(Icons.person, size: 20)

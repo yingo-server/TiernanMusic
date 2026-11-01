@@ -106,6 +106,10 @@ class PlaylistDetailPage extends ConsumerWidget {
                       CachedNetworkImage(
                         imageUrl: detail.cover,
                         fit: BoxFit.cover,
+                        // 头图按屏宽 × dpr 限制解码分辨率
+                        memCacheWidth: (MediaQuery.sizeOf(context).width *
+                                MediaQuery.devicePixelRatioOf(context))
+                            .round(),
                         errorWidget: (_, __, ___) =>
                             Container(color: theme.colorScheme.surfaceContainerHighest),
                       )
@@ -157,7 +161,7 @@ class PlaylistDetailPage extends ConsumerWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                     children: [
@@ -167,7 +171,7 @@ class PlaylistDetailPage extends ConsumerWidget {
                           detail.intro,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color:
-                                theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                                theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -285,7 +289,7 @@ class PlaylistDetailPage extends ConsumerWidget {
                         .onlyShowsFirstN(tracks.songs.length, tracks.total),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color:
-                          theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -327,16 +331,9 @@ class PlaylistDetailPage extends ConsumerWidget {
     );
   }
 
-  /// 收藏歌单（简单实现：仅收藏公共歌单，成功后 toast）
+  /// 收藏歌单（非破坏性操作，无需确认：直接执行，成功后 toast）
   Future<void> _collectPlaylist(
       BuildContext context, WidgetRef ref, PlaylistDetail detail) async {
-    final confirm = await showDestructiveConfirm(
-      context,
-      title: context.l10n.favorite,
-      message: context.l10n.collectPlaylistConfirm,
-      confirmLabel: context.l10n.confirm,
-    );
-    if (!confirm) return;
     try {
       await ref.read(_playlistRepoProvider).collectPlaylist(
             name: detail.name,

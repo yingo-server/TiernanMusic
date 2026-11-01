@@ -24,10 +24,6 @@ class _VerificationListenerState extends ConsumerState<VerificationListener> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(audioHandlerProvider, (previous, next) {
-      // handler 为单例，仅在首次获取时订阅一次
-    });
-
     // 首次进入订阅一次播放器的验证事件流
     ref.listen(verificationStreamProvider, (previous, next) {
       final api = next.value;

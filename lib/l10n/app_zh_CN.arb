@@ -490,5 +490,29 @@
   },
   "@downloadFallbackHint": {
     "description": "文件保存在应用私有目录（降级路径）时的提示"
-  }
+  },
+  "logoutConfirm": "确定要退出当前账号吗？",
+  "@logoutConfirm": {
+    "type": "text",
+    "description": "退出登录确认弹窗文案"
+  },
+  "logoutSuccess": "已退出登录",
+  "logoutFailed": "退出登录失败：{error}",
+  "@logoutFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "switchAccountSuccess": "已切换账号",
+  "switchAccountFailed": "切换账号失败：{error}",
+  "@switchAccountFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "accountNeedRelogin": "该账号需要重新登录"
 }

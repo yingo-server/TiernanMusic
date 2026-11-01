@@ -75,6 +75,10 @@ class QueueSheet extends ConsumerWidget {
                               ? CachedNetworkImage(
                                   imageUrl: s.cover,
                                   fit: BoxFit.cover,
+                                  // 44px 显示尺寸 × dpr，限制解码分辨率
+                                  memCacheWidth:
+                                      (44 * MediaQuery.devicePixelRatioOf(context))
+                                          .round(),
                                   errorWidget: (_, __, ___) =>
                                       const _QueuePlaceholder(),
                                 )

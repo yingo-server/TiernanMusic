@@ -415,9 +415,9 @@
   "clearCacheDesc": "Очистить кэш интерфейса, изображений и переводов текстов песен",
   "resetToDefault": "Сбросить на значения по умолчанию",
   "resetToDefaultDone": "Сброшено на адрес по умолчанию",
-  "all": "全部",
-  "showPassword": "显示密码",
-  "hidePassword": "隐藏密码",
+  "all": "Все",
+  "showPassword": "Показать пароль",
+  "hidePassword": "Скрыть пароль",
   "albumPageComingSoon": "Страница альбома в разработке.",
   "@albumPageComingSoon": {
     "description": "Shown when tapping an album search result while the album page is not yet available"
@@ -476,5 +476,29 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "Не удалось открыть: нет подходящего приложения",
-  "downloadFallbackHint": "Сохранено в каталог приложения (Android/data), невидим для некоторых файловых менеджеров"
+  "downloadFallbackHint": "Сохранено в каталог приложения (Android/data), невидим для некоторых файловых менеджеров",
+  "logoutConfirm": "Выйти из текущего аккаунта?",
+  "@logoutConfirm": {
+    "type": "text",
+    "description": "退出登录确认弹窗文案"
+  },
+  "logoutSuccess": "Вы вышли из аккаунта",
+  "logoutFailed": "Не удалось выйти: {error}",
+  "@logoutFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "switchAccountSuccess": "Аккаунт переключён",
+  "switchAccountFailed": "Не удалось переключить аккаунт: {error}",
+  "@switchAccountFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "accountNeedRelogin": "Этот аккаунт требует повторного входа"
 }

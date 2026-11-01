@@ -273,31 +273,6 @@ class AppTheme {
           TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
         },
       ),
-      extensions: <ThemeExtension<dynamic>>[
-        if (isDark) const _GlowShadows(),
-      ],
     );
   }
-}
-
-/// 深色主题下的发光阴影（封面/卡片用）。
-class _GlowShadows extends ThemeExtension<_GlowShadows> {
-  const _GlowShadows();
-
-  @override
-  _GlowShadows copyWith() => this;
-
-  @override
-  _GlowShadows lerp(ThemeExtension<_GlowShadows>? other, double t) =>
-      this;
-
-  /// 封面卡片的外发光
-  List<BoxShadow> get coverGlow => const [
-        BoxShadow(
-          color: Color(0x3300D4FF),
-          blurRadius: 24,
-          spreadRadius: -4,
-          offset: Offset(0, 8),
-        ),
-      ];
 }

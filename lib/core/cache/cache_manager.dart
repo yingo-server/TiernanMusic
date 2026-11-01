@@ -20,10 +20,27 @@ class MemoryCache {
   }
 
   void set<T>(String key, T value, {Duration? ttl}) {
+    if (_cache.length >= _maxEntries) _evict();
     _cache[key] = _Entry(
       value,
       DateTime.now().add(ttl ?? const Duration(seconds: AppConfig.memoryCacheSeconds)),
     );
+  }
+
+  /// 容量上限：超限时先清过期条目，仍超则按插入序（FIFO）淘汰最旧。
+  static const _maxEntries = 200;
+
+  void _evict() {
+    final now = DateTime.now();
+    _cache.removeWhere((_, e) => now.isAfter(e.expires));
+    if (_cache.length >= _maxEntries) {
+      final overflow = _cache.length - _maxEntries + 1;
+      if (overflow > 0) {
+        for (final k in _cache.keys.take(overflow).toList()) {
+          _cache.remove(k);
+        }
+      }
+    }
   }
 
   void clear() => _cache.clear();

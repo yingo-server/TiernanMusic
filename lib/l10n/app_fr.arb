@@ -415,9 +415,9 @@
   "versionLabel": "Dernière version : {version}",
   "downloadNow": "Télécharger maintenant",
   "later": "Plus tard",
-  "all": "全部",
-  "showPassword": "显示密码",
-  "hidePassword": "隐藏密码",
+  "all": "Tout",
+  "showPassword": "Afficher le mot de passe",
+  "hidePassword": "Masquer le mot de passe",
   "albumPageComingSoon": "La page d'album est en cours de développement.",
   "@albumPageComingSoon": {
     "description": "Shown when tapping an album search result while the album page is not yet available"
@@ -476,5 +476,29 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "Échec de l'ouverture : aucune application compatible",
-  "downloadFallbackHint": "Enregistré dans le dossier spécifique à l'application (Android/data), invisible pour certains gestionnaires de fichiers"
+  "downloadFallbackHint": "Enregistré dans le dossier spécifique à l'application (Android/data), invisible pour certains gestionnaires de fichiers",
+  "logoutConfirm": "Se déconnecter du compte actuel ?",
+  "@logoutConfirm": {
+    "type": "text",
+    "description": "退出登录确认弹窗文案"
+  },
+  "logoutSuccess": "Déconnecté",
+  "logoutFailed": "Échec de la déconnexion : {error}",
+  "@logoutFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "switchAccountSuccess": "Compte changé",
+  "switchAccountFailed": "Échec du changement de compte : {error}",
+  "@switchAccountFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "accountNeedRelogin": "Ce compte doit se reconnecter"
 }

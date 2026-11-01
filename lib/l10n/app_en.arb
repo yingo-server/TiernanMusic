@@ -415,9 +415,9 @@
   "versionLabel": "Latest version: {version}",
   "downloadNow": "Download now",
   "later": "Later",
-  "all": "全部",
-  "showPassword": "显示密码",
-  "hidePassword": "隐藏密码",
+  "all": "All",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
   "albumPageComingSoon": "Album page is under development. Stay tuned.",
   "@albumPageComingSoon": {
     "description": "Shown when tapping an album search result while the album page is not yet available"
@@ -476,5 +476,29 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "Open failed: no app available for this file",
-  "downloadFallbackHint": "Saved to the app-specific directory (Android/data), invisible to some file managers"
+  "downloadFallbackHint": "Saved to the app-specific directory (Android/data), invisible to some file managers",
+  "logoutConfirm": "Log out of the current account?",
+  "@logoutConfirm": {
+    "type": "text",
+    "description": "退出登录确认弹窗文案"
+  },
+  "logoutSuccess": "Logged out",
+  "logoutFailed": "Logout failed: {error}",
+  "@logoutFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "switchAccountSuccess": "Account switched",
+  "switchAccountFailed": "Account switch failed: {error}",
+  "@switchAccountFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "accountNeedRelogin": "This account needs to sign in again"
 }

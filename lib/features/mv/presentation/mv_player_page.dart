@@ -133,7 +133,7 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(widget.title ?? 'MV',
+                  Text(widget.title ?? context.l10n.mv,
                       style: theme.textTheme.titleMedium
                           ?.copyWith(color: Colors.white)),
                   if (widget.artist != null)

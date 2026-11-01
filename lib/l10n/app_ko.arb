@@ -415,9 +415,9 @@
   "searchSongsHint": "노래, 플레이리스트, 가수 검색",
   "tabSongs": "싱글",
   "later": "나중에 보기",
-  "all": "全部",
-  "showPassword": "显示密码",
-  "hidePassword": "隐藏密码",
+  "all": "전체",
+  "showPassword": "비밀번호 표시",
+  "hidePassword": "비밀번호 숨기기",
   "albumPageComingSoon": "앨범 페이지 준비 중입니다.",
   "@albumPageComingSoon": {
     "description": "Shown when tapping an album search result while the album page is not yet available"
@@ -476,5 +476,29 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "열기 실패: 이 파일을 처리할 앱이 없습니다",
-  "downloadFallbackHint": "앱 전용 디렉터리(Android/data)에 저장되었습니다. 일부 파일 관리자에서는 보이지 않습니다"
+  "downloadFallbackHint": "앱 전용 디렉터리(Android/data)에 저장되었습니다. 일부 파일 관리자에서는 보이지 않습니다",
+  "logoutConfirm": "현재 계정에서 로그아웃하시겠습니까?",
+  "@logoutConfirm": {
+    "type": "text",
+    "description": "退出登录确认弹窗文案"
+  },
+  "logoutSuccess": "로그아웃되었습니다",
+  "logoutFailed": "로그아웃 실패: {error}",
+  "@logoutFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "switchAccountSuccess": "계정이 전환되었습니다",
+  "switchAccountFailed": "계정 전환 실패: {error}",
+  "@switchAccountFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "accountNeedRelogin": "이 계정은 다시 로그인해야 합니다"
 }

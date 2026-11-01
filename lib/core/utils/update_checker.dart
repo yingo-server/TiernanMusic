@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../config/app_config.dart';
+
 /// 版本检查结果
 class UpdateInfo {
   const UpdateInfo({
@@ -45,13 +47,15 @@ class UpdateChecker {
   UpdateChecker._();
   static final instance = UpdateChecker._();
 
-  static const _proxyPrefix = 'https://proxy.344977.xyz/';
+  // Q4：引用 AppConfig.proxyBase，避免代理地址在两处重复写死
+  static const _proxyPrefix = '${AppConfig.proxyBase}/';
   static const _repoPath = 'yingo-server/TiernanMusic';
 
+  // Q3：UA 不带版本号，避免版本升级后 UA 失真
   final Dio _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 15),
     receiveTimeout: const Duration(seconds: 20),
-    headers: {'User-Agent': 'TiernanMusic/1.0.0 Android'},
+    headers: {'User-Agent': 'TiernanMusic/Android'},
   ));
 
   /// 当前版本
