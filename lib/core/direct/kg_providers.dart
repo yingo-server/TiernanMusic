@@ -73,7 +73,9 @@ class KgDeviceStore {
 
 /// 设备（main() 中 override）
 final kgDeviceProvider = Provider<KgDevice>((ref) {
-  throw UnimplementedError('kgDeviceProvider 需在 main() 中 override');
+  // 兜底：main() 正常时永远会被 override；此处仅为防崩
+  // （内存临时设备，不持久化，避免单点故障拖垮整条客户端链路）
+  return KgDevice.generate();
 });
 
 /// 直连客户端（main() 中 override，或由设备派生）

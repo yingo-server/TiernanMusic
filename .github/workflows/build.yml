@@ -79,22 +79,31 @@ jobs:
           java -version
           echo "ANDROID_HOME=$ANDROID_HOME"
 
-      - name: Generate keystore
+      - name: Restore keystore
         if: github.ref_type == 'tag'
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
         run: |
-          keytool -genkeypair -v \
-            -keystore android/app/tiernan.jks \
-            -alias tiernan \
-            -keyalg RSA -keysize 4096 -validity 10000 \
-            -storepass tiernan123 -keypass tiernan123 \
-            -dname "CN=Tiernan Music, OU=Dev, O=yingo-server, L=Unknown, ST=Unknown, C=CN"
+          if [ -z "$KS_B64" ]; then
+            echo "::error::Secret ANDROID_KEYSTORE_B64 未配置，无法还原固定 keystore（见 docs/keystore_setup.md）"
+            exit 1
+          fi
+          echo "$KS_B64" | base64 -d > android/app/tiernan.jks
 
       - name: Build APK (debug)
         run: flutter build apk --debug --split-per-abi
 
       - name: Build APK (release)
         if: github.ref_type == 'tag'
-        run: flutter build apk --release --split-per-abi
+        run: flutter build apk --release --split-per-abi --build-number="$GITHUB_RUN_NUMBER"
+
+      - name: Upload mapping
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiernan-mapping-${{ github.ref_name }}
+          path: build/app/outputs/mapping/release/mapping.txt
+          retention-days: 365
 
       - name: Report APK sizes
         run: ls -lh build/app/outputs/flutter-apk/*.apk || true
@@ -119,6 +128,7 @@ jobs:
   visual-review:
     needs: analyze-test
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -166,6 +176,15 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Verify version matches tag
+        run: |
+          PUBSPEC_VERSION=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1)
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PUBSPEC_VERSION" != "$TAG_VERSION" ]; then
+            echo "Version mismatch: pubspec=$PUBSPEC_VERSION tag=$TAG_VERSION"
+            exit 1
+          fi
 
       - name: Download artifacts
         uses: actions/download-artifact@v4

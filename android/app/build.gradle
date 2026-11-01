@@ -51,9 +51,9 @@ android {
             def keystoreFile = file('tiernan.jks')
             if (keystoreFile.exists()) {
                 storeFile keystoreFile
-                storePassword 'tiernan123'
+                storePassword System.getenv('KS_STORE_PASS') ?: 'tiernan123'
                 keyAlias 'tiernan'
-                keyPassword 'tiernan123'
+                keyPassword System.getenv('KS_KEY_PASS') ?: 'tiernan123'
             }
         }
     }

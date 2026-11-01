@@ -35,9 +35,12 @@ class AuthStateNotifier extends AsyncNotifier<AuthUser?> {
     state = const AsyncData(null);
   }
 
-  /// 切换到另一个账号（token 从 SecureStorage 按 userid 读取）
+  /// 切换到另一个账号（token 从 SecureStorage 按 userid 读取）。
+  ///
+  /// 顺序：peek（只查）→ 取 token → 登录（可能失败）→ 成功后才 switchTo。
+  /// 避免中途失败时 AccountManager 指针已切而登录态仍是旧账号（F3）。
   Future<void> switchAccount(String userid) async {
-    final record = await AccountManager.instance.switchTo(userid);
+    final record = AccountManager.instance.peek(userid);
     if (record == null) return;
     final token = await ref.read(authRepositoryProvider).getAccountToken(userid);
     if (token == null || token.isEmpty) {
@@ -46,6 +49,9 @@ class AuthStateNotifier extends AsyncNotifier<AuthUser?> {
     }
     final repo = ref.read(authRepositoryProvider);
     final user = await repo.loginByToken(token: token, userid: userid);
+    // 登录成功后才切指针+广播（loginByToken → _handleLoginSuccess → upsert
+    // 内部已会设 current，switchTo 保留显式切换语义）
+    await AccountManager.instance.switchTo(userid);
     state = AsyncData(user);
   }
 }

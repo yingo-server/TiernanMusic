@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/direct/kg_providers.dart';
 import '../../core/providers.dart';
+import '../../core/utils/friendly_error.dart';
 import '../mv/data/mv_repository.dart';
 import 'data/download_repository.dart';
 import 'data/download_store.dart';
@@ -352,7 +353,7 @@ class DownloadManager extends StateNotifier<DownloadState> {
       if (cur != null) {
         _update(cur.copyWith(
           status: DownloadTaskStatus.failed,
-          error: '$e',
+          error: friendlyError(e),
           updatedAt: DateTime.now().millisecondsSinceEpoch,
         ));
       }

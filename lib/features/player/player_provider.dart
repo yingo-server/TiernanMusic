@@ -5,6 +5,7 @@ import 'package:just_audio/just_audio.dart';
 import '../../core/api/kugou_api_client.dart';
 import '../../core/direct/kg_providers.dart';
 import '../../core/providers.dart' show kugouApiClientProvider;
+import '../library/data/recent_play_store.dart';
 import 'data/audio_handler.dart';
 import 'data/models.dart';
 import 'data/player_repository.dart';
@@ -85,6 +86,25 @@ final repeatProvider = StreamProvider<LoopMode>(
 /// 播放控制器，供 UI 调用。
 final playerControllerProvider = Provider<PlayerController>(
     (ref) => PlayerController(ref.watch(audioHandlerProvider)));
+
+/// 最近播放记录器：监听 onSongStarted（播放真正出声后）写最近播放。
+///
+/// 覆盖所有播放入口：自动切歌 / 手动上下一首 / 播放失败自动跳歌，
+/// 原 PlayHelper._record（发起播放即写）已由本流取代（F2）。
+final recentPlayRecorderProvider = Provider<void>((ref) {
+  final sub = ref.watch(audioHandlerProvider).onSongStarted.listen((song) {
+    if (song.hash.isEmpty) return;
+    RecentPlayStore.add(RecentPlay(
+      hash: song.hash,
+      name: song.name,
+      artist: song.artist,
+      cover: song.cover,
+      albumAudioId: song.albumAudioId,
+      ts: DateTime.now().millisecondsSinceEpoch,
+    )).then((_) => RecentPlayStore.notifyListeners());
+  });
+  ref.onDispose(sub.cancel);
+});
 
 class PlayerController {
   PlayerController(this._handler);

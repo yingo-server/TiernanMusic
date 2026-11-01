@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
@@ -48,6 +49,11 @@ class TiernanAudioHandler extends BaseAudioHandler
       StreamController<ApiException>.broadcast();
 
   Stream<ApiException> get verificationRequired => _verificationController.stream;
+
+  /// 播放真正开始（setAudioSource 成功且 play() 已调用）时发出，
+  /// 用于最近播放记录（自动切歌 / 手动上下一首同样覆盖）。
+  final _playedController = StreamController<Song>.broadcast();
+  Stream<Song> get onSongStarted => _playedController.stream;
 
   int _index = -1;
   bool _loading = false;
@@ -202,20 +208,29 @@ class TiernanAudioHandler extends BaseAudioHandler
       _songs[index] = detailed;
       _emitMediaItem();
 
-      final result = await _repository.resolveUrl(detailed);
-      if (token != _playToken) return;
-      _actualQualityController.add(result.quality);
-      _songs[index] = detailed.copyWith(quality: result.quality);
-
-      await _player.setAudioSource(
-        AudioSource.uri(
-          Uri.parse(result.url),
-          tag: mediaItem.value,
-        ),
-      );
+      // 已下载歌曲：本地文件存在时直接离线播放，跳过网络解析（F4）
+      final local = song.localPath;
+      if (local != null && local.isNotEmpty && File(local).existsSync()) {
+        await _player.setAudioSource(
+          AudioSource.uri(Uri.file(local), tag: mediaItem.value),
+        );
+      } else {
+        final result = await _repository.resolveUrl(detailed);
+        if (token != _playToken) return;
+        _actualQualityController.add(result.quality);
+        _songs[index] = detailed.copyWith(quality: result.quality);
+        await _player.setAudioSource(
+          AudioSource.uri(
+            Uri.parse(result.url),
+            tag: mediaItem.value,
+          ),
+        );
+      }
       if (token != _playToken) return;
       _failureStreak = 0;
       await _player.play();
+      // 播放真正开始后再写最近播放（F2：自动切歌 / 上下一首同样覆盖）
+      _playedController.add(_songs[index]);
     } catch (e) {
       // 命中 20028：需要人机验证，不跳歌，交由 UI 弹验证页后重试
       final api = _extractApiException(e);

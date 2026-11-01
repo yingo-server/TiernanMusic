@@ -20,8 +20,8 @@ android/.gradle/
 android/local.properties
 android/key.properties
 *.jks
-!android/app/tiernan.jks
 *.keystore
+.github/workflows/keystore.b64.txt
 
 # iOS
 ios/Pods/

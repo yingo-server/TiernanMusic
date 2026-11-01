@@ -40,6 +40,7 @@ class Song {
     this.cover = '',
     this.duration = Duration.zero,
     this.quality = AudioQuality.q128,
+    this.localPath,
   });
 
   final String hash;
@@ -51,6 +52,9 @@ class Song {
   final Duration duration;
   final AudioQuality quality;
 
+  /// 本地已下载文件路径（存在时优先离线播放，不走网络解析）。
+  final String? localPath;
+
   Song copyWith({
     String? hash,
     String? albumId,
@@ -60,6 +64,7 @@ class Song {
     String? cover,
     Duration? duration,
     AudioQuality? quality,
+    String? localPath,
   }) {
     return Song(
       hash: hash ?? this.hash,
@@ -70,6 +75,7 @@ class Song {
       cover: cover ?? this.cover,
       duration: duration ?? this.duration,
       quality: quality ?? this.quality,
+      localPath: localPath ?? this.localPath,
     );
   }
 
@@ -170,6 +176,10 @@ class Song {
       duration: duration,
       // quality_vip 可为 null，best_free_quality 在该部署版中不存在。
       quality: AudioQuality.fromString(str(['quality'])),
+      localPath:
+          (json['localPath'] is String && (json['localPath'] as String).isNotEmpty)
+              ? json['localPath'] as String
+              : null,
     );
   }
 

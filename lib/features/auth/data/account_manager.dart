@@ -118,6 +118,14 @@ class AccountManager {
     _notifyChanged();
   }
 
+  /// 只查账号记录不切换（switchAccount 先查后切，避免中途失败指针错位）
+  AccountRecord? peek(String userid) {
+    for (final a in accounts) {
+      if (a.userid == userid) return a;
+    }
+    return null;
+  }
+
   /// 切换当前账号（返回账号记录，不存在返回 null）
   Future<AccountRecord?> switchTo(String userid) async {
     for (final a in accounts) {

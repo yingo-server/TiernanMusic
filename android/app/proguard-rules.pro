@@ -3,13 +3,8 @@
 # Flutter 引擎与插件的通用 keep 规则已由 Flutter Gradle 插件自动注入，
 # 这里只补充本项目特有或第三方库反射敏感的类。
 
-# --- 酷狗直连：RSA/AES 通过反射调用 pointycastle，需保留 ---
--keep class org.pointycastle.** { *; }
--dontwarn org.pointycastle.**
--keepclassmembers class * extends org.bouncycastle.crypto.Cipher {
-    public <init>(org.bouncycastle.crypto.CipherParameters);
-    public int doFinal(byte[], int, int, byte[]);
-}
+# --- 酷狗直连 ---
+# pointycastle 是纯 Dart 包，Dart 代码不参与 R8，无需 keep（R2 已清理死规则）。
 
 # --- Dio / OkHttp ---
 -dontwarn okhttp3.**
@@ -44,9 +39,7 @@
 -keep class io.flutter.view.** { *; }
 -keep class io.flutter.window.** { *; }
 
-# --- WebView（人机验证页用 TCaptcha） ---
--keep class com.tencent.tcaptcha.** { *; }
--dontwarn com.tencent.**
+# --- WebView（人机验证页为 TCaptcha，纯 JS 实现，无原生类，R2 已清理死规则） ---
 
 # --- 视频播放（ExoPlayer/Media3 反射） ---
 -keep class androidx.media3.** { *; }

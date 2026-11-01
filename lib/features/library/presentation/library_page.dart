@@ -215,14 +215,17 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     context.push('/player');
   }
 
-  /// 播放已下载音频（本地文件路径优先）。
+  /// 播放已下载音频（本地文件路径优先，断网/VIP 离线可播）。
   Future<void> _playDownloaded(DownloadTask task) async {
     final song = Song(
       hash: task.hash,
+      albumId: task.albumId,
       albumAudioId: task.albumAudioId,
       name: task.title.isEmpty ? task.hash : task.title,
       artist: task.artist,
       cover: task.coverUrl,
+      // 本地文件路径交给 audio_handler 优先离线播放
+      localPath: task.filePath.isNotEmpty ? task.filePath : null,
     );
     await ref.read(playHelperProvider).playSong(song);
     if (!mounted) return;
