@@ -129,6 +129,7 @@ class KgClient {
 
   String token = '';
   String userid = '0';
+  String t1 = ''; // 登录态 t1 票据（login/token 刷新签名用）
 
   bool lite = false;
 

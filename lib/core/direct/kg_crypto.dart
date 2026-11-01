@@ -142,20 +142,24 @@ LgFVxtzIY41Pe7lPOgsfTCn5kZcvKhYKJesKnnJDNr5/abvTGf+rHG3YRwsCHcQ0
     return digest.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   }
 
-  /// RSA-PKCS1 加密，输出十六进制大写（对应 rsaEncrypt2）
-  static String rsaEncryptPkcs1(String data, {bool lite = false}) {
+  /// 解析 RSA 公钥，返回 (modulus, exponent)
+  static (BigInt, BigInt) _rsaPublicKey(bool lite) {
     final der = base64.decode(
       (lite ? _publicKeyPemLite : _publicKeyPem).replaceAll(RegExp(r'\s'), ''),
     );
     final outer = ASN1Parser(der).nextObject() as ASN1Sequence;
     // SPKI: SEQUENCE { SEQUENCE{alg}, BIT STRING{key} }
     final keyBits = (outer.elements![1] as ASN1BitString).stringValues!;
-    final keySeq = ASN1Parser(Uint8List.fromList(keyBits)).nextObject()
-        as ASN1Sequence;
-    final modulus =
-        (keySeq.elements![0] as ASN1Integer).integer as BigInt;
-    final exponent =
-        (keySeq.elements![1] as ASN1Integer).integer as BigInt;
+    final keySeq =
+        ASN1Parser(Uint8List.fromList(keyBits)).nextObject() as ASN1Sequence;
+    final modulus = (keySeq.elements![0] as ASN1Integer).integer as BigInt;
+    final exponent = (keySeq.elements![1] as ASN1Integer).integer as BigInt;
+    return (modulus, exponent);
+  }
+
+  /// RSA-PKCS1 加密，输出十六进制大写（对应 rsaEncrypt2）
+  static String rsaEncryptPkcs1(String data, {bool lite = false}) {
+    final (modulus, exponent) = _rsaPublicKey(lite);
     final publicKey = RSAPublicKey(modulus, exponent);
 
     final cipher = PKCS1Encoding(RSAEngine())
@@ -165,6 +169,28 @@ LgFVxtzIY41Pe7lPOgsfTCn5kZcvKhYKJesKnnJDNr5/abvTGf+rHG3YRwsCHcQ0
         .map((b) => b.toRadixString(16).padLeft(2, '0'))
         .join()
         .toUpperCase();
+  }
+
+  /// 裸 RSA 加密（对应 Node 的 cryptoRSAEncrypt）。
+  ///
+  /// 与 [rsaEncryptPkcs1] 不同：**无 PKCS1 填充**，而是把明文放到
+  /// keyLength 字节缓冲区**开头**、右侧补零后做 modPow（酷狗登录/用户信息
+  /// 接口即用此方式），输出十六进制小写，调用方按需转大写。
+  static String rsaEncryptRawHex(String data, {bool lite = false}) {
+    final (modulus, exponent) = _rsaPublicKey(lite);
+    final keyLength = (modulus.bitLength + 7) ~/ 8;
+    final bytes = utf8.encode(data);
+    if (bytes.length > keyLength) {
+      throw ArgumentError('数据长度超过密钥长度');
+    }
+    // 右补零到 keyLength（与 Node: padded.set(buffer) 一致）
+    final padded = Uint8List(keyLength)..setRange(0, bytes.length, bytes);
+    var message = BigInt.zero;
+    for (final b in padded) {
+      message = (message << 8) | BigInt.from(b);
+    }
+    final cipher = message.modPow(exponent, modulus);
+    return cipher.toRadixString(16).padLeft(keyLength * 2, '0');
   }
 
   /// AES-128-CBC + PKCS7，输出 Base64（对应 playlistAesEncrypt）
@@ -202,6 +228,82 @@ LgFVxtzIY41Pe7lPOgsfTCn5kZcvKhYKJesKnnJDNr5/abvTGf+rHG3YRwsCHcQ0
     return AesResult(str: base64.encode(out), key: seed ?? '');
   }
 
+  /// 移植 Node 的 cryptoAesEncrypt（AES-CBC/PKCS7，**十六进制**输出）。
+  ///
+  /// 与 [aesEncryptHex] 不同：本函数 key 为 32 位 hex 字符串（AES-256），
+  /// 输出 hex 而非 base64，用于登录/验证类接口。
+  /// - 显式给出 key+iv：直接使用；
+  /// - 仅给出 key：realKey=md5(key)[:32]，iv=realKey 末 16 位；
+  /// - 均未给出：随机 16 位 key，按上派生（临时 key 供 RSA pk 使用）。
+  static String aesEncryptCbcHex(String data, {String? key, String? iv}) {
+    if (key != null && iv != null) {
+      return _aesCbcHex(data, key, iv);
+    }
+    final tempKey = key ?? randomString(16).toLowerCase();
+    final realKey = md5(tempKey); // md5 本身即 32 位
+    final realIv = realKey.substring(realKey.length - 16);
+    return _aesCbcHex(data, realKey, realIv);
+  }
+
+  /// 同 [aesEncryptCbcHex]，但随机临时 key 时一并返回（登录 pk 需要）。
+  static AesHexResult aesEncryptCbcAuto(String data, {String? key}) {
+    final tempKey = key ?? randomString(16).toLowerCase();
+    final realKey = md5(tempKey);
+    final realIv = realKey.substring(realKey.length - 16);
+    return AesHexResult(str: _aesCbcHex(data, realKey, realIv), key: tempKey);
+  }
+
+  static String _aesCbcHex(String data, String keyStr, String ivStr) {
+    final cipher = PaddedBlockCipherImpl(
+      PKCS7Padding(),
+      CBCBlockCipher(AESEngine()),
+    )..init(
+        true,
+        PaddedBlockCipherParameters<ParametersWithIV<KeyParameter>, Null>(
+          ParametersWithIV<KeyParameter>(
+            KeyParameter(Uint8List.fromList(utf8.encode(keyStr))),
+            Uint8List.fromList(utf8.encode(ivStr)),
+          ),
+          null,
+        ),
+      );
+    final out = cipher.process(Uint8List.fromList(utf8.encode(data)));
+    return out.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
+
+  /// 移植 Node 的 cryptoAesDecrypt（输入十六进制密文）。
+  ///
+  /// 未提供 iv 时以 md5(key)[:32] 作为真实 key、末 16 位作为 iv；
+  /// 解密结果尝试 JSON 解析，失败则返回字符串。
+  static dynamic aesDecryptCbcHex(String data, String key, {String? iv}) {
+    final realKey = iv == null ? md5(key) : key;
+    final realIv = iv ?? realKey.substring(realKey.length - 16);
+    final cipherBytes = <int>[];
+    for (var i = 0; i + 1 < data.length; i += 2) {
+      cipherBytes.add(int.parse(data.substring(i, i + 2), radix: 16));
+    }
+    final cipher = PaddedBlockCipherImpl(
+      PKCS7Padding(),
+      CBCBlockCipher(AESEngine()),
+    )..init(
+        false,
+        PaddedBlockCipherParameters<ParametersWithIV<KeyParameter>, Null>(
+          ParametersWithIV<KeyParameter>(
+            KeyParameter(Uint8List.fromList(utf8.encode(realKey))),
+            Uint8List.fromList(utf8.encode(realIv)),
+          ),
+          null,
+        ),
+      );
+    final out = cipher.process(Uint8List.fromList(cipherBytes));
+    final text = utf8.decode(out, allowMalformed: true);
+    try {
+      return jsonDecode(text);
+    } catch (_) {
+      return text;
+    }
+  }
+
   /// randomString：字符表 1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ
   static String randomString(int len) {
     const chars = '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -228,4 +330,11 @@ class AesResult {
   const AesResult({required this.str, required this.key});
   final String str;
   final String key;
+}
+
+/// hex 输出的 AES 加密结果（对应 Node cryptoAesEncrypt 的 {str, key}）
+class AesHexResult {
+  const AesHexResult({required this.str, required this.key});
+  final String str; // 十六进制密文
+  final String key; // 临时 key（用于 RSA pk）
 }
