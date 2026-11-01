@@ -276,5 +276,7 @@
   "genericErrorTitle": "加载失败",
   "genericErrorHint": "出了点小问题，请稍后重试",
   "reload": "重新加载",
-  "techDetail": "技术详情"
+  "techDetail": "技术详情",
+  "copiedToClipboard": "已复制到剪贴板",
+  "copyDetails": "复制详情"
 }

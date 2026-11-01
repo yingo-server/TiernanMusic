@@ -1,16 +1,20 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:path_provider/path_provider.dart';
 
+import 'core/api/kugou_api_client.dart';
 import 'core/direct/kg_client.dart';
 import 'core/direct/kg_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/settings_provider.dart';
+import 'core/utils/error_logger.dart';
 import 'features/auth/data/auth_providers.dart';
 import 'l10n/l10n.dart';
 
@@ -26,8 +30,7 @@ Future<void> main() async {
     WidgetsFlutterBinding.ensureInitialized();
 
     FlutterError.onError = (details) {
-      FlutterError.presentError(details);
-      debugPrint('[startup] FlutterError: ${details.exception}');
+      ErrorLogger.instance.handleFlutterError(details);
     };
 
     // 任何构建异常都显示可读错误页，而不是红屏/白屏
@@ -67,6 +70,17 @@ Future<void> main() async {
       await openSafe('search_history', stringValues: true);
       await openSafe('lyric_translations', stringValues: true);
       await openSafe('downloads');
+
+      // Cookie 持久化目录（应用私有存储，三层存储规范第 2 层）。
+      // 必须是可写目录，否则 PersistCookieJar 会报「Read-only file system」。
+      try {
+        final docs = await getApplicationDocumentsDirectory();
+        final cookieDir = Directory('${docs.path}/cookies');
+        if (!await cookieDir.exists()) await cookieDir.create(recursive: true);
+        KugouApiClient.cookieStoragePath = cookieDir.path;
+      } catch (e) {
+        debugPrint('[startup] cookie dir init failed: $e');
+      }
 
       // 设备身份（box 未开时用内存默认值兜底，绝不阻塞启动）
       try {
@@ -142,8 +156,8 @@ Future<void> main() async {
       }
     });
   }, (error, stack) {
-    // runZonedGuarded 捕获的异步异常：记录，不崩溃
-    debugPrint('[runtime] uncaught: $error\n$stack');
+    // runZonedGuarded 捕获的异步异常：落盘记录，不崩溃
+    ErrorLogger.instance.handleUncaught(error, stack);
   });
 }
 

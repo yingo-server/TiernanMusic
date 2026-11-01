@@ -4,7 +4,6 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:cookie_jar/cookie_jar.dart';
 
 import '../config/app_config.dart';
-
 class ApiException implements Exception {
   ApiException(
     this.errorCode,
@@ -33,12 +32,15 @@ class ApiException implements Exception {
 }
 
 class KugouApiClient {
-  KugouApiClient({String? baseUrl})
+  /// [cookieStoragePath] 必须是**可写**的 App 私有目录（如 documents/cookies）。
+  /// 不传时退化为内存 CookieJar——cookie 不持久化且部分设备上
+  /// PersistCookieJar 默认目录不可写，登录会报「Read-only file system」。
+  KugouApiClient({String? baseUrl, String? cookieStoragePath})
       : _dio = Dio(BaseOptions(
           baseUrl: baseUrl ?? AppConfig.kugouApiBase,
           connectTimeout: const Duration(seconds: 20),
           receiveTimeout: const Duration(seconds: 30),
-          headers: {'User-Agent': 'TiernanMusic/0.1.0 Android'},
+          headers: {'User-Agent': 'TiernanMusic/1.0.0 Android'},
         )) {
     _dio.interceptors.add(CookieManager(_cookieJar));
     _dio.interceptors.add(InterceptorsWrapper(
@@ -93,7 +95,26 @@ class KugouApiClient {
   }
 
   final Dio _dio;
-  final PersistCookieJar _cookieJar = PersistCookieJar();
+
+  /// cookie 存储：
+  /// - 有可写路径 → PersistCookieJar + FileStorage（应用私有目录，三层存储规范第 2 层）
+  /// - 无路径 → 内存 CookieJar（不持久化，但绝不写只读路径）
+  final CookieJar _cookieJar = _initCookieJar;
+
+  static CookieJar get _initCookieJar {
+    final path = KugouApiClient.cookieStoragePath;
+    if (path != null && path.isNotEmpty) {
+      try {
+        return PersistCookieJar(storage: FileStorage(path));
+      } catch (_) {
+        // 目录异常时退化为内存，不能让登录因存储问题而失败
+      }
+    }
+    return CookieJar();
+  }
+
+  /// 全局 cookie 存储路径（main() 启动时用 getApplicationDocumentsDirectory 设置一次）
+  static String? cookieStoragePath;
 
   static bool _needsTimestamp(String path) {
     const list = [
@@ -106,7 +127,7 @@ class KugouApiClient {
   }
 
   Dio get dio => _dio;
-  PersistCookieJar get cookieJar => _cookieJar;
+  CookieJar get cookieJar => _cookieJar;
 
   /// 设备 mid（登录/注册后由服务端 cookie 注入，用于行为指纹）
   String mid = '';

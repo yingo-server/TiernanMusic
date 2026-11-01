@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../api/kugou_api_client.dart';
+import '../utils/toast.dart';
 import '../../l10n/l10n.dart';
 
 /// 统一歌曲列表项
@@ -283,17 +284,16 @@ class ErrorRetry extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            Text(
-              friendly,
-              textAlign: TextAlign.center,
+            // 报错文字点击即可复制到剪贴板
+            _CopyableText(
+              text: friendly,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              c.hint,
-              textAlign: TextAlign.center,
+            _CopyableText(
+              text: c.hint,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.55),
               ),
@@ -379,7 +379,39 @@ class _TechDetailState extends State<_TechDetail> {
               ),
             ),
           ),
+        if (_expanded)
+          const SizedBox(height: 8),
+        if (_expanded)
+          OutlinedButton.icon(
+            onPressed: () => Toast.copy(context, widget.raw),
+            icon: const Icon(Icons.copy_all_outlined, size: 16),
+            label: Text(context.l10n.copyDetails),
+            style: OutlinedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
       ],
+    );
+  }
+}
+
+/// 可点击复制的文本（点击后写入剪贴板并提示）
+class _CopyableText extends StatelessWidget {
+  const _CopyableText({required this.text, this.style});
+
+  final String text;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Toast.copy(context, text),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: style,
+      ),
     );
   }
 }

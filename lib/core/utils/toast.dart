@@ -1,6 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../l10n/l10n.dart';
+import '../utils/toast.dart';
+import 'package:flutter/services.dart';
 
 /// 全局轻提示（替代直接 showSnackBar）
 ///
@@ -40,6 +45,15 @@ class Toast {
     _current = entry;
     overlay.insert(entry);
     _dismissTimer = Timer(_displayDuration, _hide);
+  }
+
+  /// 复制文本到剪贴板并提示（报错文字点击时使用）
+  static Future<void> copy(BuildContext context, String text) async {
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    if (context.mounted) {
+      show(context, context.l10n.copiedToClipboard);
+    }
   }
 
   static void _hide() {
