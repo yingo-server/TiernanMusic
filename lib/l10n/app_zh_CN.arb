@@ -482,5 +482,13 @@
   "qualitySwitchFailed": "切换清晰度失败",
   "@qualitySwitchFailed": {
     "description": "Toast when MV quality switch fails"
+  },
+  "downloadOpenFileFailed": "打开失败，未找到可用的应用",
+  "downloadFallbackHint": "已保存到应用专属目录（Android/data），部分文件管理器不可见",
+  "@downloadOpenFileFailed": {
+    "description": "打开已下载文件失败时的提示"
+  },
+  "@downloadFallbackHint": {
+    "description": "文件保存在应用私有目录（降级路径）时的提示"
   }
 }

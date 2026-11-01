@@ -474,5 +474,7 @@
   "qualitySwitchFailed": "画質の切り替えに失敗しました",
   "@qualitySwitchFailed": {
     "description": "Toast when MV quality switch fails"
-  }
+  },
+  "downloadOpenFileFailed": "開けません：このファイルを扱えるアプリがありません",
+  "downloadFallbackHint": "アプリ専用ディレクトリ（Android/data）に保存されました。一部のファイルマネージャーでは表示されません"
 }

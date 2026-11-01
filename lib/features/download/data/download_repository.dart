@@ -23,7 +23,12 @@ class DownloadRepository {
   })  : _playApi = playApi,
         _lyricRepository = lyricRepository,
         _mvRepository = mvRepository,
-        _dio = dio ?? Dio();
+        _dio = dio ??
+            Dio(BaseOptions(
+              // CDN 挂起时任务不能永远停在 running
+              connectTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(minutes: 10),
+            ));
 
   final KgPlayApi? _playApi;
   final LyricRepository? _lyricRepository;
@@ -73,7 +78,8 @@ class DownloadRepository {
   /// 下载单个文件到 [savePath]。
   ///
   /// [onProgress] 回调 (received, total)；[cancelToken] 支持取消；
-  /// 失败时自动重试 [retries] 次（每次重试从头开始）。
+  /// 仅对可重试错误（网络层错误、超时、5xx）重试 [retries] 次，
+  /// 指数退避：1s、2s、4s…。404/403 等 4xx 不重试。
   Future<void> downloadFile(
     String url,
     String savePath, {
@@ -99,10 +105,26 @@ class DownloadRepository {
           onReceiveProgress: onProgress,
         );
         return;
-      } catch (e) {
+      } on DioException catch (e) {
         if (cancelToken != null && cancelToken.isCancelled) rethrow;
-        if (attempt > retries) rethrow;
+        if (!_isRetryable(e) || attempt > retries) rethrow;
+        // 指数退避：1s, 2s, 4s...
+        await Future<void>.delayed(Duration(seconds: 1 << (attempt - 1)));
       }
+    }
+  }
+
+  /// 是否值得重试：网络层错误/超时/5xx。4xx（404/403/签名过期）不重试。
+  static bool _isRetryable(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionError:
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.sendTimeout:
+        return true;
+      default:
+        final status = e.response?.statusCode ?? 0;
+        return status >= 500 && status < 600;
     }
   }
 
@@ -163,9 +185,12 @@ class DownloadRepository {
   /// 公共目录中的显示文件名
   static String displayNameOf(DownloadTask task) {
     final base = '${task.artist} - ${task.title}'.trim();
-    final safe = (base.isEmpty ? task.hash : base)
-        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
-        .trim();
+    var safe = (base.isEmpty ? task.hash : base)
+        // 非法字符 + Windows 控制字符
+        .replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1f]'), '_');
+    // 去尾部点/空格（Windows 同步到 NTFS/exFAT 时会报错）
+    safe = safe.replaceAll(RegExp(r'[.\s]+$'), '');
+    if (safe.isEmpty) safe = task.hash;
     return '$safe${task.type.fileExtension}';
   }
 

@@ -56,9 +56,24 @@ class DownloadManager extends StateNotifier<DownloadState> {
   final Map<String, CancelToken> _tokens = {};
   final Set<String> _running = {};
 
-  /// 写入策略（首次下载时确定，之后复用）
+  /// 写入策略（首次下载时确定；App resume 时重置后重新解析）
   StorageStrategy _strategy = StorageStrategy.mediaStore;
   bool _strategyResolved = false;
+
+  AppLifecycleState? _lastLifecycle;
+
+  /// App 生命周期回调：resume 时重置策略缓存。
+  ///
+  /// Android ≤9 用户首次拒绝授权后策略会锁定为 appFallback，
+  /// 从系统设置授权返回时必须重新 resolveStrategy()，否则本次进程内
+  /// 所有下载仍落到 Android/data（需重启 App 才能恢复）。
+  void onAppLifecycle(AppLifecycleState s) {
+    if (s == AppLifecycleState.resumed &&
+        _lastLifecycle == AppLifecycleState.paused) {
+      _strategyResolved = false;
+    }
+    _lastLifecycle = s;
+  }
 
   /// 从 Hive 恢复任务记录（未完成的置为暂停）
   void _restore() {
@@ -120,7 +135,13 @@ class DownloadManager extends StateNotifier<DownloadState> {
   Future<void> resume(String id) async {
     final task = _find(id);
     if (task == null) return;
-    if (task.status == DownloadTaskStatus.completed) return;
+    // 守卫：对 running/queued 任务重复 resume 会把状态改回 queued，
+    // 导致进度条冻结（实际还在下载但状态不匹配）。
+    if (task.status == DownloadTaskStatus.completed ||
+        task.status == DownloadTaskStatus.running ||
+        task.status == DownloadTaskStatus.queued) {
+      return;
+    }
     _update(task.copyWith(
       status: DownloadTaskStatus.queued,
       clearError: true,
@@ -284,7 +305,17 @@ class DownloadManager extends StateNotifier<DownloadState> {
           break;
       }
 
-      // 发布到公共目录（MediaStore / 公共路径）
+      // 发布到公共目录（MediaStore / 公共路径）。
+      // 先查同名文件：已存在则删旧文件再发布，避免 MediaStore 自动改名
+      // 产生 "xxx (1).mp3" 副本（旧文件不受任务管理）。
+      final displayName = DownloadRepository.displayNameOf(task);
+      final exist = await PublicMediaStore.instance.queryExisting(
+        type: task.type,
+        displayName: displayName,
+      );
+      if (exist != null) {
+        await PublicMediaStore.instance.delete(exist);
+      }
       final published = await _repo.publish(task, tempPath, strategy: _strategy);
       final size = await File(tempPath).exists() ? await File(tempPath).length() : 0;
 
@@ -315,6 +346,7 @@ class DownloadManager extends StateNotifier<DownloadState> {
         ));
       }
     } catch (e) {
+      if (_tokens[task.id] != token) return;
       final cur = _find(task.id);
       if (cur != null) {
         _update(cur.copyWith(
@@ -324,7 +356,7 @@ class DownloadManager extends StateNotifier<DownloadState> {
         ));
       }
     } finally {
-      _tokens.remove(task.id);
+      if (_tokens[task.id] == token) _tokens.remove(task.id);
       _running.remove(task.id);
       unawaited(_schedule());
     }

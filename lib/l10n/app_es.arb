@@ -474,5 +474,7 @@
   "qualitySwitchFailed": "Error al cambiar la calidad",
   "@qualitySwitchFailed": {
     "description": "Toast when MV quality switch fails"
-  }
+  },
+  "downloadOpenFileFailed": "No se pudo abrir: no hay una app compatible",
+  "downloadFallbackHint": "Guardado en el directorio específico de la app (Android/data), invisible para algunos gestores de archivos"
 }

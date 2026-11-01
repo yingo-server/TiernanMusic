@@ -474,5 +474,7 @@
   "qualitySwitchFailed": "화질 전환 실패",
   "@qualitySwitchFailed": {
     "description": "Toast when MV quality switch fails"
-  }
+  },
+  "downloadOpenFileFailed": "열기 실패: 이 파일을 처리할 앱이 없습니다",
+  "downloadFallbackHint": "앱 전용 디렉터리(Android/data)에 저장되었습니다. 일부 파일 관리자에서는 보이지 않습니다"
 }

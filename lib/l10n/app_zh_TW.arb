@@ -474,5 +474,7 @@
   "qualitySwitchFailed": "切換清晰度失敗",
   "@qualitySwitchFailed": {
     "description": "Toast when MV quality switch fails"
-  }
+  },
+  "downloadOpenFileFailed": "開啟失敗，未找到可用的應用",
+  "downloadFallbackHint": "已儲存到應用專屬目錄（Android/data），部分檔案管理器不可見"
 }

@@ -31,7 +31,10 @@ class PublicMediaStore {
   static String collectionOf(DownloadTaskType type) => switch (type) {
         DownloadTaskType.audio => 'audio',
         DownloadTaskType.cover => 'images',
-        DownloadTaskType.lyric => 'downloads',
+        // MediaStore.Files：支持 Documents/ 下任意 RELATIVE_PATH。
+        // Downloads collection 要求 RELATIVE_PATH 位于 Download/ 之下，
+        // 用它插 Documents/ 路径在 Android 10+ 上 insert 必抛 IllegalArgumentException。
+        DownloadTaskType.lyric => 'files',
         DownloadTaskType.mv => 'video',
       };
 
@@ -99,6 +102,11 @@ class PublicMediaStore {
           displayPath: '/sdcard/${relativePathOf(type)}',
         );
       } catch (_) {
+        // 写流/finalize 抛异常时也要清掉 IS_PENDING=1 的孤儿条目，
+        // 否则残留约 7 天（MediaStore 对 pending 条目的清理周期）。
+        try {
+          await _channel.invokeMethod<bool>('delete', {'uri': uri});
+        } catch (_) {}
         return _publishDirect(type, tempFilePath, displayName);
       }
     }

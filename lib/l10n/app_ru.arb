@@ -474,5 +474,7 @@
   "qualitySwitchFailed": "Не удалось изменить качество",
   "@qualitySwitchFailed": {
     "description": "Toast when MV quality switch fails"
-  }
+  },
+  "downloadOpenFileFailed": "Не удалось открыть: нет подходящего приложения",
+  "downloadFallbackHint": "Сохранено в каталог приложения (Android/data), невидим для некоторых файловых менеджеров"
 }

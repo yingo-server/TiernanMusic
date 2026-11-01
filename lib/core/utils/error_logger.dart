@@ -180,6 +180,27 @@ class ErrorLogger {
   }
 
 
+  /// 对日志文本脱敏：token/authorization/签名等敏感字段打码。
+  ///
+  /// 日志落在公共 Documents 目录（文件管理器可见，且用户可能分享），
+  /// 响应体/header 中的凭据必须先脱敏再落盘。
+  static String _redact(String s) {
+    // key=value / key: value / "key":"value" 形式（覆盖 header 与 JSON body）
+    s = s.replaceAllMapped(
+      RegExp(
+        r'((?:authorization|token|access[_-]?token|refresh[_-]?token|api[_-]?key|secret|sign(ature)?|cookie|session(?:_id)?)\s*[=:]\s*)(?:"([^"]*)"|(\S+))',
+        caseSensitive: false,
+      ),
+      (m) => '${m.group(1)}***',
+    );
+    // Bearer / Basic 凭据
+    s = s.replaceAllMapped(
+      RegExp(r'(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+', caseSensitive: false),
+      (m) => '${m.group(1)} ***',
+    );
+    return s;
+  }
+
   /// 记录 API 错误（含错误码与请求路径）
   Future<void> logApi(
     Object error, {
@@ -191,7 +212,7 @@ class ErrorLogger {
       ..writeln('接口: $endpoint')
       ..writeln('错误码: ${code ?? '-'}');
     if (body != null && body.isNotEmpty) {
-      final s = body.toString();
+      final s = _redact(body.toString());
       sb.writeln('响应: ${s.length > 800 ? '${s.substring(0, 800)}…' : s}');
     }
     await log(error, null, source: 'api', context: sb.toString());

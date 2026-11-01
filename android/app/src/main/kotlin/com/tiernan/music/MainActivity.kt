@@ -273,7 +273,10 @@ class MainActivity : FlutterActivity() {
             "images" -> MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
             "video" -> MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
             "downloads" -> MediaStore.Downloads.EXTERNAL_CONTENT_URI
-            else -> MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            // MediaStore.Files：支持 Documents/ 等任意 RELATIVE_PATH（歌词用）
+            "files" -> MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            // 未知集合静默落到 Audio 会错插，直接抛错暴露问题
+            else -> throw IllegalArgumentException("unknown collection: $collection")
         }
     }
 

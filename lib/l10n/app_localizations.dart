@@ -293,6 +293,8 @@ const _strings_de = <String, String>{
   'operateFailed': 'Vorgang fehlgeschlagen: {error}',
   'commentVerifiedRetryHint': 'Verifizierung erfolgreich, bitte erneut senden',
   'qualitySwitchFailed': 'Qualitätswechsel fehlgeschlagen',
+  'downloadOpenFileFailed': 'Öffnen fehlgeschlagen: keine passende App gefunden',
+  'downloadFallbackHint': 'Im app-spezifischen Verzeichnis (Android/data) gespeichert, für einige Dateimanager unsichtbar',
 };
 
 const _strings_en = <String, String>{
@@ -584,6 +586,8 @@ const _strings_en = <String, String>{
   'operateFailed': 'Operation failed: {error}',
   'commentVerifiedRetryHint': 'Verification passed, please tap send again',
   'qualitySwitchFailed': 'Failed to switch quality',
+  'downloadOpenFileFailed': 'Open failed: no app available for this file',
+  'downloadFallbackHint': 'Saved to the app-specific directory (Android/data), invisible to some file managers',
 };
 
 const _strings_es = <String, String>{
@@ -875,6 +879,8 @@ const _strings_es = <String, String>{
   'operateFailed': 'Operación fallida: {error}',
   'commentVerifiedRetryHint': 'Verificación superada, pulsa enviar de nuevo',
   'qualitySwitchFailed': 'Error al cambiar la calidad',
+  'downloadOpenFileFailed': 'No se pudo abrir: no hay una app compatible',
+  'downloadFallbackHint': 'Guardado en el directorio específico de la app (Android/data), invisible para algunos gestores de archivos',
 };
 
 const _strings_fr = <String, String>{
@@ -1166,6 +1172,8 @@ const _strings_fr = <String, String>{
   'operateFailed': 'Échec de l\'opération : {error}',
   'commentVerifiedRetryHint': 'Vérification réussie, appuyez à nouveau sur envoyer',
   'qualitySwitchFailed': 'Échec du changement de qualité',
+  'downloadOpenFileFailed': 'Échec de l\'ouverture : aucune application compatible',
+  'downloadFallbackHint': 'Enregistré dans le dossier spécifique à l\'application (Android/data), invisible pour certains gestionnaires de fichiers',
 };
 
 const _strings_ja = <String, String>{
@@ -1457,6 +1465,8 @@ const _strings_ja = <String, String>{
   'operateFailed': '操作に失敗しました：{error}',
   'commentVerifiedRetryHint': '認証が完了しました。もう一度送信してください',
   'qualitySwitchFailed': '画質の切り替えに失敗しました',
+  'downloadOpenFileFailed': '開けません：このファイルを扱えるアプリがありません',
+  'downloadFallbackHint': 'アプリ専用ディレクトリ（Android/data）に保存されました。一部のファイルマネージャーでは表示されません',
 };
 
 const _strings_ko = <String, String>{
@@ -1748,6 +1758,8 @@ const _strings_ko = <String, String>{
   'operateFailed': '작업 실패: {error}',
   'commentVerifiedRetryHint': '인증 완료, 다시 보내기를 눌러 주세요',
   'qualitySwitchFailed': '화질 전환 실패',
+  'downloadOpenFileFailed': '열기 실패: 이 파일을 처리할 앱이 없습니다',
+  'downloadFallbackHint': '앱 전용 디렉터리(Android/data)에 저장되었습니다. 일부 파일 관리자에서는 보이지 않습니다',
 };
 
 const _strings_pt = <String, String>{
@@ -2039,6 +2051,8 @@ const _strings_pt = <String, String>{
   'operateFailed': 'Falha na operação: {error}',
   'commentVerifiedRetryHint': 'Verificação concluída, toque em enviar novamente',
   'qualitySwitchFailed': 'Falha ao mudar a qualidade',
+  'downloadOpenFileFailed': 'Falha ao abrir: nenhum app compatível',
+  'downloadFallbackHint': 'Salvo no diretório específico do app (Android/data), invisível para alguns gerenciadores de arquivos',
 };
 
 const _strings_ru = <String, String>{
@@ -2330,6 +2344,8 @@ const _strings_ru = <String, String>{
   'operateFailed': 'Ошибка операции: {error}',
   'commentVerifiedRetryHint': 'Проверка пройдена, нажмите «отправить» ещё раз',
   'qualitySwitchFailed': 'Не удалось изменить качество',
+  'downloadOpenFileFailed': 'Не удалось открыть: нет подходящего приложения',
+  'downloadFallbackHint': 'Сохранено в каталог приложения (Android/data), невидим для некоторых файловых менеджеров',
 };
 
 const _strings_zh = <String, String>{
@@ -2912,6 +2928,8 @@ const _strings_zh_CN = <String, String>{
   'operateFailed': '操作失败：{error}',
   'commentVerifiedRetryHint': '验证已通过，请重新点击发送',
   'qualitySwitchFailed': '切换清晰度失败',
+  'downloadOpenFileFailed': '打开失败，未找到可用的应用',
+  'downloadFallbackHint': '已保存到应用专属目录（Android/data），部分文件管理器不可见',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3203,6 +3221,8 @@ const _strings_zh_TW = <String, String>{
   'operateFailed': '操作失敗：{error}',
   'commentVerifiedRetryHint': '驗證已通過，請重新點擊發送',
   'qualitySwitchFailed': '切換清晰度失敗',
+  'downloadOpenFileFailed': '開啟失敗，未找到可用的應用',
+  'downloadFallbackHint': '已儲存到應用專屬目錄（Android/data），部分檔案管理器不可見',
 };
 
 const _template = _strings_zh_CN;
@@ -3554,6 +3574,8 @@ class AppLocalizations {
   String operateFailed(String error) => _t('operateFailed').r(error);
   String get commentVerifiedRetryHint => _t('commentVerifiedRetryHint');
   String get qualitySwitchFailed => _t('qualitySwitchFailed');
+  String get downloadOpenFileFailed => _t('downloadOpenFileFailed');
+  String get downloadFallbackHint => _t('downloadFallbackHint');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

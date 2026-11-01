@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/toast.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../../../l10n/l10n.dart';
@@ -9,11 +10,35 @@ import '../data/public_media_store.dart';
 import '../download_provider.dart';
 
 /// 下载管理页：任务列表、进度条、暂停/继续/删除。
-class DownloadPage extends ConsumerWidget {
+class DownloadPage extends ConsumerStatefulWidget {
   const DownloadPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DownloadPage> createState() => _DownloadPageState();
+}
+
+class _DownloadPageState extends ConsumerState<DownloadPage>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 用户从系统设置授权返回时，重置写入策略缓存并重新检测
+    ref.read(downloadManagerProvider.notifier).onAppLifecycle(state);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(downloadManagerProvider);
     final manager = ref.read(downloadManagerProvider.notifier);
 
@@ -152,6 +177,19 @@ class _DownloadTile extends ConsumerWidget {
                 style: theme.textTheme.labelSmall,
               ),
             ),
+          // 降级路径（Android/data）：提示用户文件在应用私有目录
+          if (task.status == DownloadTaskStatus.completed &&
+              task.filePath.contains('/Android/data/'))
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                context.l10n.downloadFallbackHint,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: theme.colorScheme.error),
+              ),
+            ),
         ],
       ),
       // 多个操作（暂停/继续/重试/打开/删除）收进 PopupMenuButton
@@ -169,20 +207,31 @@ class _DownloadTile extends ConsumerWidget {
               await manager.retry(task.id);
               break;
             case 'open':
-              await PublicMediaStore.instance.open(
+              final opened = await PublicMediaStore.instance.open(
                 PublishedFile(
                   uri: task.mediaUri.isEmpty ? null : task.mediaUri,
                   path: task.filePath.isEmpty ? null : task.filePath,
                 ),
               );
+              if (!opened && mounted) {
+                Toast.show(context, context.l10n.downloadOpenFileFailed);
+              }
               break;
             case 'folder':
-              await PublicMediaStore.instance.viewFolder(
+              final ok = await PublicMediaStore.instance.viewFolder(
                 PublishedFile(
                   uri: task.mediaUri.isEmpty ? null : task.mediaUri,
                   path: task.filePath.isEmpty ? null : task.filePath,
                 ),
               );
+              if (!ok && mounted) {
+                // 多数文件管理器不支持以 FileProvider uri 打开目录，
+                // 失败时复制路径到剪贴板作为兜底
+                final path = task.filePath.isNotEmpty
+                    ? task.filePath
+                    : task.displayPath;
+                await Toast.copy(context, path);
+              }
               break;
             case 'delete':
               // 危险操作：error 色 + 二次确认 Dialog
