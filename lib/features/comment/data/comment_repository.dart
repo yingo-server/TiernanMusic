@@ -6,6 +6,9 @@ class CommentRepository {
   CommentRepository(this._api);
   final KugouApiClient _api;
 
+  /// 当前登录用户 userid（来自 API 客户端 cookie 上下文），用于 isMine 判定
+  String get _currentUserId => _api.userid;
+
   /// 评论列表
   Future<CommentPage> fetchComments({
     required CommentResourceType type,
@@ -26,7 +29,7 @@ class CommentRepository {
       _ => {'id': id, 'page': page, 'pagesize': pageSize},
     };
     final data = await _api.get(path, query: query);
-    return CommentPage.fromJson(data);
+    return CommentPage.fromJson(data, currentUserId: _currentUserId);
   }
 
   /// 按歌曲 hash 查询评论数。
@@ -49,7 +52,7 @@ class CommentRepository {
       if (mixsongid != null) 'mixsongid': mixsongid,
       'page': page,
     });
-    return CommentPage.fromJson(data);
+    return CommentPage.fromJson(data, currentUserId: _currentUserId);
   }
 
   /// 发评论
@@ -115,7 +118,8 @@ class CommentPage {
   final List<CommentClassify>? classifies;
   final List<String>? hotWords;
 
-  factory CommentPage.fromJson(Map<String, dynamic> json) {
+  factory CommentPage.fromJson(Map<String, dynamic> json,
+      {String? currentUserId}) {
     // 实测：顶层就有 `list`（无 data 层）；楼中楼总数是 `comments_num`。
     final data = json['data'] is Map
         ? Map<String, dynamic>.from(json['data'] as Map)
@@ -124,7 +128,8 @@ class CommentPage {
     final list = raw is List ? raw : const [];
     final comments = list
         .whereType<Map>()
-        .map((e) => Comment.fromJson(Map<String, dynamic>.from(e)))
+        .map((e) => Comment.fromJson(Map<String, dynamic>.from(e),
+            currentUserId: currentUserId))
         .toList();
     final total = _asInt(data['count'] ??
         data['total'] ??
@@ -184,7 +189,7 @@ class Comment {
   final String? specialChildId;
   final bool isMine;
 
-  factory Comment.fromJson(Map<String, dynamic> json) {
+  factory Comment.fromJson(Map<String, dynamic> json, {String? currentUserId}) {
     var avatar = '${json['user_pic'] ?? json['avatar'] ?? json['pic'] ?? ''}';
     avatar = avatar.replaceAll('{size}', '120');
     // 实测 `like` 是**对象** {count, likenum, haslike, opposenum}；
@@ -204,6 +209,10 @@ class Comment {
       specialChildId: json['special_child_id'] != null
           ? '${json['special_child_id']}'
           : null,
+      // 是否本人评论：userid 与当前登录用户一致
+      // （优先用调用方传入的 currentUserId，缺省用 API 客户端的 cookie userid）
+      isMine: _currentUserId.isNotEmpty &&
+          '${json['userid'] ?? json['user_id'] ?? ''}' == currentUserId,
     );
   }
 }

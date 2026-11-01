@@ -417,5 +417,62 @@
   "unknown": "Unbekannt",
   "all": "全部",
   "showPassword": "显示密码",
-  "hidePassword": "隐藏密码"
+  "hidePassword": "隐藏密码",
+  "albumPageComingSoon": "Die Albumseite ist in Entwicklung.",
+  "@albumPageComingSoon": {
+    "description": "Shown when tapping an album search result while the album page is not yet available"
+  },
+  "hotSearchLoadFailed": "Hot Searches konnten nicht geladen werden",
+  "@hotSearchLoadFailed": {
+    "description": "Empty state message when the hot search board fails to load"
+  },
+  "noMore": "Keine weiteren",
+  "@noMore": {
+    "description": "Footer shown when the comment list has no more pages"
+  },
+  "loadMore": "Mehr laden",
+  "@loadMore": {
+    "description": "Button to fetch the next page of playlist tracks"
+  },
+  "onlyShowsFirstN": "Zeigt erste {loaded} von {total} Titeln",
+  "@onlyShowsFirstN": {
+    "placeholders": {
+      "loaded": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    },
+    "description": "Truncation hint in playlist detail"
+  },
+  "collectSuccess": "Zu Favoriten hinzugefügt",
+  "@collectSuccess": {
+    "description": "Toast after collecting a playlist"
+  },
+  "collectPlaylistConfirm": "Diese Playlist zu Favoriten hinzufügen?",
+  "@collectPlaylistConfirm": {
+    "description": "Confirm dialog for collecting a playlist"
+  },
+  "uncollectPlaylistConfirm": "Diese Playlist aus Favoriten entfernen?",
+  "@uncollectPlaylistConfirm": {
+    "description": "Confirm dialog for removing a collected playlist"
+  },
+  "operateFailed": "Vorgang fehlgeschlagen: {error}",
+  "@operateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    },
+    "description": "Generic operation failure toast"
+  },
+  "commentVerifiedRetryHint": "Verifizierung erfolgreich, bitte erneut senden",
+  "@commentVerifiedRetryHint": {
+    "description": "After captcha success, ask user to resend manually"
+  },
+  "qualitySwitchFailed": "Qualitätswechsel fehlgeschlagen",
+  "@qualitySwitchFailed": {
+    "description": "Toast when MV quality switch fails"
+  }
 }

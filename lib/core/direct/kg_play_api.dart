@@ -214,6 +214,8 @@ class PlayUrlResult {
     required this.errorCode,
     required this.message,
     required this.ssaCode,
+    this.failProcess = const [],
+    this.extName = '',
   });
 
   final List<String> urls;
@@ -224,6 +226,12 @@ class PlayUrlResult {
   final int errorCode;
   final String message;
   final String? ssaCode;
+
+  /// 非空表示服务端明确拒绝（需购买/无版权等），降级无意义
+  final List<String> failProcess;
+
+  /// 服务端实际返回的音质扩展名（如 flac/320/128）
+  final String extName;
 
   String? get bestUrl => urls.isNotEmpty
       ? urls.first
@@ -259,6 +267,8 @@ class PlayUrlResult {
       errorCode: res.errorCode,
       message: '${b['error'] ?? b['error_msg'] ?? b['errmsg'] ?? ''}',
       ssaCode: res.ssaCode,
+      failProcess: toList(b['fail_process']),
+      extName: '${b['extName'] ?? ''}',
     );
   }
 }

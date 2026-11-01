@@ -417,5 +417,62 @@
   "later": "稍後",
   "all": "全部",
   "showPassword": "显示密码",
-  "hidePassword": "隐藏密码"
+  "hidePassword": "隐藏密码",
+  "albumPageComingSoon": "專輯詳情頁開發中，敬請期待",
+  "@albumPageComingSoon": {
+    "description": "Shown when tapping an album search result while the album page is not yet available"
+  },
+  "hotSearchLoadFailed": "熱搜載入失敗",
+  "@hotSearchLoadFailed": {
+    "description": "Empty state message when the hot search board fails to load"
+  },
+  "noMore": "沒有更多了",
+  "@noMore": {
+    "description": "Footer shown when the comment list has no more pages"
+  },
+  "loadMore": "載入更多",
+  "@loadMore": {
+    "description": "Button to fetch the next page of playlist tracks"
+  },
+  "onlyShowsFirstN": "僅顯示前 {loaded} 首（共 {total} 首）",
+  "@onlyShowsFirstN": {
+    "placeholders": {
+      "loaded": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    },
+    "description": "Truncation hint in playlist detail"
+  },
+  "collectSuccess": "收藏成功",
+  "@collectSuccess": {
+    "description": "Toast after collecting a playlist"
+  },
+  "collectPlaylistConfirm": "確定收藏該歌單嗎？",
+  "@collectPlaylistConfirm": {
+    "description": "Confirm dialog for collecting a playlist"
+  },
+  "uncollectPlaylistConfirm": "確定取消收藏該歌單嗎？",
+  "@uncollectPlaylistConfirm": {
+    "description": "Confirm dialog for removing a collected playlist"
+  },
+  "operateFailed": "操作失敗：{error}",
+  "@operateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    },
+    "description": "Generic operation failure toast"
+  },
+  "commentVerifiedRetryHint": "驗證已通過，請重新點擊發送",
+  "@commentVerifiedRetryHint": {
+    "description": "After captcha success, ask user to resend manually"
+  },
+  "qualitySwitchFailed": "切換清晰度失敗",
+  "@qualitySwitchFailed": {
+    "description": "Toast when MV quality switch fails"
+  }
 }

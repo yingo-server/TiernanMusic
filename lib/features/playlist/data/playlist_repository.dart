@@ -81,10 +81,11 @@ class PlaylistRepository {
 
   /// 添加歌曲到歌单
   Future<void> addTracks(String listid, List<TrackRef> tracks) async {
+    // 位置参数 data：名称|hash|album_id|album_audio_id，
+    // 空字段必须占位（不能 skip，否则后字段前移导致服务端解析错位）
     final data = tracks
-        .map((t) => [t.name, t.hash, t.albumId, t.albumAudioId]
-            .where((e) => e != null && e.isNotEmpty)
-            .join('|'))
+        .map((t) =>
+            [t.name, t.hash, t.albumId ?? '', t.albumAudioId ?? ''].join('|'))
         .join(',');
     await _api.get('/playlist/tracks/add', query: {'listid': listid, 'data': data});
   }

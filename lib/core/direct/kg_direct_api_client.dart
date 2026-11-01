@@ -88,6 +88,8 @@ class KgDirectApiClient extends KugouApiClient {
     } catch (e) {
       _logError(label, e);
       if (!fallbackToKapi) rethrow;
+      // 风控/验证（20028）不回退：回退等于同一业务请求打两次，会加重风控。
+      if (e is ApiException && e.needsVerification) rethrow;
       try {
         return await kapi();
       } catch (e2) {

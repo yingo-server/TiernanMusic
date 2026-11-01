@@ -417,5 +417,62 @@
   "later": "Más tarde",
   "all": "全部",
   "showPassword": "显示密码",
-  "hidePassword": "隐藏密码"
+  "hidePassword": "隐藏密码",
+  "albumPageComingSoon": "La página del álbum está en desarrollo.",
+  "@albumPageComingSoon": {
+    "description": "Shown when tapping an album search result while the album page is not yet available"
+  },
+  "hotSearchLoadFailed": "Error al cargar búsquedas populares",
+  "@hotSearchLoadFailed": {
+    "description": "Empty state message when the hot search board fails to load"
+  },
+  "noMore": "No hay más",
+  "@noMore": {
+    "description": "Footer shown when the comment list has no more pages"
+  },
+  "loadMore": "Cargar más",
+  "@loadMore": {
+    "description": "Button to fetch the next page of playlist tracks"
+  },
+  "onlyShowsFirstN": "Mostrando las primeras {loaded} de {total} canciones",
+  "@onlyShowsFirstN": {
+    "placeholders": {
+      "loaded": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    },
+    "description": "Truncation hint in playlist detail"
+  },
+  "collectSuccess": "Añadido a favoritos",
+  "@collectSuccess": {
+    "description": "Toast after collecting a playlist"
+  },
+  "collectPlaylistConfirm": "¿Añadir esta lista a favoritos?",
+  "@collectPlaylistConfirm": {
+    "description": "Confirm dialog for collecting a playlist"
+  },
+  "uncollectPlaylistConfirm": "¿Quitar esta lista de favoritos?",
+  "@uncollectPlaylistConfirm": {
+    "description": "Confirm dialog for removing a collected playlist"
+  },
+  "operateFailed": "Operación fallida: {error}",
+  "@operateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    },
+    "description": "Generic operation failure toast"
+  },
+  "commentVerifiedRetryHint": "Verificación superada, pulsa enviar de nuevo",
+  "@commentVerifiedRetryHint": {
+    "description": "After captcha success, ask user to resend manually"
+  },
+  "qualitySwitchFailed": "Error al cambiar la calidad",
+  "@qualitySwitchFailed": {
+    "description": "Toast when MV quality switch fails"
+  }
 }

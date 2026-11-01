@@ -417,5 +417,62 @@
   "later": "Later",
   "all": "全部",
   "showPassword": "显示密码",
-  "hidePassword": "隐藏密码"
+  "hidePassword": "隐藏密码",
+  "albumPageComingSoon": "Album page is under development. Stay tuned.",
+  "@albumPageComingSoon": {
+    "description": "Shown when tapping an album search result while the album page is not yet available"
+  },
+  "hotSearchLoadFailed": "Failed to load hot searches",
+  "@hotSearchLoadFailed": {
+    "description": "Empty state message when the hot search board fails to load"
+  },
+  "noMore": "No more",
+  "@noMore": {
+    "description": "Footer shown when the comment list has no more pages"
+  },
+  "loadMore": "Load more",
+  "@loadMore": {
+    "description": "Button to fetch the next page of playlist tracks"
+  },
+  "onlyShowsFirstN": "Showing first {loaded} of {total} songs",
+  "@onlyShowsFirstN": {
+    "placeholders": {
+      "loaded": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    },
+    "description": "Truncation hint in playlist detail"
+  },
+  "collectSuccess": "Added to favorites",
+  "@collectSuccess": {
+    "description": "Toast after collecting a playlist"
+  },
+  "collectPlaylistConfirm": "Add this playlist to favorites?",
+  "@collectPlaylistConfirm": {
+    "description": "Confirm dialog for collecting a playlist"
+  },
+  "uncollectPlaylistConfirm": "Remove this playlist from favorites?",
+  "@uncollectPlaylistConfirm": {
+    "description": "Confirm dialog for removing a collected playlist"
+  },
+  "operateFailed": "Operation failed: {error}",
+  "@operateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    },
+    "description": "Generic operation failure toast"
+  },
+  "commentVerifiedRetryHint": "Verification passed, please tap send again",
+  "@commentVerifiedRetryHint": {
+    "description": "After captcha success, ask user to resend manually"
+  },
+  "qualitySwitchFailed": "Failed to switch quality",
+  "@qualitySwitchFailed": {
+    "description": "Toast when MV quality switch fails"
+  }
 }

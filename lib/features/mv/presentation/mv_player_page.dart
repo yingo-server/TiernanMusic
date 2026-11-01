@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../core/utils/toast.dart';
 import '../../../l10n/l10n.dart';
 import '../mv_provider.dart';
 
@@ -53,6 +54,8 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
   void dispose() {
     _controller?.dispose();
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    // 恢复系统 UI（进入横屏时隐藏了状态栏）
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
@@ -60,6 +63,7 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
   Future<void> _resolve(String hash) async {
     if (_resolving) return;
     _resolving = true;
+    final isSwitch = _controller != null; // 切清晰度（非首次解析）
     if (mounted) setState(() {
       _error = null;
       _controller?.pause();
@@ -85,7 +89,16 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
     } catch (e) {
       // 初始化失败必须释放刚创建的原生播放器，否则每次重试泄漏一个
       await created?.dispose();
-      if (mounted) setState(() => _error = '$e');
+      if (!mounted) return;
+      if (isSwitch) {
+        // 切档失败：恢复旧画面播放 + toast（不显示全屏错误 UI）
+        try {
+          await _controller?.play();
+        } catch (_) {}
+        Toast.show(context, context.l10n.qualitySwitchFailed);
+      } else {
+        setState(() => _error = '$e');
+      }
     } finally {
       _resolving = false;
     }
@@ -95,6 +108,14 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
   Widget build(BuildContext context) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
+    // 全屏（横屏）时隐藏状态栏，退出恢复
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SystemChrome.setEnabledSystemUIMode(
+        isLandscape
+            ? SystemUiMode.immersiveSticky
+            : SystemUiMode.edgeToEdge,
+      );
+    });
     final detail = ref
         .watch(mvDetailProvider(widget.videoId ?? widget.hash))
         .value;

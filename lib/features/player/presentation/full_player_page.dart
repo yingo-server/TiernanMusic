@@ -259,31 +259,48 @@ class _MvEntry extends ConsumerWidget {
     if (mv == null || mv.videoId.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(0, 40),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            visualDensity: VisualDensity.compact,
+      child: Row(
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 40),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                visualDensity: VisualDensity.compact,
+              ),
+              icon: const Icon(Icons.movie_outlined, size: 18),
+              label: Text(context.l10n.playMv),
+              onPressed: () {
+                final title = mv.name.isNotEmpty ? mv.name : (song?.name ?? '');
+                final artist =
+                    mv.artist.isNotEmpty ? mv.artist : (song?.artist ?? '');
+                // /video/url 只认视频 hash，故 path 用 hash；
+                // videoId 走 query 供清晰度列表使用
+                final hash = mv.bestHash ?? mv.sdHash ?? '';
+                context.push(
+                  '/mv/${Uri.encodeComponent(hash.isEmpty ? mv.videoId : hash)}'
+                  '?videoId=${Uri.encodeComponent(mv.videoId)}'
+                  '&title=${Uri.encodeComponent(title)}'
+                  '&artist=${Uri.encodeComponent(artist)}',
+                );
+              },
+            ),
           ),
-          icon: const Icon(Icons.movie_outlined, size: 18),
-          label: Text(context.l10n.playMv),
-          onPressed: () {
-            final title = mv.name.isNotEmpty ? mv.name : (song?.name ?? '');
-            final artist =
-                mv.artist.isNotEmpty ? mv.artist : (song?.artist ?? '');
-            // /video/url 只认视频 hash，故 path 用 hash；
-            // videoId 走 query 供清晰度列表使用
-            final hash = mv.bestHash ?? mv.sdHash ?? '';
-            context.push(
-              '/mv/${Uri.encodeComponent(hash.isEmpty ? mv.videoId : hash)}'
-              '?videoId=${Uri.encodeComponent(mv.videoId)}'
-              '&title=${Uri.encodeComponent(title)}'
-              '&artist=${Uri.encodeComponent(artist)}',
-            );
-          },
-        ),
+          const SizedBox(width: 12),
+          // 评论入口（之前整个评论功能不可达）
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(0, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.comment_outlined, size: 18),
+            label: Text(context.l10n.comments),
+            onPressed: () => context.push(
+                '/comments/song/${Uri.encodeComponent(albumAudioId)}'),
+          ),
+        ],
       ),
     );
   }

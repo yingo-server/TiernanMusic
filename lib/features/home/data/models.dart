@@ -204,17 +204,25 @@ class HomePlaylist {
 class HomeRank {
   const HomeRank({
     required this.id,
+    required this.globalCollectionId,
     required this.name,
     required this.cover,
   });
 
   final String id;
+  // 全局歌单 ID（collection_ 形式）；跳转 /playlist/ 必须用它，
+  // 数字 rankid 会触发 20010（与搜索页口径一致）。
+  final String globalCollectionId;
   final String name;
   final String cover;
 
   factory HomeRank.fromJson(Map<String, dynamic> json) {
+    final gid = _toStr(json['global_collection_id'] ??
+        json['global_specialid'] ??
+        json['gid']);
     return HomeRank(
       id: _toStr(json['rankid'] ?? json['id']),
+      globalCollectionId: gid.isNotEmpty ? gid : _toStr(json['rankid'] ?? json['id']),
       name: _toStr(json['rankname'] ?? json['name']).isEmpty
           ? '未知榜单'
           : _toStr(json['rankname'] ?? json['name']),
