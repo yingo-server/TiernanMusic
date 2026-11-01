@@ -919,8 +919,9 @@ class KgDirectApiClient extends KugouApiClient {
         headers: {'x-router': 'usercenter.kugou.com'});
     // 实测响应无 userid 字段，而上层 AuthRepository 读 data.userid → 回填
     final d = resp.body;
-    if (d is Map<String, dynamic> && d['data'] is Map<String, dynamic>) {
-      (d['data'] as Map<String, dynamic>)['userid'] = userid.toString();
+    final inner = d['data'];
+    if (inner is Map<String, dynamic>) {
+      inner['userid'] = userid.toString();
     }
     return resp;
   }

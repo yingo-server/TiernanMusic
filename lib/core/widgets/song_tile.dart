@@ -412,8 +412,7 @@ FriendlyError errorClassification(BuildContext context, Object? error) {
   final raw = error?.toString() ?? '';
   if (error is DioException) {
     final t = error.type;
-    if (error is DioException &&
-        (t == DioExceptionType.connectionTimeout ||
+    if (t == DioExceptionType.connectionTimeout ||
             t == DioExceptionType.receiveTimeout ||
             t == DioExceptionType.sendTimeout ||
             t == DioExceptionType.connectionError)) {
