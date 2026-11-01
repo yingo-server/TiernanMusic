@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../features/download/data/storage_permission_service.dart';
+
 /// 全局错误日志落盘。
 ///
 /// 存储层级：**公共内部存储**（文件管理器可见）
@@ -36,16 +38,20 @@ class ErrorLogger {
   Directory? _fallbackDir;
 
   /// 初始化日志目录（应用私有降级目录）
+  ///
+  /// 失败时**不置 _initialized**，保证下次调用会重试——
+  /// 否则一次失败会让日志永久丢失。
   Future<void> init() async {
-    if (_initialized) return;
-    _initialized = true;
+    if (_fallbackDir != null) return;
     try {
       final docs = await getApplicationDocumentsDirectory();
       final dir = Directory('${docs.path}/$folderName/$logsDirName');
       if (!await dir.exists()) await dir.create(recursive: true);
       _fallbackDir = dir;
+      _initialized = true;
     } catch (e) {
       debugPrint('[ErrorLogger] fallback dir failed: $e');
+      _initialized = false;
     }
   }
 
@@ -106,7 +112,8 @@ class ErrorLogger {
         // 由 Dart 侧缓存当日内容，退出/超限时整份重写。
         return await _rewriteMediaStore(fileName, text);
       }
-      // ≤9：直接写公共 Documents 路径
+      // ≤9：写公共 Documents 需要 WRITE_EXTERNAL_STORAGE，先申请
+      if (!await _ensureStoragePermission()) return false;
       final base = await _channel.invokeMethod<String>(
           'publicDir', {'type': 'documents'});
       if (base == null || base.isEmpty) return false;
@@ -122,6 +129,17 @@ class ErrorLogger {
       return true;
     } catch (e) {
       debugPrint('[ErrorLogger] public write failed: $e');
+      return false;
+    }
+  }
+
+  /// 申请存储权限（仅 Android 9 及以下需要；≥29 MediaStore 免权限）
+  Future<bool> _ensureStoragePermission() async {
+    try {
+      final service = StoragePermissionService.instance;
+      return await service.requestStoragePermission();
+    } catch (e) {
+      debugPrint('[ErrorLogger] permission request failed: $e');
       return false;
     }
   }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -14,6 +16,9 @@ enum StorageStrategy {
 }
 
 /// 存储权限服务：判断 API 级别、申请运行时权限、决定写入策略。
+///
+/// 这是**唯一权威**的存储权限来源；`lib/core/utils/permission_gate.dart`
+/// 只负责 UI 层提示，两者共享同一套判定逻辑。
 class StoragePermissionService {
   StoragePermissionService._();
   static final instance = StoragePermissionService._();
@@ -32,6 +37,12 @@ class StoragePermissionService {
     } catch (_) {
       level = 0;
     }
+    // 原生通道失败时用 operatingSystemVersion 兜底
+    if (level <= 0) {
+      final match = RegExp(r'Android\s+(\d+)')
+          .firstMatch(Platform.operatingSystemVersion);
+      level = int.tryParse(match?.group(1) ?? '') ?? 29;
+    }
     _apiLevel = level;
     return level;
   }
@@ -40,33 +51,45 @@ class StoragePermissionService {
   Future<bool> isAndroid10Plus() async => (await apiLevel()) >= 29;
 
   /// Android 9 及以下（需要写权限）
-  Future<bool> needsLegacyWritePermission() async =>
-      (await apiLevel()) > 0 && (await apiLevel()) < 29;
+  Future<bool> needsLegacyWritePermission() async {
+    final level = await apiLevel();
+    return level > 0 && level < 29;
+  }
 
   /// 申请存储权限（仅 Android 9 及以下需要）。
   ///
   /// 返回是否具备公共目录写入能力。
   Future<bool> requestStoragePermission() async {
     final level = await apiLevel();
-    if (level <= 0) return false;
     if (level >= 29) return true; // MediaStore 免权限
-    final status = await Permission.storage.request();
-    return status.isGranted;
+
+    final status = await Permission.storage.status;
+    if (status.isGranted) return true;
+    if (status.isPermanentlyDenied) {
+      await openAppSettings();
+      return false;
+    }
+    final result = await Permission.storage.request();
+    return result.isGranted;
   }
 
   /// 申请通知权限（Android 13+ 后台下载通知）。
   Future<bool> requestNotificationPermission() async {
     final level = await apiLevel();
-    if (level <= 0) return false;
     if (level < 33) return true;
-    final status = await Permission.notification.request();
-    return status.isGranted;
+    final status = await Permission.notification.status;
+    if (status.isGranted) return true;
+    if (status.isPermanentlyDenied) {
+      await openAppSettings();
+      return false;
+    }
+    final result = await Permission.notification.request();
+    return result.isGranted;
   }
 
   /// 计算当前可用的写入策略（会触发权限申请）。
   Future<StorageStrategy> resolveStrategy() async {
     final level = await apiLevel();
-    if (level <= 0) return StorageStrategy.appFallback;
     if (level >= 29) return StorageStrategy.mediaStore;
     final granted = await requestStoragePermission();
     return granted ? StorageStrategy.directPath : StorageStrategy.appFallback;
@@ -75,10 +98,9 @@ class StoragePermissionService {
   /// 当前策略（不申请权限）。
   Future<StorageStrategy> currentStrategy() async {
     final level = await apiLevel();
-    if (level <= 0) return StorageStrategy.appFallback;
     if (level >= 29) return StorageStrategy.mediaStore;
-    final granted = await Permission.storage.status;
-    return granted.isGranted
+    final status = await Permission.storage.status;
+    return status.isGranted
         ? StorageStrategy.directPath
         : StorageStrategy.appFallback;
   }
@@ -89,6 +111,22 @@ class StoragePermissionService {
       return await _channel.invokeMethod<String>('publicDir', {'type': type});
     } catch (_) {
       return null;
+    }
+  }
+
+  /// 该公共目录在当前系统版本下是否可直接写文件。
+  ///
+  /// Android 10+ 的 scoped storage 下，直写公共路径会被拒绝，
+  /// 必须走 MediaStore；此方法用于判断是否需要降级。
+  Future<bool> isPublicDirWritable(String type) async {
+    final level = await apiLevel();
+    if (level >= 29) return false;
+    try {
+      final ok = await _channel.invokeMethod<bool>(
+          'publicDirWritable', {'type': type});
+      return ok ?? false;
+    } catch (_) {
+      return false;
     }
   }
 }

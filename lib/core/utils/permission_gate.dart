@@ -4,87 +4,37 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../features/download/data/storage_permission_service.dart';
 import 'toast.dart';
 
-/// 权限门卫：需要写公共存储 / 发通知前自动申请。
+/// 权限门卫：UI 层入口。
 ///
-/// Android 版本差异：
-/// - API ≤ 28：写公共目录必须 `WRITE_EXTERNAL_STORAGE`（运行时申请）
-/// - API 29+：MediaStore 写入不需要权限；但 Android 13+ 发通知需要 `POST_NOTIFICATIONS`
-/// - 用户拒绝后再次触发时，引导到系统设置
+/// **判定逻辑统一由 [StoragePermissionService] 提供**（唯一权威），
+/// 本类只负责：发起申请、给出用户提示、永久拒绝时引导系统设置。
 class PermissionGate {
   PermissionGate._();
   static final instance = PermissionGate._();
 
-  /// 已请求过的权限不再重复弹窗
-  final Set<Permission> _requested = <Permission>{};
+  StoragePermissionService get _service => StoragePermissionService.instance;
 
   /// 写公共存储前调用。返回 true 表示可以写。
   Future<bool> ensureStorageWrite() async {
     if (!Platform.isAndroid) return true;
-
-    final apiLevel = _apiLevel;
-    if (apiLevel >= 29) {
-      // Android 10+：MediaStore 写入无需存储权限
-      return true;
-    }
-
-    final status = await Permission.storage.status;
-    if (status.isGranted) return true;
-    if (status.isPermanentlyDenied) {
-      await _guideToSettings();
-      return false;
-    }
-
-    final result = await Permission.storage.request();
-    if (result.isGranted) return true;
-    if (result.isPermanentlyDenied) await _guideToSettings();
-    return false;
+    return _service.requestStoragePermission();
   }
 
   /// 需要发通知时调用（Android 13+ 才有意义）
   Future<bool> ensureNotification() async {
     if (!Platform.isAndroid) return true;
-
-    final apiLevel = _apiLevel;
-    if (apiLevel < 33) return true;
-
-    final status = await Permission.notification.status;
-    if (status.isGranted) return true;
-    if (status.isPermanentlyDenied) {
-      await _guideToSettings();
-      return false;
-    }
-    final result = await Permission.notification.request();
-    return result.isGranted;
+    return _service.requestNotificationPermission();
   }
 
-  /// 读取媒体（Android 13+ 需要细分权限；本 App 只读自己写入的文件，通常不需要）
+  /// 读取媒体（Android 13+ 细分权限；本 App 只读自己写入的文件，通常不需要）
   Future<bool> ensureMediaRead() async {
     if (!Platform.isAndroid) return true;
-    final apiLevel = _apiLevel;
-    if (apiLevel < 33) {
-      final status = await Permission.storage.status;
-      if (status.isGranted) return true;
-      final result = await Permission.storage.request();
-      return result.isGranted;
-    }
+    final level = await _service.apiLevel();
+    if (level < 33) return true;
     return true;
-  }
-
-  /// Android API 级别（Platform.operatingSystemVersion 的 Android 分支返回 "Android 13"）
-  int get _apiLevel {
-    if (!Platform.isAndroid) return 99;
-    final match = RegExp(r'Android\s+(\d+)').firstMatch(Platform.operatingSystemVersion);
-    return int.tryParse(match?.group(1) ?? '') ?? 29;
-  }
-
-  Future<void> _guideToSettings() async {
-    try {
-      await openAppSettings();
-    } catch (e) {
-      debugPrint('[PermissionGate] openAppSettings failed: $e');
-    }
   }
 
   /// 带上下文提示地申请（UI 层用）
@@ -97,7 +47,7 @@ class PermissionGate {
     final status = await permission.status;
     if (status.isGranted) return true;
     if (status.isPermanentlyDenied) {
-      await _guideToSettings();
+      await openAppSettings();
       return false;
     }
     final result = await permission.request();
@@ -106,5 +56,14 @@ class PermissionGate {
       return false;
     }
     return true;
+  }
+
+  /// 打开系统设置（供 UI 层「去授权」按钮使用）
+  Future<void> openSettings() async {
+    try {
+      await openAppSettings();
+    } catch (e) {
+      debugPrint('[PermissionGate] openAppSettings failed: $e');
+    }
   }
 }

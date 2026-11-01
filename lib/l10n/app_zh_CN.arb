@@ -299,5 +299,23 @@
         "example": "12"
       }
     }
+  },
+  "checkUpdate": "检查更新",
+  "checkUpdateDesc": "检测是否有新版本",
+  "checkingUpdate": "正在检查更新…",
+  "updateCheckFailed": "检查更新失败，请稍后重试",
+  "alreadyLatestVersion": "已是最新版本",
+  "newVersionAvailable": "发现新版本",
+  "versionLabel": "最新版本：{version}",
+  "downloadNow": "立即下载",
+  "later": "稍后",
+  "@versionLabel": {
+    "description": "最新版本号",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.1"
+      }
+    }
   }
 }

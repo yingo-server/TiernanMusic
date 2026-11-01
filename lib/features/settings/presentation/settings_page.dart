@@ -16,6 +16,7 @@ import '../../../core/theme/settings_provider.dart';
 import '../../../core/utils/error_logger.dart';
 import '../../../core/utils/permission_gate.dart';
 import '../../../core/utils/toast.dart';
+import '../../../core/utils/update_checker.dart';
 import '../../../l10n/l10n.dart';
 import 'settings_providers.dart';
 
@@ -694,18 +695,73 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           onTap: _showLicenseDialog,
         ),
         ListTile(
-          leading: const Icon(Icons.code_outlined),
-          title: Text(context.l10n.githubRepo),
-          subtitle: const Text('github.com/tiernan/music'),
-          trailing: const Icon(Icons.open_in_new, size: 18),
-          onTap: () async {
-            final uri = Uri.parse('https://github.com/tiernan/music');
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
-          },
+          leading: const Icon(Icons.system_update_alt_outlined),
+          title: Text(context.l10n.checkUpdate),
+          subtitle: Text(context.l10n.checkUpdateDesc),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _checkUpdate,
         ),
       ],
+    );
+  }
+
+  Future<void> _checkUpdate() async {
+    Toast.show(context, context.l10n.checkingUpdate);
+    UpdateInfo info;
+    try {
+      info = await UpdateChecker.instance.check();
+    } catch (e) {
+      if (!mounted) return;
+      Toast.show(context, context.l10n.updateCheckFailed);
+      return;
+    }
+    if (!mounted) return;
+    if (!info.hasUpdate) {
+      Toast.show(context, context.l10n.alreadyLatestVersion);
+      return;
+    }
+    await _showUpdateDialog(info);
+  }
+
+  Future<void> _showUpdateDialog(UpdateInfo info) async {
+    final url = info.acceleratedUrl ?? info.downloadUrl;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.l10n.newVersionAvailable),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.l10n.versionLabel(info.latestVersion)),
+              if (info.releaseNotes != null) ...[
+                const SizedBox(height: 12),
+                Text(info.releaseNotes!,
+                    style: const TextStyle(fontSize: 12, height: 1.4)),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(context.l10n.later),
+          ),
+          if (url != null)
+            FilledButton.icon(
+              icon: const Icon(Icons.download_outlined, size: 18),
+              label: Text(context.l10n.downloadNow),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final uri = Uri.parse(url);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+        ],
+      ),
     );
   }
 
