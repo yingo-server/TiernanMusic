@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../../core/utils/toast.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../../auth/data/auth_providers.dart';
 import '../data/comment_repository.dart';
@@ -144,6 +146,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      // M3 规范：二级页面用标准 AppBar；标题区保持层级。
       appBar: AppBar(title: Text(context.l10n.comments)),
       body: Column(
         children: [
@@ -266,8 +269,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
     if (!_isLoggedIn) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(context.l10n.pleaseLoginFirst)));
+      Toast.show(context, context.l10n.pleaseLoginFirst);
       return;
     }
     _inputCtrl.clear();
@@ -289,51 +291,34 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
             .sendComment(text);
       }
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(context.l10n.commentSuccess)));
+        Toast.show(context, context.l10n.commentSuccess);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(context.l10n.commentFailed('$e'))));
+        Toast.show(context, context.l10n.commentFailed('$e'));
       }
     }
   }
 
   Future<void> _deleteComment(Comment comment) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.deleteComment),
-        content: Text(context.l10n.deleteCommentConfirm),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(context.l10n.cancel)),
-          // 危险操作：红色强调
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-              foregroundColor: Theme.of(ctx).colorScheme.onError,
-            ),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(context.l10n.delete)),
-        ],
-      ),
+    // 危险操作：error 色强调 + 二次确认 Dialog
+    final confirm = await showDestructiveConfirm(
+      context,
+      title: context.l10n.deleteComment,
+      message: context.l10n.deleteCommentConfirm,
+      confirmLabel: context.l10n.delete,
     );
-    if (confirm != true) return;
+    if (!confirm) return;
     try {
       await ref.read(_commentsProvider(_args).notifier).deleteComment(
           comment.id,
           specialId: comment.specialChildId);
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(context.l10n.deleted)));
+        Toast.show(context, context.l10n.deleted);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(context.l10n.deleteFailed('$e'))));
+        Toast.show(context, context.l10n.deleteFailed('$e'));
       }
     }
   }
@@ -344,6 +329,8 @@ class _CommentTile extends StatelessWidget {
   final Comment comment;
   final VoidCallback? onReply;
   final VoidCallback? onDelete;
+
+  bool get _hasActions => onReply != null || onDelete != null;
 
   @override
   Widget build(BuildContext context) {
@@ -402,32 +389,44 @@ class _CommentTile extends StatelessWidget {
                     )),
               ],
               const Spacer(),
-              // 次要操作用 TextButton（而非裸 GestureDetector 文本）：
-              // 有涟漪反馈、有 48dp 触控目标、有语义。
-              if (onReply != null)
-                TextButton(
-                  onPressed: onReply,
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(48, 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  child: Text(context.l10n.reply,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.colorScheme.primary)),
-                ),
-              if (onDelete != null)
-                TextButton(
-                  onPressed: onDelete,
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(48, 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    visualDensity: VisualDensity.compact,
-                    foregroundColor: theme.colorScheme.error,
-                  ),
-                  child: Text(context.l10n.delete,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.colorScheme.error)),
+              // M3 规范：列表项的多个操作收进 PopupMenuButton，
+              // 而不是在行末排一排图标/文本按钮。
+              if (_hasActions)
+                PopupMenuButton<String>(
+                  tooltip: context.l10n.moreActions,
+                  onSelected: (v) {
+                    if (v == 'reply') onReply?.call();
+                    if (v == 'delete') onDelete?.call();
+                  },
+                  itemBuilder: (context) => [
+                    if (onReply != null)
+                      PopupMenuItem<String>(
+                        value: 'reply',
+                        child: Row(
+                          children: [
+                            Icon(Icons.reply,
+                                size: 20,
+                                color: theme.colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 12),
+                            Text(context.l10n.reply),
+                          ],
+                        ),
+                      ),
+                    if (onDelete != null)
+                      PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline,
+                                size: 20, color: theme.colorScheme.error),
+                            const SizedBox(width: 12),
+                            Text(context.l10n.delete,
+                                style: TextStyle(
+                                    color: theme.colorScheme.error)),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
             ],
           ),

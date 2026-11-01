@@ -59,7 +59,89 @@
       }
     }
   },
-  "about": "バージョン情報",
+  "@recentErrorsCount": {
+    "description": "最近的错误条数",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "12"
+      }
+    }
+  },
+  "@versionLabel": {
+    "description": "最新版本号",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.1"
+      }
+    }
+  },
+  "@commentFailed": {
+    "description": "コメントに失敗しました：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@deleteFailed": {
+    "description": "削除に失敗しました：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@clearCacheFailed": {
+    "description": "消去に失敗しました：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@apiConnectionOk": {
+    "description": "接続成功（HTTP {code}）",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "@apiServerReachable": {
+    "description": "サーバーに到達しました（HTTP {code}）",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "@apiConnectionFailed": {
+    "description": "接続に失敗しました：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@qrLoadFailed": {
+    "description": "QRコードの読み込みに失敗：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@commentsCount": {
+    "description": "{count} 件のコメント",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "about": "について",
   "version": "バージョン",
   "license": "ライセンス",
   "mobileLogin": "電話番号でログイン",
@@ -70,18 +152,18 @@
   "smsCode": "SMS認証コード",
   "sendSmsCode": "認証コードを送信",
   "themeDark": "ダークモード",
-  "themeLight": "ライトモード",
+  "themeLight": "ライト",
   "themeSystem": "システムに追随",
   "language": "言語",
   "apiSettings": "API設定",
-  "kugouApiUrl": "Kugou APIアドレス",
+  "kugouApiUrl": "酷狗APIアドレス",
   "translateApiUrl": "翻訳APIアドレス",
   "cacheSettings": "キャッシュ設定",
   "clearCache": "キャッシュをクリア",
   "cacheSize": "キャッシュサイズ",
   "previous": "前の曲",
   "favorite": "お気に入り",
-  "unfavorite": "お気に入り登録を解除",
+  "unfavorite": "お気に入りから外す",
   "playlist": "プレイリスト",
   "comment": "コメント",
   "comments": "コメント",
@@ -89,10 +171,10 @@
   "reply": "返信",
   "delete": "削除",
   "cancel": "キャンセル",
-  "appName": "汀瀾ミュージック",
+  "appName": "汀澜音楽",
   "home": "ホーム",
   "search": "検索",
-  "library": "ミュージックライブラリ",
+  "library": "音楽ライブラリ",
   "settings": "設定",
   "login": "ログイン",
   "logout": "ログアウト",
@@ -134,8 +216,8 @@
   "quality128": "スムーズ 128K",
   "quality320": "高品質 320K",
   "qualityFlac": "ロスレス FLAC",
-  "captchaTitle": "CAPTCHA認証",
-  "captchaHint": "スライダーをスライドして認証してください",
+  "captchaTitle": "CAPTCHA",
+  "captchaHint": "スライダー認証を完了してください",
   "loginSuccess": "ログインに成功しました",
   "loginFailed": "ログインに失敗しました",
   "accountManage": "アカウント管理",
@@ -151,8 +233,8 @@
   "noRelatedContent": "関連するコンテンツはありません",
   "recentlyPlayed": "最近再生",
   "clear": "クリア",
-  "myFavoriteMvs": "マイコレクションのMV",
-  "mvComingSoon": "MVコレクション機能はまもなくリリースされます。どうぞご期待ください",
+  "myFavoriteMvs": "お気に入り登録したMV",
+  "mvComingSoon": "MVのお気に入り登録機能はまもなくリリースされます。どうぞご期待ください",
   "clearRecentlyPlayed": "最近再生をクリア",
   "clearRecentConfirm": "すべての再生履歴をクリアしてもよろしいですか？この操作は元に戻せません。",
   "notLoggedIn": "ログインしていません",
@@ -160,7 +242,7 @@
   "goLogin": "ログインする",
   "noPlaylistsYet": "プレイリストはありません",
   "playlistLoadFailed": "プレイリストの読み込みに失敗しました",
-  "unofficialClient": "非公式サードパーティ製クライアントです",
+  "unofficialClient": "非公式サードパーティ製クライアント",
   "smsLogin": "SMSでログイン",
   "operationFailed": "操作に失敗しました",
   "phoneInvalid": "正しい電話番号を入力してください",
@@ -172,7 +254,7 @@
   "tabSongs": "シングル",
   "refreshQr": "QRコードを更新",
   "qrExpiredShort": "有効期限切れ",
-  "unknownArtist": "不明のアーティスト",
+  "unknownArtist": "不明なアーティスト",
   "notPlaying": "再生中ではありません",
   "noLyric": "歌詞はありません",
   "lyricParseFailed": "歌詞の解析に失敗しました",
@@ -181,12 +263,12 @@
   "clearCacheConfirm": "画像キャッシュ、APIキャッシュ、歌詞翻訳キャッシュがクリアされます。アカウントデータは削除されません。このまま続行しますか？",
   "cacheCleared": "キャッシュがクリアされました",
   "account": "アカウント",
-  "switchAccountSubtitle": "ログイン済みのアカウントを切り替えたり、管理したりします",
+  "switchAccountSubtitle": "ログイン済みのアカウントを切り替える、または管理する",
   "appearance": "外観",
   "themeMode": "テーマモード",
   "appLanguage": "インターフェース言語",
   "lyricModeOriginal": "原文のみ",
-  "lyricModeBilingual": "二言語対照",
+  "lyricModeBilingual": "二か国語対照",
   "lyricModeTranslation": "訳文のみ",
   "playback": "再生",
   "lyricDisplayMode": "歌詞表示モード",
@@ -198,7 +280,7 @@
   "usernameLabel": "ユーザー名 / 携帯電話番号",
   "usernamePasswordRequired": "ユーザー名とパスワードを入力してください",
   "qrExpired": "QRコードの有効期限が切れました。更新してください",
-  "qrScanSuccess": "スキャンに成功しました。スマートフォンでログインを承認してください",
+  "qrScanSuccess": "スキャンに成功しました。携帯電話でログインを承認してください",
   "qrScanHint": "Kugou Musicアプリを使用してQRコードをスキャンし、ログインしてください",
   "pleaseLoginFirst": "まずログインしてください",
   "commentSuccess": "コメントに成功しました",
@@ -218,123 +300,122 @@
   "githubRepo": "GitHub リポジトリ",
   "knowIt": "了解しました",
   "noComments": "まだコメントはありません。一番乗りでコメントしましょう",
-  "commentHint": "何かコメント…",
+  "commentHint": "何かコメントを入力…",
   "loginToComment": "ログインするとコメントできます",
-  "replyPrefix": "{name}さんへの返信：{content}",
+  "replyPrefix": "{name} への返信：{content}",
   "trackCountSuffix": "{count} 曲",
   "songCountSuffix": "{count} 曲",
   "totalSongs": "合計 {count} 曲",
   "repliesCount": "{count} 件の返信",
   "resendIn": "{seconds}秒後に再送信",
   "userIdLabel": "ID: {id}",
-  "noRecentlyPlayed": "再生履歴がありません。ホーム画面から曲を選んでみましょう",
+  "noRecentlyPlayed": "再生履歴がありません。トップページで曲を選んでみましょう",
   "loginToViewPlaylists": "ログインしてプレイリストを確認",
   "queueEmpty": "キューが空です。まずは曲をいくつか再生してみましょう",
   "cache": "キャッシュ",
   "defaultQuality": "デフォルト音質",
-  "wifiAutoHighQuality": "Wi-Fi接続時に自動的に最高音質へ",
+  "wifiAutoHighQuality": "Wi-Fi 接続時に自動的に最高音質",
   "wifiAutoHighQualityDesc": "Wi-Fi接続時にロスレス/Hi-Resを優先的に再生（保留）",
-  "cellularLowQuality": "モバイルデータ通信時は音質を低減",
+  "cellularLowQuality": "モバイルデータ通信時は音質を低下",
   "cellularLowQualityDesc": "モバイルネットワーク使用時に標準音質へ自動切り替え（保留）",
   "cacheUsage": "キャッシュ使用量",
   "recalculate": "再計算",
-  "clearCacheDesc": "インターフェース、画像、歌詞翻訳のキャッシュをクリア",
+  "clearCacheDesc": "インターフェース、画像、歌詞の翻訳キャッシュをクリア",
   "resetToDefault": "デフォルトにリセット",
   "resetToDefaultDone": "デフォルトのアドレスにリセットされました",
   "moreActions": "その他",
-  "clearHistoryConfirm": "すべての検索履歴を消去しますか？",
+  "clearHistoryConfirm": "検索履歴をすべてクリアしてもよろしいですか？",
   "commentFailed": "コメントに失敗しました：{error}",
-  "@commentFailed": {
-    "description": "コメントに失敗しました：{error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "deleteFailed": "削除に失敗しました：{error}",
-  "@deleteFailed": {
-    "description": "削除に失敗しました：{error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "clearCacheFailed": "消去に失敗しました：{error}",
-  "@clearCacheFailed": {
-    "description": "消去に失敗しました：{error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "apiConnectionOk": "接続成功（HTTP {code}）",
-  "@apiConnectionOk": {
-    "description": "接続成功（HTTP {code}）",
-    "placeholders": {
-      "code": {
-        "type": "int"
-      }
-    }
-  },
-  "apiServerReachable": "サーバーに到達しました（HTTP {code}）",
-  "@apiServerReachable": {
-    "description": "サーバーに到達しました（HTTP {code}）",
-    "placeholders": {
-      "code": {
-        "type": "int"
-      }
-    }
-  },
+  "clearCacheFailed": "クリアに失敗しました：{error}",
+  "apiConnectionOk": "接続は正常です（HTTP {code}）",
+  "apiServerReachable": "サーバーに到達可能です（HTTP {code}）",
   "apiConnectionFailed": "接続に失敗しました：{error}",
-  "@apiConnectionFailed": {
-    "description": "接続に失敗しました：{error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "apiSection": "API とネットワーク",
-  "licenseBody": "Tiernan Music\n\n本リポジトリのソースコードは公開されています（Source Available）。学習と研究目的のみに使用してください。\n\n【禁止事項】\n· 本コードおよびその派生物を商業・非商業を問わず使用しないでください；\n· 本ソフトウェアを配布、複製、修正して再公開しないでください；\n· 組み込みの接口をクロールや一括ダウンロードに使用しないでください。\n\n本プロジェクトは公式の酷狗音楽とは一切関係ありません。著作権如有请联系ください。\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
-  "mvQualitySd": "SD",
-  "mvQualityHd": "HD",
-  "mvQualityQhd": "ウルトラHD",
+  "apiSection": "APIとネットワーク",
+  "licenseBody": "汀瀾音楽 Tiernan Music\n\n本リポジトリのソースコードは公開されており（Source Available）、学習および研究目的でのみ利用できます。\n\n【禁止事項】\n・本コードまたはその派生物を、いかなる商業的または非商業的目的にも使用することを禁止します。\n・いかなる形式であれ、本ソフトウェアを配布、複製、または改変して公開することを禁止します。\n・本プロジェクトが接続するAPIを、クローリングや一括ダウンロードに使用することを禁止します。\n\n本プロジェクトは酷狗音楽（Kugou Music）の公式とは一切関係ありません。権利を侵害する内容が含まれる場合は、ご連絡いただければ削除いたします。\n\n本ソフトウェアは「現状有姿」で提供され、いかなる種類の保証もありません。",
+  "mvQualitySd": "標準画質",
+  "mvQualityHd": "高画質",
+  "mvQualityQhd": "超高画質",
   "mvQualitySq": "フルHD",
   "mvQualityFhd": "ブルーレイ",
-  "mvQualitySelect": "画質",
-  "qrLoadFailed": "QRコードの読み込みに失敗：{error}",
-  "@qrLoadFailed": {
-    "description": "QRコードの読み込みに失敗：{error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "shuffle": "シャッフル",
-  "repeat": "全曲リピート",
-  "repeatOne": "1曲リピート",
-  "closePlayer": "プレーヤーを閉じる",
-  "expandPlayer": "プレーヤーを拡大",
+  "mvQualitySelect": "解像度",
+  "qrLoadFailed": "QRコードの読み込みに失敗しました：{error}",
+  "shuffle": "シャッフル再生",
+  "repeat": "ループ再生",
+  "repeatOne": "1曲ループ",
+  "closePlayer": "再生ページを折りたたむ",
+  "expandPlayer": "再生ページを展開する",
   "showLyrics": "歌詞を表示",
-  "showCover": "ジャケットを表示",
-  "commentsCount": "{count} 件のコメント",
-  "@commentsCount": {
-    "description": "{count} 件のコメント",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "playlistIntro": "プレイリスト紹介",
+  "showCover": "カバーを表示",
+  "commentsCount": "合計 {count} 件のコメント",
+  "playlistIntro": "プレイリストの紹介",
   "expand": "展開",
   "collapse": "折りたたむ",
-  "noSongsInPlaylist": "このプレイリストには曲がありません",
+  "noSongsInPlaylist": "プレイリストにはまだ曲がありません",
   "playNext": "次に再生",
-  "addToQueue": "キューに追加",
-  "songActions": "曲の操作"
+  "addToQueue": "再生キューに追加",
+  "songActions": "曲の操作",
+  "downloading": "ダウンロード中",
+  "downloaded": "ダウンロード済み",
+  "downloadQueued": "キュー中",
+  "downloadPaused": "一時停止中",
+  "downloadFailed": "ダウンロードに失敗しました",
+  "downloadCompleted": "完了",
+  "downloadSong": "曲をダウンロード",
+  "downloadCover": "カバーをダウンロード",
+  "downloadLyric": "歌詞をダウンロード",
+  "downloadMv": "MVをダウンロード",
+  "downloadManagement": "ダウンロード管理",
+  "downloads": "ダウンロード済み",
+  "download": "ダウンロード",
+  "downloadAll": "すべてダウンロード",
+  "noDownloads": "ダウンロードしたコンテンツはありません",
+  "downloadStoragePath": "保存先",
+  "openInFileManager": "ファイルマネージャーで表示",
+  "openWithOtherApp": "他のアプリで開く",
+  "openFailed": "リンクを開けません。ネットワークまたはブラウザの設定を確認してください",
+  "downloadDeleteConfirm": "このダウンロードコンテンツを削除してもよろしいですか？",
+  "downloadClearAll": "ダウンロード履歴をクリア",
+  "downloadAudio": "音声",
+  "downloadCoverLabel": "カバー",
+  "downloadLyricLabel": "歌詞",
+  "downloadMvLabel": "MV",
+  "downloadPermissionNeeded": "パブリックディレクトリに保存するにはストレージ権限が必要です",
+  "downloadFallbackNotice": "アプリ固有のディレクトリに保存されました。一部のファイルマネージャーでは表示されない場合があります",
+  "downloadRetry": "再試行",
+  "downloadPause": "一時停止",
+  "downloadResume": "続行",
+  "downloadedSongs": "ダウンロード済みの曲",
+  "networkErrorTitle": "ネットワーク接続に失敗しました",
+  "networkErrorHint": "ネットワーク設定を確認して再試行するか、後ほど再度お試しください",
+  "checkingUpdate": "アップデートを確認中…",
+  "updateCheckFailed": "アップデートの確認に失敗しました。後でもう一度お試しください",
+  "alreadyLatestVersion": "最新バージョンです",
+  "newVersionAvailable": "新バージョンが見つかりました",
+  "versionLabel": "最新バージョン：{version}",
+  "downloadNow": "今すぐダウンロード",
+  "later": "後で",
+  "permissionGranted": "権限を付与済み",
+  "permissionDenied": "権限を未付与",
+  "requestPermission": "権限を申請",
+  "recentErrors": "最近のエラー",
+  "recentErrorsCount": "合計 {count} 件、クリックして表示",
+  "noRecentErrors": "エラー記録はありません",
+  "unknown": "不明",
+  "close": "閉じる",
+  "checkUpdate": "更新をチェック",
+  "checkUpdateDesc": "新バージョンがあるか確認",
+  "genericErrorTitle": "読み込み失敗",
+  "genericErrorHint": "問題が発生しました。後でもう一度お試しください",
+  "reload": "再読み込み",
+  "techDetail": "技術詳細",
+  "copiedToClipboard": "クリップボードにコピーしました",
+  "copyDetails": "詳細をコピー",
+  "diagnostics": "診断",
+  "errorLogLocation": "エラーログの場所",
+  "copyPath": "パスをコピー",
+  "storagePermissions": "ストレージ権限",
+  "all": "全部",
+  "showPassword": "显示密码",
+  "hidePassword": "隐藏密码"
 }

@@ -92,12 +92,47 @@ class ProgressBar:
 
 
 def translate_batch(lines: list[str], target_lang: str) -> list[str]:
-    """批量翻译（一次请求多条，用换行分隔）。"""
-    joined = "\n".join(lines)
+    """批量翻译（一次请求多条，用换行分隔）。
+
+    **多行文本（值里含 \\n）必须单独翻译**，否则响应按行切分后会与
+    原列表错位，导致整批文案被写错 key。
+    """
+    # 先拆出含换行的条目，单独处理
+    single: list[str] = []
+    multi: list[tuple[int, str]] = []
+    for i, line in enumerate(lines):
+        if "\n" in line:
+            multi.append((i, line))
+        else:
+            single.append(line)
+
+    result: list[str] = [""] * len(lines)
+
+    if single:
+        for idx, txt in zip(
+            [i for i, l in enumerate(lines) if "\n" not in l],
+            _translate_lines(single, target_lang),
+        ):
+            result[idx] = txt
+
+    for idx, txt in multi:
+        result[idx] = _translate_block(txt, target_lang)
+
+    return result
+
+
+def _translate_lines(lines: list[str], target_lang: str) -> list[str]:
+    """把若干条单行文案翻译为目标语言（严格按条对齐）。
+
+    使用 **JSON 数组** 作为请求/响应格式：模型偶尔会多输出一行或漏掉一行，
+    按行切分会导致整批文案**错位**（写到别的 key 上），JSON 数组可避免该问题。
+    """
     prompt = (
-        f"请将以下 App 界面文案逐行翻译为{target_lang}。"
-        f"直接输出翻译结果，每行一条，不要编号，不要解释，保持行数和换行不变。"
-        f"不要翻译品牌名。\n\n{joined}"
+        f"请将下面 JSON 数组里的 App 界面文案逐条翻译为{target_lang}。"
+        f"只输出一个 JSON 字符串数组，元素个数与顺序必须与输入完全一致，"
+        f"不要编号，不要解释，不要输出任何其它文字。"
+        f"不要翻译品牌名。\n\n"
+        + json.dumps(lines, ensure_ascii=False)
     )
     payload = {
         "model": MODEL,
@@ -117,12 +152,17 @@ def translate_batch(lines: list[str], target_lang: str) -> list[str]:
             with urllib.request.urlopen(req, timeout=60) as resp:
                 data = json.loads(resp.read())
             content = data["choices"][0]["message"]["content"].strip()
-            translated = content.split("\n")
-            # 对齐行数
-            return [
-                translated[i].strip() if i < len(translated) and translated[i].strip() else lines[i]
-                for i in range(len(lines))
-            ]
+            parsed = _parse_json_array(content)
+            if parsed is not None and len(parsed) == len(lines):
+                return [
+                    (parsed[i].strip() or lines[i]) if isinstance(parsed[i], str) else lines[i]
+                    for i in range(len(lines))
+                ]
+            # 结构不对 → 重新请求
+            if attempt < MAX_RETRIES - 1:
+                time.sleep(1)
+                continue
+            break
         except urllib.error.HTTPError as e:
             if e.code == 412 and attempt < MAX_RETRIES - 1:
                 time.sleep(2 * (attempt + 1))
@@ -138,6 +178,73 @@ def translate_batch(lines: list[str], target_lang: str) -> list[str]:
             return lines
 
     return lines
+
+
+def _parse_json_array(content: str) -> list | None:
+    """从模型输出里解析出 JSON 字符串数组（容忍 ```json 包裹）。"""
+    text = content.strip()
+    if text.startswith("```"):
+        # ```json ... ```
+        text = text.split("\n", 1)[-1] if "\n" in text else text
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+    start = text.find("[")
+    end = text.rfind("]")
+    if start < 0 or end <= start:
+        return None
+    try:
+        parsed = json.loads(text[start : end + 1])
+    except Exception:
+        return None
+    if not isinstance(parsed, list):
+        return None
+    return parsed
+
+
+def _translate_block(text: str, target_lang: str) -> str:
+    """翻译一段可能含换行的文本（整体翻译，不再按行切分）。"""
+    prompt = (
+        f"请将以下 App 界面文案翻译为{target_lang}。"
+        f"直接输出翻译结果，不要编号，不要解释，保留原有的换行结构。"
+        f"不要翻译品牌名。\n\n{text}"
+    )
+    payload = {
+        "model": MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0,
+        "max_tokens": 2048,
+        "chat_template_kwargs": {"enable_thinking": False},
+    }
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            req = urllib.request.Request(
+                API,
+                data=json.dumps(payload).encode(),
+                headers=HEADERS,
+            )
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                data = json.loads(resp.read())
+            out = data["choices"][0]["message"]["content"].strip()
+            if not out:
+                return text
+            return out
+        except urllib.error.HTTPError as e:
+            if e.code == 412 and attempt < MAX_RETRIES - 1:
+                time.sleep(2 * (attempt + 1))
+                continue
+            if attempt < MAX_RETRIES - 1:
+                time.sleep(1)
+                continue
+            return text
+        except Exception:
+            if attempt < MAX_RETRIES - 1:
+                time.sleep(1)
+                continue
+            return text
+
+    return text
 
 
 def translate_language(

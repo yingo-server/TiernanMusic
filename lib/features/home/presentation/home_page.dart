@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/l10n.dart';
 
 import '../../player/play_helper.dart';
+import '../../player/data/models.dart';
+import '../../download/presentation/download_sheet.dart';
+import '../../../core/widgets/shimmer.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../data/home_repository.dart';
 import '../data/models.dart';
@@ -32,14 +35,10 @@ class HomePage extends ConsumerWidget {
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                // 大标题层级：M3 顶层页面使用 headline 样式的标题栏
-                SliverAppBar(
-                  floating: true,
-                  title: Text(context.l10n.home,
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold)),
+                // 大标题层级：M3 顶层页面用 SliverAppBar.large（headlineMedium），
+                // 滚动后自动折叠为小标题栏。
+                SliverAppBar.large(
+                  title: Text(context.l10n.home),
                   actions: [
                     IconButton(
                       icon: const Icon(Icons.search),
@@ -428,29 +427,11 @@ class _SongTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: CachedNetworkImage(
-          imageUrl: song.cover,
-          width: 56,
-          height: 56,
-          fit: BoxFit.cover,
-          errorWidget: (_, __, ___) => Container(
-            width: 56,
-            height: 56,
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: const Icon(Icons.music_note),
-          ),
-        ),
-      ),
-      title: Text(song.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(song.singer,
-          maxLines: 1, overflow: TextOverflow.ellipsis),
-      // trailing 只放次要信息（时长），操作收进 PopupMenu
-      trailing: Text(song.durationText,
-          style: Theme.of(context).textTheme.bodySmall),
+    return SongTile(
+      title: song.name,
+      artist: song.singer,
+      cover: song.cover,
+      duration: song.duration,
       onTap: () {
         final helper = ref.read(playHelperProvider);
         if (queue != null) {
@@ -459,6 +440,30 @@ class _SongTile extends ConsumerWidget {
           helper.playHomeSong(song);
         }
         context.push('/player');
+      },
+      // M3 规范：列表项多个操作收进 PopupMenuButton，trailing 只留时长。
+      menuItems: [
+        SongTileMenuItem(
+          value: 'download',
+          label: context.l10n.download,
+          icon: Icons.download_outlined,
+        ),
+      ],
+      onMenuSelected: (v) {
+        if (v == 'download') {
+          showDownloadSheet(
+            context,
+            Song(
+              hash: song.hash ?? song.id,
+              albumId: song.albumId ?? '',
+              albumAudioId: song.albumAudioId ?? '',
+              name: song.name,
+              artist: song.singer,
+              cover: song.cover,
+              duration: Duration(seconds: song.duration),
+            ),
+          );
+        }
       },
     );
   }
@@ -472,7 +477,7 @@ class _HomeSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return _Shimmer(
+    return Shimmer(
       baseColor: scheme.surface,
       highlightColor:
           scheme.surfaceContainerHighest.withValues(alpha: 0.4),
@@ -481,10 +486,10 @@ class _HomeSkeleton extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           // Banner
-          _SkBox(height: 150, radius: 16),
+          const SkeletonBox(height: 150, radius: 16),
           const SizedBox(height: 24),
           // 推荐歌单：130x130 圆角卡横排
-          _SkText(width: 120),
+          const SkeletonText(width: 120),
           const SizedBox(height: 12),
           SizedBox(
             height: 176,
@@ -494,9 +499,9 @@ class _HomeSkeleton extends StatelessWidget {
                 const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _SkBox(width: 130, height: 130, radius: 16),
+                    SkeletonBox(width: 130, height: 130, radius: 16),
                     SizedBox(height: 8),
-                    _SkText(width: 100),
+                    SkeletonText(width: 100),
                   ],
                 ),
               ],
@@ -504,34 +509,34 @@ class _HomeSkeleton extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           // 排行榜横排卡
-          _SkText(width: 100),
+          const SkeletonText(width: 100),
           const SizedBox(height: 12),
           SizedBox(
             height: 150,
             child: Row(children: [
               for (var i = 0; i < 2; i++) ...[
                 if (i > 0) const SizedBox(width: 12),
-                const _SkBox(width: 200, height: 150, radius: 16),
+                const SkeletonBox(width: 200, height: 150, radius: 16),
               ],
             ]),
           ),
           const SizedBox(height: 24),
           // 新歌列表行（56 封面 + 两行文字）
-          _SkText(width: 110),
+          const SkeletonText(width: 110),
           const SizedBox(height: 12),
           for (var i = 0; i < 5; i++)
             const Padding(
               padding: EdgeInsets.only(bottom: 14),
               child: Row(children: [
-                _SkBox(width: 56, height: 56, radius: 8),
+                SkeletonBox(width: 56, height: 56, radius: 8),
                 SizedBox(width: 12),
                 Expanded(
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _SkText(width: double.infinity, height: 14),
+                          SkeletonText(width: double.infinity, height: 14),
                           SizedBox(height: 8),
-                          _SkText(width: 120, height: 12),
+                          SkeletonText(width: 120, height: 12),
                         ])),
               ]),
             ),
@@ -539,115 +544,6 @@ class _HomeSkeleton extends StatelessWidget {
       ),
     );
   }
-}
-
-/// 骨架占位块
-class _SkBox extends StatelessWidget {
-  const _SkBox(
-      {required this.height, this.width, this.radius = 12});
-  final double height;
-  final double? width;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      width: width,
-      decoration: BoxDecoration(
-        color: Theme.of(context)
-            .colorScheme
-            .surfaceContainerHighest
-            .withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(radius),
-      ),
-    );
-  }
-}
-
-/// 骨架文字条
-class _SkText extends StatelessWidget {
-  const _SkText({required this.width, this.height = 16});
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      width: width,
-      decoration: BoxDecoration(
-        color: Theme.of(context)
-            .colorScheme
-            .surfaceContainerHighest
-            .withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(4),
-      ),
-    );
-  }
-}
-
-/// 微光扫过动画（3s 循环，无第三方依赖）
-class _Shimmer extends StatefulWidget {
-  const _Shimmer({required this.child, this.baseColor, this.highlightColor});
-  final Widget child;
-  final Color? baseColor;
-  final Color? highlightColor;
-
-  @override
-  State<_Shimmer> createState() => _ShimmerState();
-}
-
-class _ShimmerState extends State<_Shimmer>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 3),
-  )..repeat();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      child: widget.child,
-      builder: (context, child) {
-        final theme = Theme.of(context);
-        final base =
-            widget.baseColor ?? theme.colorScheme.surface;
-        final highlight = widget.highlightColor ??
-            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4);
-        // 高光带从左侧 -1 推进到右侧 1，覆盖 child 后裁剪
-        final dx = -1.2 + _controller.value * 2.4;
-        return ShaderMask(
-          blendMode: BlendMode.srcATop,
-          shaderCallback: (bounds) => LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [base, highlight, base],
-            stops: const [0.35, 0.5, 0.65],
-            transform: GradientTranslation(dx * bounds.width),
-          ).createShader(bounds),
-          child: child,
-        );
-      },
-    );
-  }
-}
-
-/// Gradient 平移：把渐变整体在 x 方向偏移 [dx]
-class GradientTranslation extends GradientTransform {
-  const GradientTranslation(this.dx);
-  final double dx;
-
-  @override
-  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) =>
-      Matrix4.translationValues(dx, 0, 0);
 }
 
 class _HomeError extends StatelessWidget {

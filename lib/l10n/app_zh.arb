@@ -85,6 +85,240 @@
   "noCopyright": "暂无版权",
   "tryListen": "试听",
   "fullPlay": "完整播放",
+  "noRecommend": "暂无推荐内容，请下拉重试",
+  "newSongsRecommend": "新歌推荐",
+  "authErrorRetry": "需要登录或完成验证后重试",
+  "loadFailedNetwork": "加载失败，请检查网络",
+  "searchSongsHint": "搜索歌曲、歌单、歌手",
+  "tabSongs": "单曲",
+  "albums": "专辑",
+  "artists": "歌手",
+  "noSearchResults": "暂无搜索结果",
+  "noRelatedPlaylists": "暂无相关歌单",
+  "noRelatedContent": "暂无相关内容",
+  "recentlyPlayed": "最近播放",
+  "clear": "清空",
+  "myFavoriteMvs": "我收藏的 MV",
+  "mvComingSoon": "MV 收藏功能即将上线，敬请期待",
+  "clearRecentlyPlayed": "清空最近播放",
+  "clearRecentConfirm": "确定要清空全部播放记录吗？此操作不可恢复。",
+  "notLoggedIn": "未登录",
+  "loginToSync": "登录后同步你的歌单与收藏",
+  "goLogin": "去登录",
+  "noPlaylistsYet": "暂无歌单",
+  "playlistLoadFailed": "歌单加载失败",
+  "unofficialClient": "非官方第三方客户端",
+  "smsLogin": "短信登录",
+  "operationFailed": "操作失败",
+  "phoneInvalid": "请输入正确的手机号",
+  "smsCodeSent": "验证码已发送",
+  "codeInvalid": "请输入验证码",
+  "selectAccount": "该手机号绑定了多个账号，请选择要登录的账号",
+  "phoneHintCn": "请输入中国大陆手机号",
+  "verificationCode": "验证码",
+  "usernameLabel": "用户名 / 手机号",
+  "usernamePasswordRequired": "请输入用户名和密码",
+  "qrExpired": "二维码已过期，请刷新",
+  "qrScanSuccess": "扫码成功，请在手机上确认登录",
+  "qrScanHint": "请使用酷狗音乐 App 扫码登录",
+  "refreshQr": "刷新二维码",
+  "qrExpiredShort": "已过期",
+  "unknownArtist": "未知歌手",
+  "notPlaying": "未在播放",
+  "noLyric": "暂无歌词",
+  "lyricParseFailed": "歌词解析失败",
+  "calculating": "计算中…",
+  "cannotCalculate": "无法计算",
+  "clearCacheConfirm": "将清除图片缓存、接口缓存与歌词翻译缓存，不会删除账号数据。确定继续吗？",
+  "cacheCleared": "缓存已清除",
+  "account": "账号",
+  "switchAccountSubtitle": "切换或管理已登录的账号",
+  "appearance": "外观",
+  "themeMode": "主题模式",
+  "appLanguage": "界面语言",
+  "lyricModeOriginal": "仅原文",
+  "lyricModeBilingual": "双语对照",
+  "lyricModeTranslation": "仅译文",
+  "playback": "播放",
+  "lyricDisplayMode": "歌词显示模式",
+  "defaultQuality": "默认音质",
+  "wifiAutoHighQuality": "Wi-Fi 下自动最高音质",
+  "wifiAutoHighQualityDesc": "连接 Wi-Fi 时优先播放无损/Hi-Res（预留）",
+  "cellularLowQuality": "流量下降低音质",
+  "cellularLowQualityDesc": "使用移动网络时自动切换为标准音质（预留）",
+  "cacheUsage": "缓存占用",
+  "recalculate": "重新计算",
+  "clearCacheDesc": "清除接口、图片与歌词翻译缓存",
+  "resetToDefault": "重置为默认",
+  "resetToDefaultDone": "已重置为默认地址",
+  "testing": "测试中…",
+  "testConnectivity": "测试连通性",
+  "save": "保存",
+  "openSourceLicenses": "开源许可证",
+  "licenseDesc": "源代码可见，禁止使用",
+  "githubRepo": "GitHub 仓库",
+  "knowIt": "知道了",
+  "noComments": "还没有评论，快来抢沙发",
+  "commentHint": "说点什么…",
+  "loginToComment": "登录后可评论",
+  "pleaseLoginFirst": "请先登录",
+  "commentSuccess": "评论成功",
+  "deleteComment": "删除评论",
+  "deleteCommentConfirm": "确定删除这条评论吗？",
+  "deleted": "已删除",
+  "playAll": "播放全部",
+  "playFailed": "播放失败",
+  "back": "返回",
+  "loadFailed": "加载失败",
+  "playCountSuffix": "{count} 播放",
+  "trackCountSuffix": "{count} 首",
+  "songCountSuffix": "{count} 首",
+  "totalSongs": "共 {count} 首",
+  "repliesCount": "{count} 条回复",
+  "resendIn": "{seconds}s 后重发",
+  "userIdLabel": "ID: {id}",
+  "@playCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@trackCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@songCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@totalSongs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@repliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "@userIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "noRecentlyPlayed": "还没有播放记录，去首页挑首歌吧",
+  "loginToViewPlaylists": "登录后查看你的歌单",
+  "queueEmpty": "队列为空，先去播放几首歌吧",
+  "cache": "缓存",
+  "replyPrefix": "回复 {name}：{content}",
+  "@replyPrefix": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadManagement": "下载管理",
+  "downloads": "已下载",
+  "download": "下载",
+  "downloading": "下载中",
+  "downloaded": "已下载",
+  "downloadQueued": "排队中",
+  "downloadPaused": "已暂停",
+  "downloadFailed": "下载失败",
+  "downloadCompleted": "已完成",
+  "downloadSong": "下载歌曲",
+  "downloadCover": "下载封面",
+  "downloadLyric": "下载歌词",
+  "downloadMv": "下载 MV",
+  "downloadAll": "全部下载",
+  "noDownloads": "还没有下载内容",
+  "downloadStoragePath": "保存位置",
+  "openInFileManager": "在文件管理器中查看",
+  "openWithOtherApp": "用其他应用打开",
+  "openFailed": "无法打开链接，请检查网络或浏览器设置",
+  "downloadDeleteConfirm": "确定删除该下载内容吗？",
+  "downloadClearAll": "清空下载记录",
+  "downloadAudio": "音频",
+  "downloadCoverLabel": "封面",
+  "downloadLyricLabel": "歌词",
+  "downloadMvLabel": "MV",
+  "downloadPermissionNeeded": "需要存储权限才能保存到公共目录",
+  "downloadFallbackNotice": "已保存到应用专属目录，部分文件管理器不可见",
+  "downloadRetry": "重试",
+  "downloadPause": "暂停",
+  "downloadResume": "继续",
+  "downloadedSongs": "已下载歌曲",
+  "networkErrorTitle": "网络连接失败",
+  "networkErrorHint": "请检查网络设置后重试，或稍后再来",
+  "genericErrorTitle": "加载失败",
+  "genericErrorHint": "出了点小问题，请稍后重试",
+  "reload": "重新加载",
+  "techDetail": "技术详情",
+  "copiedToClipboard": "已复制到剪贴板",
+  "copyDetails": "复制详情",
+  "diagnostics": "诊断",
+  "errorLogLocation": "错误日志位置",
+  "copyPath": "复制路径",
+  "storagePermissions": "存储权限",
+  "permissionGranted": "已授权",
+  "permissionDenied": "未授权",
+  "requestPermission": "申请权限",
+  "recentErrors": "最近的错误",
+  "recentErrorsCount": "共 {count} 条，点击查看",
+  "noRecentErrors": "暂无错误记录",
+  "unknown": "未知",
+  "close": "关闭",
+  "@recentErrorsCount": {
+    "description": "最近的错误条数",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "12"
+      }
+    }
+  },
+  "checkUpdate": "检查更新",
+  "checkUpdateDesc": "检测是否有新版本",
+  "checkingUpdate": "正在检查更新…",
+  "updateCheckFailed": "检查更新失败，请稍后重试",
+  "alreadyLatestVersion": "已是最新版本",
+  "newVersionAvailable": "发现新版本",
+  "versionLabel": "最新版本：{version}",
+  "downloadNow": "立即下载",
+  "later": "稍后",
+  "@versionLabel": {
+    "description": "最新版本号",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.1"
+      }
+    }
+  },
   "moreActions": "更多",
   "clearHistoryConfirm": "确定要清空全部搜索历史吗？",
   "commentFailed": "评论失败：{error}",
@@ -92,7 +326,8 @@
     "description": "评论失败：{error}",
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "String",
+        "example": "网络错误"
       }
     }
   },
@@ -101,7 +336,8 @@
     "description": "删除失败：{error}",
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "String",
+        "example": "网络错误"
       }
     }
   },
@@ -110,7 +346,8 @@
     "description": "清除失败：{error}",
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "String",
+        "example": "权限不足"
       }
     }
   },
@@ -119,7 +356,8 @@
     "description": "连通正常（HTTP {code}）",
     "placeholders": {
       "code": {
-        "type": "int"
+        "type": "int",
+        "example": "200"
       }
     }
   },
@@ -128,7 +366,8 @@
     "description": "服务器可达（HTTP {code}）",
     "placeholders": {
       "code": {
-        "type": "int"
+        "type": "int",
+        "example": "404"
       }
     }
   },
@@ -137,48 +376,54 @@
     "description": "连接失败：{error}",
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "String",
+        "example": "超时"
       }
     }
   },
-  "apiSection": "API 與網路",
-  "licenseBody": "汀瀾音樂 Tiernan Music\n\n本倉庫原始碼公開可見（Source Available），僅供學習與研究用途。\n\n【禁止事項】\n· 禁止將本程式碼或其衍生作品用於任何商業或非商業用途；\n· 禁止以任何形式散布、複製、修改後發布本軟體；\n· 禁止將本專案接入的介面用於爬取或批次下載。\n\n本專案與酷狗音樂官方無任何關聯，如有侵權請聯絡刪除。\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
-  "mvQualitySd": "標清",
+  "apiSection": "API 与网络",
+  "licenseBody": "汀澜音乐 Tiernan Music\n\n本仓库源代码公开可见（Source Available），仅供学习与研究用途。\n\n【禁止事项】\n· 禁止将本代码或其衍生作品用于任何商业或非商业用途；\n· 禁止以任何形式分发、复制、修改后发布本软件；\n· 禁止将本项目接入的接口用于爬取或批量下载。\n\n本项目与酷狗音乐官方无任何关联，如有侵权请联系删除。\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "mvQualitySd": "标清",
   "mvQualityHd": "高清",
   "mvQualityQhd": "超清",
-  "mvQualitySq": "全高畫質",
-  "mvQualityFhd": "藍光",
-  "mvQualitySelect": "畫質",
-  "qrLoadFailed": "二維碼載入失敗：{error}",
+  "mvQualitySq": "全高清",
+  "mvQualityFhd": "蓝光",
+  "mvQualitySelect": "清晰度",
+  "qrLoadFailed": "二维码加载失败：{error}",
   "@qrLoadFailed": {
-    "description": "二維碼載入失敗：{error}",
+    "description": "二维码加载失败：{error}",
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "String",
+        "example": "网络错误"
       }
     }
   },
-  "shuffle": "隨機播放",
-  "repeat": "循環播放",
-  "repeatOne": "單曲循環",
-  "closePlayer": "收起播放頁",
-  "expandPlayer": "展開播放頁",
-  "showLyrics": "查看歌詞",
+  "shuffle": "随机播放",
+  "repeat": "循环播放",
+  "repeatOne": "单曲循环",
+  "closePlayer": "收起播放页",
+  "expandPlayer": "展开播放页",
+  "showLyrics": "查看歌词",
   "showCover": "查看封面",
-  "commentsCount": "共 {count} 則留言",
+  "commentsCount": "共 {count} 条评论",
   "@commentsCount": {
-    "description": "共 {count} 則留言",
+    "description": "共 {count} 条评论",
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "int",
+        "example": "120"
       }
     }
   },
-  "playlistIntro": "歌單簡介",
-  "expand": "展開",
-  "collapse": "收合",
-  "noSongsInPlaylist": "歌單中暫無歌曲",
+  "playlistIntro": "歌单简介",
+  "expand": "展开",
+  "collapse": "收起",
+  "noSongsInPlaylist": "歌单中暂无歌曲",
   "playNext": "下一首播放",
-  "addToQueue": "加入播放佇列",
-  "songActions": "歌曲操作"
+  "addToQueue": "加入播放队列",
+  "songActions": "歌曲操作",
+  "all": "全部",
+  "showPassword": "显示密码",
+  "hidePassword": "隐藏密码"
 }

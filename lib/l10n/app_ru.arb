@@ -1,6 +1,147 @@
 {
   "@@locale": "ru",
-  "about": "О приложении",
+  "@playCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@trackCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@songCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@totalSongs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@repliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "@userIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "@replyPrefix": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "@recentErrorsCount": {
+    "description": "最近的错误条数",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "12"
+      }
+    }
+  },
+  "@versionLabel": {
+    "description": "最新版本号",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.1"
+      }
+    }
+  },
+  "@commentFailed": {
+    "description": "Не удалось отправить комментарий: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@deleteFailed": {
+    "description": "Не удалось удалить: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@clearCacheFailed": {
+    "description": "Не удалось очистить: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@apiConnectionOk": {
+    "description": "Соединение в порядке (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "@apiServerReachable": {
+    "description": "Сервер доступен (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "@apiConnectionFailed": {
+    "description": "Ошибка соединения: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@qrLoadFailed": {
+    "description": "Не удалось загрузить QR-код: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@commentsCount": {
+    "description": "Комментариев: {count}",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "about": "О программе",
   "version": "Версия",
   "license": "Лицензия",
   "mobileLogin": "Вход по номеру телефона",
@@ -10,13 +151,13 @@
   "password": "Пароль",
   "smsCode": "Код подтверждения по SMS",
   "sendSmsCode": "Отправить код подтверждения",
-  "appName": "Музыка Тинлань",
+  "appName": "Тинлань Музыка",
   "home": "Главная",
   "search": "Поиск",
   "library": "Музыкальная библиотека",
   "settings": "Настройки",
   "login": "Войти",
-  "logout": "Выйти из аккаунта",
+  "logout": "Выйти",
   "play": "Воспроизвести",
   "pause": "Пауза",
   "next": "Следующий трек",
@@ -24,10 +165,10 @@
   "topCharts": "Чарты",
   "newSongs": "Новинки",
   "hotArtists": "Популярные исполнители",
-  "lyricOriginal": "Сейчас играет",
-  "lyricBilingual": "Очередь воспроизведения",
-  "lyricTranslation": "Тема",
-  "nowPlaying": "Воспроизводится",
+  "lyricOriginal": "Оригинал",
+  "lyricBilingual": "Двуязычный",
+  "lyricTranslation": "Перевод",
+  "nowPlaying": "Сейчас играет",
   "playQueue": "Очередь воспроизведения",
   "theme": "Тема",
   "previous": "Предыдущая песня",
@@ -35,7 +176,7 @@
   "unfavorite": "Убрать из избранного",
   "playlist": "Плейлист",
   "comment": "Комментарии",
-  "comments": "Комментарии",
+  "comments": "Комментарий",
   "send": "Отправить",
   "reply": "Ответить",
   "delete": "Удалить",
@@ -60,9 +201,9 @@
   "cacheSettings": "Настройки кэша",
   "clearCache": "Очистить кэш",
   "cacheSize": "Размер кэша",
-  "qualityHigh": "Высокое разрешение",
-  "vipOnly": "Эксклюзив для VIP-пользователей",
-  "noCopyright": "Права отсутствуют",
+  "qualityHigh": "Hi-Res",
+  "vipOnly": "Эксклюзив для VIP",
+  "noCopyright": "Авторские права временно недоступны",
   "tryListen": "Прослушивание",
   "fullPlay": "Полное воспроизведение",
   "playlistName": "Название плейлиста",
@@ -70,15 +211,15 @@
   "removeFromPlaylist": "Удалить из плейлиста",
   "mv": "MV",
   "playMv": "Воспроизвести MV",
-  "relatedMv": "Связанные MV",
+  "relatedMv": "Похожие MV",
   "quality": "Качество звука",
   "quality128": "Плавное 128K",
   "quality320": "Высокое качество 320K",
   "qualityFlac": "Потерь нет FLAC",
-  "captchaTitle": "Проверка «человек-робот»",
+  "captchaTitle": "Проверка человека",
   "captchaHint": "Пожалуйста, завершите проверку с помощью ползунка",
   "loginSuccess": "Вход выполнен успешно",
-  "loginFailed": "Вход не выполнен",
+  "loginFailed": "Ошибка входа",
   "accountManage": "Управление аккаунтами",
   "addAccount": "Добавить аккаунт",
   "switchAccount": "Переключить аккаунт",
@@ -86,99 +227,195 @@
   "myPlaylists": "Мои плейлисты",
   "createPlaylist": "Создать новый плейлист",
   "moreActions": "Ещё",
-  "clearHistoryConfirm": "Очистить всю историю поиска?",
-  "commentFailed": "Не удалось отправить комментарий: {error}",
-  "@commentFailed": {
-    "description": "Не удалось отправить комментарий: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "deleteFailed": "Не удалось удалить: {error}",
-  "@deleteFailed": {
-    "description": "Не удалось удалить: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "clearCacheFailed": "Не удалось очистить: {error}",
-  "@clearCacheFailed": {
-    "description": "Не удалось очистить: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "apiConnectionOk": "Соединение в порядке (HTTP {code})",
-  "@apiConnectionOk": {
-    "description": "Соединение в порядке (HTTP {code})",
-    "placeholders": {
-      "code": {
-        "type": "int"
-      }
-    }
-  },
+  "clearHistoryConfirm": "Вы уверены, что хотите очистить всю историю поиска?",
+  "commentFailed": "Ошибка комментария: {error}",
+  "deleteFailed": "Ошибка удаления: {error}",
+  "clearCacheFailed": "Ошибка очистки: {error}",
+  "apiConnectionOk": "Подключение в норме (HTTP {code})",
   "apiServerReachable": "Сервер доступен (HTTP {code})",
-  "@apiServerReachable": {
-    "description": "Сервер доступен (HTTP {code})",
-    "placeholders": {
-      "code": {
-        "type": "int"
-      }
-    }
-  },
-  "apiConnectionFailed": "Ошибка соединения: {error}",
-  "@apiConnectionFailed": {
-    "description": "Ошибка соединения: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "apiConnectionFailed": "Ошибка подключения: {error}",
   "apiSection": "API и сеть",
-  "licenseBody": "Tiernan Music\n\nИсходный код этого репозитория общедоступен (Source Available) и предназначен только для обучения и исследований.\n\n[Запрещено]\n· Использовать этот код или производные работы в любых коммерческих или некоммерческих целях;\n· Распространять, копировать, изменять и перепубликовывать это ПО;\n· Использовать встроенные интерфейсы для сканирования или массовой загрузки.\n\nПроект не связан с официальным Kugou Music. Свяжитесь с нами при нарушении авторских прав.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
-  "mvQualitySd": "SD",
-  "mvQualityHd": "HD",
-  "mvQualityQhd": "Ultra HD",
-  "mvQualitySq": "Full HD",
+  "licenseBody": "Музыка Tiernan\n\nИсходный код этого репозитория открыт для просмотра (Source Available) и предназначен исключительно для учебных и исследовательских целей.\n\n【Запрещено】\n· Запрещается использовать данный код или производные от него работы в любых коммерческих или некоммерческих целях;\n· Запрещается распространять, копировать или публиковать данное программное обеспечение в изменённом виде в любой форме;\n· Запрещается использовать интерфейсы, к которым подключается данный проект, для скрапинга или массового скачивания.\n\nДанный проект никак не связан с официальным сервисом Kugou Music. В случае нарушения авторских прав, пожалуйста, свяжитесь с нами для их удаления.\n\nПРОГРАММНОЕ ОБЕСПЕЧЕНИЕ ПРЕДОСТАВЛЯЕТСЯ «КАК ЕСТЬ», БЕЗ КАКИХ-ЛИБО ГАРАНТИЙ.",
+  "mvQualitySd": "Стандартное разрешение",
+  "mvQualityHd": "Высокое разрешение",
+  "mvQualityQhd": "Сверхвысокое разрешение",
+  "mvQualitySq": "Полное высокое разрешение",
   "mvQualityFhd": "Blu-ray",
-  "mvQualitySelect": "Качество",
-  "qrLoadFailed": "Не удалось загрузить QR-код: {error}",
-  "@qrLoadFailed": {
-    "description": "Не удалось загрузить QR-код: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "shuffle": "Перемешать",
-  "repeat": "Повтор всех",
+  "mvQualitySelect": "Чёткость",
+  "qrLoadFailed": "Ошибка загрузки QR-кода: {error}",
+  "shuffle": "Случайное воспроизведение",
+  "repeat": "Повторное воспроизведение",
   "repeatOne": "Повтор трека",
-  "closePlayer": "Свернуть плеер",
-  "expandPlayer": "Развернуть плеер",
-  "showLyrics": "Показать текст",
-  "showCover": "Показать обложку",
-  "commentsCount": "Комментариев: {count}",
-  "@commentsCount": {
-    "description": "Комментариев: {count}",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "closePlayer": "Свернуть страницу воспроизведения",
+  "expandPlayer": "Развернуть страницу воспроизведения",
+  "showLyrics": "Посмотреть текст песни",
+  "showCover": "Посмотреть обложку",
+  "commentsCount": "Всего {count} комментариев",
   "playlistIntro": "Описание плейлиста",
   "expand": "Развернуть",
   "collapse": "Свернуть",
-  "noSongsInPlaylist": "В этом плейлисте нет треков",
-  "playNext": "Играть следующим",
-  "addToQueue": "В очередь",
-  "songActions": "Действия с треком"
+  "noSongsInPlaylist": "В плейлисте пока нет песен",
+  "playNext": "Следующая песня",
+  "addToQueue": "Добавить в очередь воспроизведения",
+  "songActions": "Действия с песней",
+  "albums": "Альбом",
+  "artists": "Исполнитель",
+  "noSearchResults": "Поисковые результаты отсутствуют",
+  "noRelatedPlaylists": "Соответствующие плейлисты отсутствуют",
+  "noRelatedContent": "Соответствующий контент отсутствует",
+  "recentlyPlayed": "Недавно воспроизводилось",
+  "clear": "Очистить",
+  "myFavoriteMvs": "Мои сохранённые клипы",
+  "mvComingSoon": "Функция сохранения клипов скоро появится, следите за обновлениями",
+  "clearRecentlyPlayed": "Очистить недавно воспроизводившиеся",
+  "clearRecentConfirm": "Вы уверены, что хотите удалить всю историю воспроизведения? Это действие нельзя отменить.",
+  "notLoggedIn": "Не вошёл в аккаунт",
+  "loginToSync": "Войдите в аккаунт, чтобы синхронизировать свои плейлисты и избранное",
+  "goLogin": "Войти",
+  "noPlaylistsYet": "Плейлистов пока нет",
+  "playlistLoadFailed": "Не удалось загрузить плейлист",
+  "unofficialClient": "Неофициальный клиент стороннего разработчика",
+  "smsLogin": "Вход по SMS",
+  "operationFailed": "Операция не удалась",
+  "phoneInvalid": "Введите корректный номер телефона",
+  "noRecommend": "Рекомендации временно недоступны, потяните вниз, чтобы попробовать ещё раз",
+  "newSongsRecommend": "Рекомендации новых песен",
+  "authErrorRetry": "Необходимо войти в систему или пройти проверку, а затем попробовать ещё раз",
+  "loadFailedNetwork": "Ошибка загрузки, проверьте подключение к сети",
+  "searchSongsHint": "Поиск песен, плейлистов, исполнителей",
+  "tabSongs": "Сингл",
+  "smsCodeSent": "Код подтверждения отправлен",
+  "codeInvalid": "Введите код подтверждения",
+  "selectAccount": "Этот номер телефона привязан к нескольким аккаунтам. Выберите аккаунт, в который хотите войти",
+  "phoneHintCn": "Введите номер телефона материкового Китая",
+  "verificationCode": "Код подтверждения",
+  "usernameLabel": "Имя пользователя / номер телефона",
+  "usernamePasswordRequired": "Введите имя пользователя и пароль",
+  "qrExpired": "Срок действия QR-кода истек. Обновите страницу",
+  "qrScanSuccess": "Сканирование QR-кода выполнено успешно. Подтвердите вход на телефоне",
+  "qrScanHint": "Используйте приложение Kugou Music для сканирования QR-кода и входа",
+  "refreshQr": "Обновить QR-код",
+  "qrExpiredShort": "Истёк срок действия",
+  "unknownArtist": "Неизвестный исполнитель",
+  "notPlaying": "Сейчас не воспроизводится",
+  "noLyric": "Текста песни пока нет",
+  "lyricParseFailed": "Не удалось проанализировать текст песни",
+  "calculating": "Вычисление…",
+  "cannotCalculate": "Невозможно вычислить",
+  "clearCacheConfirm": "Кэш изображений, кэш API и кэш переводов текстов песен будут удалены. Данные аккаунта не затронуты. Вы уверены, что хотите продолжить?",
+  "cacheCleared": "Кэш очищен",
+  "testing": "В процессе тестирования…",
+  "testConnectivity": "Проверка подключения",
+  "save": "Сохранить",
+  "openSourceLicenses": "Лицензия с открытым исходным кодом",
+  "licenseDesc": "Исходный код доступен, использование запрещено",
+  "githubRepo": "Репозиторий на GitHub",
+  "knowIt": "Понятно",
+  "noComments": "Комментариев пока нет, станьте первым!",
+  "commentHint": "Напишите что-нибудь…",
+  "loginToComment": "Комментировать можно после входа в систему",
+  "pleaseLoginFirst": "Сначала войдите в систему",
+  "commentSuccess": "Комментарий успешно опубликован",
+  "deleteComment": "Удалить комментарий",
+  "deleteCommentConfirm": "Вы уверены, что хотите удалить этот комментарий?",
+  "deleted": "Удалено",
+  "playAll": "Воспроизвести все",
+  "playFailed": "Ошибка воспроизведения",
+  "back": "Назад",
+  "loadFailed": "Ошибка загрузки",
+  "playCountSuffix": "{count} воспроизведений",
+  "replyPrefix": "Ответ для {name}: {content}",
+  "downloadManagement": "Управление загрузками",
+  "downloads": "Скачано",
+  "download": "Загрузить",
+  "downloading": "Загрузка",
+  "downloaded": "Скачано",
+  "downloadQueued": "В очереди",
+  "downloadPaused": "Приостановлено",
+  "downloadFailed": "Ошибка загрузки",
+  "downloadCompleted": "Завершено",
+  "trackCountSuffix": "{count} трек",
+  "songCountSuffix": "{count} трек",
+  "totalSongs": "Всего {count} треков",
+  "repliesCount": "{count} ответов",
+  "resendIn": "Отправить ещё раз через {seconds}s",
+  "userIdLabel": "ID: {id}",
+  "noRecentlyPlayed": "Записей воспроизведения пока нет, перейдите на главную страницу и выберите песню",
+  "loginToViewPlaylists": "Посмотрите свой плейлист после входа в систему",
+  "queueEmpty": "Очередь пуста, сначала включите несколько песен",
+  "cache": "Кэш",
+  "downloadSong": "Скачать песню",
+  "downloadCover": "Скачать обложку",
+  "downloadLyric": "Скачать текст песни",
+  "downloadMv": "Скачать клип",
+  "downloadAll": "Скачать всё",
+  "noDownloads": "Пока нет загруженных файлов",
+  "downloadStoragePath": "Место сохранения",
+  "openInFileManager": "Просмотреть в файловом менеджере",
+  "openWithOtherApp": "Открыть в другом приложении",
+  "openFailed": "Не удалось открыть ссылку. Проверьте подключение к сети или настройки браузера",
+  "downloadDeleteConfirm": "Вы уверены, что хотите удалить этот загружаемый контент?",
+  "downloadClearAll": "Очистить историю загрузок",
+  "downloadAudio": "Аудио",
+  "downloadCoverLabel": "Обложка",
+  "downloadLyricLabel": "Текст песни",
+  "downloadMvLabel": "Музыкальный клип",
+  "downloadPermissionNeeded": "Для сохранения в общую папку требуется разрешение на доступ к хранилищу",
+  "downloadFallbackNotice": "Сохранено в отдельной папке приложения, может быть невидимым в некоторых файловых менеджерах",
+  "downloadRetry": "Повторить",
+  "downloadPause": "Пауза",
+  "downloadResume": "Продолжить",
+  "downloadedSongs": "Скачанные песни",
+  "networkErrorTitle": "Ошибка сетевого подключения",
+  "networkErrorHint": "Проверьте настройки сети и попробуйте ещё раз или вернитесь позже",
+  "genericErrorTitle": "Ошибка загрузки",
+  "genericErrorHint": "Возникла небольшая проблема, попробуйте ещё раз позже",
+  "reload": "Перезагрузить",
+  "techDetail": "Технические сведения",
+  "copiedToClipboard": "Скопировано в буфер обмена",
+  "copyDetails": "Скопировать сведения",
+  "unknown": "Неизвестно",
+  "close": "Закрыть",
+  "checkUpdate": "Проверить наличие обновлений",
+  "checkUpdateDesc": "Проверка наличия новой версии",
+  "checkingUpdate": "Идёт проверка обновлений…",
+  "updateCheckFailed": "Не удалось проверить наличие обновлений, пожалуйста, попробуйте позже",
+  "alreadyLatestVersion": "Установлена последняя версия",
+  "newVersionAvailable": "Обнаружена новая версия",
+  "versionLabel": "Последняя версия: {version}",
+  "downloadNow": "Скачать сейчас",
+  "account": "Аккаунт",
+  "switchAccountSubtitle": "Переключать или управлять вошедшими аккаунтами",
+  "appearance": "Внешний вид",
+  "themeMode": "Тема",
+  "appLanguage": "Язык интерфейса",
+  "lyricModeOriginal": "Только оригинал",
+  "lyricModeBilingual": "Двуязычный режим",
+  "lyricModeTranslation": "Только перевод",
+  "playback": "Воспроизвести",
+  "lyricDisplayMode": "Режим отображения текста песни",
+  "diagnostics": "Диагностика",
+  "errorLogLocation": "Расположение журнала ошибок",
+  "copyPath": "Скопировать путь",
+  "storagePermissions": "Разрешение на хранение",
+  "permissionGranted": "Предоставлено",
+  "permissionDenied": "Не предоставлено",
+  "requestPermission": "Запросить разрешение",
+  "recentErrors": "Последние ошибки",
+  "recentErrorsCount": "Всего {count} записей, нажмите для просмотра",
+  "noRecentErrors": "Записей об ошибках пока нет",
+  "later": "Позже",
+  "defaultQuality": "Стандартное качество звука",
+  "wifiAutoHighQuality": "Автоматически использовать максимальное качество звука по Wi-Fi",
+  "wifiAutoHighQualityDesc": "При подключении к Wi-Fi отдавать приоритет воспроизведению аудио без потерь/Hi-Res (зарезервировано)",
+  "cellularLowQuality": "Снижение качества звука при низком трафике",
+  "cellularLowQualityDesc": "Автоматически переключаться на стандартное качество звука при использовании мобильной сети (зарезервировано)",
+  "cacheUsage": "Занятое место в кэше",
+  "recalculate": "Пересчитать",
+  "clearCacheDesc": "Очистить кэш интерфейса, изображений и переводов текстов песен",
+  "resetToDefault": "Сбросить на значения по умолчанию",
+  "resetToDefaultDone": "Сброшено на адрес по умолчанию",
+  "all": "全部",
+  "showPassword": "显示密码",
+  "hidePassword": "隐藏密码"
 }

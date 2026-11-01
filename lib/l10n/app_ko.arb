@@ -1,5 +1,146 @@
 {
   "@@locale": "ko",
+  "@playCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@trackCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@songCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@totalSongs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@repliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "@userIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "@replyPrefix": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "@recentErrorsCount": {
+    "description": "最近的错误条数",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "12"
+      }
+    }
+  },
+  "@versionLabel": {
+    "description": "最新版本号",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.1"
+      }
+    }
+  },
+  "@commentFailed": {
+    "description": "댓글 실패: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@deleteFailed": {
+    "description": "삭제 실패: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@clearCacheFailed": {
+    "description": "삭제 실패: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@apiConnectionOk": {
+    "description": "연결 정상 (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "@apiServerReachable": {
+    "description": "서버 응답 있음 (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "@apiConnectionFailed": {
+    "description": "연결 실패: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@qrLoadFailed": {
+    "description": "QR 코드 불러오기 실패: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@commentsCount": {
+    "description": "댓글 {count}개",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "appName": "팅란 뮤직",
   "home": "홈",
   "search": "검색",
@@ -15,7 +156,7 @@
   "newSongs": "신곡",
   "hotArtists": "인기 가수",
   "lyricOriginal": "원문",
-  "lyricBilingual": "중한 대조",
+  "lyricBilingual": "바이링구얼",
   "lyricTranslation": "번역",
   "nowPlaying": "현재 재생 중",
   "playQueue": "재생 대기열",
@@ -48,7 +189,7 @@
   "qrLogin": "QR 코드로 로그인",
   "phoneNumber": "휴대폰 번호",
   "password": "비밀번호",
-  "smsCode": "문자 인증번호",
+  "smsCode": "SMS 인증번호",
   "sendSmsCode": "인증번호 발송",
   "themeDark": "어두운 모드",
   "themeLight": "밝은 모드",
@@ -70,10 +211,10 @@
   "quality128": "일반 128K",
   "quality320": "고음질 320K",
   "qualityFlac": "무손실 FLAC",
-  "qualityHigh": "고음질",
+  "qualityHigh": "Hi-Res",
   "vipOnly": "VIP 전용",
   "noCopyright": "저작권 없음",
-  "tryListen": "듣기 보기",
+  "tryListen": "듣기 체험",
   "fullPlay": "전체 재생",
   "captchaTitle": "인공지능 인증",
   "captchaHint": "슬라이더 인증을 완료해 주세요",
@@ -84,101 +225,197 @@
   "switchAccount": "계정 전환",
   "currentAccount": "현재 계정",
   "myPlaylists": "내 플레이리스트",
-  "createPlaylist": "새 플레이리스트 만들기",
+  "createPlaylist": "새 플레이리스트",
   "moreActions": "더 보기",
-  "clearHistoryConfirm": "모든 검색 기록을 삭제할까요?",
+  "clearHistoryConfirm": "모든 검색 기록을 모두 지우시겠습니까?",
   "commentFailed": "댓글 실패: {error}",
-  "@commentFailed": {
-    "description": "댓글 실패: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "deleteFailed": "삭제 실패: {error}",
-  "@deleteFailed": {
-    "description": "삭제 실패: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "clearCacheFailed": "삭제 실패: {error}",
-  "@clearCacheFailed": {
-    "description": "삭제 실패: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "apiConnectionOk": "연결 정상 (HTTP {code})",
-  "@apiConnectionOk": {
-    "description": "연결 정상 (HTTP {code})",
-    "placeholders": {
-      "code": {
-        "type": "int"
-      }
-    }
-  },
-  "apiServerReachable": "서버 응답 있음 (HTTP {code})",
-  "@apiServerReachable": {
-    "description": "서버 응답 있음 (HTTP {code})",
-    "placeholders": {
-      "code": {
-        "type": "int"
-      }
-    }
-  },
+  "clearCacheFailed": "지우기 실패: {error}",
+  "apiConnectionOk": "정상 연결 (HTTP {code})",
+  "apiServerReachable": "서버 접속 가능 (HTTP {code})",
   "apiConnectionFailed": "연결 실패: {error}",
-  "@apiConnectionFailed": {
-    "description": "연결 실패: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "apiSection": "API 및 네트워크",
-  "licenseBody": "Tiernan Music\n\n이 저장소의 소스 코드는 공개되어 있습니다 (Source Available). 학습 및 연구 목적으로만 사용할 수 있습니다.\n\n[금지 사항]\n· 본 코드나 파생 저작물을 상업·비상업 목적으로 사용할 수 없습니다;\n· 이 소프트웨어를 배포, 복제, 수정 후 재게시할 수 없습니다;\n· 내장된 인터페이스를 크롤링이나 대량 다운로드에 사용할 수 없습니다.\n\n이 프로젝트는 공식 쿠거 뮤직과 관련이 없습니다. 저작권 침해 시 연락 주세요.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "licenseBody": "틴란 음악 Tiernan Music\n\n본 저장소의 소스 코드는 공개되어 있으며(Source Available), 학습 및 연구 목적으로만 제공됩니다.\n\n【금지 사항】\n· 본 코드 또는 그 파생물을 어떠한 상업적 또는 비상업적 목적으로도 사용하는 것을 금지합니다.\n· 어떠한 형태로든 본 소프트웨어를 배포, 복제, 수정 후 게시하는 것을 금지합니다.\n· 본 프로젝트에 연결된 인터페이스를 크롤링 또는 대량 다운로드에 사용하는 것을 금지합니다.\n\n본 프로젝트는 쿠투 음악(Kugou Music) 공식 서비스와 어떠한 관련도 없으며, 저작권 침해 시 연락 주시면 삭제하겠습니다.\n\n본 소프트웨어는 어떠한 종류의 보증 없이 \"있는 그대로\" 제공됩니다.",
   "mvQualitySd": "SD",
   "mvQualityHd": "HD",
-  "mvQualityQhd": "울트라HD",
-  "mvQualitySq": "풀HD",
+  "mvQualityQhd": "FHD",
+  "mvQualitySq": "풀 HD",
   "mvQualityFhd": "블루레이",
   "mvQualitySelect": "화질",
-  "qrLoadFailed": "QR 코드 불러오기 실패: {error}",
-  "@qrLoadFailed": {
-    "description": "QR 코드 불러오기 실패: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "shuffle": "셔플",
-  "repeat": "전체 반복",
-  "repeatOne": "한 곡 반복",
-  "closePlayer": "플레이어 접기",
-  "expandPlayer": "플레이어 펼치기",
+  "qrLoadFailed": "QR 코드 로딩 실패: {error}",
+  "shuffle": "랜덤 재생",
+  "repeat": "반복 재생",
+  "repeatOne": "단곡 반복 재생",
+  "closePlayer": "재생 페이지 접기",
+  "expandPlayer": "재생 페이지 펼치기",
   "showLyrics": "가사 보기",
   "showCover": "커버 보기",
-  "commentsCount": "댓글 {count}개",
-  "@commentsCount": {
-    "description": "댓글 {count}개",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "commentsCount": "총 {count}개의 댓글",
   "playlistIntro": "플레이리스트 소개",
   "expand": "펼치기",
   "collapse": "접기",
-  "noSongsInPlaylist": "이 플레이리스트에 곡이 없습니다",
-  "playNext": "다음 재생",
-  "addToQueue": "재생 대기열에 추가",
-  "songActions": "곡 작업"
+  "noSongsInPlaylist": "플레이리스트에 아직 곡이 없습니다",
+  "playNext": "다음 곡 재생",
+  "addToQueue": "재생 목록에 추가",
+  "songActions": "곡 조작",
+  "albums": "앨범",
+  "artists": "가수",
+  "noSearchResults": "검색 결과가 없습니다",
+  "noRelatedPlaylists": "관련 플레이리스트가 없습니다",
+  "noRelatedContent": "관련 콘텐츠가 없습니다",
+  "recentlyPlayed": "최근 재생",
+  "clear": "지우기",
+  "myFavoriteMvs": "내가 저장한 MV",
+  "mvComingSoon": "MV 저장 기능이 곧 출시될 예정이니 많은 기대 바랍니다",
+  "clearRecentlyPlayed": "최근 재생 기록 지우기",
+  "clearRecentConfirm": "재생 기록 전체를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+  "notLoggedIn": "로그인되지 않음",
+  "loginToSync": "로그인 후 플레이리스트와 즐겨찾기를 동기화하세요",
+  "goLogin": "로그인하러 가기",
+  "noPlaylistsYet": "플레이리스트가 없습니다",
+  "playlistLoadFailed": "플레이리스트 로딩 실패",
+  "unofficialClient": "비공식 타사 클라이언트",
+  "smsLogin": "SMS로 로그인",
+  "operationFailed": "작업 실패",
+  "phoneInvalid": "올바른 휴대폰 번호를 입력해 주세요",
+  "refreshQr": "QR코드 새로고침",
+  "qrExpiredShort": "만료됨",
+  "unknownArtist": "알 수 없는 가수",
+  "notPlaying": "재생 중이 아님",
+  "noLyric": "현재 가사 없음",
+  "lyricParseFailed": "가사 분석 실패",
+  "calculating": "계산 중…",
+  "cannotCalculate": "계산 불가",
+  "clearCacheConfirm": "이미지 캐시, API 캐시 및 가사 번역 캐시가 삭제되며, 계정 데이터는 삭제되지 않습니다. 계속하시겠습니까?",
+  "cacheCleared": "캐시가 삭제되었습니다",
+  "smsCodeSent": "인증코드가 전송되었습니다",
+  "codeInvalid": "인증코드를 입력해 주세요",
+  "selectAccount": "이 휴대폰 번호는 여러 계정과 연결되어 있습니다. 로그인할 계정을 선택해 주세요",
+  "phoneHintCn": "중국 본토 휴대폰 번호를 입력해 주세요",
+  "verificationCode": "인증코드",
+  "usernameLabel": "사용자명 / 휴대폰 번호",
+  "usernamePasswordRequired": "사용자명과 비밀번호를 입력해 주세요",
+  "qrExpired": "QR코드가 만료되었습니다. 새로고침해 주세요",
+  "qrScanSuccess": "QR코드 스캔에 성공했습니다. 휴대폰에서 로그인을 확인해 주세요",
+  "qrScanHint": "Kugou Music 앱으로 QR코드를 스캔하여 로그인해 주세요",
+  "account": "계정",
+  "switchAccountSubtitle": "로그인된 계정 전환 또는 관리",
+  "appearance": "외관",
+  "themeMode": "테마 모드",
+  "appLanguage": "인터페이스 언어",
+  "lyricModeOriginal": "원문만 보기",
+  "lyricModeBilingual": "이중 언어 대조 보기",
+  "lyricModeTranslation": "번역문만 보기",
+  "playback": "재생",
+  "lyricDisplayMode": "가사 표시 모드",
+  "testing": "테스트 중…",
+  "testConnectivity": "연결성 테스트",
+  "save": "저장",
+  "openSourceLicenses": "오픈 소스 라이선스",
+  "licenseDesc": "소스 코드는 공개되어 있으나 사용을 금지합니다",
+  "githubRepo": "GitHub 저장소",
+  "knowIt": "알겠습니다",
+  "noComments": "아직 댓글이 없어요. 가장 먼저 댓글을 남겨보세요",
+  "commentHint": "무슨 말을 할까요…",
+  "loginToComment": "로그인 후 댓글을 작성할 수 있습니다",
+  "defaultQuality": "기본 음질",
+  "wifiAutoHighQuality": "Wi-Fi 환경 시 자동으로 최고 음질",
+  "wifiAutoHighQualityDesc": "Wi-Fi 연결 시 무손실/Hi-Res 우선 재생(예약)",
+  "cellularLowQuality": "데이터 사용 시 음질 저하",
+  "cellularLowQualityDesc": "모바일 네트워크 사용 시 자동으로 표준 음질로 전환(예약)",
+  "cacheUsage": "캐시 사용량",
+  "recalculate": "다시 계산",
+  "clearCacheDesc": "인터페이스, 이미지 및 가사 번역 캐시 삭제",
+  "resetToDefault": "기본값으로 재설정",
+  "resetToDefaultDone": "기본 주소로 재설정되었습니다",
+  "pleaseLoginFirst": "먼저 로그인해 주세요",
+  "commentSuccess": "댓글 성공",
+  "deleteComment": "댓글 삭제",
+  "deleteCommentConfirm": "이 댓글을 정말 삭제하시겠습니까?",
+  "deleted": "삭제됨",
+  "playAll": "전체 재생",
+  "playFailed": "재생 실패",
+  "back": "뒤로",
+  "loadFailed": "로딩 실패",
+  "playCountSuffix": "{count}회 재생",
+  "trackCountSuffix": "{count}곡",
+  "songCountSuffix": "{count}곡",
+  "totalSongs": "총 {count}곡",
+  "repliesCount": "{count}개의 답글",
+  "resendIn": "{seconds}s 후 다시 보내기",
+  "userIdLabel": "ID: {id}",
+  "noRecentlyPlayed": "아직 재생 기록이 없어요. 홈으로 가서 노래를 골라보세요",
+  "loginToViewPlaylists": "로그인 후 내 플레이리스트 확인하기",
+  "queueEmpty": "대기열이 비어 있어요. 먼저 노래 몇 곡을 재생해 보세요",
+  "cache": "캐시",
+  "replyPrefix": "답글 {name}：{content}",
+  "downloadManagement": "다운로드 관리",
+  "downloads": "다운로드 완료",
+  "download": "다운로드",
+  "downloading": "다운로드 중",
+  "downloaded": "다운로드 완료",
+  "downloadQueued": "대기 중",
+  "downloadPaused": "일시 정지",
+  "downloadFailed": "다운로드 실패",
+  "downloadCompleted": "완료",
+  "downloadSong": "곡 다운로드",
+  "downloadCover": "커버 다운로드",
+  "downloadLyric": "가사 다운로드",
+  "downloadMv": "MV 다운로드",
+  "downloadAll": "전체 다운로드",
+  "noDownloads": "아직 다운로드한 내용이 없습니다",
+  "downloadStoragePath": "저장 위치",
+  "openInFileManager": "파일 관리자에서 보기",
+  "openWithOtherApp": "다른 앱으로 열기",
+  "openFailed": "링크를 열 수 없습니다. 네트워크 또는 브라우저 설정을 확인해 주세요",
+  "downloadResume": "계속",
+  "downloadedSongs": "다운로드된 노래",
+  "networkErrorTitle": "네트워크 연결 실패",
+  "networkErrorHint": "네트워크 설정을 확인한 후 다시 시도하거나 잠시 후에 다시 방문해주세요",
+  "genericErrorTitle": "로딩 실패",
+  "genericErrorHint": "작은 문제가 발생했습니다. 잠시 후 다시 시도해주세요",
+  "reload": "다시 불러오기",
+  "techDetail": "기술 세부 정보",
+  "copiedToClipboard": "클립보드에 복사됨",
+  "copyDetails": "상세 정보 복사",
+  "downloadDeleteConfirm": "이 다운로드 콘텐츠를 정말 삭제하시겠습니까?",
+  "downloadClearAll": "다운로드 기록 지우기",
+  "downloadAudio": "오디오",
+  "downloadCoverLabel": "커버",
+  "downloadLyricLabel": "가사",
+  "downloadMvLabel": "MV",
+  "downloadPermissionNeeded": "공용 디렉터리에 저장하려면 저장 권한이 필요합니다",
+  "downloadFallbackNotice": "앱 전용 디렉터리에 저장되었습니다. 일부 파일 관리자에서는 보이지 않을 수 있습니다",
+  "downloadRetry": "다시 시도",
+  "downloadPause": "일시 정지",
+  "diagnostics": "진단",
+  "errorLogLocation": "오류 로그 위치",
+  "copyPath": "경로 복사",
+  "storagePermissions": "저장소 권한",
+  "permissionGranted": "권한 부여됨",
+  "permissionDenied": "권한 미부여",
+  "requestPermission": "권한 요청",
+  "recentErrors": "최근 오류",
+  "recentErrorsCount": "총 {count}개, 클릭하여 보기",
+  "noRecentErrors": "아직 오류 기록이 없습니다",
+  "unknown": "알 수 없음",
+  "close": "닫기",
+  "checkUpdate": "업데이트 확인",
+  "checkUpdateDesc": "새 버전이 있는지 확인 중",
+  "checkingUpdate": "업데이트를 확인하는 중…",
+  "updateCheckFailed": "업데이트 확인에 실패했습니다. 잠시 후 다시 시도해 주세요",
+  "alreadyLatestVersion": "이미 최신 버전입니다",
+  "newVersionAvailable": "새 버전 발견",
+  "versionLabel": "최신 버전: {version}",
+  "downloadNow": "지금 다운로드",
+  "noRecommend": "추천 콘텐츠가 없습니다. 아래로 스크롤하여 다시 시도해 주세요",
+  "newSongsRecommend": "신곡 추천",
+  "authErrorRetry": "로그인 또는 인증을 완료한 후 다시 시도해 주세요",
+  "loadFailedNetwork": "로딩 실패, 네트워크를 확인해 주세요",
+  "searchSongsHint": "노래, 플레이리스트, 가수 검색",
+  "tabSongs": "싱글",
+  "later": "나중에 보기",
+  "all": "全部",
+  "showPassword": "显示密码",
+  "hidePassword": "隐藏密码"
 }

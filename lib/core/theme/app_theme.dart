@@ -71,6 +71,20 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
       ),
 
+      // ---------- 搜索 ----------
+      // M3 规范：搜索一律用 SearchBar 组件，不用裸 TextField 塞 AppBar。
+      searchBarTheme: SearchBarThemeData(
+        elevation: const WidgetStatePropertyAll(0),
+        backgroundColor: WidgetStatePropertyAll(scheme.surfaceContainerHigh),
+        side: WidgetStatePropertyAll(
+          BorderSide(color: scheme.outlineVariant),
+        ),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: 16),
+        ),
+        textStyle: const TextStyle(fontWeight: FontWeight.w400),
+      ),
+
       // ---------- 按钮 ----------
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -182,6 +196,34 @@ class AppTheme {
           borderRadius: BorderRadius.circular(radiusSmall),
         ),
         labelStyle: const TextStyle(fontSize: 13),
+      ),
+
+      // M3 规范：筛选类选择用 FilterChip（带选中态图标 + 描边），
+      // 分段选择用 SegmentedButton，多标签切换用 TabBar。
+      filterChipTheme: FilterChipThemeData(
+        side: BorderSide(color: scheme.outlineVariant),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusSmall),
+        ),
+        showCheckmark: true,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w500),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radiusSmall),
+            ),
+          ),
+          minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+        ),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: scheme.primary,
+        unselectedLabelColor: scheme.onSurfaceVariant,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
       badgeTheme: BadgeThemeData(
         backgroundColor: scheme.error,

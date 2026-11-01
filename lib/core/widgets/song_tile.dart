@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../api/kugou_api_client.dart';
 import '../utils/toast.dart';
+import 'shimmer.dart';
 import '../../l10n/l10n.dart';
 
 /// 列表项二级操作（收进 PopupMenuButton 的菜单项）。
@@ -38,6 +39,7 @@ class SongTile extends StatelessWidget {
     this.duration, // 秒
     this.trailing,
     this.onTap,
+    this.onLongPress,
     this.onDownload,
     this.menuItems,
     this.onMenuSelected,
@@ -51,6 +53,9 @@ class SongTile extends StatelessWidget {
   final int? duration; // 秒
   final Widget? trailing;
   final VoidCallback? onTap;
+
+  /// 长按：M3 列表项的次级入口（等价于桌面端右键菜单）。
+  final VoidCallback? onLongPress;
   final VoidCallback? onDownload;
 
   /// 需要收进「更多」菜单的操作。
@@ -67,6 +72,7 @@ class SongTile extends StatelessWidget {
     final theme = Theme.of(context);
     return ListTile(
       onTap: onTap,
+      onLongPress: onLongPress,
       selected: selected,
       selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.08),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -105,54 +111,75 @@ class SongTile extends StatelessWidget {
   }
 
   Widget? _buildTrailing(BuildContext context, ThemeData theme) {
-    if (_hasMenu) {
-      return PopupMenuButton<String>(
-        tooltip: context.l10n.moreActions,
-        onSelected: (v) => onMenuSelected?.call(v),
-        itemBuilder: (context) => [
-          for (final item in menuItems!)
-            PopupMenuItem<String>(
-              value: item.value,
-              child: Row(
-                children: [
-                  if (item.icon != null) ...[
-                    Icon(
-                      item.icon,
-                      size: 20,
-                      color: item.isDestructive
-                          ? theme.colorScheme.error
-                          : theme.colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  Text(
-                    item.label,
-                    style: item.isDestructive
-                        ? TextStyle(color: theme.colorScheme.error)
-                        : null,
-                  ),
-                ],
-              ),
+    // M3 规范：trailing 只承载「次要信息 + 单一入口」。
+    // 时长是次要信息（文本），多个操作收进 PopupMenuButton —— 不排一排 IconButton。
+    final durationLabel = duration != null
+        ? Text(
+            _fmt(duration!),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
+          )
+        : null;
+
+    if (_hasMenu) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (durationLabel != null) ...[
+            durationLabel,
+            const SizedBox(width: 8),
+          ],
+          PopupMenuButton<String>(
+            tooltip: context.l10n.moreActions,
+            onSelected: (v) => onMenuSelected?.call(v),
+            itemBuilder: (context) => [
+              for (final item in menuItems!)
+                PopupMenuItem<String>(
+                  value: item.value,
+                  child: Row(
+                    children: [
+                      if (item.icon != null) ...[
+                        Icon(
+                          item.icon,
+                          size: 20,
+                          color: item.isDestructive
+                              ? theme.colorScheme.error
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      Text(
+                        item.label,
+                        style: item.isDestructive
+                            ? TextStyle(color: theme.colorScheme.error)
+                            : null,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ],
       );
     }
     if (onDownload != null) {
-      return IconButton(
-        icon: const Icon(Icons.download_outlined, size: 20),
-        tooltip: context.l10n.download,
-        onPressed: onDownload,
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (durationLabel != null) ...[
+            durationLabel,
+            const SizedBox(width: 8),
+          ],
+          IconButton(
+            icon: const Icon(Icons.download_outlined, size: 20),
+            tooltip: context.l10n.download,
+            onPressed: onDownload,
+          ),
+        ],
       );
     }
-    if (duration != null) {
-      return Text(
-        _fmt(duration!),
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-        ),
-      );
-    }
-    return null;
+    return durationLabel;
   }
 
   Widget _placeholder(ThemeData theme) => Container(
@@ -272,7 +299,7 @@ class GradientChip extends StatelessWidget {
   }
 }
 
-/// 统一加载骨架
+/// 统一加载骨架（带微光动画）
 class ListSkeleton extends StatelessWidget {
   const ListSkeleton({super.key, this.itemCount = 6});
   final int itemCount;
@@ -280,46 +307,30 @@ class ListSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return ListView.builder(
-      itemCount: itemCount,
-      itemBuilder: (_, __) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
+    return Shimmer(
+      baseColor: theme.colorScheme.surface,
+      highlightColor:
+          theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+      child: ListView.builder(
+        itemCount: itemCount,
+        itemBuilder: (_, __) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              SkeletonBox(height: 52, width: 52, radius: 8),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SkeletonText(width: double.infinity, height: 14),
+                    const SizedBox(height: 8),
+                    SkeletonText(width: 120, height: 12),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 14,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    height: 12,
-                    width: 120,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

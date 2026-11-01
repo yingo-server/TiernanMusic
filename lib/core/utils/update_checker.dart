@@ -28,6 +28,16 @@ class UpdateInfo {
   final DateTime? publishedAt;
 }
 
+/// 检查更新失败（网络故障 / 接口返回异常）
+class UpdateCheckException implements Exception {
+  const UpdateCheckException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 /// 检查更新。
 ///
 /// 使用**前缀代理**访问 GitHub API / Release，避免直连 GitHub 速度慢或被墙。
@@ -55,19 +65,22 @@ class UpdateChecker {
   }
 
   /// 检查是否有新版本
+  ///
+  /// **失败时抛异常**：网络故障、接口异常都不能被当成「已是最新版本」。
+  /// 只有真正拿到 Release 且比较结果相同时才算「已是最新」。
   Future<UpdateInfo> check() async {
     final current = await currentVersion();
     final release = await _fetchLatestRelease();
     if (release == null) {
-      return UpdateInfo(
-        hasUpdate: false,
-        latestVersion: current,
-        latestTag: '',
-      );
+      // 仓库尚未发布任何 Release —— 这不是「已是最新」，而是无法判断。
+      throw const UpdateCheckException('no release found');
     }
 
     final tag = '${release['tag_name'] ?? ''}';
     final latest = tag.startsWith('v') ? tag.substring(1) : tag;
+    if (latest.isEmpty) {
+      throw const UpdateCheckException('invalid release tag');
+    }
     final hasUpdate = _compareVersion(latest, current) > 0;
 
     // 优先挑 arm64 的 APK（绝大多数设备）
@@ -87,6 +100,10 @@ class UpdateChecker {
     );
   }
 
+  /// 拉取最新的 Release 信息。
+  ///
+  /// - 返回 `null`：**404**，仓库还没有发布任何 Release（不是网络故障）。
+  /// - 抛出异常：网络故障、超时、5xx、返回体异常 —— 都不能被当成「已是最新版本」。
   Future<Map<String, dynamic>?> _fetchLatestRelease() async {
     // 通过 GitHub API 获取结构化 release 信息（走前缀代理加速）
     final apiUrl =
@@ -95,15 +112,17 @@ class UpdateChecker {
       final res = await _dio.get<Map<String, dynamic>>(apiUrl);
       final data = res.data;
       if (data != null && data['tag_name'] != null) return data;
-      return null;
+      // 2xx 但结构不完整 —— 按失败处理，不能伪装成「无 release」
+      throw const UpdateCheckException('malformed release payload');
     } on DioException catch (e) {
       // 404 = 仓库还没有发布任何 Release（不是网络故障）
       if (e.response?.statusCode == 404) return null;
       debugPrint('[UpdateChecker] api failed: $e');
-      rethrow;
+      throw UpdateCheckException('network error: ${e.type}');
     } catch (e) {
       debugPrint('[UpdateChecker] api failed: $e');
-      rethrow;
+      if (e is UpdateCheckException) rethrow;
+      throw UpdateCheckException('network error: $e');
     }
   }
 

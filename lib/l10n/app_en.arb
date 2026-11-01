@@ -59,22 +59,104 @@
       }
     }
   },
+  "@recentErrorsCount": {
+    "description": "最近的错误条数",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "12"
+      }
+    }
+  },
+  "@versionLabel": {
+    "description": "最新版本号",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.1"
+      }
+    }
+  },
+  "@commentFailed": {
+    "description": "Comment failed: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@deleteFailed": {
+    "description": "Delete failed: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@clearCacheFailed": {
+    "description": "Clear failed: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@apiConnectionOk": {
+    "description": "Connection OK (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "@apiServerReachable": {
+    "description": "Server reachable (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "@apiConnectionFailed": {
+    "description": "Connection failed: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@qrLoadFailed": {
+    "description": "Failed to load QR code: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@commentsCount": {
+    "description": "{count} comments",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "recommendedPlaylists": "Recommended Playlists",
   "topCharts": "Charts",
   "newSongs": "New Releases",
   "hotArtists": "Popular Artists",
-  "lyricOriginal": "Original",
+  "lyricOriginal": "Original Text",
   "lyricBilingual": "Bilingual",
   "lyricTranslation": "Translation",
   "nowPlaying": "Now Playing",
-  "playQueue": "Play Queue",
+  "playQueue": "Queue",
   "theme": "Theme",
   "previous": "Previous Track",
-  "favorite": "Save",
-  "unfavorite": "Unsave",
+  "favorite": "Favorite",
+  "unfavorite": "Unfavorite",
   "playlist": "Playlist",
   "comment": "Comments",
-  "comments": "Comments",
+  "comments": "Comment",
   "send": "Send",
   "reply": "Reply",
   "delete": "Delete",
@@ -92,13 +174,13 @@
   "about": "About",
   "version": "Version",
   "license": "License",
-  "mobileLogin": "Log in with phone number",
-  "passwordLogin": "Log in with password",
-  "qrLogin": "Log in with QR code",
-  "phoneNumber": "Phone number",
+  "mobileLogin": "Login with Phone Number",
+  "passwordLogin": "Login with Password",
+  "qrLogin": "Login with QR Code",
+  "phoneNumber": "Phone Number",
   "password": "Password",
-  "smsCode": "SMS verification code",
-  "sendSmsCode": "Send verification code",
+  "smsCode": "SMS Verification Code",
+  "sendSmsCode": "Send Verification Code",
   "appName": "Tinglan Music",
   "home": "Home",
   "search": "Search",
@@ -121,22 +203,22 @@
   "dailyRecommend": "Daily recommendations",
   "qualityHigh": "Hi-Res",
   "vipOnly": "VIP Exclusive",
-  "noCopyright": "No Copyright Available",
+  "noCopyright": "No copyright available",
   "tryListen": "Preview",
-  "fullPlay": "Play in Full",
-  "captchaTitle": "Human verification",
+  "fullPlay": "Play in full",
+  "captchaTitle": "Human-Machine Verification",
   "captchaHint": "Please complete the slider verification",
   "loginSuccess": "Login successful",
   "loginFailed": "Login failed",
-  "accountManage": "Account management",
-  "addAccount": "Add account",
-  "switchAccount": "Switch account",
-  "currentAccount": "Current account",
-  "myPlaylists": "My playlists",
-  "createPlaylist": "Create new playlist",
-  "playlistName": "Playlist name",
-  "addToPlaylist": "Add to playlist",
-  "removeFromPlaylist": "Remove from playlist",
+  "accountManage": "Account Management",
+  "addAccount": "Add Account",
+  "switchAccount": "Switch Account",
+  "currentAccount": "Current Account",
+  "myPlaylists": "My Playlists",
+  "createPlaylist": "Create New Playlist",
+  "playlistName": "Playlist Name",
+  "addToPlaylist": "Add to Playlist",
+  "removeFromPlaylist": "Remove from Playlist",
   "mv": "MV",
   "playMv": "Play MV",
   "relatedMv": "Related MVs",
@@ -144,203 +226,196 @@
   "quality128": "Smooth 128K",
   "quality320": "High Quality 320K",
   "qualityFlac": "Lossless FLAC",
-  "notLoggedIn": "Not Logged In",
-  "loginToSync": "Log in to sync your playlists and favorites",
-  "goLogin": "Log In",
-  "noPlaylistsYet": "No playlists yet",
-  "playlistLoadFailed": "Failed to load playlist",
+  "notLoggedIn": "Not logged in",
+  "loginToSync": "Sync your playlists and favorites after logging in",
+  "goLogin": "Log in",
+  "noPlaylistsYet": "No playlists available",
+  "playlistLoadFailed": "Failed to load playlists",
   "unofficialClient": "Unofficial third-party client",
-  "smsLogin": "Log in via SMS",
+  "smsLogin": "Log in with SMS",
   "operationFailed": "Operation failed",
   "phoneInvalid": "Please enter a valid phone number",
   "smsCodeSent": "Verification code has been sent",
-  "artists": "Artist",
-  "noSearchResults": "No search results available.",
-  "noRelatedPlaylists": "No related playlists available.",
-  "noRelatedContent": "No content available",
+  "artists": "Singer",
+  "noSearchResults": "No search results found",
+  "noRelatedPlaylists": "No related playlists found",
+  "noRelatedContent": "No related content found",
   "recentlyPlayed": "Recently Played",
   "clear": "Clear",
   "myFavoriteMvs": "My Favorite MVs",
-  "mvComingSoon": "The MV Favorites feature will be available soon. Stay tuned!",
+  "mvComingSoon": "The MV favorite feature will be available soon. Stay tuned.",
   "clearRecentlyPlayed": "Clear Recently Played",
   "clearRecentConfirm": "Are you sure you want to clear all playback history? This action cannot be undone.",
   "noRecommend": "No recommendations available. Please pull down to try again.",
   "newSongsRecommend": "New Song Recommendations",
   "authErrorRetry": "Please log in or complete verification and try again.",
-  "loadFailedNetwork": "Loading failed. Please check your network.",
+  "loadFailedNetwork": "Loading failed. Please check your network connection.",
   "searchSongsHint": "Search for songs, playlists, or artists",
   "tabSongs": "Single",
   "albums": "Album",
   "switchAccountSubtitle": "Switch or manage logged-in accounts",
   "appearance": "Appearance",
   "themeMode": "Theme mode",
-  "appLanguage": "Interface Language",
-  "lyricModeOriginal": "Original Text Only",
-  "lyricModeBilingual": "Bilingual Comparison",
-  "lyricModeTranslation": "Translation Only",
+  "appLanguage": "Interface language",
+  "lyricModeOriginal": "Original text only",
+  "lyricModeBilingual": "Bilingual comparison",
+  "lyricModeTranslation": "Translation only",
   "playback": "Play",
-  "lyricDisplayMode": "Lyrics Display Mode",
-  "defaultQuality": "Default Audio Quality",
+  "lyricDisplayMode": "Lyrics display mode",
+  "defaultQuality": "Default audio quality",
   "qrExpiredShort": "Expired",
   "unknownArtist": "Unknown Artist",
   "notPlaying": "Not Playing",
-  "noLyric": "No lyrics available",
-  "lyricParseFailed": "Failed to parse lyrics",
+  "noLyric": "No Lyrics Available",
+  "lyricParseFailed": "Failed to Parse Lyrics",
   "calculating": "Calculating…",
-  "cannotCalculate": "Unable to calculate",
+  "cannotCalculate": "Unable to Calculate",
   "clearCacheConfirm": "This will clear the image cache, API cache, and lyric translation cache, but will not delete your account data. Are you sure you want to proceed?",
-  "cacheCleared": "Cache cleared",
+  "cacheCleared": "Cache Cleared",
   "account": "Account",
   "testConnectivity": "Test connectivity",
   "save": "Save",
-  "openSourceLicenses": "Open-source license",
-  "licenseDesc": "Source code is visible.",
+  "openSourceLicenses": "Open source license",
+  "licenseDesc": "Source code is visible, use prohibited",
   "githubRepo": "GitHub repository",
   "knowIt": "Got it",
-  "noComments": "No comments yet, be the first to comment!",
-  "commentHint": "Say something...",
-  "loginToComment": "You can comment after logging in.",
-  "pleaseLoginFirst": "Please log in first.",
+  "noComments": "No comments yet, be the first to comment",
+  "commentHint": "Say something…",
+  "loginToComment": "You can comment after logging in",
+  "pleaseLoginFirst": "Please log in first",
   "codeInvalid": "Please enter the verification code",
-  "selectAccount": "This phone number is linked to multiple accounts. Please select the account you want to log in to.",
+  "selectAccount": "This phone number is linked to multiple accounts. Please select the account you want to log in to",
   "phoneHintCn": "Please enter a mainland China phone number",
-  "verificationCode": "Verification Code",
-  "usernameLabel": "Username / Phone Number",
+  "verificationCode": "Verification code",
+  "usernameLabel": "Username / Phone number",
   "usernamePasswordRequired": "Please enter your username and password",
-  "qrExpired": "The QR code has expired. Please refresh.",
-  "qrScanSuccess": "Scan successful. Please confirm the login on your phone.",
-  "qrScanHint": "Please use the Kugou Music app to scan the QR code and log in.",
-  "refreshQr": "Refresh QR Code",
-  "commentSuccess": "Comment successful.",
+  "qrExpired": "The QR code has expired. Please refresh it",
+  "qrScanSuccess": "QR code scanned successfully. Please confirm the login on your phone",
+  "qrScanHint": "Please use the Kugou Music app to scan the QR code and log in",
+  "refreshQr": "Refresh QR code",
+  "commentSuccess": "Comment successful",
   "deleteComment": "Delete comment",
-  "deleteCommentConfirm": "Delete this comment?",
-  "deleted": "Deleted.",
-  "playAll": "Play All",
-  "playFailed": "Play Failed",
+  "deleteCommentConfirm": "Are you sure you want to delete this comment?",
+  "deleted": "Deleted",
+  "playAll": "Play all",
+  "playFailed": "Play failed",
   "back": "Back",
-  "loadFailed": "Load Failed",
-  "playCountSuffix": "{count} Plays",
-  "trackCountSuffix": "{count} Tracks",
-  "wifiAutoHighQuality": "Automatically use the highest quality over Wi-Fi",
-  "wifiAutoHighQualityDesc": "Prioritize lossless/Hi-Res playback when connected to Wi-Fi (reserved)",
-  "cellularLowQuality": "Reduce audio quality when using mobile data",
-  "cellularLowQualityDesc": "Automatically switch to standard audio quality when using mobile data (reserved)",
+  "loadFailed": "Load failed",
+  "playCountSuffix": "{count} plays",
+  "trackCountSuffix": "{count} songs",
+  "wifiAutoHighQuality": "Auto-select highest audio quality over Wi-Fi",
+  "wifiAutoHighQualityDesc": "Prioritize lossless/Hi-Res playback (reserved) when connected to Wi-Fi",
+  "cellularLowQuality": "Reduce audio quality over mobile data",
+  "cellularLowQualityDesc": "Automatically switch to standard audio quality (reserved) when using a mobile network",
   "cacheUsage": "Cache usage",
   "recalculate": "Recalculate",
   "clearCacheDesc": "Clear interface, image, and lyric translation cache",
   "resetToDefault": "Reset to default",
-  "resetToDefaultDone": "Address has been reset to default",
-  "testing": "Testing...",
-  "songCountSuffix": "{count} Tracks",
-  "totalSongs": "Total {count} Tracks",
-  "repliesCount": "{count} Replies",
+  "resetToDefaultDone": "Reset to default address",
+  "testing": "In testing…",
+  "songCountSuffix": "{count} tracks",
+  "totalSongs": "Total {count} tracks",
+  "repliesCount": "{count} replies",
   "resendIn": "Repost in {seconds}s",
   "userIdLabel": "ID: {id}",
   "noRecentlyPlayed": "No playback history yet. Go to the homepage and pick a song.",
   "loginToViewPlaylists": "Log in to view your playlist.",
   "queueEmpty": "The queue is empty. Go play a few songs first.",
   "cache": "Cache",
-  "replyPrefix": "Reply to {name}: {content}",
-  "networkErrorTitle": "Network Error",
-  "networkErrorHint": "Please check your connection and try again later",
-  "genericErrorTitle": "Something Went Wrong",
-  "genericErrorHint": "An unexpected error occurred. Please try again.",
+  "replyPrefix": "Replying to {name}: {content}",
+  "networkErrorTitle": "Network connection failed",
+  "networkErrorHint": "Please check your network settings and try again, or come back later",
+  "genericErrorTitle": "Loading failed",
+  "genericErrorHint": "Something went wrong. Please try again later",
   "reload": "Reload",
-  "techDetail": "Technical Details",
+  "techDetail": "Technical details",
   "moreActions": "More",
-  "clearHistoryConfirm": "Clear all search history?",
+  "clearHistoryConfirm": "Are you sure you want to clear all search history?",
   "commentFailed": "Comment failed: {error}",
-  "@commentFailed": {
-    "description": "Comment failed: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "deleteFailed": "Delete failed: {error}",
-  "@deleteFailed": {
-    "description": "Delete failed: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "clearCacheFailed": "Clear failed: {error}",
-  "@clearCacheFailed": {
-    "description": "Clear failed: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "apiConnectionOk": "Connection OK (HTTP {code})",
-  "@apiConnectionOk": {
-    "description": "Connection OK (HTTP {code})",
-    "placeholders": {
-      "code": {
-        "type": "int"
-      }
-    }
-  },
+  "apiConnectionOk": "Connection normal (HTTP {code})",
   "apiServerReachable": "Server reachable (HTTP {code})",
-  "@apiServerReachable": {
-    "description": "Server reachable (HTTP {code})",
-    "placeholders": {
-      "code": {
-        "type": "int"
-      }
-    }
-  },
   "apiConnectionFailed": "Connection failed: {error}",
-  "@apiConnectionFailed": {
-    "description": "Connection failed: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "apiSection": "API & Network",
-  "licenseBody": "Tiernan Music\n\nThe source code of this repository is publicly visible (Source Available), for study and research purposes only.\n\n[Prohibited]\n· Do not use this code or derivatives for any commercial or non-commercial purpose;\n· Do not distribute, copy, modify and republish this software in any form;\n· Do not use the integrated interfaces for crawling or bulk downloading.\n\nThis project is not affiliated with the official Kugou Music. Contact us for copyright issues.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
-  "mvQualitySd": "SD",
+  "apiSection": "API and Network",
+  "licenseBody": "Tiernan Music\n\nThe source code for this repository is publicly available (Source Available) and is intended for learning and research purposes only.\n\n【Prohibited Actions】\n· It is prohibited to use this code or any derivative works for any commercial or non-commercial purposes;\n· It is prohibited to distribute, copy, or republish this software in any form after modification;\n· It is prohibited to use the APIs integrated with this project for web scraping or batch downloading.\n\nThis project is not affiliated with Kugou Music in any way. Please contact us for removal if there is any copyright infringement.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "mvQualitySd": "Standard Definition",
   "mvQualityHd": "HD",
   "mvQualityQhd": "Ultra HD",
   "mvQualitySq": "Full HD",
-  "mvQualityFhd": "Blue-ray",
-  "mvQualitySelect": "Quality",
+  "mvQualityFhd": "Blu-ray",
+  "mvQualitySelect": "Clarity",
   "qrLoadFailed": "Failed to load QR code: {error}",
-  "@qrLoadFailed": {
-    "description": "Failed to load QR code: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "shuffle": "Shuffle",
-  "repeat": "Repeat all",
-  "repeatOne": "Repeat one",
-  "closePlayer": "Collapse player",
-  "expandPlayer": "Expand player",
-  "showLyrics": "Show lyrics",
-  "showCover": "Show cover",
-  "commentsCount": "{count} comments",
-  "@commentsCount": {
-    "description": "{count} comments",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "playlistIntro": "Playlist intro",
+  "repeat": "Repeat",
+  "repeatOne": "Repeat Single Track",
+  "closePlayer": "Collapse Playback Page",
+  "expandPlayer": "Expand playback page",
+  "showLyrics": "View lyrics",
+  "showCover": "View cover",
+  "commentsCount": "Total {count} comments",
+  "playlistIntro": "Playlist description",
   "expand": "Expand",
   "collapse": "Collapse",
-  "noSongsInPlaylist": "No songs in this playlist",
+  "noSongsInPlaylist": "No songs in the playlist yet",
   "playNext": "Play next",
-  "addToQueue": "Add to queue",
-  "songActions": "Song actions"
+  "addToQueue": "Add to playback queue",
+  "songActions": "Song Actions",
+  "downloads": "Downloaded",
+  "download": "Download",
+  "downloading": "Downloading",
+  "downloaded": "Downloaded",
+  "downloadQueued": "In Queue",
+  "downloadPaused": "Paused",
+  "downloadFailed": "Download Failed",
+  "downloadCompleted": "Completed",
+  "downloadSong": "Download Song",
+  "downloadCover": "Download Cover",
+  "downloadLyric": "Download Lyrics",
+  "downloadMv": "Download MV",
+  "downloadAll": "Download All",
+  "noDownloads": "No content has been downloaded yet",
+  "downloadStoragePath": "Save Location",
+  "openInFileManager": "View in File Manager",
+  "openWithOtherApp": "Open with Other App",
+  "openFailed": "Unable to open the link. Please check your network or browser settings",
+  "downloadDeleteConfirm": "Are you sure you want to delete this download?",
+  "downloadClearAll": "Clear Download History",
+  "downloadAudio": "Audio",
+  "downloadCoverLabel": "Cover",
+  "downloadLyricLabel": "Lyrics",
+  "downloadMvLabel": "MV",
+  "downloadPermissionNeeded": "Storage permission is required to save to the public directory",
+  "downloadFallbackNotice": "Saved to the app's private directory. Some file managers may not be able to see it",
+  "downloadRetry": "Retry",
+  "downloadPause": "Pause",
+  "downloadResume": "Resume",
+  "downloadedSongs": "Downloaded Songs",
+  "downloadManagement": "Download Management",
+  "copyPath": "Copy Path",
+  "storagePermissions": "Storage Permission",
+  "permissionGranted": "Granted",
+  "permissionDenied": "Not Granted",
+  "requestPermission": "Request Permission",
+  "recentErrors": "Recent Errors",
+  "recentErrorsCount": "Total {count} items, tap to view",
+  "noRecentErrors": "No error records yet",
+  "unknown": "Unknown",
+  "close": "Close",
+  "copiedToClipboard": "Copied to clipboard",
+  "copyDetails": "Copy details",
+  "diagnostics": "Diagnosis",
+  "errorLogLocation": "Error log location",
+  "checkUpdate": "Check for updates",
+  "checkUpdateDesc": "Checking for a new version",
+  "checkingUpdate": "Checking for updates…",
+  "updateCheckFailed": "Failed to check for updates. Please try again later",
+  "alreadyLatestVersion": "Already the latest version",
+  "newVersionAvailable": "New version found",
+  "versionLabel": "Latest version: {version}",
+  "downloadNow": "Download now",
+  "later": "Later",
+  "all": "全部",
+  "showPassword": "显示密码",
+  "hidePassword": "隐藏密码"
 }

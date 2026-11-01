@@ -60,21 +60,6 @@ class PermissionGate {
     }
   }
 
-  /// 只查询当前是否具备公共目录写入能力（**不弹权限框**）。
-  ///
-  /// 用于「设置 → 诊断 → 存储权限」的**只读展示**；
-  /// 真正的申请请显式调用 [ensureStorageWrite]。
-  Future<bool> hasStorageWriteAccess() async {
-    if (!Platform.isAndroid) return true;
-    try {
-      final strategy = await _service.currentStrategy();
-      return strategy != StorageStrategy.appFallback;
-    } catch (e) {
-      debugPrint('[PermissionGate] storage check failed: $e');
-      return false;
-    }
-  }
-
   /// 带上下文提示地申请（UI 层用）
   Future<bool> requestWithPrompt(
     BuildContext context, {

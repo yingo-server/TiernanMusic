@@ -6,15 +6,6 @@ import 'package:video_player/video_player.dart';
 import '../../../l10n/l10n.dart';
 import '../mv_provider.dart';
 
-/// 清晰度档位显示名。
-const _qualityLabels = {
-  'sd': '标清',
-  'hd': '高清',
-  'qhd': '超清',
-  'sq': '全高清',
-  'fhd': '蓝光',
-};
-
 /// MV 全屏播放页。
 ///
 /// URL 解析在 initState 中触发（Future.then），build 不再有副作用；
@@ -108,6 +99,7 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
         .watch(mvDetailProvider(widget.videoId ?? widget.hash))
         .value;
     final qualities = detail?.hashes ?? const <String, String>{};
+    final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -115,15 +107,18 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
           ? null
           : AppBar(
               backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(widget.title ?? 'MV',
-                      style: const TextStyle(fontSize: 16)),
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(color: Colors.white)),
                   if (widget.artist != null)
                     Text(widget.artist!,
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.white54)),
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: Colors.white54)),
                 ],
               ),
             ),
@@ -149,18 +144,47 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
                       color: Colors.white, shadows: [
                         Shadow(color: Colors.black54, blurRadius: 8),
                       ]),
+                  tooltip: context.l10n.back,
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
-            // 清晰度切换
+            // 清晰度切换（PopupMenu）
             if (_error == null && qualities.length > 1)
               Positioned(
                 right: 12,
-                bottom: 56,
+                bottom: 108,
                 child: _QualityPicker(
                   qualities: qualities,
                   activeHash: _activeHash,
                   onSelected: (q) => _resolve(qualities[q]!),
+                ),
+              ),
+            // 竖屏：底部浮层操作条（主/次按钮层级明确）
+            if (!isLandscape && _showControls && _error == null)
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 48,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // 次要操作：OutlinedButton
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white54),
+                      ),
+                      icon: const Icon(Icons.arrow_back, size: 18),
+                      label: Text(context.l10n.back),
+                    ),
+                    // 主操作：FilledButton
+                    FilledButton.icon(
+                      onPressed: () => _resolve(_activeHash ?? widget.hash),
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: Text(context.l10n.retry),
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -183,6 +207,9 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
           IconButton(
             iconSize: 64,
             color: Colors.white,
+            tooltip: controller.value.isPlaying
+                ? context.l10n.pause
+                : context.l10n.play,
             icon: Icon(controller.value.isPlaying
                 ? Icons.pause_circle
                 : Icons.play_circle),
@@ -214,32 +241,43 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
   }
 
   Widget _buildError() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.error_outline, color: Colors.white54, size: 56),
-        const SizedBox(height: 16),
-        Text(context.l10n.playFailed, style: const TextStyle(color: Colors.white70)),
-        const SizedBox(height: 8),
-        Text(_error!,
-            style: const TextStyle(color: Colors.white38, fontSize: 12),
-            textAlign: TextAlign.center),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FilledButton.tonal(
-              onPressed: () => _resolve(_activeHash ?? widget.hash),
-              child: Text(context.l10n.retry),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.tonal(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(context.l10n.back),
-            ),
-          ],
-        ),
-      ],
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.white54, size: 56),
+          const SizedBox(height: 16),
+          Text(context.l10n.playFailed,
+              style: theme.textTheme.bodyLarge
+                  ?.copyWith(color: Colors.white70),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Text(_error!,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: Colors.white38),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 主操作：FilledButton（重试）
+              FilledButton.icon(
+                onPressed: () => _resolve(_activeHash ?? widget.hash),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: Text(context.l10n.retry),
+              ),
+              const SizedBox(width: 12),
+              // 次要操作：OutlinedButton（返回）
+              OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(context.l10n.back),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -256,25 +294,47 @@ class _QualityPicker extends StatelessWidget {
   final String? activeHash;
   final ValueChanged<String> onSelected;
 
-  String _label(String q, String hash) =>
-      '${_qualityLabels[q] ?? q.toUpperCase()}${hash == activeHash ? ' ✓' : ''}';
+  String _label(BuildContext context, String q) {
+    return switch (q) {
+      'sd' => context.l10n.mvQualitySd,
+      'hd' => context.l10n.mvQualityHd,
+      'qhd' => context.l10n.mvQualityQhd,
+      'sq' => context.l10n.mvQualitySq,
+      'fhd' => context.l10n.mvQualityFhd,
+      _ => q.toUpperCase(),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final active = qualities.entries
         .where((e) => e.value == activeHash)
         .map((e) => e.key)
         .firstOrNull;
     return PopupMenuButton<String>(
       color: Colors.black87,
+      tooltip: context.l10n.mvQualitySelect,
       onSelected: onSelected,
       itemBuilder: (_) => [
         for (final e in qualities.entries)
           PopupMenuItem(
             value: e.key,
-            child: Text(
-              _label(e.key, e.value),
-              style: const TextStyle(color: Colors.white),
+            child: Row(
+              children: [
+                // 选中态用 check 图标（不再叠加文本 ✓）
+                if (e.value == activeHash)
+                  const Icon(Icons.check_rounded,
+                      size: 18, color: Colors.white)
+                else
+                  const SizedBox(width: 18),
+                const SizedBox(width: 8),
+                Text(
+                  _label(context, e.key),
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: Colors.white),
+                ),
+              ],
             ),
           ),
       ],
@@ -284,9 +344,20 @@ class _QualityPicker extends StatelessWidget {
           color: Colors.black38,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Text(
-          _qualityLabels[active] ?? (active?.toUpperCase() ?? '清晰度'),
-          style: const TextStyle(color: Colors.white, fontSize: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.high_quality_rounded,
+                size: 16, color: Colors.white),
+            const SizedBox(width: 4),
+            Text(
+              active == null
+                  ? context.l10n.mvQualitySelect
+                  : _label(context, active),
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: Colors.white),
+            ),
+          ],
         ),
       ),
     );

@@ -62,7 +62,8 @@ class FullPlayerPage extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // 顶部栏
+            // 顶部栏：左侧收起、居中标题、右侧「更多」菜单（下载/队列收进菜单，
+            // 避免行内排一排 IconButton）。
             Row(
               children: [
                 IconButton(
@@ -76,17 +77,42 @@ class FullPlayerPage extends ConsumerWidget {
                       style: theme.textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.w600)),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.download_outlined),
-                  tooltip: context.l10n.download,
-                  onPressed: song == null
-                      ? null
-                      : () => showDownloadSheet(context, song),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.queue_music_rounded),
-                  tooltip: context.l10n.playQueue,
-                  onPressed: () => showQueueSheet(context),
+                PopupMenuButton<String>(
+                  tooltip: context.l10n.moreActions,
+                  onSelected: (v) {
+                    if (v == 'download' && song != null) {
+                      showDownloadSheet(context, song);
+                    } else if (v == 'queue') {
+                      showQueueSheet(context);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: 'download',
+                      enabled: song != null,
+                      child: Row(
+                        children: [
+                          Icon(Icons.download_outlined,
+                              size: 20,
+                              color: theme.colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 12),
+                          Text(context.l10n.download),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'queue',
+                      child: Row(
+                        children: [
+                          Icon(Icons.queue_music_rounded,
+                              size: 20,
+                              color: theme.colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 12),
+                          Text(context.l10n.playQueue),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -154,11 +180,11 @@ class FullPlayerPage extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  IconButton(
-                    icon: Icon(Icons.shuffle,
-                        color: shuffle
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant),
+                  // 状态切换用 IconButton.toggle（带 selected 语义 + 状态色）
+                  IconButton.toggle(
+                    isSelected: shuffle,
+                    icon: const Icon(Icons.shuffle),
+                    selectedIcon: const Icon(Icons.shuffle),
                     tooltip: context.l10n.shuffle,
                     onPressed: controller.toggleShuffle,
                   ),
@@ -189,15 +215,19 @@ class FullPlayerPage extends ConsumerWidget {
                     tooltip: context.l10n.next,
                     onPressed: controller.next,
                   ),
-                  IconButton(
+                  IconButton.toggle(
+                    isSelected: loopMode != LoopMode.off,
                     icon: Icon(
                       switch (loopMode) {
                         LoopMode.one => Icons.repeat_one,
                         _ => Icons.repeat,
                       },
-                      color: loopMode != LoopMode.off
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurfaceVariant,
+                    ),
+                    selectedIcon: Icon(
+                      switch (loopMode) {
+                        LoopMode.one => Icons.repeat_one,
+                        _ => Icons.repeat,
+                      },
                     ),
                     tooltip: loopMode == LoopMode.one
                         ? context.l10n.repeatOne

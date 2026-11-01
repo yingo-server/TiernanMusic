@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../../../l10n/l10n.dart';
 import '../data/download_task.dart';
@@ -25,24 +26,14 @@ class DownloadPage extends ConsumerWidget {
               icon: const Icon(Icons.delete_sweep_outlined),
               tooltip: context.l10n.downloadClearAll,
               onPressed: () async {
-                final ok = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: Text(context.l10n.downloadClearAll),
-                    content: Text(context.l10n.downloadDeleteConfirm),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: Text(context.l10n.cancel),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child: Text(context.l10n.confirm),
-                      ),
-                    ],
-                  ),
+                // 危险操作：二次确认 + error 色强调
+                final ok = await showDestructiveConfirm(
+                  context,
+                  title: context.l10n.downloadClearAll,
+                  message: context.l10n.downloadDeleteConfirm,
+                  confirmLabel: context.l10n.confirm,
                 );
-                if (ok == true) await manager.clearAll();
+                if (ok) await manager.clearAll();
               },
             ),
         ],
@@ -65,6 +56,35 @@ class DownloadPage extends ConsumerWidget {
   }
 }
 
+/// 统一的 PopupMenu 项：图标 + 文案（不用 ListTile 嵌套，避免多余内边距）。
+PopupMenuItem<String> _menuItem({
+  required IconData icon,
+  required String label,
+  required String value,
+  bool destructive = false,
+}) {
+  return PopupMenuItem<String>(
+    value: value,
+    child: Builder(
+      builder: (context) {
+        final scheme = Theme.of(context).colorScheme;
+        final color =
+            destructive ? scheme.error : scheme.onSurfaceVariant;
+        return Row(
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: destructive ? TextStyle(color: scheme.error) : null,
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
+
 class _DownloadTile extends ConsumerWidget {
   const _DownloadTile({required this.task});
   final DownloadTask task;
@@ -77,9 +97,9 @@ class _DownloadTile extends ConsumerWidget {
 
     final typeLabel = switch (task.type) {
       DownloadTaskType.audio => context.l10n.downloadAudio,
-      DownloadTaskType.cover => context.l10n.downloadCover,
-      DownloadTaskType.lyric => context.l10n.downloadLyric,
-      DownloadTaskType.mv => context.l10n.downloadMv,
+      DownloadTaskType.cover => context.l10n.downloadCoverLabel,
+      DownloadTaskType.lyric => context.l10n.downloadLyricLabel,
+      DownloadTaskType.mv => context.l10n.downloadMvLabel,
     };
 
     final statusLabel = switch (task.status) {
@@ -134,7 +154,9 @@ class _DownloadTile extends ConsumerWidget {
             ),
         ],
       ),
+      // 多个操作（暂停/继续/重试/打开/删除）收进 PopupMenuButton
       trailing: PopupMenuButton<String>(
+        tooltip: context.l10n.moreActions,
         onSelected: (value) async {
           switch (value) {
             case 'pause':
@@ -163,26 +185,57 @@ class _DownloadTile extends ConsumerWidget {
               );
               break;
             case 'delete':
-              await manager.remove(task.id);
+              // 危险操作：error 色 + 二次确认 Dialog
+              final ok = await showDestructiveConfirm(
+                context,
+                title: context.l10n.delete,
+                message: context.l10n.downloadDeleteConfirm,
+                confirmLabel: context.l10n.delete,
+              );
+              if (ok) await manager.remove(task.id);
               break;
           }
         },
         itemBuilder: (context) => [
           if (task.status == DownloadTaskStatus.running ||
               task.status == DownloadTaskStatus.queued)
-            PopupMenuItem(value: 'pause', child: Text(context.l10n.downloadPause)),
+            _menuItem(
+              icon: Icons.pause_rounded,
+              label: context.l10n.downloadPause,
+              value: 'pause',
+            ),
           if (task.status == DownloadTaskStatus.paused)
-            PopupMenuItem(value: 'resume', child: Text(context.l10n.downloadResume)),
+            _menuItem(
+              icon: Icons.play_arrow_rounded,
+              label: context.l10n.downloadResume,
+              value: 'resume',
+            ),
           if (task.status == DownloadTaskStatus.failed)
-            PopupMenuItem(value: 'retry', child: Text(context.l10n.downloadRetry)),
+            _menuItem(
+              icon: Icons.refresh_rounded,
+              label: context.l10n.downloadRetry,
+              value: 'retry',
+            ),
           if (task.status == DownloadTaskStatus.completed) ...[
-            PopupMenuItem(
-                value: 'open', child: Text(context.l10n.openWithOtherApp)),
+            _menuItem(
+              icon: Icons.open_in_new_rounded,
+              label: context.l10n.openWithOtherApp,
+              value: 'open',
+            ),
             if (task.filePath.isNotEmpty)
-              PopupMenuItem(
-                  value: 'folder', child: Text(context.l10n.openInFileManager)),
+              _menuItem(
+                icon: Icons.folder_open_outlined,
+                label: context.l10n.openInFileManager,
+                value: 'folder',
+              ),
           ],
-          PopupMenuItem(value: 'delete', child: Text(context.l10n.delete)),
+          // 删除是危险操作：error 色
+          _menuItem(
+            icon: Icons.delete_outline,
+            label: context.l10n.delete,
+            value: 'delete',
+            destructive: true,
+          ),
         ],
       ),
       onTap: () {

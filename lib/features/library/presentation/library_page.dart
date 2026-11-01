@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart' show kugouApiClientProvider;
+import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/shimmer.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../../auth/data/account_manager.dart';
 import '../../playlist/data/playlist_repository.dart';
@@ -44,14 +46,19 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final downloaded = ref.watch(downloadedAudioProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.library,
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold)),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 32),
-        children: [
+      // M3 规范：顶层页面用大标题（SliverAppBar.large）。
+      // 长内容用 CustomScrollView + SliverToBoxAdapter，避免嵌套 shrinkWrap ListView。
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar.large(
+            title: Text(context.l10n.library),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
           // ---- 账号卡片 ----
           _AccountCard(account: account),
           const SizedBox(height: 8),
@@ -147,7 +154,12 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 artist: task.artist,
                 cover: task.coverUrl,
                 onTap: () => _playDownloaded(task),
-                trailing: const Icon(Icons.offline_pin_outlined, size: 20),
+                // 已下载状态用图标徽标（次要信息），不是操作按钮。
+                trailing: Icon(
+                  Icons.offline_pin_outlined,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
               ),
 
           // ---- 我收藏的 MV ----
@@ -155,6 +167,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           EmptyState(
             icon: Icons.movie_outlined,
             message: context.l10n.mvComingSoon,
+          ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -190,30 +206,15 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     context.push('/player');
   }
 
-  /// 清空最近播放（危险操作：红色强调 + 二次确认 Dialog）。
+  /// 清空最近播放（危险操作：error 色强调 + 二次确认 Dialog）。
   Future<void> _confirmClearRecent() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.clearRecentlyPlayed),
-        content: Text(context.l10n.clearRecentConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(context.l10n.cancel),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-              foregroundColor: Theme.of(ctx).colorScheme.onError,
-            ),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(context.l10n.clear),
-          ),
-        ],
-      ),
+    final ok = await showDestructiveConfirm(
+      context,
+      title: context.l10n.clearRecentlyPlayed,
+      message: context.l10n.clearRecentConfirm,
+      confirmLabel: context.l10n.clear,
     );
-    if (ok == true) {
+    if (ok) {
       await RecentPlayStore.clear();
       _loadRecent();
     }
@@ -419,26 +420,27 @@ class _PlaylistRowSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = Theme.of(context).colorScheme.surfaceContainerHighest;
+    final theme = Theme.of(context);
     return SizedBox(
       height: 170,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 5,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (_, __) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                    color: base, borderRadius: BorderRadius.circular(16))),
-            const SizedBox(height: 6),
-            Container(height: 12, width: 90, color: base),
-          ],
+      child: Shimmer(
+        baseColor: theme.colorScheme.surface,
+        highlightColor:
+            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: 5,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (_, __) => const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonBox(width: 120, height: 120, radius: 16),
+              SizedBox(height: 6),
+              SkeletonText(width: 90, height: 12),
+            ],
+          ),
         ),
       ),
     );

@@ -92,15 +92,18 @@ class MainActivity : FlutterActivity() {
 
     /** 公共目录绝对路径（仅 API <= 28 有意义） */
     private fun publicDir(type: String): String? {
-        val dir = when (type) {
-            "music" -> Environment.DIRECTORY_MUSIC
-            "pictures" -> Environment.DIRECTORY_PICTURES
-            "movies" -> Environment.DIRECTORY_MOVIES
-            "documents" -> Environment.DIRECTORY_DOCUMENTS
-            "downloads" -> Environment.DIRECTORY_DOWNLOADS
-            else -> return null
-        }
+        val dir = dirFor(type) ?: return null
         return Environment.getExternalStoragePublicDirectory(dir).absolutePath
+    }
+
+    /** type -> Environment.DIRECTORY_* 映射（未知类型返回 null） */
+    private fun dirFor(type: String): String? = when (type) {
+        "music" -> Environment.DIRECTORY_MUSIC
+        "pictures" -> Environment.DIRECTORY_PICTURES
+        "movies" -> Environment.DIRECTORY_MOVIES
+        "documents" -> Environment.DIRECTORY_DOCUMENTS
+        "downloads" -> Environment.DIRECTORY_DOWNLOADS
+        else -> null
     }
 
     /** 用其它应用打开文件（优先 MediaStore Uri，回退 FileProvider） */
@@ -153,14 +156,7 @@ class MainActivity : FlutterActivity() {
     /** 公共目录在当前系统版本下是否可直接写文件 */
     private fun isPublicDirWritable(type: String): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) return false
-        val dir = when (type) {
-            "music" -> Environment.DIRECTORY_MUSIC
-            "pictures" -> Environment.DIRECTORY_PICTURES
-            "movies" -> Environment.DIRECTORY_MOVIES
-            "documents" -> Environment.DIRECTORY_DOCUMENTS
-            "downloads" -> Environment.DIRECTORY_DOWNLOADS
-            else -> return false
-        }
+        val dir = dirFor(type) ?: return false
         val path = File(Environment.getExternalStoragePublicDirectory(dir), "probe")
         return try {
             path.parentFile?.mkdirs()
@@ -236,9 +232,10 @@ class MainActivity : FlutterActivity() {
                 "/sdcard/$relativePath"
             } else {
                 val base = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-                // relativePath 形如 "Documents/<folder>/<logs>"，而 base 已经是 Documents 根，
-                // 直接拼接会得到 /sdcard/Documents/Documents/... —— 这里去掉前缀 "Documents/"。
-                val relative = relativePath.removePrefix("Documents/").removePrefix("/")
+                // relativePath 形如 "Documents/<folder>/<logs>/"，而 base 已经是 Documents 根，
+                // 直接拼接会得到 /sdcard/Documents/Documents/... —— 这里去掉前缀 "Documents/"，
+                // 并去掉结尾的 "/"（Dart 侧 RELATIVE_PATH 统一以 "/" 结尾，这里保持一致）。
+                val relative = relativePath.removePrefix("Documents/").trimEnd('/')
                 val dir = File(base, relative)
                 if (!dir.exists()) dir.mkdirs()
                 val target = File(dir, displayName)
@@ -257,7 +254,8 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun guessMime(uri: String?, path: String?): String {        val name = path ?: uri ?: ""
+    private fun guessMime(uri: String?, path: String?): String {
+        val name = path ?: uri ?: ""
         return when {
             name.endsWith(".mp3") -> "audio/mpeg"
             name.endsWith(".m4a") -> "audio/mp4"

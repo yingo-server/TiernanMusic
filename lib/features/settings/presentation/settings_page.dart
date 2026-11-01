@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +15,7 @@ import '../../../core/utils/error_logger.dart';
 import '../../../core/utils/permission_gate.dart';
 import '../../../core/utils/toast.dart';
 import '../../../core/utils/update_checker.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart' show SectionHeader;
 import '../../../l10n/l10n.dart';
 import 'settings_providers.dart';
@@ -33,12 +32,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   String _version = '';
   Map<String, dynamic>? _account;
 
+  /// 日志目录路径（**必须是 State 字段**）
+  ///
+  /// 若在 build() 里直接 `ErrorLogger.instance.currentDirPath()`，
+  /// 每次 build 都会新建一个 Future → 完成 → setState → 再 build → 无限循环。
+  late Future<String?> _logDirPath;
+
+  /// 存储写入权限状态（同上，必须提为字段避免无限重建）
+  late Future<bool> _storageGranted;
+
+  /// 「检查更新」进行中（用于显示进度圈）
+  bool _checkingUpdate = false;
+
   @override
   void initState() {
     super.initState();
     _loadCacheSize();
     _loadVersion();
     _loadAccount();
+    _logDirPath = ErrorLogger.instance.currentDirPath();
+    _storageGranted = PermissionGate.instance.hasStorageWriteAccess();
   }
 
   Future<void> _loadVersion() async {
@@ -89,27 +102,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _clearCache() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.clearCache),
-        content: Text(context.l10n.clearCacheConfirm),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(context.l10n.cancel)),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-              foregroundColor: Theme.of(ctx).colorScheme.onError,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(context.l10n.clear),
-          ),
-        ],
-      ),
+    // 危险操作：error 色 + 二次确认 Dialog。
+    final confirm = await showDestructiveConfirm(
+      context,
+      title: context.l10n.clearCache,
+      message: context.l10n.clearCacheConfirm,
+      confirmLabel: context.l10n.clear,
     );
-    if (confirm != true) return;
+    if (!confirm) return;
 
     try {
       MemoryCache.instance.clear();
@@ -143,20 +143,49 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.settings)),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 32),
-        children: [
-          _buildAccountSection(),
-          _buildAppearanceSection(),
-          _buildPlaybackSection(),
-          _buildDownloadSection(),
-          _buildCacheSection(),
-          _buildApiSection(),
-          _buildDiagnosticsSection(),
-          _buildAboutSection(),
+      // M3 规范：顶层页面用大标题（SliverAppBar.large）。
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar.large(
+            title: Text(context.l10n.settings),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildAccountSection(),
+                  _buildAppearanceSection(),
+                  _buildPlaybackSection(),
+                  _buildDownloadSection(),
+                  _buildCacheSection(),
+                  _buildApiSection(),
+                  _buildDiagnosticsSection(),
+                  _buildAboutSection(),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  /// 统一的「可点击进入下一级」列表项：右侧用 chevron 指示可导航。
+  Widget _navTile({
+    required IconData leading,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    return ListTile(
+      leading: Icon(leading),
+      title: Text(title),
+      subtitle: subtitle == null ? null : Text(subtitle),
+      trailing: trailing ?? const Icon(Icons.chevron_right),
+      onTap: onTap,
     );
   }
 
@@ -189,11 +218,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             _loadAccount();
           },
         ),
-        ListTile(
-          leading: const Icon(Icons.switch_account_outlined),
-          title: Text(context.l10n.accountManage),
-          subtitle: Text(context.l10n.switchAccountSubtitle),
-          trailing: const Icon(Icons.chevron_right),
+        _navTile(
+          leading: Icons.switch_account_outlined,
+          title: context.l10n.accountManage,
+          subtitle: context.l10n.switchAccountSubtitle,
           onTap: () async {
             await context.push<void>('/login');
             _loadAccount();
@@ -207,11 +235,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget _buildAppearanceSection() {
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
-    final themeLabel = switch (themeMode) {
-      ThemeMode.light => context.l10n.themeLight,
-      ThemeMode.system => context.l10n.themeSystem,
-      _ => context.l10n.themeDark,
-    };
     final localeLabel = locale == null
         ? context.l10n.themeSystem
         : AppConfig.localeNames[locale.countryCode != null
@@ -222,92 +245,112 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(title: context.l10n.appearance),
-        ListTile(
-          leading: const Icon(Icons.dark_mode_outlined),
-          title: Text(context.l10n.themeMode),
-          subtitle: Text(themeLabel),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => _showThemeDialog(themeMode),
+        // M3 规范：少量互斥选项的「单选切换」用 SegmentedButton，
+        // 而不是 ListTile + Dialog 弹层。
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.l10n.themeMode,
+                  style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<ThemeMode>(
+                  segments: [
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      label: Text(context.l10n.themeLight),
+                      icon: const Icon(Icons.light_mode_outlined, size: 18),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      label: Text(context.l10n.themeDark),
+                      icon: const Icon(Icons.dark_mode_outlined, size: 18),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      label: Text(context.l10n.themeSystem),
+                      icon: const Icon(Icons.brightness_auto_outlined, size: 18),
+                    ),
+                  ],
+                  selected: {themeMode},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (s) => ref
+                      .read(themeModeProvider.notifier)
+                      .set(s.first),
+                ),
+              ),
+            ],
+          ),
         ),
-        ListTile(
-          leading: const Icon(Icons.language_outlined),
-          title: Text(context.l10n.appLanguage),
-          subtitle: Text(localeLabel),
-          trailing: const Icon(Icons.chevron_right),
+        _navTile(
+          leading: Icons.language_outlined,
+          title: context.l10n.appLanguage,
+          subtitle: localeLabel,
           onTap: () => _showLocaleDialog(locale),
         ),
       ],
     );
   }
 
-  void _showThemeDialog(ThemeMode current) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => SimpleDialog(
-        title: Text(context.l10n.themeMode),
-        children: [
-          for (final (mode, label) in [
-            (ThemeMode.dark, context.l10n.themeDark),
-            (ThemeMode.light, context.l10n.themeLight),
-            (ThemeMode.system, context.l10n.themeSystem),
-          ])
-            RadioListTile<ThemeMode>(
-              value: mode,
-              groupValue: current,
-              title: Text(label),
-              onChanged: (v) {
-                if (v != null) ref.read(themeModeProvider.notifier).set(v);
-                Navigator.pop(ctx);
-              },
-            ),
-        ],
-      ),
-    );
-  }
-
   void _showLocaleDialog(Locale? current) {
     String? codeOf(Locale? l) => l == null
         ? 'system'
-        : (l.countryCode != null ? '${l.languageCode}_${l.countryCode}' : l.languageCode);
-    showDialog<void>(
+        : (l.countryCode != null
+            ? '${l.languageCode}_${l.countryCode}'
+            : l.languageCode);
+    // M3 规范：长列表选项用底部弹层（showModalBottomSheet），不用居中 Dialog。
+    showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => SimpleDialog(
-        title: Text(context.l10n.appLanguage),
-        children: [
-          SizedBox(
-            width: double.maxFinite,
-            height: 420,
-            child: ListView.builder(
-              itemCount: AppConfig.supportedLocales.length + 1,
-              itemBuilder: (_, i) {
-                if (i == 0) {
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(context.l10n.appLanguage,
+                  style: Theme.of(ctx).textTheme.titleMedium),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: ListView.builder(
+                itemCount: AppConfig.supportedLocales.length + 1,
+                itemBuilder: (_, i) {
+                  if (i == 0) {
+                    return RadioListTile<String>(
+                      value: 'system',
+                      groupValue: codeOf(current),
+                      title: Text(context.l10n.themeSystem),
+                      onChanged: (_) {
+                        ref.read(localeProvider.notifier).set(null);
+                        Navigator.pop(ctx);
+                      },
+                    );
+                  }
+                  final code = AppConfig.supportedLocales[i - 1];
                   return RadioListTile<String>(
-                    value: 'system',
+                    value: code,
                     groupValue: codeOf(current),
-                    title: Text(context.l10n.themeSystem),
+                    title: Text(AppConfig.localeNames[code] ?? code),
                     onChanged: (_) {
-                      ref.read(localeProvider.notifier).set(null);
+                      final parts = code.split('_');
+                      ref.read(localeProvider.notifier).set(parts.length == 2
+                          ? Locale(parts[0], parts[1])
+                          : Locale(parts[0]));
                       Navigator.pop(ctx);
                     },
                   );
-                }
-                final code = AppConfig.supportedLocales[i - 1];
-                return RadioListTile<String>(
-                  value: code,
-                  groupValue: codeOf(current),
-                  title: Text(AppConfig.localeNames[code] ?? code),
-                  onChanged: (_) {
-                    final parts = code.split('_');
-                    ref.read(localeProvider.notifier).set(parts.length == 2
-                        ? Locale(parts[0], parts[1])
-                        : Locale(parts[0]));
-                    Navigator.pop(ctx);
-                  },
-                );
-              },
+                },
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -318,27 +361,50 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final quality = ref.watch(defaultQualityProvider);
     final wifiHigh = ref.watch(wifiQualityProvider);
     final cellularLow = ref.watch(cellularQualityProvider);
-    final lyricLabel = switch (lyricMode) {
-      LyricDisplayMode.original => context.l10n.lyricModeOriginal,
-      LyricDisplayMode.bilingual => context.l10n.lyricModeBilingual,
-      LyricDisplayMode.translation => context.l10n.lyricModeTranslation,
-    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(title: context.l10n.playback),
-        ListTile(
-          leading: const Icon(Icons.lyrics_outlined),
-          title: Text(context.l10n.lyricDisplayMode),
-          subtitle: Text(lyricLabel),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => _showLyricModeDialog(lyricMode),
+        // M3 规范：少量互斥选项用 SegmentedButton（单选语义）。
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.l10n.lyricDisplayMode,
+                  style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<LyricDisplayMode>(
+                  segments: [
+                    ButtonSegment(
+                      value: LyricDisplayMode.original,
+                      label: Text(context.l10n.lyricModeOriginal),
+                    ),
+                    ButtonSegment(
+                      value: LyricDisplayMode.bilingual,
+                      label: Text(context.l10n.lyricModeBilingual),
+                    ),
+                    ButtonSegment(
+                      value: LyricDisplayMode.translation,
+                      label: Text(context.l10n.lyricModeTranslation),
+                    ),
+                  ],
+                  selected: {lyricMode},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (s) => ref
+                      .read(lyricModeProvider.notifier)
+                      .set(s.first),
+                ),
+              ),
+            ],
+          ),
         ),
-        ListTile(
-          leading: const Icon(Icons.high_quality_outlined),
-          title: Text(context.l10n.defaultQuality),
-          subtitle: Text(qualityNames[quality] ?? quality),
-          trailing: const Icon(Icons.chevron_right),
+        _navTile(
+          leading: Icons.high_quality_outlined,
+          title: context.l10n.defaultQuality,
+          subtitle: qualityNames[quality] ?? quality,
           onTap: () => _showQualityDialog(quality),
         ),
         // 状态切换用 SwitchListTile（label 在左，switch 在右）
@@ -360,48 +426,35 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  void _showLyricModeDialog(LyricDisplayMode current) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => SimpleDialog(
-        title: Text(context.l10n.lyricDisplayMode),
-        children: [
-          for (final (mode, label) in [
-            (LyricDisplayMode.original, context.l10n.lyricModeOriginal),
-            (LyricDisplayMode.bilingual, context.l10n.lyricModeBilingual),
-            (LyricDisplayMode.translation, context.l10n.lyricModeTranslation),
-          ])
-            RadioListTile<LyricDisplayMode>(
-              value: mode,
-              groupValue: current,
-              title: Text(label),
-              onChanged: (v) {
-                if (v != null) ref.read(lyricModeProvider.notifier).set(v);
-                Navigator.pop(ctx);
-              },
-            ),
-        ],
-      ),
-    );
-  }
-
   void _showQualityDialog(String current) {
-    showDialog<void>(
+    // M3 规范：选项列表用底部弹层，不用居中 Dialog。
+    showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => SimpleDialog(
-        title: Text(context.l10n.defaultQuality),
-        children: [
-          for (final entry in qualityNames.entries)
-            RadioListTile<String>(
-              value: entry.key,
-              groupValue: current,
-              title: Text(entry.value),
-              onChanged: (v) {
-                if (v != null) ref.read(defaultQualityProvider.notifier).set(v);
-                Navigator.pop(ctx);
-              },
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(context.l10n.defaultQuality,
+                  style: Theme.of(ctx).textTheme.titleMedium),
             ),
-        ],
+            const Divider(height: 1),
+            for (final entry in qualityNames.entries)
+              RadioListTile<String>(
+                value: entry.key,
+                groupValue: current,
+                title: Text(entry.value),
+                onChanged: (v) {
+                  if (v != null) ref.read(defaultQualityProvider.notifier).set(v);
+                  Navigator.pop(ctx);
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -412,11 +465,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(title: context.l10n.downloadManagement),
-        ListTile(
-          leading: const Icon(Icons.download_for_offline_outlined),
-          title: Text(context.l10n.downloads),
-          subtitle: Text(context.l10n.downloadManagement),
-          trailing: const Icon(Icons.chevron_right),
+        _navTile(
+          leading: Icons.download_for_offline_outlined,
+          title: context.l10n.downloads,
+          subtitle: context.l10n.downloadManagement,
           onTap: () => context.push<void>('/downloads'),
         ),
       ],
@@ -443,7 +495,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             },
           ),
         ),
-        // 危险操作：删除类用红色 + 二次确认
+        // 危险操作：删除类用 error 色 + 二次确认
         ListTile(
           leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
           title: Text(context.l10n.clearCache,
@@ -607,7 +659,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           leading: const Icon(Icons.bug_report_outlined),
           title: Text(context.l10n.errorLogLocation),
           subtitle: FutureBuilder<String?>(
-            future: ErrorLogger.instance.currentDirPath(),
+            future: _logDirPath,
             builder: (context, snap) {
               final path = snap.data;
               return Text(
@@ -638,7 +690,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           leading: const Icon(Icons.storage_outlined),
           title: Text(context.l10n.storagePermissions),
           subtitle: FutureBuilder<bool>(
-            future: PermissionGate.instance.hasStorageWriteAccess(),
+            future: _storageGranted,
             builder: (context, snap) {
               final granted = snap.data ?? false;
               return Text(granted
@@ -649,7 +701,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           trailing: TextButton(
             onPressed: () async {
               final ok = await PermissionGate.instance.ensureStorageWrite();
-              if (!context.mounted) return;
+              if (!mounted) return;
+              // 重新查询状态并刷新展示
+              final future = PermissionGate.instance.hasStorageWriteAccess();
+              setState(() => _storageGranted = future);
               Toast.show(
                 context,
                 ok
@@ -674,33 +729,41 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   void _showRecentErrors() {
     final entries = ErrorLogger.recent;
-    showDialog<void>(
+    // M3 规范：长列表用底部弹层，不用居中 Dialog。
+    showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.recentErrors),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 400,
-          child: entries.isEmpty
-              ? Center(child: Text(context.l10n.noRecentErrors))
-              : ListView.builder(
-                  itemCount: entries.length,
-                  itemBuilder: (_, i) => ListTile(
-                    dense: true,
-                    title: Text(
-                      entries[i].split('\n').take(3).join('\n'),
-                      style: Theme.of(ctx).textTheme.labelSmall,
-                    ),
-                    onTap: () => Toast.copy(ctx, entries[i]),
-                  ),
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(context.l10n.close),
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: FractionallySizedBox(
+          heightFactor: 0.7,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: Text(context.l10n.recentErrors,
+                    style: Theme.of(ctx).textTheme.titleMedium),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: entries.isEmpty
+                    ? Center(child: Text(context.l10n.noRecentErrors))
+                    : ListView.builder(
+                        itemCount: entries.length,
+                        itemBuilder: (_, i) => ListTile(
+                          dense: true,
+                          title: Text(
+                            entries[i].split('\n').take(3).join('\n'),
+                            style: Theme.of(ctx).textTheme.labelSmall,
+                          ),
+                          onTap: () => Toast.copy(ctx, entries[i]),
+                        ),
+                      ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -716,40 +779,49 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           title: const Text(AppConfig.appNameCn),
           subtitle: Text('${context.l10n.version} $_version'),
         ),
-        ListTile(
-          leading: const Icon(Icons.description_outlined),
-          title: Text(context.l10n.openSourceLicenses),
-          subtitle: Text(context.l10n.licenseDesc),
-          trailing: const Icon(Icons.chevron_right),
+        _navTile(
+          leading: Icons.description_outlined,
+          title: context.l10n.openSourceLicenses,
+          subtitle: context.l10n.licenseDesc,
           onTap: _showLicenseDialog,
         ),
         ListTile(
           leading: const Icon(Icons.system_update_alt_outlined),
           title: Text(context.l10n.checkUpdate),
           subtitle: Text(context.l10n.checkUpdateDesc),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: _checkUpdate,
+          // 弹 Dialog 的入口不用「进入下一页」的箭头图标；
+          // 检查中用 CircularProgressIndicator 代替图标。
+          trailing: _checkingUpdate
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : null,
+          onTap: _checkingUpdate ? null : _checkUpdate,
         ),
       ],
     );
   }
 
   Future<void> _checkUpdate() async {
+    if (_checkingUpdate) return;
+    setState(() => _checkingUpdate = true);
     Toast.show(context, context.l10n.checkingUpdate);
-    UpdateInfo info;
     try {
-      info = await UpdateChecker.instance.check();
+      final info = await UpdateChecker.instance.check();
+      if (!mounted) return;
+      if (!info.hasUpdate) {
+        Toast.show(context, context.l10n.alreadyLatestVersion);
+        return;
+      }
+      await _showUpdateDialog(info);
     } catch (e) {
       if (!mounted) return;
       Toast.show(context, context.l10n.updateCheckFailed);
-      return;
+    } finally {
+      if (mounted) setState(() => _checkingUpdate = false);
     }
-    if (!mounted) return;
-    if (!info.hasUpdate) {
-      Toast.show(context, context.l10n.alreadyLatestVersion);
-      return;
-    }
-    await _showUpdateDialog(info);
   }
 
   Future<void> _showUpdateDialog(UpdateInfo info) async {
@@ -784,8 +856,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               onPressed: () async {
                 Navigator.pop(ctx);
                 final uri = Uri.parse(url);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                if (!await canLaunchUrl(uri)) {
+                  if (context.mounted) {
+                    Toast.show(context, context.l10n.openFailed);
+                  }
+                  return;
+                }
+                final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                if (!ok && context.mounted) {
+                  Toast.show(context, context.l10n.openFailed);
                 }
               },
             ),
@@ -795,17 +874,42 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   void _showLicenseDialog() {
-    showDialog<void>(
+    // M3 规范：纯内容展示（无需决策）用底部弹层，不用 Dialog。
+    showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.openSourceLicenses),
-        content: SingleChildScrollView(
-          child: Text(context.l10n.licenseBody),
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: FractionallySizedBox(
+          heightFactor: 0.7,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: Text(context.l10n.openSourceLicenses,
+                    style: Theme.of(ctx).textTheme.titleMedium),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(context.l10n.licenseBody),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(context.l10n.knowIt),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        actions: [
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx), child: Text(context.l10n.knowIt)),
-        ],
       ),
     );
   }

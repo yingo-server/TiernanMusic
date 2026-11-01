@@ -31,96 +31,110 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
     final controller = ref.read(playerControllerProvider);
     final theme = Theme.of(context);
 
-    return GestureDetector(
-      onTap: () => context.push('/player'),
-      onLongPress: () => showQueueSheet(context),
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            height: 64,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.55),
-              border: Border(
-                top: BorderSide(
-                  color: theme.dividerColor.withValues(alpha: 0.3),
-                  width: 0.5,
-                ),
-              ),
-            ),
-            child: Column(
-              children: [
-                // 进度条独立：只有它随 position 重建
-                const _MiniProgressBar(),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        Hero(
-                          tag: 'album-art',
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: SizedBox(
-                              width: 44,
-                              height: 44,
-                              child: song.cover.isNotEmpty
-                                  ? CachedNetworkImage(
-                                      imageUrl: song.cover,
-                                      fit: BoxFit.cover,
-                                      fadeInDuration:
-                                          const Duration(milliseconds: 180),
-                                      memCacheWidth: 132,
-                                      errorWidget: (_, __, ___) =>
-                                          const _MiniPlaceholder(),
-                                    )
-                                  : const _MiniPlaceholder(),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                song.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
-                              ),
-                              Text(
-                                song.artist.isEmpty
-                                    ? context.l10n.unknownArtist
-                                    : song.artist,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            isPlaying
-                                ? Icons.pause_rounded
-                                : Icons.play_arrow_rounded,
-                          ),
-                          onPressed: controller.togglePlay,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.skip_next_rounded),
-                          onPressed: controller.next,
-                        ),
-                      ],
-                    ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push('/player'),
+        onLongPress: () => showQueueSheet(context),
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              height: 64,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.55),
+                border: Border(
+                  top: BorderSide(
+                    color: theme.dividerColor.withValues(alpha: 0.3),
+                    width: 0.5,
                   ),
                 ),
-              ],
+              ),
+              child: Column(
+                children: [
+                  // 进度条独立：只有它随 position 重建
+                  const _MiniProgressBar(),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          Hero(
+                            tag: 'album-art',
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: song.cover.isNotEmpty
+                                    ? CachedNetworkImage(
+                                        imageUrl: song.cover,
+                                        fit: BoxFit.cover,
+                                        fadeInDuration:
+                                            const Duration(milliseconds: 180),
+                                        memCacheWidth: 132,
+                                        errorWidget: (_, __, ___) =>
+                                            const _MiniPlaceholder(),
+                                      )
+                                    : const _MiniPlaceholder(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  song.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium
+                                      ?.copyWith(fontWeight: FontWeight.w600),
+                                ),
+                                Text(
+                                  song.artist.isEmpty
+                                      ? context.l10n.unknownArtist
+                                      : song.artist,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // 播放/暂停是主操作，用 filled 风格强调
+                          IconButton.filled(
+                            icon: Icon(
+                              isPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                            ),
+                            tooltip: isPlaying
+                                ? context.l10n.pause
+                                : context.l10n.play,
+                            onPressed: controller.togglePlay,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.skip_next_rounded),
+                            tooltip: context.l10n.next,
+                            onPressed: controller.next,
+                          ),
+                          // 播放队列：显式入口（不只靠长按这一隐藏手势）
+                          IconButton(
+                            icon: const Icon(Icons.queue_music_rounded),
+                            tooltip: context.l10n.playQueue,
+                            onPressed: () => showQueueSheet(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

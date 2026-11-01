@@ -99,10 +99,42 @@ class PlaylistDetailPage extends ConsumerWidget {
                 ),
               ),
             ),
-            // 简介：M3 中「需要解释的内容」用 ExpansionTile（可展开区块）
+            // 简介：M3 规范「可展开内容」用 ExpansionTile，
+            // 而不是自定义的「展开/收起」按钮。
             if (detail.intro.isNotEmpty)
               SliverToBoxAdapter(
-                child: _ExpandableIntro(text: detail.intro),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsets.only(bottom: 8),
+                    title: Text(
+                      context.l10n.playlistIntro,
+                      style: theme.textTheme.labelLarge
+                          ?.copyWith(color: theme.colorScheme.primary),
+                    ),
+                    subtitle: Text(
+                      detail.intro,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          detail.intro,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color:
+                                theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             SliverToBoxAdapter(
               child: Padding(
@@ -138,12 +170,12 @@ class PlaylistDetailPage extends ConsumerWidget {
                 ),
               ),
               data: (tracks) => tracks.songs.isEmpty
-                  ? const SliverToBoxAdapter(
+                  ? SliverToBoxAdapter(
                       child: SizedBox(
                         height: 200,
                         child: EmptyState(
                           icon: Icons.queue_music_outlined,
-                          message: '歌单中暂无歌曲',
+                          message: context.l10n.noSongsInPlaylist,
                         ),
                       ),
                     )
@@ -195,59 +227,7 @@ class PlaylistDetailPage extends ConsumerWidget {
   }
 }
 
-/// 歌单简介：默认 3 行，可展开/收起。
-class _ExpandableIntro extends StatefulWidget {
-  const _ExpandableIntro({required this.text});
-  final String text;
-
-  @override
-  State<_ExpandableIntro> createState() => _ExpandableIntroState();
-}
-
-class _ExpandableIntroState extends State<_ExpandableIntro> {
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            context.l10n.playlistIntro,
-            style: theme.textTheme.labelLarge
-                ?.copyWith(color: theme.colorScheme.primary),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            widget.text,
-            maxLines: _expanded ? null : 3,
-            overflow: _expanded ? null : TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 4),
-          // 展开/收起用 TextButton（次要操作）
-          TextButton(
-            onPressed: () => setState(() => _expanded = !_expanded),
-            style: TextButton.styleFrom(
-              minimumSize: const Size(48, 36),
-              padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.compact,
-            ),
-            child: Text(_expanded
-                ? context.l10n.collapse
-                : context.l10n.expand),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+/// 歌单信息角标（播放量 / 曲目数）。
 class _InfoChip extends StatelessWidget {
   const _InfoChip(this.icon, this.label);
   final IconData icon;

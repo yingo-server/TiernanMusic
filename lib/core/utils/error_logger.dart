@@ -25,7 +25,11 @@ class ErrorLogger {
   static const String logsDirName = 'Logs';
 
   /// 公共相对路径（Android 10+ 用 RELATIVE_PATH，≤9 用路径拼接）
-  static String get _relativePath => 'Documents/$folderName/$logsDirName';
+  ///
+  /// **必须以 `/` 结尾**：MediaStore 的 RELATIVE_PATH 规范要求目录形式，
+  /// 原生 ≤28 分支也会按同样约定去掉 `Documents/` 前缀后拼接，两边保持一致。
+  static String get _relativePath =>
+      'Documents/$folderName/$logsDirName/';
 
   /// 单个日志文件上限，超过后轮转
   static const int maxBytes = 5 * 1024 * 1024;
@@ -34,15 +38,17 @@ class ErrorLogger {
   static final List<String> _recent = <String>[];
   static List<String> get recent => List.unmodifiable(_recent);
 
-  bool _initialized = false;
   Directory? _fallbackDir;
 
   /// 原生返回的实际公共写入位置（公共目录写入成功后才有值）
   String? _publicDirPath;
 
+  /// 降级写入私有目录成功后记录的实际路径
+  String? _fallbackWrittenPath;
+
   /// 初始化日志目录（应用私有降级目录）
   ///
-  /// 失败时**不置 _initialized**，保证下次调用会重试——
+  /// 失败时**不缓存失败状态**，保证下次调用会重试——
   /// 否则一次失败会让日志永久丢失。
   Future<void> init() async {
     if (_fallbackDir != null) return;
@@ -51,10 +57,8 @@ class ErrorLogger {
       final dir = Directory('${docs.path}/$folderName/$logsDirName');
       if (!await dir.exists()) await dir.create(recursive: true);
       _fallbackDir = dir;
-      _initialized = true;
     } catch (e) {
       debugPrint('[ErrorLogger] fallback dir failed: $e');
-      _initialized = false;
     }
   }
 
@@ -101,6 +105,7 @@ class ErrorLogger {
         await file.rename(rotated.path);
       }
       await file.writeAsString(text, mode: FileMode.append, flush: true);
+      _fallbackWrittenPath = dir.path;
     } catch (e) {
       debugPrint('[ErrorLogger] write failed: $e');
     }
@@ -109,8 +114,8 @@ class ErrorLogger {
   /// 写入公共目录：Android 10+ 用原生 MediaStore；≤9 直写公共 Documents。
   Future<bool> _appendPublic(String fileName, String text) async {
     try {
-      final apiLevel = await apiLevel;
-      if (apiLevel >= 29) {
+      final level = await apiLevel;
+      if (level >= 29) {
         // MediaStore 每次插入都是新文件，无法追加 —— 所以按天聚合，
         // 由 Dart 侧缓存当日内容，退出/超限时整份重写。
         return await _rewriteMediaStore(fileName, text);
@@ -193,8 +198,10 @@ class ErrorLogger {
   }
 
   /// 全局未捕获异常（FlutterError.onError）
+  ///
+  /// **不再调用 [FlutterError.presentError]**：它会把同一异常再打印一遍
+  /// （红屏/控制台重复输出），与本方法自己的落盘日志重复。
   void handleFlutterError(FlutterErrorDetails details) {
-    FlutterError.presentError(details);
     unawaited(log(
       details.exception,
       details.stack,
@@ -210,15 +217,21 @@ class ErrorLogger {
   }
 
   /// 当前日志目录（展示给用户）
+  ///
+  /// **只返回「实际确认写入」过的路径**：
+  ///  - [_publicDirPath]：原生 MediaStore / 公共 Documents 写入成功后回传的真实位置；
+  ///  - [_fallbackWrittenPath]：降级到 App 私有目录并成功落盘后的目录。
+  ///
+  /// 尚未真正写入过任何日志时返回 null —— 不能把「计划路径」当成「实际路径」误导用户。
   Future<String?> currentDirPath() async {
     await init();
-    // 公共目录写入成功后，原生会返回实际路径，优先用它
     final public = _publicDirPath;
-    if (public != null && public.isNotEmpty) return public;
-    if (await apiLevel >= 29) {
-      return '/sdcard/Documents/$folderName/$logsDirName';
+    if (public != null && public.isNotEmpty) {
+      return public.endsWith('/')
+          ? public.substring(0, public.length - 1)
+          : public;
     }
-    return _fallbackDir?.path;
+    return _fallbackWrittenPath;
   }
 
   /// Android API 级别

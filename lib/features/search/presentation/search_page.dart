@@ -6,9 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../home/data/models.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart'
-    show GradientChip, EmptyState, ErrorRetry, ListSkeleton, SectionHeader;
+    show GradientChip, EmptyState, ErrorRetry, ListSkeleton, SectionHeader, SongTile, SongTileMenuItem;
+import '../../player/data/models.dart';
 import '../../player/play_helper.dart';
+import '../../download/presentation/download_sheet.dart';
 import '../../../core/utils/toast.dart';
 import '../data/search_repository.dart';
 import '../../../l10n/l10n.dart';
@@ -98,7 +101,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // 能否返回：作为底部导航 Tab 时不能，作为二级页面 push 进来时可以。
+    final canPop = Navigator.of(context).canPop();
     return Scaffold(
       // Material 3 规范：搜索用 SearchBar 控件（自带展开/收起行为、
       // 统一的焦点态），而不是在 AppBar 里塞裸 TextField。
@@ -108,32 +112,41 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-              child: SearchBar(
-                controller: _controller,
-                focusNode: _focusNode,
-                hintText: context.l10n.searchSongsHint,
-                leading: const Icon(Icons.search),
-                trailing: [
-                  if (_controller.text.isNotEmpty)
+              child: Row(
+                children: [
+                  if (canPop) ...[
                     IconButton(
-                      icon: const Icon(Icons.close),
-                      tooltip: context.l10n.clear,
-                      onPressed: _clear,
+                      icon: const Icon(Icons.arrow_back),
+                      tooltip: context.l10n.back,
+                      onPressed: () => Navigator.of(context).maybePop(),
                     ),
+                    const SizedBox(width: 4),
+                  ],
+                  Expanded(
+                    child: SearchBar(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      hintText: context.l10n.searchSongsHint,
+                      leading: const Icon(Icons.search),
+                      trailing: [
+                        if (_controller.text.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: context.l10n.clear,
+                            onPressed: _clear,
+                          ),
+                      ],
+                      textInputAction: TextInputAction.search,
+                      onChanged: _onChanged,
+                      onSubmitted: _submit,
+                      // 主题里已统一 SearchBar 外观，这里只覆盖必要项。
+                      elevation: const WidgetStatePropertyAll(0),
+                      padding: const WidgetStatePropertyAll(
+                        EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                    ),
+                  ),
                 ],
-                textInputAction: TextInputAction.search,
-                onChanged: _onChanged,
-                onSubmitted: _submit,
-                elevation: const WidgetStatePropertyAll(0),
-                backgroundColor: WidgetStatePropertyAll(
-                  theme.colorScheme.surfaceContainerHigh,
-                ),
-                side: WidgetStatePropertyAll(
-                  BorderSide(color: theme.colorScheme.outlineVariant),
-                ),
-                padding: const WidgetStatePropertyAll(
-                  EdgeInsets.symmetric(horizontal: 16),
-                ),
               ),
             ),
             Expanded(
@@ -186,6 +199,9 @@ class _SearchLanding extends ConsumerStatefulWidget {
 class _SearchLandingState extends ConsumerState<_SearchLanding> {
   List<String> _history = [];
 
+  /// 当前选中的热搜榜（第一项为「全部」）。
+  String? _board;
+
   @override
   void initState() {
     super.initState();
@@ -197,30 +213,15 @@ class _SearchLandingState extends ConsumerState<_SearchLanding> {
     if (mounted) setState(() => _history = list);
   }
 
-  /// 清空历史属于破坏性操作：二次确认 Dialog。
+  /// 清空历史属于破坏性操作：二次确认 Dialog（error 色强调）。
   Future<void> _confirmClearHistory() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.clearHistory),
-        content: Text(context.l10n.clearHistoryConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(context.l10n.cancel),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-              foregroundColor: Theme.of(ctx).colorScheme.onError,
-            ),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(context.l10n.clear),
-          ),
-        ],
-      ),
+    final ok = await showDestructiveConfirm(
+      context,
+      title: context.l10n.clearHistory,
+      message: context.l10n.clearHistoryConfirm,
+      confirmLabel: context.l10n.clear,
     );
-    if (ok != true) return;
+    if (!ok) return;
     await ref.read(searchRepositoryProvider).clearHistory();
     _loadHistory();
   }
@@ -276,42 +277,71 @@ class _SearchLandingState extends ConsumerState<_SearchLanding> {
             child: Center(child: CircularProgressIndicator()),
           ),
           error: (_, __) => const SizedBox.shrink(),
-          data: (boards) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final board in boards) ...[
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(board.name,
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: theme.colorScheme.primary)),
-                ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (var i = 0; i < board.keywords.length; i++)
-                        Badge(
-                          isLabelVisible: board.keywords[i].reason != null,
-                          label: Text(board.keywords[i].reason ?? ''),
-                          offset: const Offset(8, -4),
-                          child: GradientChip(
-                            label: board.keywords[i].keyword,
-                            index: i,
-                            onTap: () =>
-                                widget.onTapKeyword(board.keywords[i].keyword),
-                          ),
+          data: (boards) {
+            final visible = _board == null
+                ? boards
+                : boards.where((b) => b.name == _board).toList();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // M3 规范：榜单切换属于「筛选/切换」语义 → FilterChip
+                // （带选中态），而不是横向一排普通按钮。
+                if (boards.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilterChip(
+                          label: Text(context.l10n.all),
+                          selected: _board == null,
+                          onSelected: (_) => setState(() => _board = null),
                         ),
-                    ],
+                        for (final board in boards)
+                          FilterChip(
+                            label: Text(board.name),
+                            selected: _board == board.name,
+                            onSelected: (sel) => setState(
+                                () => _board = sel ? board.name : null),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
+                for (final board in visible) ...[
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(board.name,
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(color: theme.colorScheme.primary)),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (var i = 0; i < board.keywords.length; i++)
+                          Badge(
+                            isLabelVisible: board.keywords[i].reason != null,
+                            label: Text(board.keywords[i].reason ?? ''),
+                            offset: const Offset(8, -4),
+                            child: GradientChip(
+                              label: board.keywords[i].keyword,
+                              index: i,
+                              onTap: () =>
+                                  widget.onTapKeyword(board.keywords[i].keyword),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
+            );
+          },
         ),
       ],
     );
@@ -481,31 +511,35 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
                 );
               }
               final s = _items[i];
-              return ListTile(
-                leading: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: s.cover,
-                    width: 48,
-                    height: 48,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => Container(
-                      width: 48,
-                      height: 48,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHighest,
-                      child: const Icon(Icons.music_note),
-                    ),
+              return SongTile(
+                title: s.name,
+                artist: s.singer,
+                cover: s.cover,
+                duration: s.duration,
+                // M3 规范：列表项多个操作收进 PopupMenuButton。
+                menuItems: [
+                  SongTileMenuItem(
+                    value: 'download',
+                    label: context.l10n.download,
+                    icon: Icons.download_outlined,
                   ),
-                ),
-                title:
-                    Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text(s.singer,
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-                // trailing 只承载次要信息（时长）
-                trailing: Text(s.durationText,
-                    style: Theme.of(context).textTheme.bodySmall),
+                ],
+                onMenuSelected: (v) {
+                  if (v == 'download') {
+                    showDownloadSheet(
+                      context,
+                      Song(
+                        hash: s.hash ?? s.id,
+                        albumId: s.albumId ?? '',
+                        albumAudioId: s.albumAudioId ?? '',
+                        name: s.name,
+                        artist: s.singer,
+                        cover: s.cover,
+                        duration: Duration(seconds: s.duration),
+                      ),
+                    );
+                  }
+                },
                 onTap: () {
                   ref.read(playHelperProvider).playHomeQueue(_items, i);
                   context.push('/player');

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/providers.dart' show kugouApiClientProvider;
+import '../../../core/utils/toast.dart';
 import '../../../l10n/l10n.dart';
 import '../data/auth_providers.dart';
 import '../data/auth_repository.dart';
@@ -51,7 +52,16 @@ class _LoginPageState extends ConsumerState<LoginPage>
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 40),
+            // 登录是二级页面：左上角提供返回按钮（≥48dp 触控目标 + tooltip）
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: context.l10n.back,
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            ),
+            const SizedBox(height: 8),
             // Logo 区：圆角图标 + 标题 + 副标题
             Container(
               width: 84,
@@ -75,8 +85,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   size: 44, color: Colors.white),
             ),
             const SizedBox(height: 16),
+            // 大标题层级：M3 顶层页用 headlineMedium / displaySmall
             Text(context.l10n.appName,
-                style: textTheme.headlineSmall
+                style: textTheme.headlineMedium
                     ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(
@@ -136,15 +147,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }
 }
 
-/// 显示错误提示
+/// 显示错误提示（项目统一用 Toast，避免 Snackbar 刷屏）
 void _showError(BuildContext context, Object e) {
   final msg = e is ApiException
       ? e.message
       : e is CaptchaRequiredException
           ? e.message
           : '$e';
-  ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(msg.isEmpty ? context.l10n.operationFailed : msg)));
+  Toast.show(context, msg.isEmpty ? context.l10n.operationFailed : msg);
 }
 
 // ---------------------------------------------------------------------------
@@ -185,8 +195,7 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
     try {
       await ref.read(authRepositoryProvider).sendSmsCode(mobile);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(context.l10n.smsCodeSent)));
+      Toast.show(context, context.l10n.smsCodeSent);
       setState(() => _countdown = 60);
       _timer?.cancel();
       _timer = Timer.periodic(const Duration(seconds: 1), (t) {
@@ -237,36 +246,40 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
     return showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text(context.l10n.selectAccount,
-                  style: Theme.of(ctx).textTheme.titleMedium),
-            ),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: users.length,
-                itemBuilder: (_, i) {
-                  final u = users[i];
-                  final userid = '${u['userid'] ?? u['user_id'] ?? ''}';
-                  final nickname =
-                      '${u['nickname'] ?? u['name'] ?? context.l10n.account + ' $userid'}';
-                  return ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.person)),
-                    title: Text(nickname),
-                    subtitle: Text('ID: $userid'),
-                    onTap: () => Navigator.pop(ctx, userid),
-                  );
-                },
+        child: FractionallySizedBox(
+          heightFactor: 0.6,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: Text(context.l10n.selectAccount,
+                    style: Theme.of(ctx).textTheme.titleMedium),
               ),
-            ),
-            const SizedBox(height: 8),
-          ],
+              const Divider(height: 1),
+              // M3 规范：长列表必须 ListView.builder，不用 shrinkWrap。
+              Expanded(
+                child: ListView.builder(
+                  itemCount: users.length,
+                  itemBuilder: (_, i) {
+                    final u = users[i];
+                    final userid = '${u['userid'] ?? u['user_id'] ?? ''}';
+                    final nickname =
+                        '${u['nickname'] ?? u['name'] ?? context.l10n.account + ' $userid'}';
+                    return ListTile(
+                      leading: const CircleAvatar(child: Icon(Icons.person)),
+                      title: Text(nickname),
+                      subtitle: Text('ID: $userid'),
+                      onTap: () => Navigator.pop(ctx, userid),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -281,6 +294,7 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
           controller: _mobileCtrl,
           keyboardType: TextInputType.phone,
           maxLength: 11,
+          autofillHints: const [AutofillHints.telephoneNumber],
           decoration: InputDecoration(
             labelText: context.l10n.phoneNumber,
             hintText: context.l10n.phoneHintCn,
@@ -297,6 +311,8 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
                 controller: _codeCtrl,
                 keyboardType: TextInputType.number,
                 maxLength: 6,
+                autofillHints: const [AutofillHints.oneTimeCode],
+                textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
                   labelText: context.l10n.verificationCode,
                   prefixIcon: const Icon(Icons.pin_outlined),
@@ -305,6 +321,7 @@ class _SmsLoginTabState extends ConsumerState<_SmsLoginTab> {
               ),
             ),
             const SizedBox(width: 12),
+            // 次要操作：FilledButton.tonal（发送验证码是辅助动作）
             FilledButton.tonal(
               onPressed: _countdown > 0 ? null : _sendCode,
               child: Text(_countdown > 0 ? context.l10n.resendIn(_countdown) : context.l10n.sendSmsCode),
@@ -409,13 +426,16 @@ class _PasswordLoginTabState extends ConsumerState<_PasswordLoginTab> {
         TextField(
           controller: _passwordCtrl,
           obscureText: _obscure,
+          autofillHints: const [AutofillHints.password],
           decoration: InputDecoration(
             labelText: context.l10n.password,
             prefixIcon: const Icon(Icons.lock_outline),
             suffixIcon: IconButton(
               icon: Icon(
                   _obscure ? Icons.visibility_off : Icons.visibility),
-              tooltip: context.l10n.password,
+              tooltip: _obscure
+                  ? context.l10n.showPassword
+                  : context.l10n.hidePassword,
               onPressed: () => setState(() => _obscure = !_obscure),
             ),
           ),
@@ -601,10 +621,33 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
 
   Widget _buildQrContent() {
     final theme = Theme.of(context);
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) {
+      return const Center(
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: CircularProgressIndicator(strokeWidth: 3),
+        ),
+      );
+    }
     final b64 = _qrBase64;
     if (_error != null || b64 == null || b64.isEmpty) {
-      return const Center(child: Icon(Icons.broken_image_outlined, size: 48));
+      // 错误态用图标 + 明确的刷新入口（error 色）
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.broken_image_outlined,
+                size: 48, color: theme.colorScheme.error),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: _loadQr,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: Text(context.l10n.refreshQr),
+            ),
+          ],
+        ),
+      );
     }
     try {
       // 兼容 data:image/png;base64, 前缀
@@ -625,7 +668,21 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
         ],
       );
     } catch (_) {
-      return const Center(child: Icon(Icons.broken_image_outlined, size: 48));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.broken_image_outlined,
+                size: 48, color: theme.colorScheme.error),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: _loadQr,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: Text(context.l10n.refreshQr),
+            ),
+          ],
+        ),
+      );
     }
   }
 }

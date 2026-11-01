@@ -1,16 +1,157 @@
 {
   "@@locale": "pt",
+  "@playCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@trackCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@songCountSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@totalSongs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@repliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "@userIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "@replyPrefix": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "@recentErrorsCount": {
+    "description": "最近的错误条数",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "12"
+      }
+    }
+  },
+  "@versionLabel": {
+    "description": "最新版本号",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.1"
+      }
+    }
+  },
+  "@commentFailed": {
+    "description": "Falha ao comentar: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@deleteFailed": {
+    "description": "Falha ao excluir: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@clearCacheFailed": {
+    "description": "Falha ao limpar: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@apiConnectionOk": {
+    "description": "Conexão ok (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "@apiServerReachable": {
+    "description": "Servidor acessível (HTTP {code})",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "@apiConnectionFailed": {
+    "description": "Falha de conexão: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@qrLoadFailed": {
+    "description": "Falha ao carregar o QR code: {error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@commentsCount": {
+    "description": "{count} comentários",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "recommendedPlaylists": "Playlist recomendada",
-  "topCharts": "Paradas musicais",
+  "topCharts": "Paradas",
   "newSongs": "Músicas novas",
   "hotArtists": "Artistas populares",
-  "lyricOriginal": "Tocando agora",
-  "lyricBilingual": "Fila de reprodução",
-  "lyricTranslation": "Tema",
+  "lyricOriginal": "Texto original",
+  "lyricBilingual": "Bilingue",
+  "lyricTranslation": "Tradução",
   "nowPlaying": "Reproduzindo",
   "playQueue": "Fila de reprodução",
   "theme": "Tema",
-  "appName": "Tinglan Música",
+  "appName": "Tinglan Music",
   "home": "Página Inicial",
   "search": "Pesquisar",
   "library": "Biblioteca de Música",
@@ -19,10 +160,10 @@
   "logout": "Sair",
   "play": "Reproduzir",
   "pause": "Pausar",
-  "next": "Próxima faixa",
+  "next": "Próxima Música",
   "previous": "Música anterior",
   "favorite": "Favoritar",
-  "unfavorite": "Cancelar favoritamento",
+  "unfavorite": "Remover dos favoritos",
   "playlist": "Playlist",
   "comment": "Comentários",
   "comments": "Comentário",
@@ -52,7 +193,7 @@
   "dailyRecommend": "Recomendações diárias",
   "themeDark": "Escuro",
   "themeLight": "Claro",
-  "themeSystem": "Seguir o sistema",
+  "themeSystem": "Seguir sistema",
   "language": "Idioma",
   "apiSettings": "Configurações da API",
   "kugouApiUrl": "Endereço da API do Kugou",
@@ -60,13 +201,13 @@
   "cacheSettings": "Configurações de cache",
   "clearCache": "Limpar cache",
   "cacheSize": "Tamanho do cache",
-  "qualityHigh": "Alta Resolução",
-  "vipOnly": "Exclusivo para VIPs",
+  "qualityHigh": "Hi-Res",
+  "vipOnly": "Exclusivo VIP",
   "noCopyright": "Sem direitos autorais no momento",
   "tryListen": "Prévia",
   "fullPlay": "Reprodução completa",
-  "captchaTitle": "Verificação de segurança",
-  "captchaHint": "Por favor, complete a verificação do deslizador",
+  "captchaTitle": "Verificação humano-máquina",
+  "captchaHint": "Por favor, complete a verificação de deslizar",
   "loginSuccess": "Login bem-sucedido",
   "loginFailed": "Falha no login",
   "accountManage": "Gerenciamento de contas",
@@ -86,99 +227,195 @@
   "quality320": "Alta qualidade 320K",
   "qualityFlac": "Sem perdas FLAC",
   "moreActions": "Mais",
-  "clearHistoryConfirm": "Limpar todo o histórico de pesquisa?",
+  "clearHistoryConfirm": "Tem certeza de que deseja limpar todo o histórico de pesquisas?",
   "commentFailed": "Falha ao comentar: {error}",
-  "@commentFailed": {
-    "description": "Falha ao comentar: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "deleteFailed": "Falha ao excluir: {error}",
-  "@deleteFailed": {
-    "description": "Falha ao excluir: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "clearCacheFailed": "Falha ao limpar: {error}",
-  "@clearCacheFailed": {
-    "description": "Falha ao limpar: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "apiConnectionOk": "Conexão ok (HTTP {code})",
-  "@apiConnectionOk": {
-    "description": "Conexão ok (HTTP {code})",
-    "placeholders": {
-      "code": {
-        "type": "int"
-      }
-    }
-  },
-  "apiServerReachable": "Servidor acessível (HTTP {code})",
-  "@apiServerReachable": {
-    "description": "Servidor acessível (HTTP {code})",
-    "placeholders": {
-      "code": {
-        "type": "int"
-      }
-    }
-  },
-  "apiConnectionFailed": "Falha de conexão: {error}",
-  "@apiConnectionFailed": {
-    "description": "Falha de conexão: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "apiConnectionOk": "Conexão normal (HTTP {code})",
+  "apiServerReachable": "Servidor alcançável (HTTP {code})",
+  "apiConnectionFailed": "Falha na conexão: {error}",
   "apiSection": "API e rede",
-  "licenseBody": "Tiernan Music\n\nO código-fonte deste repositório é publicamente visível (Source Available), apenas para estudo e pesquisa.\n\n[Proibido]\n· Não usar este código ou obras derivadas para fins comerciais ou não comerciais;\n· Não distribuir, copiar, modificar ou republicar este software;\n· Não usar as interfaces integradas para varredura ou download em massa.\n\nEste projeto não tem ligação com o Kugou Music oficial. Contate-nos em caso de violação de direitos.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
+  "licenseBody": "Tiernan Music\n\nO código-fonte deste repositório é de acesso público (Source Available) e destina-se apenas a fins de estudo e pesquisa.\n\n【Proibições】\n· É proibido utilizar este código ou suas obras derivadas para qualquer finalidade comercial ou não comercial;\n· É proibido distribuir, copiar ou publicar este software após modificação, sob qualquer forma;\n· É proibido utilizar as interfaces conectadas a este projeto para scraping ou download em massa.\n\nEste projeto não possui qualquer relação com o KuGou Music oficial. Em caso de violação de direitos autorais, entre em contato para remoção.\n\nO SOFTWARE É FORNECIDO \"NA FORMA EM QUE SE ENCONTRA\", SEM GARANTIA DE QUALQUER TIPO.",
   "mvQualitySd": "SD",
   "mvQualityHd": "HD",
   "mvQualityQhd": "Ultra HD",
   "mvQualitySq": "Full HD",
   "mvQualityFhd": "Blu-ray",
-  "mvQualitySelect": "Qualidade",
-  "qrLoadFailed": "Falha ao carregar o QR code: {error}",
-  "@qrLoadFailed": {
-    "description": "Falha ao carregar o QR code: {error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "shuffle": "Aleatório",
-  "repeat": "Repetir tudo",
-  "repeatOne": "Repetir uma",
-  "closePlayer": "Recolher player",
-  "expandPlayer": "Expandir player",
+  "mvQualitySelect": "Resolução",
+  "qrLoadFailed": "Falha ao carregar o código QR: {error}",
+  "shuffle": "Reprodução aleatória",
+  "repeat": "Reprodução em loop",
+  "repeatOne": "Repetir música",
+  "closePlayer": "Recolher página de reprodução",
+  "expandPlayer": "Expandir página de reprodução",
   "showLyrics": "Ver letra",
   "showCover": "Ver capa",
-  "commentsCount": "{count} comentários",
-  "@commentsCount": {
-    "description": "{count} comentários",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "commentsCount": "Total de {count} comentários",
   "playlistIntro": "Descrição da playlist",
   "expand": "Expandir",
   "collapse": "Recolher",
-  "noSongsInPlaylist": "Nenhuma música nesta playlist",
-  "playNext": "Tocar depois",
-  "addToQueue": "Adicionar à fila",
-  "songActions": "Ações da música"
+  "noSongsInPlaylist": "Ainda não há músicas na playlist",
+  "playNext": "Próxima música",
+  "addToQueue": "Adicionar à fila de reprodução",
+  "songActions": "Ações da música",
+  "albums": "Álbum",
+  "artists": "Artista",
+  "noSearchResults": "Nenhum resultado de busca encontrado",
+  "noRelatedPlaylists": "Nenhuma playlist relacionada encontrada",
+  "noRelatedContent": "Nenhum conteúdo relacionado encontrado",
+  "recentlyPlayed": "Reproduzidos recentemente",
+  "clear": "Limpar",
+  "myFavoriteMvs": "Meus MVs favoritos",
+  "mvComingSoon": "A função de favoritos de MV será lançada em breve. Fique atento",
+  "clearRecentlyPlayed": "Limpar reproduções recentes",
+  "noRecommend": "Nenhum conteúdo recomendado no momento, puxe para baixo e tente novamente",
+  "newSongsRecommend": "Recomendação de novas músicas",
+  "authErrorRetry": "Faça login ou conclua a verificação e tente novamente",
+  "loadFailedNetwork": "Falha ao carregar, verifique sua conexão com a internet",
+  "searchSongsHint": "Pesquisar músicas, playlists, artistas",
+  "tabSongs": "Música individual",
+  "clearRecentConfirm": "Tem certeza de que deseja limpar todo o histórico de reprodução? Esta ação não pode ser desfeita.",
+  "notLoggedIn": "Não conectado",
+  "loginToSync": "Conecte-se para sincronizar suas playlists e favoritos",
+  "goLogin": "Ir para login",
+  "noPlaylistsYet": "Nenhuma playlist no momento",
+  "playlistLoadFailed": "Falha ao carregar a playlist",
+  "unofficialClient": "Cliente não oficial de terceiros",
+  "smsLogin": "Login por SMS",
+  "operationFailed": "Operação falhou",
+  "phoneInvalid": "Insira o número de celular correto",
+  "smsCodeSent": "Código de verificação enviado",
+  "codeInvalid": "Insira o código de verificação",
+  "selectAccount": "Este número de telefone está vinculado a várias contas. Selecione a conta na qual deseja fazer login",
+  "phoneHintCn": "Insira um número de telefone da China continental",
+  "verificationCode": "Código de verificação",
+  "usernameLabel": "Nome de usuário / Número de telefone",
+  "usernamePasswordRequired": "Insira o nome de usuário e a senha",
+  "qrExpired": "O código QR expirou. Atualize a página",
+  "qrScanSuccess": "Leitura do código bem-sucedida. Confirme o login no seu celular",
+  "qrScanHint": "Use o app Kugou Music para escanear o código e fazer login",
+  "account": "Conta",
+  "switchAccountSubtitle": "Alternar ou gerenciar contas conectadas",
+  "appearance": "Aparência",
+  "themeMode": "Modo de tema",
+  "appLanguage": "Idioma da interface",
+  "lyricModeOriginal": "Apenas o original",
+  "lyricModeBilingual": "Comparação bilíngue",
+  "lyricModeTranslation": "Apenas a tradução",
+  "playback": "Reproduzir",
+  "lyricDisplayMode": "Modo de exibição da letra",
+  "refreshQr": "Atualizar código QR",
+  "qrExpiredShort": "Expirado",
+  "unknownArtist": "Artista desconhecido",
+  "notPlaying": "Não está em reprodução",
+  "noLyric": "Letra indisponível",
+  "lyricParseFailed": "Falha ao analisar a letra",
+  "calculating": "Calculando…",
+  "cannotCalculate": "Não foi possível calcular",
+  "clearCacheConfirm": "O cache de imagens, o cache de API e o cache de tradução de letras serão limpos. Os dados da sua conta não serão excluídos. Tem certeza de que deseja continuar?",
+  "cacheCleared": "Cache limpo",
+  "testing": "Em teste…",
+  "testConnectivity": "Testando conectividade",
+  "save": "Salvar",
+  "openSourceLicenses": "Licença de código aberto",
+  "licenseDesc": "Código-fonte visível, uso proibido",
+  "githubRepo": "Repositório do GitHub",
+  "knowIt": "Entendido",
+  "noComments": "Ainda não há comentários, seja o primeiro a comentar",
+  "commentHint": "Diga algo…",
+  "loginToComment": "Comente após fazer login",
+  "pleaseLoginFirst": "Faça login primeiro",
+  "commentSuccess": "Comentário enviado com sucesso",
+  "deleteComment": "Excluir comentário",
+  "deleteCommentConfirm": "Tem certeza de que deseja excluir este comentário?",
+  "deleted": "Excluído",
+  "playAll": "Reproduzir tudo",
+  "playFailed": "Falha ao reproduzir",
+  "back": "Voltar",
+  "loadFailed": "Falha ao carregar",
+  "playCountSuffix": "{count} reproduções",
+  "defaultQuality": "Qualidade de som padrão",
+  "wifiAutoHighQuality": "Qualidade de som máxima automática via Wi-Fi",
+  "wifiAutoHighQualityDesc": "Priorizar reprodução sem perdas/Hi-Res ao conectar ao Wi-Fi (reservado)",
+  "cellularLowQuality": "Reduzir a qualidade do som com dados móveis",
+  "cellularLowQualityDesc": "Alternar automaticamente para a qualidade de som padrão ao usar a rede móvel (reservado)",
+  "cacheUsage": "Espaço em cache ocupado",
+  "recalculate": "Recalcular",
+  "clearCacheDesc": "Limpar o cache de interface, imagens e traduções de letras",
+  "resetToDefault": "Redefinir para o padrão",
+  "resetToDefaultDone": "Endereço redefinido para o padrão",
+  "replyPrefix": "Responder a {name}: {content}",
+  "downloadManagement": "Gerenciamento de downloads",
+  "downloads": "Baixado",
+  "download": "Baixar",
+  "downloading": "Baixando",
+  "downloaded": "Baixado",
+  "downloadQueued": "Na fila",
+  "downloadPaused": "Pausado",
+  "downloadFailed": "Falha no download",
+  "downloadCompleted": "Concluído",
+  "trackCountSuffix": "{count} faixas",
+  "songCountSuffix": "{count} faixas",
+  "totalSongs": "Total de {count} faixas",
+  "repliesCount": "{count} respostas",
+  "resendIn": "Reenviar em {seconds}s",
+  "userIdLabel": "ID: {id}",
+  "noRecentlyPlayed": "Ainda não há histórico de reprodução. Vá para a página inicial e escolha uma música",
+  "loginToViewPlaylists": "Faça login para ver sua playlist",
+  "queueEmpty": "A fila está vazia. Vá reproduzir algumas músicas primeiro",
+  "cache": "Cache",
+  "downloadDeleteConfirm": "Tem certeza de que deseja excluir este conteúdo baixado?",
+  "downloadClearAll": "Limpar histórico de downloads",
+  "downloadAudio": "Áudio",
+  "downloadCoverLabel": "Capa",
+  "downloadLyricLabel": "Letra",
+  "downloadMvLabel": "MV",
+  "downloadPermissionNeeded": "É necessária permissão de armazenamento para salvar no diretório público",
+  "downloadFallbackNotice": "Salvo no diretório exclusivo do aplicativo, alguns gerenciadores de arquivos podem não visualizá-lo",
+  "downloadRetry": "Tentar novamente",
+  "downloadPause": "Pausar",
+  "downloadResume": "Continuar",
+  "downloadedSongs": "Músicas baixadas",
+  "networkErrorTitle": "Falha na conexão de rede",
+  "networkErrorHint": "Verifique as configurações de rede e tente novamente, ou volte mais tarde",
+  "genericErrorTitle": "Falha ao carregar",
+  "genericErrorHint": "Ocorreu um pequeno problema, tente novamente mais tarde",
+  "reload": "Recarregar",
+  "techDetail": "Detalhes técnicos",
+  "copiedToClipboard": "Copiado para a área de transferência",
+  "copyDetails": "Copiar detalhes",
+  "diagnostics": "Diagnóstico",
+  "errorLogLocation": "Local do log de erros",
+  "copyPath": "Copiar caminho",
+  "storagePermissions": "Permissão de armazenamento",
+  "permissionGranted": "Autorizado",
+  "permissionDenied": "Não autorizado",
+  "requestPermission": "Solicitar permissão",
+  "recentErrors": "Erros recentes",
+  "recentErrorsCount": "Total de {count} itens, clique para ver",
+  "noRecentErrors": "Nenhum registro de erro no momento",
+  "downloadSong": "Baixar música",
+  "downloadCover": "Baixar capa",
+  "downloadLyric": "Baixar letra",
+  "downloadMv": "Baixar MV",
+  "downloadAll": "Baixar tudo",
+  "noDownloads": "Nenhum conteúdo baixado ainda",
+  "downloadStoragePath": "Local de salvamento",
+  "openInFileManager": "Ver no gerenciador de arquivos",
+  "openWithOtherApp": "Abrir com outro aplicativo",
+  "openFailed": "Não foi possível abrir o link. Verifique a conexão de rede ou as configurações do navegador",
+  "later": "Mais tarde",
+  "unknown": "Desconhecido",
+  "close": "Fechar",
+  "checkUpdate": "Verificar atualizações",
+  "checkUpdateDesc": "Verificar se há uma nova versão",
+  "checkingUpdate": "Verificando atualizações…",
+  "updateCheckFailed": "Falha ao verificar atualizações, tente novamente mais tarde",
+  "alreadyLatestVersion": "Já está na versão mais recente",
+  "newVersionAvailable": "Nova versão encontrada",
+  "versionLabel": "Versão mais recente: {version}",
+  "downloadNow": "Baixar agora",
+  "all": "全部",
+  "showPassword": "显示密码",
+  "hidePassword": "隐藏密码"
 }

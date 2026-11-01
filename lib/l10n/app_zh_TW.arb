@@ -59,6 +59,88 @@
       }
     }
   },
+  "@recentErrorsCount": {
+    "description": "最近的错误条数",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "12"
+      }
+    }
+  },
+  "@versionLabel": {
+    "description": "最新版本号",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.1"
+      }
+    }
+  },
+  "@commentFailed": {
+    "description": "留言失敗：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@deleteFailed": {
+    "description": "刪除失敗：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@clearCacheFailed": {
+    "description": "清除失敗：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@apiConnectionOk": {
+    "description": "連線正常（HTTP {code}）",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "@apiServerReachable": {
+    "description": "伺服器可達（HTTP {code}）",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "@apiConnectionFailed": {
+    "description": "連線失敗：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@qrLoadFailed": {
+    "description": "QR Code 載入失敗：{error}",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@commentsCount": {
+    "description": "共 {count} 則留言",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "previous": "上一首",
   "favorite": "收藏",
   "unfavorite": "取消收藏",
@@ -92,12 +174,12 @@
   "confirm": "確定",
   "loading": "載入中…",
   "error": "錯誤",
-  "retry": "重新嘗試",
+  "retry": "重試",
   "noData": "暫無資料",
   "searchHint": "搜尋歌曲、歌單、專輯、MV",
   "searchHistory": "搜尋歷史",
   "hotSearch": "熱門搜尋",
-  "clearHistory": "清除歷史",
+  "clearHistory": "清空歷史",
   "dailyRecommend": "每日推薦",
   "about": "關於",
   "version": "版本",
@@ -168,9 +250,9 @@
   "usernameLabel": "使用者名稱 / 手機號碼",
   "usernamePasswordRequired": "請輸入使用者名稱與密碼",
   "qrExpired": "二維碼已過期，請重新載入",
-  "qrScanSuccess": "掃描成功，請在手機上確認登入",
+  "qrScanSuccess": "掃描二維碼成功，請在手機上確認登入",
   "qrScanHint": "請使用酷狗音樂 App 掃描二維碼登入",
-  "refreshQr": "重新產生二維碼",
+  "refreshQr": "重新產生 QR 碼",
   "qrExpiredShort": "已過期",
   "unknownArtist": "未知歌手",
   "noRelatedPlaylists": "暫無相關歌單",
@@ -180,7 +262,7 @@
   "myFavoriteMvs": "我收藏的 MV",
   "mvComingSoon": "MV 收藏功能即將上線，敬請期待",
   "clearRecentlyPlayed": "清空最近播放",
-  "clearRecentConfirm": "確定要清空所有播放紀錄嗎？此動作無法復原。",
+  "clearRecentConfirm": "確定要清空所有播放記錄嗎？此動作無法復原。",
   "notLoggedIn": "未登入",
   "loginToSync": "登入後同步您的歌單與收藏",
   "notPlaying": "目前未播放",
@@ -203,15 +285,15 @@
   "defaultQuality": "預設音質",
   "wifiAutoHighQuality": "Wi-Fi 下自動最高音質",
   "wifiAutoHighQualityDesc": "連接 Wi-Fi 時優先播放無損/Hi-Res（預留）",
-  "cellularLowQuality": "行動數據下降低音質",
-  "cellularLowQualityDesc": "使用流動網絡時自動切換至標準音質（預留）",
+  "cellularLowQuality": "流量下降低音質",
+  "cellularLowQualityDesc": "使用行動網路時自動切換為標準音質（預留）",
   "cacheUsage": "快取佔用",
   "recalculate": "重新計算",
   "clearCacheDesc": "清除介面、圖片與歌詞翻譯快取",
   "resetToDefault": "重設為預設",
   "resetToDefaultDone": "已重設為預設位址",
   "testing": "測試中…",
-  "testConnectivity": "測試連線性",
+  "testConnectivity": "測試連通性",
   "save": "儲存",
   "openSourceLicenses": "開放原始碼授權",
   "licenseDesc": "原始碼可見，禁止使用",
@@ -234,86 +316,30 @@
   "songCountSuffix": "{count} 首",
   "totalSongs": "共 {count} 首",
   "repliesCount": "{count} 則回覆",
-  "resendIn": "{seconds}秒後重新傳送",
+  "resendIn": "{seconds}s 後重新傳送",
   "userIdLabel": "ID: {id}",
-  "noRecentlyPlayed": "目前還沒有播放記錄，到首頁選一首歌吧",
-  "loginToViewPlaylists": "登入後查看你的歌單",
+  "noRecentlyPlayed": "目前還沒有任何播放記錄，請到首頁選一首歌吧",
+  "loginToViewPlaylists": "登入後即可查看你的歌單",
   "queueEmpty": "隊列為空，先去播放幾首歌吧",
   "cache": "快取",
   "replyPrefix": "回覆 {name}：{content}",
   "moreActions": "更多",
   "clearHistoryConfirm": "確定要清空全部搜尋歷史嗎？",
-  "commentFailed": "留言失敗：{error}",
-  "@commentFailed": {
-    "description": "留言失敗：{error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "commentFailed": "評論失敗：{error}",
   "deleteFailed": "刪除失敗：{error}",
-  "@deleteFailed": {
-    "description": "刪除失敗：{error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "clearCacheFailed": "清除失敗：{error}",
-  "@clearCacheFailed": {
-    "description": "清除失敗：{error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "apiConnectionOk": "連線正常（HTTP {code}）",
-  "@apiConnectionOk": {
-    "description": "連線正常（HTTP {code}）",
-    "placeholders": {
-      "code": {
-        "type": "int"
-      }
-    }
-  },
   "apiServerReachable": "伺服器可達（HTTP {code}）",
-  "@apiServerReachable": {
-    "description": "伺服器可達（HTTP {code}）",
-    "placeholders": {
-      "code": {
-        "type": "int"
-      }
-    }
-  },
   "apiConnectionFailed": "連線失敗：{error}",
-  "@apiConnectionFailed": {
-    "description": "連線失敗：{error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "apiSection": "API 與網路",
-  "licenseBody": "汀瀾音樂 Tiernan Music\n\n本倉庫原始碼公開可見（Source Available），僅供學習與研究用途。\n\n【禁止事項】\n· 禁止將本程式碼或其衍生作品用於任何商業或非商業用途；\n· 禁止以任何形式散布、複製、修改後發布本軟體；\n· 禁止將本專案接入的介面用於爬取或批次下載。\n\n本專案與酷狗音樂官方無任何關聯，如有侵權請聯絡刪除。\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.",
-  "mvQualitySd": "標清",
+  "licenseBody": "汀瀾音樂 Tiernan Music\n\n本倉庫原始碼公開可見（Source Available），僅供學習與研究用途。\n\n【禁止事項】\n· 禁止將本程式碼或其衍生作品用於任何商業或非商業用途；\n· 禁止以任何形式分發、複製、修改後發布本軟體；\n· 禁止將本專案接入的介面用於爬取或批量下載。\n\n本專案與酷狗音樂官方無任何關聯，如有侵權，敬請聯絡刪除。\n\n本軟體「按原樣」提供，不附有任何形式的保證。",
+  "mvQualitySd": "標準畫質",
   "mvQualityHd": "高清",
   "mvQualityQhd": "超清",
-  "mvQualitySq": "全高畫質",
+  "mvQualitySq": "全高清",
   "mvQualityFhd": "藍光",
-  "mvQualitySelect": "畫質",
-  "qrLoadFailed": "QR Code 載入失敗：{error}",
-  "@qrLoadFailed": {
-    "description": "QR Code 載入失敗：{error}",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "mvQualitySelect": "清晰度",
+  "qrLoadFailed": "二維碼載入失敗：{error}",
   "shuffle": "隨機播放",
   "repeat": "循環播放",
   "repeatOne": "單曲循環",
@@ -321,20 +347,75 @@
   "expandPlayer": "展開播放頁",
   "showLyrics": "查看歌詞",
   "showCover": "查看封面",
-  "commentsCount": "共 {count} 則留言",
-  "@commentsCount": {
-    "description": "共 {count} 則留言",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "commentsCount": "共 {count} 條評論",
   "playlistIntro": "歌單簡介",
   "expand": "展開",
-  "collapse": "收合",
+  "collapse": "收起",
   "noSongsInPlaylist": "歌單中暫無歌曲",
   "playNext": "下一首播放",
-  "addToQueue": "加入播放佇列",
-  "songActions": "歌曲操作"
+  "addToQueue": "加入播放隊列",
+  "songActions": "歌曲操作",
+  "downloadFailed": "下載失敗",
+  "downloadCompleted": "已完成",
+  "downloadSong": "下載歌曲",
+  "downloadCover": "下載封面",
+  "downloadLyric": "下載歌詞",
+  "downloadMv": "下載 MV",
+  "downloadAll": "全部下載",
+  "noDownloads": "目前尚未下載任何內容",
+  "downloadStoragePath": "儲存位置",
+  "openInFileManager": "於檔案總管中檢視",
+  "downloadManagement": "下載管理",
+  "downloads": "已下載",
+  "download": "下載",
+  "downloading": "下載中",
+  "downloaded": "已下載",
+  "downloadQueued": "排隊中",
+  "downloadPaused": "已暫停",
+  "downloadRetry": "重新嘗試",
+  "downloadPause": "暫停",
+  "downloadResume": "繼續",
+  "downloadedSongs": "已下載歌曲",
+  "networkErrorTitle": "網路連線失敗",
+  "networkErrorHint": "請檢查網路設定後重新嘗試，或稍後再試",
+  "genericErrorTitle": "載入失敗",
+  "genericErrorHint": "發生了一些小問題，請稍後重新嘗試",
+  "reload": "重新載入",
+  "techDetail": "技術詳細資訊",
+  "copiedToClipboard": "已複製到剪貼簿",
+  "copyDetails": "複製詳細資料",
+  "diagnostics": "診斷",
+  "errorLogLocation": "錯誤日誌位置",
+  "copyPath": "複製路徑",
+  "storagePermissions": "儲存權限",
+  "permissionGranted": "已授權",
+  "permissionDenied": "未授權",
+  "requestPermission": "申請權限",
+  "recentErrors": "最近的錯誤",
+  "openWithOtherApp": "用其他應用程式開啟",
+  "openFailed": "無法開啟連結，請檢查網路或瀏覽器設定",
+  "downloadDeleteConfirm": "確定要刪除該下載內容嗎？",
+  "downloadClearAll": "清空下載記錄",
+  "downloadAudio": "音訊",
+  "downloadCoverLabel": "封面",
+  "downloadLyricLabel": "歌詞",
+  "downloadMvLabel": "MV",
+  "downloadPermissionNeeded": "需要儲存權限才能儲存到公共目錄",
+  "downloadFallbackNotice": "已儲存到應用程式專屬目錄，部分檔案管理器可能無法顯示",
+  "recentErrorsCount": "共 {count} 筆，點擊檢視",
+  "noRecentErrors": "目前無錯誤記錄",
+  "unknown": "未知",
+  "close": "關閉",
+  "checkUpdate": "檢查更新",
+  "checkUpdateDesc": "檢測是否有新版本",
+  "checkingUpdate": "正在檢查更新…",
+  "updateCheckFailed": "檢查更新失敗，請稍後重試",
+  "alreadyLatestVersion": "已是最新版本",
+  "newVersionAvailable": "發現新版本",
+  "versionLabel": "最新版本：{version}",
+  "downloadNow": "立即下載",
+  "later": "稍後",
+  "all": "全部",
+  "showPassword": "显示密码",
+  "hidePassword": "隐藏密码"
 }

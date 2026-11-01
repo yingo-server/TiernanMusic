@@ -259,6 +259,7 @@
   "downloadStoragePath": "保存位置",
   "openInFileManager": "在文件管理器中查看",
   "openWithOtherApp": "用其他应用打开",
+  "openFailed": "无法打开链接，请检查网络或浏览器设置",
   "downloadDeleteConfirm": "确定删除该下载内容吗？",
   "downloadClearAll": "清空下载记录",
   "downloadAudio": "音频",
@@ -421,5 +422,8 @@
   "noSongsInPlaylist": "歌单中暂无歌曲",
   "playNext": "下一首播放",
   "addToQueue": "加入播放队列",
-  "songActions": "歌曲操作"
+  "songActions": "歌曲操作",
+  "all": "全部",
+  "showPassword": "显示密码",
+  "hidePassword": "隐藏密码"
 }
