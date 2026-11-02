@@ -16,6 +16,7 @@ import 'core/router/app_router.dart';
 import 'features/home/data/home_repository.dart' show homeDataProvider;
 import 'core/theme/app_theme.dart';
 import 'core/theme/settings_provider.dart';
+import 'core/widgets/splash_screen.dart';
 import 'core/utils/toast.dart';
 import 'core/utils/error_logger.dart';
 import 'core/storage/secure_storage.dart';
@@ -178,10 +179,17 @@ class TiernanMusicApp extends ConsumerStatefulWidget {
 
 class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
     with WidgetsBindingObserver {
+  /// 启动准备是否完成（完成后才从 SplashScreen 切到主界面）
+  bool _appReady = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // 首帧后再标记就绪，确保 SplashScreen 至少绘制一帧（可见动画）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _appReady = true);
+    });
   }
 
   @override
@@ -275,7 +283,10 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
-      builder: (context, child) => child ?? const SizedBox.shrink(),
+      builder: (context, child) {
+        if (!_appReady) return const SplashScreen();
+        return child ?? const SizedBox.shrink();
+      },
     );
   }
 }

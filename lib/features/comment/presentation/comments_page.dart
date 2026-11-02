@@ -9,6 +9,7 @@ import '../../../core/providers.dart';
 import '../../../core/utils/toast.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart';
+import '../../auth/presentation/login_guard.dart';
 import '../../auth/data/auth_providers.dart';
 import '../../auth/presentation/captcha_page.dart';
 import '../data/comment_repository.dart';
@@ -327,7 +328,8 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
     if (!_isLoggedIn) {
-      Toast.show(context, context.l10n.pleaseLoginFirst);
+      // 匿名态：给出明确的登录入口，而不是只提示「请先登录」
+      ensureLoggedIn(context, ref, action: context.l10n.comment);
       return;
     }
     _inputCtrl.clear();

@@ -9,6 +9,7 @@ import '../../../core/utils/toast.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../../auth/data/auth_providers.dart';
+import '../../auth/presentation/login_guard.dart';
 import '../data/comment_repository.dart';
 import '../../../l10n/l10n.dart';
 
@@ -139,7 +140,7 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
     if (!_isLoggedIn) {
-      Toast.show(context, context.l10n.pleaseLoginFirst);
+      ensureLoggedIn(context, ref, action: context.l10n.comment);
       return;
     }
     _inputCtrl.clear();

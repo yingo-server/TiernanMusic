@@ -44,7 +44,7 @@ class TiernanAudioHandler extends BaseAudioHandler
     if (!ok) {
       // 记录失败原因并同步播放态，避免 UI 停留在「播放中」假象
       engineError ??= '音频服务未就绪，请稍后重试';
-      _broadcastState(playbackState.value.copyWith(
+      playbackState.add(playbackState.value.copyWith(
         playing: false,
         processingState: AudioProcessingState.idle,
       ));
