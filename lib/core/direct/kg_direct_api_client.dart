@@ -151,6 +151,14 @@ class KgDirectApiClient extends KugouApiClient {
         return _directOrFallback(() => _kmrAudioMv(q), kapi, '/kmr/audio/mv');
       case 'comment/music':
         return _directOrFallback(() => _commentMusic(q), kapi, '/comment/music');
+      case 'playlist/add':
+        return _directOrFallback(() => _playlistAdd(q), kapi, '/playlist/add');
+      case 'playlist/tracks/add':
+        return _directOrFallback(
+            () => _playlistTracksAdd(q), kapi, '/playlist/tracks/add');
+      case 'playlist/tracks/del':
+        return _directOrFallback(
+            () => _playlistTracksDel(q), kapi, '/playlist/tracks/del');
       case 'user/playlist':
         return _directOrFallback(() => _userPlaylist(q), kapi, '/user/playlist');
       case 'playlist/track/all/new':
@@ -421,6 +429,86 @@ class KgDirectApiClient extends KugouApiClient {
           if (q['hash'] != null) 'hash': q['hash'],
           if (q['hash'] == null && q['special_id'] != null)
             'childrenid': q['special_id'],
+        });
+  }
+
+  /// 收藏/新建歌单（module/playlist_add.js，需登录）
+  /// POST /cloudlist.service/v5/add_list
+  /// type=1 收藏公共歌单（需 list_create_userid/list_create_listid/gid）
+  /// type=0 新建歌单
+  Future<KgResponse> _playlistAdd(Map<String, dynamic> q) {
+    final userid = kg.userid.isEmpty ? '0' : kg.userid;
+    final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final type = int.tryParse('${q['type'] ?? 0}') ?? 0;
+    return kg.request('/cloudlist.service/v5/add_list',
+        method: 'POST',
+        params: type == 0
+            ? {
+                'last_time': '$clienttime',
+                'last_area': 'gztx',
+                'userid': userid,
+                'token': kg.token,
+              }
+            : const <String, dynamic>{},
+        data: {
+          'userid': userid,
+          'token': kg.token,
+          'total_ver': 0,
+          'name': '${q['name'] ?? ''}',
+          'type': type,
+          'source': 1,
+          'is_pri': 0,
+          if (q['list_create_userid'] != null)
+            'list_create_userid': '${q['list_create_userid']}',
+          if (q['list_create_listid'] != null)
+            'list_create_listid': '${q['list_create_listid']}',
+          'list_create_gid': '${q['list_create_gid'] ?? ''}',
+          'from_shupinmv': 0,
+        });
+  }
+
+  /// 歌单加歌（module/playlist_tracks_add.js，需登录）
+  /// POST /cloudlist.service/v6/add_song
+  /// data 为 `名称|hash|album_id|album_audio_id` 逗号分隔（空字段要占位，不能跳）
+  Future<KgResponse> _playlistTracksAdd(Map<String, dynamic> q) {
+    final userid = kg.userid.isEmpty ? '0' : kg.userid;
+    final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final raw = q['data'] ?? q['songs'] ?? '';
+    return kg.request('/cloudlist.service/v6/add_song',
+        method: 'POST',
+        params: {
+          'last_time': '$clienttime',
+          'last_area': 'gztx',
+          'userid': userid,
+          'token': kg.token,
+        },
+        data: {
+          'userid': userid,
+          'token': kg.token,
+          'listid': '${q['listid'] ?? ''}',
+          'list_ver': 0,
+          'type': 0,
+          'slow_upload': 1,
+          'scene': 'false;null',
+          'data': raw,
+        });
+  }
+
+  /// 歌单删歌（module/playlist_tracks_del.js，需登录）
+  /// POST /cloudlist.service/v4/delete_songs，x-router cloudlist.service.kugou.com
+  Future<KgResponse> _playlistTracksDel(Map<String, dynamic> q) {
+    final userid = kg.userid.isEmpty ? '0' : kg.userid;
+    return kg.request('/cloudlist.service/v4/delete_songs',
+        method: 'POST',
+        headers: {'x-router': 'cloudlist.service.kugou.com'},
+        data: {
+          'userid': userid,
+          'token': kg.token,
+          'listid': '${q['listid'] ?? ''}',
+          'type': 0,
+          'fileids': '${q['fileids'] ?? q['data'] ?? ''}',
+          'area_code': 1,
+          'allplatform': 1,
         });
   }
 
