@@ -308,6 +308,7 @@ const _strings_de = <String, String>{
   'fansLabel': 'Fans {count}',
   'sortNew': 'Neueste',
   'sortHot': 'Beliebt',
+  'loginToViewFavorites': 'Anmelden, um Favoriten zu sehen',
 };
 
 const _strings_en = <String, String>{
@@ -614,6 +615,7 @@ const _strings_en = <String, String>{
   'fansLabel': 'Fans {count}',
   'sortNew': 'Newest',
   'sortHot': 'Popular',
+  'loginToViewFavorites': 'Log in to view favorites',
 };
 
 const _strings_es = <String, String>{
@@ -920,6 +922,7 @@ const _strings_es = <String, String>{
   'fansLabel': 'Fans {count}',
   'sortNew': 'Más recientes',
   'sortHot': 'Populares',
+  'loginToViewFavorites': 'Inicia sesión para ver los favoritos',
 };
 
 const _strings_fr = <String, String>{
@@ -1226,6 +1229,7 @@ const _strings_fr = <String, String>{
   'fansLabel': 'Fans {count}',
   'sortNew': 'Plus récents',
   'sortHot': 'Populaires',
+  'loginToViewFavorites': 'Connectez-vous pour voir vos favoris',
 };
 
 const _strings_ja = <String, String>{
@@ -1532,6 +1536,7 @@ const _strings_ja = <String, String>{
   'fansLabel': 'ファン {count}',
   'sortNew': '最新',
   'sortHot': '人気',
+  'loginToViewFavorites': 'ログインするとお気に入りが見られます',
 };
 
 const _strings_ko = <String, String>{
@@ -1838,6 +1843,7 @@ const _strings_ko = <String, String>{
   'fansLabel': '팬 {count}',
   'sortNew': '최신',
   'sortHot': '인기',
+  'loginToViewFavorites': '로그인하면 즐겨찾기를 볼 수 있습니다',
 };
 
 const _strings_pt = <String, String>{
@@ -2144,6 +2150,7 @@ const _strings_pt = <String, String>{
   'fansLabel': 'Fãs {count}',
   'sortNew': 'Mais recentes',
   'sortHot': 'Populares',
+  'loginToViewFavorites': 'Faça login para ver os favoritos',
 };
 
 const _strings_ru = <String, String>{
@@ -2450,6 +2457,7 @@ const _strings_ru = <String, String>{
   'fansLabel': 'Подписчики {count}',
   'sortNew': 'Новые',
   'sortHot': 'Популярные',
+  'loginToViewFavorites': 'Войдите, чтобы увидеть избранное',
 };
 
 const _strings_zh = <String, String>{
@@ -2756,6 +2764,7 @@ const _strings_zh = <String, String>{
   'fansLabel': '粉丝 {count}',
   'sortNew': '最新',
   'sortHot': '最热',
+  'loginToViewFavorites': '登录后查看收藏',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -3062,6 +3071,7 @@ const _strings_zh_CN = <String, String>{
   'fansLabel': '粉丝 {count}',
   'sortNew': '最新',
   'sortHot': '最热',
+  'loginToViewFavorites': '登录后查看收藏',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3368,6 +3378,7 @@ const _strings_zh_TW = <String, String>{
   'fansLabel': '粉絲 {count}',
   'sortNew': '最新',
   'sortHot': '最熱',
+  'loginToViewFavorites': '登入後檢視收藏',
 };
 
 const _template = _strings_zh_CN;
@@ -3730,6 +3741,7 @@ class AppLocalizations {
   String fansLabel(int count) => _t('fansLabel').r({'count': count});
   String get sortNew => _t('sortNew');
   String get sortHot => _t('sortHot');
+  String get loginToViewFavorites => _t('loginToViewFavorites');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

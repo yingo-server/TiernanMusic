@@ -16,6 +16,7 @@ import '../../player/data/models.dart';
 import '../../player/play_helper.dart';
 import '../../download/data/download_task.dart';
 import '../../download/download_provider.dart';
+import '../../mv/data/mv_collection_repository.dart';
 import '../../download/presentation/download_sheet.dart';
 import '../data/recent_play_store.dart';
 import '../../../l10n/l10n.dart';
@@ -188,10 +189,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
           // ---- 我收藏的 MV ----
           SectionHeader(title: context.l10n.myFavoriteMvs),
-          EmptyState(
-            icon: Icons.movie_outlined,
-            message: context.l10n.mvComingSoon,
-          ),
+          _buildCollectedMvs(context, account != null),
                 ],
               ),
             ),
@@ -245,6 +243,75 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       await RecentPlayStore.clear();
       _loadRecent();
     }
+  }
+
+  /// 我收藏的 MV 区块
+  Widget _buildCollectedMvs(BuildContext context, bool loggedIn) {
+    if (!loggedIn) {
+      return EmptyState(
+        icon: Icons.movie_outlined,
+        message: context.l10n.loginToViewFavorites,
+      );
+    }
+    final async = ref.watch(_collectedMvsProvider(true));
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => ErrorRetry(error: e, onRetry: () {
+        ref.invalidate(_collectedMvsProvider(true));
+      }),
+      data: (list) {
+        if (list.isEmpty) {
+          return EmptyState(
+            icon: Icons.movie_outlined,
+            message: context.l10n.noData,
+          );
+        }
+        return Column(
+          children: [
+            for (final mv in list)
+              ListTile(
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: mv.cover.isEmpty
+                        ? Container(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                          )
+                        : CachedNetworkImage(
+                            imageUrl: mv.cover,
+                            cacheManager: AppImageCache.instance,
+                            fit: BoxFit.cover,
+                            memCacheWidth: 144,
+                          ),
+                  ),
+                ),
+                title: Text(
+                  mv.title.isEmpty ? context.l10n.mv : mv.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  mv.artist,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () {
+                  if (mv.hash.isNotEmpty) {
+                    context.push('/mv/${mv.hash}');
+                  }
+                },
+              ),
+          ],
+        );
+      },
+    );
   }
 
   AccountRecord? _currentAccount() {    try {
@@ -366,6 +433,14 @@ final _userPlaylistsProvider = FutureProvider.autoDispose
   if (!loggedIn) return const [];
   final repo = PlaylistRepository(ref.watch(kugouApiClientProvider));
   return repo.fetchUserPlaylists();
+});
+
+/// 我收藏的 MV（需登录）
+final _collectedMvsProvider = FutureProvider.autoDispose
+    .family<List<CollectedMv>, bool>((ref, loggedIn) async {
+  if (!loggedIn) return const [];
+  final repo = ref.watch(mvCollectionRepositoryProvider);
+  return repo.fetchCollected();
 });
 
 class _MyPlaylistRow extends StatelessWidget {

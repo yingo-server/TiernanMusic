@@ -518,5 +518,6 @@
     }
   },
   "sortNew": "Neueste",
-  "sortHot": "Beliebt"
+  "sortHot": "Beliebt",
+  "loginToViewFavorites": "Anmelden, um Favoriten zu sehen"
 }

@@ -518,5 +518,6 @@
     }
   },
   "sortNew": "最新",
-  "sortHot": "人気"
+  "sortHot": "人気",
+  "loginToViewFavorites": "ログインするとお気に入りが見られます"
 }

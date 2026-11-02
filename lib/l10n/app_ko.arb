@@ -518,5 +518,6 @@
     }
   },
   "sortNew": "최신",
-  "sortHot": "인기"
+  "sortHot": "인기",
+  "loginToViewFavorites": "로그인하면 즐겨찾기를 볼 수 있습니다"
 }

@@ -18,6 +18,7 @@ class KgResponse {
     required this.status,
     required this.body,
     this.headers = const {},
+    this.rawBytes,
   });
 
   /// HTTP 状态（200 成功 / 502 封装失败）
@@ -28,6 +29,10 @@ class KgResponse {
 
   /// 响应头（小写 key），含 ssa-code
   final Map<String, String> headers;
+
+  /// 原始响应字节（非 JSON 响应，如 AES 加密的二进制体）。
+  /// 需要自行用 seed 派生 key/iv 解密。
+  final List<int>? rawBytes;
 
   bool get isOk => status == 200 && body['status'] == 1;
 
@@ -232,6 +237,7 @@ class KgClient {
       status: res.statusCode ?? 0,
       body: body,
       headers: headerMap,
+      rawBytes: res.data,
     );
   }
 

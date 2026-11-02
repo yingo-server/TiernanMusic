@@ -518,5 +518,6 @@
     }
   },
   "sortNew": "最新",
-  "sortHot": "最熱"
+  "sortHot": "最熱",
+  "loginToViewFavorites": "登入後檢視收藏"
 }
