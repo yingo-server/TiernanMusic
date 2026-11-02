@@ -151,6 +151,11 @@ class KgDirectApiClient extends KugouApiClient {
         return _directOrFallback(() => _kmrAudioMv(q), kapi, '/kmr/audio/mv');
       case 'comment/music':
         return _directOrFallback(() => _commentMusic(q), kapi, '/comment/music');
+      case 'user/playlist':
+        return _directOrFallback(() => _userPlaylist(q), kapi, '/user/playlist');
+      case 'playlist/track/all/new':
+        return _directOrFallback(
+            () => _userPlaylistTracks(q), kapi, '/playlist/track/all/new');
       case 'comment/playlist':
         return _directOrFallback(
             () => _commentPlaylist(q), kapi, '/comment/playlist');
@@ -416,6 +421,45 @@ class KgDirectApiClient extends KugouApiClient {
           if (q['hash'] != null) 'hash': q['hash'],
           if (q['hash'] == null && q['special_id'] != null)
             'childrenid': q['special_id'],
+        });
+  }
+
+  /// 我的歌单（module/user_playlist.js，需登录）
+  /// POST gateway /v7/get_all_list，x-router cloudlist.service.kugou.com
+  /// 参数：query 带 plat/userid/token，body 带 total_ver/type/page/pagesize
+  Future<KgResponse> _userPlaylist(Map<String, dynamic> q) {
+    final userid = kg.userid.isEmpty ? '0' : kg.userid;
+    return kg.request('/v7/get_all_list',
+        method: 'POST',
+        headers: {'x-router': 'cloudlist.service.kugou.com'},
+        params: {'plat': 1, 'userid': userid, 'token': kg.token},
+        data: {
+          'userid': userid,
+          'token': kg.token,
+          'total_ver': 979,
+          'type': 2,
+          'page': q['page'] ?? 1,
+          'pagesize': q['pagesize'] ?? 30,
+        });
+  }
+
+  /// 用户歌单歌曲（module/playlist_track_all_new.js，需登录）
+  /// POST gateway /v4/get_list_all_file_v3，x-router cloudlist.service.kugou.com
+  Future<KgResponse> _userPlaylistTracks(Map<String, dynamic> q) {
+    final userid = kg.userid.isEmpty ? '0' : kg.userid;
+    return kg.request('/v4/get_list_all_file_v3',
+        method: 'POST',
+        headers: {'x-router': 'cloudlist.service.kugou.com'},
+        data: {
+          'listid': '${q['listid'] ?? q['id'] ?? ''}',
+          'userid': userid,
+          'type': int.tryParse('${q['type'] ?? 0}') ?? 0,
+          'page': int.tryParse('${q['page'] ?? 1}') ?? 1,
+          'pagesize': int.tryParse('${q['pagesize'] ?? 300}') ?? 300,
+          'area_code': 1,
+          'allplatform': 1,
+          'show_cover': 1,
+          'token': kg.token,
         });
   }
 
