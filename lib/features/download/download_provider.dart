@@ -325,7 +325,9 @@ class DownloadManager extends StateNotifier<DownloadState> {
       if (cur != null) {
         _update(cur.copyWith(
           status: DownloadTaskStatus.completed,
-          filePath: published.path ?? '',
+          // Android 10+ 走 MediaStore，只有 uri（content://）可用；
+          // ≤9 / 降级目录才有绝对路径。两者都存，播放时按形态分别处理。
+          filePath: published.path ?? published.uri ?? '',
           mediaUri: published.uri ?? '',
           displayName: DownloadRepository.displayNameOf(task),
           displayPath: published.displayPath,

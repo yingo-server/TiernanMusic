@@ -52,7 +52,13 @@ class Song {
   final Duration duration;
   final AudioQuality quality;
 
-  /// 本地已下载文件路径（存在时优先离线播放，不走网络解析）。
+  /// 本地已下载资源（存在时优先离线播放，不走网络解析）。
+  ///
+  /// 两种形态：
+  /// - 绝对路径（Android ≤9 / 降级到 App 私有目录）：`/storage/.../song.mp3`
+  /// - MediaStore Uri（Android 10+）：`content://media/external/audio/media/123`
+  ///
+  /// 播放器用 [Uri.parse] 统一处理：`file://` 与 `content://` 都支持。
   final String? localPath;
 
   Song copyWith({

@@ -253,14 +253,36 @@ class TiernanAudioHandler extends BaseAudioHandler
       _songs[index] = detailed;
       _emitMediaItem();
 
-      // 已下载歌曲：本地文件存在时直接离线播放，跳过网络解析（F4）
+      // 已下载歌曲：本地资源存在时直接离线播放，跳过网络解析（F4）
+      //
+      // 两种本地源：
+      // - 绝对路径（Android ≤9 / 降级目录）→ Uri.file
+      // - MediaStore Uri（Android 10+）→ 直接用 content://（just_audio 支持）
       final local = song.localPath;
-      if (local != null && local.isNotEmpty && File(local).existsSync()) {
-        _isPreview = false;
-        _previewController.add(false);
-        await _player.setAudioSource(
-          AudioSource.uri(Uri.file(local), tag: mediaItem.value),
-        );
+      if (local != null && local.isNotEmpty) {
+        final isContentUri = local.startsWith('content://');
+        final exists = isContentUri || File(local).existsSync();
+        if (exists) {
+          _isPreview = false;
+          _previewController.add(false);
+          await _player.setAudioSource(
+            AudioSource.uri(
+              isContentUri ? Uri.parse(local) : Uri.file(local),
+              tag: mediaItem.value,
+            ),
+          );
+        } else {
+          // 本地文件已被系统清理 → 回落到网络解析
+          final result = await _repository.resolveUrl(detailed);
+          if (token != _playToken) return;
+          _actualQualityController.add(result.quality);
+          _isPreview = result.isPreview;
+          _previewController.add(_isPreview);
+          _songs[index] = detailed.copyWith(quality: result.quality);
+          await _player.setAudioSource(
+            AudioSource.uri(Uri.parse(result.url), tag: mediaItem.value),
+          );
+        }
       } else {
         final result = await _repository.resolveUrl(detailed);
         if (token != _playToken) return;
