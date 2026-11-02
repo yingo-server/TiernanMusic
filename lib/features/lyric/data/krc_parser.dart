@@ -150,15 +150,55 @@ class KrcParser {
   }
 
   static List<String> _decodeLanguage(String value) {
-    // 官方 KRC 的 language 是 Base64(JSON 数组)，兼容纯文本行作为降级。
+    // KRC 的 language 行是 Base64(JSON)，但**结构在不同版本间不一致**，全部兼容：
+    //   A) {"languageList":[{"lyricContent":[[原文,译文],...]}]}   ← 官方新格式
+    //   B) [{"content":"译文"}, ...]                              ← 旧格式（顶层数组）
+    //   C) ["译文", ...]                                          ← 纯数组
+    // 解不开时降级为按行分割的纯文本，绝不让原歌词消失。
     try {
       final decoded = utf8.decode(base64.decode(value));
       final jsonValue = jsonDecode(decoded);
+
+      // A) languageList 结构
+      if (jsonValue is Map) {
+        final list = jsonValue['languageList'];
+        if (list is List) {
+          final out = <String>[];
+          for (final entry in list) {
+            if (entry is! Map) continue;
+            final content = entry['lyricContent'];
+            if (content is List) {
+              for (final pair in content) {
+                if (pair is List && pair.length >= 2) {
+                  out.add('${pair[1]}'); // [原文, 译文] → 取译文
+                } else if (pair is String) {
+                  out.add(pair);
+                }
+              }
+            } else if (content is String) {
+              out.add(content);
+            }
+          }
+          if (out.isNotEmpty) return out;
+        }
+        // Map 里的其它形态
+        final direct = jsonValue['content'] ?? jsonValue['text'];
+        if (direct is String && direct.isNotEmpty) return [direct];
+      }
+
+      // B) 顶层数组（元素是 Map 或 String）
       if (jsonValue is List) {
-        return jsonValue.map((item) {
-          if (item is Map) return '${item['content'] ?? item['text'] ?? ''}';
-          return '$item';
-        }).toList();
+        final out = <String>[];
+        for (final item in jsonValue) {
+          if (item is Map) {
+            out.add('${item['content'] ?? item['text'] ?? ''}');
+          } else if (item is List && item.length >= 2) {
+            out.add('${item[1]}');
+          } else {
+            out.add('$item');
+          }
+        }
+        if (out.isNotEmpty) return out;
       }
     } catch (_) {
       // 非标准或损坏的翻译块不应导致原歌词消失。
