@@ -105,7 +105,9 @@ class LyricRepository {
 
     // 批量翻译（40 行一批）
     final texts = lyric.lines.map((l) => l.text).toList();
+    // 只缓存**成功翻译**的行；失败批次不入缓存，下次还能重试
     final translations = <int, String>{};
+    final failed = <int>{};
     const batchSize = 40;
     for (var i = 0; i < texts.length; i += batchSize) {
       final batch = texts.sublist(
@@ -117,20 +119,24 @@ class LyricRepository {
           translations[i + j] = translated[j];
         }
       } catch (_) {
-        // 单批失败保留原文
+        // 单批失败：保留原文供显示，但**不写入缓存**（否则永久无翻译）
         for (var j = 0; j < batch.length; j++) {
-          translations[i + j] = batch[j];
+          failed.add(i + j);
         }
       }
     }
 
     for (var i = 0; i < lyric.lines.length; i++) {
-      lyric.lines[i].translation = translations[i];
+      lyric.lines[i].translation = failed.contains(i)
+          ? null
+          : (translations[i] ?? lyric.lines[i].text);
     }
 
-    // 持久缓存
-    await LyricTranslationCache.instance
-        .set(lyricId, targetLanguage, translations);
+    // 持久缓存（仅成功部分）
+    if (translations.isNotEmpty) {
+      await LyricTranslationCache.instance
+          .set(lyricId, targetLanguage, translations);
+    }
     return lyric;
   }
 }
