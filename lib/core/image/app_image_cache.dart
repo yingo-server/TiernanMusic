@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 
+import 'package:file/file.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 /// 全局图片缓存（串行化）。
