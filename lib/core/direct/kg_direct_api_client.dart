@@ -151,6 +151,12 @@ class KgDirectApiClient extends KugouApiClient {
         return _directOrFallback(() => _kmrAudioMv(q), kapi, '/kmr/audio/mv');
       case 'comment/music':
         return _directOrFallback(() => _commentMusic(q), kapi, '/comment/music');
+      case 'comment/playlist':
+        return _directOrFallback(
+            () => _commentPlaylist(q), kapi, '/comment/playlist');
+      case 'comment/album':
+        return _directOrFallback(
+            () => _commentAlbum(q), kapi, '/comment/album');
       case 'top/playlist':
         return _directOrFallback(() => _topPlaylist(q), kapi, '/top/playlist');
       case 'everyday/recommend':
@@ -410,6 +416,41 @@ class KgDirectApiClient extends KugouApiClient {
           if (q['hash'] != null) 'hash': q['hash'],
           if (q['hash'] == null && q['special_id'] != null)
             'childrenid': q['special_id'],
+        });
+  }
+
+  /// 歌单评论（module/comment_playlist.js）
+  /// POST /m.comment.service/v1/cmtlist，参数走 **query**
+  /// childrenid = global_collection_id，code = 歌单码，content_type=0，tag=5
+  Future<KgResponse> _commentPlaylist(Map<String, dynamic> q) {
+    return kg.request('/m.comment.service/v1/cmtlist',
+        method: 'POST',
+        params: {
+          'childrenid': '${q['id'] ?? q['childrenid'] ?? ''}',
+          'need_show_image': 1,
+          'p': q['page'] ?? 1,
+          'pagesize': q['pagesize'] ?? 30,
+          'show_classify': q['show_classify'] ?? 1,
+          'show_hotword_list': q['show_hotword_list'] ?? 1,
+          'code': 'ca53b96fe5a1d9c22d71c8f522ef7c4f',
+          'content_type': 0,
+          'tag': 5,
+        });
+  }
+
+  /// 专辑评论（module/comment_album.js）
+  /// POST /m.comment.service/v1/cmtlist，childrenid = album_id，code = 专辑码
+  Future<KgResponse> _commentAlbum(Map<String, dynamic> q) {
+    return kg.request('/m.comment.service/v1/cmtlist',
+        method: 'POST',
+        params: {
+          'childrenid': '${q['id'] ?? q['childrenid'] ?? ''}',
+          'need_show_image': 1,
+          'p': q['page'] ?? 1,
+          'pagesize': q['pagesize'] ?? 30,
+          'show_classify': q['show_classify'] ?? 1,
+          'show_hotword_list': q['show_hotword_list'] ?? 1,
+          'code': '94f1792ced1df89aa68a7939eaf2efca',
         });
   }
 
