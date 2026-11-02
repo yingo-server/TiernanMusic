@@ -9,6 +9,7 @@ import '../../../core/utils/toast.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../l10n/l10n.dart';
+import '../../auth/presentation/login_guard.dart';
 import '../../download/presentation/download_sheet.dart';
 import '../../player/data/models.dart';
 import '../../player/play_helper.dart';
@@ -336,6 +337,8 @@ class PlaylistDetailPage extends ConsumerWidget {
   /// 收藏歌单（非破坏性操作，无需确认：直接执行，成功后 toast）
   Future<void> _collectPlaylist(
       BuildContext context, WidgetRef ref, PlaylistDetail detail) async {
+    // 匿名态直接拦截，不发请求（否则服务端拒绝，用户只看到原始错误）
+    if (!ensureLoggedIn(context, ref, action: context.l10n.favorite)) return;
     try {
       await ref.read(_playlistRepoProvider).collectPlaylist(
             name: detail.name,

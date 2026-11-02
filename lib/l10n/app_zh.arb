@@ -510,5 +510,15 @@
   "downloadOpenFileFailed": "打开文件失败",
   "downloadFallbackHint": "文件位于应用私有目录（Android/data），部分文件管理器可能无法访问",
   "previewOnly": "试听",
-  "playlistUnavailableSoon": "该歌单暂不支持打开（缺少全局 ID）"
+  "playlistUnavailableSoon": "该歌单暂不支持打开（缺少全局 ID）",
+  "loginRequiredTitle": "需要登录",
+  "loginRequiredHint": "该功能需要登录酷狗账号后使用。",
+  "loginRequiredAction": "「{action}」需要登录后才能使用。",
+  "@loginRequiredAction": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  }
 }

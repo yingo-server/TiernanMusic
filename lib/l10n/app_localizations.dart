@@ -303,6 +303,9 @@ const _strings_de = <String, String>{
   'accountNeedRelogin': 'Dieses Konto muss sich erneut anmelden',
   'previewOnly': '试听',
   'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
+  'loginRequiredTitle': '需要登录',
+  'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
+  'loginRequiredAction': '「{action}」需要登录后才能使用。',
 };
 
 const _strings_en = <String, String>{
@@ -604,6 +607,9 @@ const _strings_en = <String, String>{
   'accountNeedRelogin': 'This account needs to sign in again',
   'previewOnly': '试听',
   'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
+  'loginRequiredTitle': '需要登录',
+  'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
+  'loginRequiredAction': '「{action}」需要登录后才能使用。',
 };
 
 const _strings_es = <String, String>{
@@ -905,6 +911,9 @@ const _strings_es = <String, String>{
   'accountNeedRelogin': 'Esta cuenta debe iniciar sesión de nuevo',
   'previewOnly': '试听',
   'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
+  'loginRequiredTitle': '需要登录',
+  'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
+  'loginRequiredAction': '「{action}」需要登录后才能使用。',
 };
 
 const _strings_fr = <String, String>{
@@ -1206,6 +1215,9 @@ const _strings_fr = <String, String>{
   'accountNeedRelogin': 'Ce compte doit se reconnecter',
   'previewOnly': '试听',
   'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
+  'loginRequiredTitle': '需要登录',
+  'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
+  'loginRequiredAction': '「{action}」需要登录后才能使用。',
 };
 
 const _strings_ja = <String, String>{
@@ -1507,6 +1519,9 @@ const _strings_ja = <String, String>{
   'accountNeedRelogin': 'このアカウントは再ログインが必要です',
   'previewOnly': '试听',
   'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
+  'loginRequiredTitle': '需要登录',
+  'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
+  'loginRequiredAction': '「{action}」需要登录后才能使用。',
 };
 
 const _strings_ko = <String, String>{
@@ -1808,6 +1823,9 @@ const _strings_ko = <String, String>{
   'accountNeedRelogin': '이 계정은 다시 로그인해야 합니다',
   'previewOnly': '试听',
   'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
+  'loginRequiredTitle': '需要登录',
+  'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
+  'loginRequiredAction': '「{action}」需要登录后才能使用。',
 };
 
 const _strings_pt = <String, String>{
@@ -2109,6 +2127,9 @@ const _strings_pt = <String, String>{
   'accountNeedRelogin': 'Esta conta precisa entrar novamente',
   'previewOnly': '试听',
   'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
+  'loginRequiredTitle': '需要登录',
+  'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
+  'loginRequiredAction': '「{action}」需要登录后才能使用。',
 };
 
 const _strings_ru = <String, String>{
@@ -2410,6 +2431,9 @@ const _strings_ru = <String, String>{
   'accountNeedRelogin': 'Этот аккаунт требует повторного входа',
   'previewOnly': '试听',
   'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
+  'loginRequiredTitle': '需要登录',
+  'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
+  'loginRequiredAction': '「{action}」需要登录后才能使用。',
 };
 
 const _strings_zh = <String, String>{
@@ -2711,6 +2735,9 @@ const _strings_zh = <String, String>{
   'accountNeedRelogin': '该账号需要重新登录',
   'previewOnly': '试听',
   'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
+  'loginRequiredTitle': '需要登录',
+  'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
+  'loginRequiredAction': '「{action}」需要登录后才能使用。',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -3012,6 +3039,9 @@ const _strings_zh_CN = <String, String>{
   'accountNeedRelogin': '该账号需要重新登录',
   'previewOnly': '试听',
   'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
+  'loginRequiredTitle': '需要登录',
+  'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
+  'loginRequiredAction': '「{action}」需要登录后才能使用。',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3313,6 +3343,9 @@ const _strings_zh_TW = <String, String>{
   'accountNeedRelogin': '該帳號需要重新登入',
   'previewOnly': '试听',
   'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
+  'loginRequiredTitle': '需要登录',
+  'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
+  'loginRequiredAction': '「{action}」需要登录后才能使用。',
 };
 
 const _template = _strings_zh_CN;
@@ -3670,6 +3703,9 @@ class AppLocalizations {
   String get accountNeedRelogin => _t('accountNeedRelogin');
   String get previewOnly => _t('previewOnly');
   String get playlistUnavailableSoon => _t('playlistUnavailableSoon');
+  String get loginRequiredTitle => _t('loginRequiredTitle');
+  String get loginRequiredHint => _t('loginRequiredHint');
+  String loginRequiredAction(String action) => _t('loginRequiredAction').r({'action': action});
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {
