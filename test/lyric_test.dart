@@ -26,15 +26,24 @@ void main() {
   });
 
   group('KrcParser', () {
-    test('解析逐字标签', () {
-      const krc = '[0,2048]<0,256,0>周<256,256,0>杰\n'
-          '[2048,1281]<0,256,0>词\n';
+    test('解析逐字标签（真实 KRC 行样本）', () {
+      // 来自真实 KRC：周杰伦 - 晴天 的前两行
+      const krc = '[0,2048]<0,256,0>周<256,256,0>杰<512,256,0>伦<768,256,0> '
+          '<1024,256,0>-<1280,256,0> <1536,256,0>晴<1792,256,0>天\n'
+          '[2048,1281]<0,256,0>词<256,256,0>：<512,256,0>周<768,257,0>杰'
+          '<1025,256,0>伦\n';
       final lyric = KrcParser.parse(krc);
       expect(lyric.lines.length, 2);
-      expect(lyric.lines.first.text, '周杰伦');
-      expect(lyric.lines.first.words.length, 2);
+      expect(lyric.lines.first.text, '周杰伦 - 晴天');
+      expect(lyric.lines.first.words.length, 8);
       expect(lyric.lines.first.startMs, 0);
       expect(lyric.lines.first.durationMs, 2048);
+      expect(lyric.lines[1].text, '词：周杰伦');
+      // 逐字时间应递增
+      final times = lyric.lines.first.words.map((w) => w.startMs).toList();
+      for (var i = 1; i < times.length; i++) {
+        expect(times[i], greaterThan(times[i - 1]));
+      }
     });
 
     test('无时间标签正文归并到上一行（不丢内容）', () {
