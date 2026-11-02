@@ -67,9 +67,22 @@ class KugouApiClient {
               : int.tryParse('$rawCode') ?? -1;
           final hasErrorCode = data.containsKey('error_code') ||
               data.containsKey('errcode');
-          // 部分接口使用 status=2，另有失败响应只给非零 errcode。
-          // 无论哪种形式都必须向上抛错，不能被仓库当成空列表。
-          if (status == 0 || status == 2 || (hasErrorCode && errorCode != 0)) {
+
+          // 酷狗各接口的成功语义不统一，实测口径：
+          //   /search、/comment 等：status=1
+          //   /search/lyric：status=200 + errcode=200（**成功**，不是错误）
+          //   /comment/music 等：status=1 + errcode=151/152（**警告但有数据**）
+          // 若把 1xx/2xx 一律当失败，歌词接口会永远抛 ApiException(200)，
+          // 表现为播放页无歌词并刷屏报错。
+          final okStatus = status == 1 || status == 200;
+          final failedStatus = status == 0 || status == 2;
+          // 警告码：0 表示无错；151/152/200/201 是上游"有结果但需提示"的码
+          const warningCodes = {0, 151, 152, 200, 201};
+          final isWarning = warningCodes.contains(errorCode) ||
+              (errorCode > 0 && errorCode < 300);
+
+          if (failedStatus ||
+              (hasErrorCode && errorCode != 0 && !(okStatus && isWarning))) {
             final defaultMessage = errorCode == 20028
                 ? '需要完成人机验证'
                 : status == 0 && errorCode == 0

@@ -500,5 +500,7 @@
       }
     }
   },
-  "accountNeedRelogin": "Ce compte doit se reconnecter"
+  "accountNeedRelogin": "Ce compte doit se reconnecter",
+  "previewOnly": "试听",
+  "playlistUnavailableSoon": "该歌单暂不支持打开（缺少全局 ID）"
 }

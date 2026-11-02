@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../../core/image/app_image_cache.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -285,7 +286,9 @@ class _AccountCard extends StatelessWidget {
               radius: 26,
               backgroundColor: scheme.primaryContainer,
               backgroundImage: (account?.avatar ?? '').isNotEmpty
-                  ? CachedNetworkImageProvider(account!.avatar)
+                  ? CachedNetworkImageProvider(
+        cacheManager: AppImageCache.instance,
+        account!.avatar)
                   : null,
               child: (account?.avatar ?? '').isEmpty
                   ? Icon(Icons.person_rounded, color: scheme.onPrimaryContainer)
@@ -396,6 +399,7 @@ class _MyPlaylistRow extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: CachedNetworkImage(
+                    cacheManager: AppImageCache.instance,
                         imageUrl: p.cover,
                         width: 120,
                         height: 120,

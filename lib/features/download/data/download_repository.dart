@@ -59,7 +59,8 @@ class DownloadRepository {
     if (url == null || url.isEmpty) {
       throw StateError(result.message.isEmpty ? '无可用播放地址' : result.message);
     }
-    return AppConfig.proxyMvUrl(url);
+    // 直连原始地址（kugou 子域已允许 cleartext），代理不支持 Range 会拖慢/截断下载
+    return url;
   }
 
   /// 解析 MV 播放地址（http → 代理 https）
@@ -133,7 +134,7 @@ class DownloadRepository {
       {void Function(int received, int total)? onProgress,
       CancelToken? cancelToken}) async {
     await downloadFile(
-      AppConfig.proxyMvUrl(url),
+      url,
       savePath,
       onProgress: onProgress,
       cancelToken: cancelToken,

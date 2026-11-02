@@ -1,0 +1,217 @@
+{
+  "_meta": {
+    "endpoint": "/search",
+    "method": "GET",
+    "base": "https://kapi.344977.xyz",
+    "params": {
+      "keywords": "流行",
+      "type": "special",
+      "page": 1,
+      "pagesize": 3
+    },
+    "state": "anon",
+    "http": 200,
+    "verdict": "ok",
+    "expect": "status=1 + data.lists[]（gid 字段）",
+    "captured_at": "2026-11-02T22:03:24"
+  },
+  "response": {
+    "status": 1,
+    "error_code": 0,
+    "error_msg": "",
+    "data": {
+      "pagesize": 3,
+      "page": 1,
+      "from": 0,
+      "size": 3,
+      "total": 480,
+      "correctiontype": 0,
+      "correctionforce": 0,
+      "correctiontip": "",
+      "theme": {
+        "valid": false
+      },
+      "lists": [
+        {
+          "grade": 0,
+          "quality": 0,
+          "quality_new": 0,
+          "version": 0,
+          "high_quality": 1,
+          "isugc": 1,
+          "ispublish": 1,
+          "isvip": 0,
+          "isperiodical": 0,
+          "nper": 0,
+          "iscustom": 0,
+          "specialid": 1852429,
+          "song_count": 592,
+          "specialname": "抖音歌曲最火的歌2026【持续更新】",
+          "contain": "",
+          "img": "http://c1.kgimg.com/custom/150/20251228/20251228145344492162.jpg",
+          "intro": "",
+          "grade_int": "0",
+          "grade_float": "0",
+          "publish_time": "2020-01-01 19:09:26",
+          "collect_count": "0",
+          "suid": "975665376",
+          "nickname": "枫",
+          "srid": "0",
+          "play_count": "1833859",
+          "total_play_count": "2008399575",
+          "gid": "collection_3_975665376_920_0",
+          "alg_path": "",
+          "tag_str": "#流行",
+          "is_mutual": 0,
+          "abtags": [],
+          "trans_param": {
+            "special_tag": 0,
+            "trans_flag": 1,
+            "iden": 8
+          }
+        },
+        {
+          "grade": 0,
+          "quality": 0,
+          "quality_new": 0,
+          "version": 0,
+          "high_quality": 1,
+          "isugc": 0,
+          "ispublish": 1,
+          "isvip": 0,
+          "isperiodical": 0,
+          "nper": 0,
+          "iscustom": 0,
+          "specialid": 9180602,
+          "song_count": 100,
+          "specialname": "2025年度华语流行TOP100｜全年顶流都在这",
+          "contain": "",
+          "img": "http://imge.kugou.com/soft/collection/150/20251222/20251222155107356165.jpg",
+          "intro": "",
+          "grade_int": "0",
+          "grade_float": "0",
+          "publish_time": "2025-12-15 19:27:17",
+          "collect_count": "0",
+          "suid": "1002717860",
+          "nickname": "酷狗音乐官方歌单",
+          "srid": "0",
+          "play_count": "5677",
+          "total_play_count": "4106043",
+          "gid": "collection_3_1002717860_518_0",
+          "alg_path": "",
+          "tag_str": "",
+          "is_mutual": 0,
+          "abtags": [],
+          "trans_param": {
+            "iden": 0,
+            "skin": {
+              "id": "469",
+              "resource_type": 1,
+              "module_type": "pag",
+              "background_info_type": "image",
+              "used_count": 0,
+              "preview": {
+                "dynamic_url": "",
+                "static_url": ""
+              },
+              "display_version_userids": {
+                "version": {
+                  "android": [
+                    {
+                      "b": 0,
+                      "e": 9999999
+                    }
+                  ],
+                  "ios": [
+                    {
+                      "b": 0,
+                      "e": 9999999
+                    }
+                  ]
+                },
+                "userids": []
+              },
+              "font_color": "white",
+              "thumbnail": "https://mobileservicebssdl.kugou.com/0d54708e5f2df62973a412704b095fbb.jpg",
+              "free_start": "",
+              "status_bar_height": 0,
+              "vip_type": 1,
+              "background_info": {
+                "image_info": {
+                  "image_url": "https://mobileservicebssdl.kugou.com/5a3fa3dab7546d18c8b14f5cbf72df3d.jpg"
+                },
+                "color_info": {
+                  "color": ""
+                },
+                "gradient_info": {
+                  "to_color": "",
+                  "from_color": "",
+                  "mask_color": "",
+                  "orientation": ""
+                },
+                "blur_info": {
+                  "mask_color": "",
+                  "radiu": null
+                }
+              },
+              "title": "2025年度华语流行盘点",
+              "module_theme_info": {
+                "images": [],
+                "layout": "1",
+                "num": 1,
+                "url": "https://mobileservicebssdl.kugou.com/24fb6914aec874dc45857dd4fb1fa08b.zip",
+                "md5": "24fb6914aec874dc45857dd4fb1fa08b",
+                "max_height_rate": "0.7",
+                "size": {
+                  "width": 1080,
+                  "height": 1250
+                }
+              },
+              "free_end": ""
+            },
+            "special_tag": 0,
+            "trans_flag": 1
+          }
+        },
+        {
+          "grade": 0,
+          "quality": 0,
+          "quality_new": 0,
+          "version": 0,
+          "high_quality": 0,
+          "isugc": 1,
+          "ispublish": 1,
+          "isvip": 0,
+          "isperiodical": 0,
+          "nper": 0,
+          "iscustom": 0,
+          "specialid": 4473449,
+          "song_count": 402,
+          "specialname": "00后流行歌曲（超好听）",
+          "contain": "",
+          "img": "http://c1.kgimg.com/custom/150/20211203/20211203160707250521.jpg",
+          "intro": "",
+          "grade_int": "0",
+          "grade_float": "0",
+          "publish_time": "2021-12-03 16:07:36",
+          "collect_count": "0",
+          "suid": "1785414495",
+          "nickname": "摘星",
+          "srid": "0",
+          "play_count": "47103",
+          "total_play_count": "29329666",
+          "gid": "collection_3_1785414495_564_0",
+          "alg_path": "",
+          "tag_str": "",
+          "is_mutual": 0,
+          "abtags": [],
+          "trans_param": {
+            "trans_flag": 1,
+            "iden": 0,
+            "special_tag": 0
+          }
+        }
+      ]
+    }
+  }
+}

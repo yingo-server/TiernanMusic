@@ -169,10 +169,27 @@ class PlayerRepository {
       }
       lastErrorCode = result.errorCode;
       lastMessage = result.message.isNotEmpty ? result.message : lastMessage;
-      // 20028（需验证）/ 权益不足（fail_process 非空，需购买/无版权）：
-      // 不再继续降级（继续也没权限），直接退出后由调用方决定回退或上抛
+      // 20028（需验证）直接退出
       if (result.errorCode == 20028) break;
-      if (result.failProcess.isNotEmpty) break;
+      // 权益不足（需购买/无版权）：先尝试官方 60 秒试听通道（IsFreePart=1），
+      // 拿到就按试听播放；拿不到再退出（不再为同一首歌打 5 次无效请求）。
+      if (result.failProcess.isNotEmpty) {
+        final preview = await play.songUrl(
+          hash: song.hash,
+          albumId: int.tryParse(song.albumId) ?? 0,
+          albumAudioId: int.tryParse(song.albumAudioId) ?? 0,
+          quality: q.value,
+          freePart: true,
+        );
+        if (preview.hasUrl) {
+          return PlayableResult(
+            url: _proxyHttp(preview.bestUrl!),
+            quality: _qualityFromBitrate(preview, q),
+            isPreview: true,
+          );
+        }
+        break;
+      }
     }
     if (lastErrorCode != null && lastErrorCode != 0) {
       throw ApiException(lastErrorCode, lastMessage.isEmpty ? '直连获取播放地址失败' : lastMessage);
@@ -234,6 +251,30 @@ class PlayerRepository {
       }
       lastError = ApiException(-1, '音质 ${q.value} 无可用播放地址');
     }
+    // 全部音质都拿不到：再试一次官方 60 秒试听（VIP/付费曲的兜底）
+    for (var i = startIndex; i < order.length; i++) {
+      final q = order[i];
+      try {
+        final res = await _api.get('/song/url', query: {
+          'hash': song.hash,
+          'album_id': song.albumId,
+          'album_audio_id': song.albumAudioId,
+          'quality': q.value,
+          'free_part': '1',
+        });
+        final data = res['data'] is Map ? res['data'] as Map : res;
+        final url = _firstUrl(data['url']) ?? _firstUrl(data['backupUrl']);
+        if (url != null) {
+          return PlayableResult(
+            url: _proxyHttp(url),
+            quality: _actualQuality(data, q),
+            isPreview: true,
+          );
+        }
+      } catch (_) {
+        // 继续尝试下一档
+      }
+    }
     throw lastError ?? ApiException(-1, '没有可尝试的播放音质');
   }
 
@@ -276,9 +317,14 @@ class PlayerRepository {
     return url;
   }
 
-  static String _proxyHttp(String url) => url.startsWith('http://')
-      ? 'https://proxy.344977.xyz/$url'
-      : url;
+  /// 播放地址**不再**走前缀代理。
+  ///
+  /// 原因（真机实测）：
+  /// - Android 的 network_security_config 已对 kugou.com（含子域）放行 cleartext；
+  /// - 酷狗 CDN 支持 Range 请求，直连才能边下边播、seek、断点续传；
+  /// - 走前缀代理时不转发 Range，表现为「只能播开头 / 卡住 / 播放态滞留」，
+  ///   且多一跳中转明显更慢。
+  static String _proxyHttp(String url) => url;
 
   static AudioQuality _actualQuality(Map data, AudioQuality requested) {
     final bitrate = _int(data['bitRate']);

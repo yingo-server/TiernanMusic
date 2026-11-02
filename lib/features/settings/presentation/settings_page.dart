@@ -205,7 +205,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   // ---------- 账号 ----------
   Widget _buildAccountSection() {
     // 登录态单一事实源：watch authStateProvider，退出/切换后即时刷新（F5）
-    final user = ref.watch(authStateProvider).value;
+    final user = ref.watch(authStateProvider).valueOrNull;
     final loggedIn = user != null && user.userid.isNotEmpty;
     // 昵称/头像优先用 authState，缺失时回退 Hive settings 盒（本地缓存资料）
     final avatar = (user?.avatar.isNotEmpty ?? false)
@@ -299,7 +299,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   /// 多账号切换（底部弹层选择账号）
   Future<void> _showSwitchAccountDialog() async {
-    final current = ref.read(authStateProvider).value;
+    final current = ref.read(authStateProvider).valueOrNull;
     final accounts = AccountManager.instance.accounts
         .where((a) => a.userid != current?.userid)
         .toList();

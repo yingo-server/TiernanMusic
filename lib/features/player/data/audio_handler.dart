@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../../core/api/kugou_api_client.dart';
+import '../../../core/audio/audio_service_bootstrap.dart';
 import 'models.dart';
 import 'player_repository.dart';
 
@@ -22,27 +23,46 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   /// 延迟创建：启动期不实例化 AudioPlayer / AudioSession，
   /// 避免任何平台通道异常导致首屏卡死。
+  ///
+  /// 关键：**必须先等 just_audio_background 初始化完成**再创建 AudioPlayer，
+  /// 否则会抛 LateInitializationError: _audioHandler（真机实测必现）。
   AudioPlayer? _playerInstance;
-  AudioPlayer get _player => _playerInstance ??= AudioPlayer();
+  AudioPlayer get _player => _playerInstance!;
 
   bool _initialized = false;
 
-  /// 首次播放前调用；重复调用安全。
-  void ensureInitialized() {
-    if (_initialized) return;
+  /// 音频引擎是否可用（just_audio_background 已就绪且 AudioPlayer 已创建）。
+  bool get isEngineReady => _initialized;
+
+  /// 等待音频后台服务就绪；失败返回 false（调用方给友好错误，不要播放）。
+  Future<bool> ensureEngineReady() async {
+    if (_initialized) return true;
+    final ok = await AudioServiceBootstrap.ensureReady();
+    if (!ok) return false;
+    if (_initialized) return true;
     _initialized = true;
-    final p = _player; // 触发创建
+    final p = _playerInstance = AudioPlayer();
     p.playbackEventStream.listen(_broadcastState);
     p.processingStateStream.listen((state) {
       if (state == ProcessingState.completed) skipToNext();
     });
     _configureSession();
+    return true;
   }
+
+  /// 兼容旧调用点：仅在引擎已就绪时返回 player，否则 null。
+  AudioPlayer? get _playerOrNull => _playerInstance;
 
   final List<Song> _songs = [];
   final _currentSongController = StreamController<Song?>.broadcast();
   final _actualQualityController =
       StreamController<AudioQuality?>.broadcast();
+
+  /// 是否 60 秒试听（VIP/付费曲走官方免费试听通道时置 true）
+  final _previewController = StreamController<bool>.broadcast();
+  Stream<bool> get previewStream => _previewController.stream;
+  bool _isPreview = false;
+  bool get isPreview => _isPreview;
 
   /// 人机验证事件（播放命中 20028 时发出）
   final _verificationController =
@@ -59,10 +79,8 @@ class TiernanAudioHandler extends BaseAudioHandler
   bool _loading = false;
   int _playToken = 0;
 
-  AudioPlayer get player {
-    ensureInitialized();
-    return _player;
-  }
+  /// 对外暴露的 player：未就绪时返回 null（UI 需判空）。
+  AudioPlayer? get player => _playerOrNull;
 
   /// 当前播放歌曲流。
   Stream<Song?> get currentSongStream => _currentSongController.stream;
@@ -84,7 +102,9 @@ class TiernanAudioHandler extends BaseAudioHandler
   }
 
   void _broadcastState(PlaybackEvent event) {
-    final playing = _player.playing;
+    final p = _playerOrNull;
+    if (p == null) return;
+    final playing = p.playing;
     playbackState.add(playbackState.value.copyWith(
       controls: [
         MediaControl.skipToPrevious,
@@ -103,16 +123,16 @@ class TiernanAudioHandler extends BaseAudioHandler
         ProcessingState.buffering: AudioProcessingState.buffering,
         ProcessingState.ready: AudioProcessingState.ready,
         ProcessingState.completed: AudioProcessingState.completed,
-      }[_player.processingState]!,
+      }[p.processingState]!,
       playing: playing,
-      updatePosition: _player.position,
-      bufferedPosition: _player.bufferedPosition,
-      speed: _player.speed,
+      updatePosition: p.position,
+      bufferedPosition: p.bufferedPosition,
+      speed: p.speed,
       queueIndex: _index,
-      shuffleMode: _player.shuffleModeEnabled
+      shuffleMode: p.shuffleModeEnabled
           ? AudioServiceShuffleMode.all
           : AudioServiceShuffleMode.none,
-      repeatMode: switch (_player.loopMode) {
+      repeatMode: switch (p.loopMode) {
         LoopMode.off => AudioServiceRepeatMode.none,
         LoopMode.all => AudioServiceRepeatMode.all,
         LoopMode.one => AudioServiceRepeatMode.one,
@@ -154,7 +174,7 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   /// 设置队列并从 [index] 开始播放。
   Future<void> playQueue(List<Song> songs, int index) async {
-    ensureInitialized();
+    if (!await ensureEngineReady()) return;
     // 新的播放请求会清掉 20028 挂起状态，避免验证后跳回旧歌
     _pendingSongIndex = null;
     _songs
@@ -166,7 +186,7 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   /// 播放单曲（追加到队列或替换当前位置）。
   Future<void> playSong(Song song) async {
-    ensureInitialized();
+    if (!await ensureEngineReady()) return;
     // 新的播放请求会清掉 20028 挂起状态，避免验证后跳回旧歌
     _pendingSongIndex = null;
     final existing = _songs.indexOf(song);
@@ -185,7 +205,14 @@ class TiernanAudioHandler extends BaseAudioHandler
   int _failureStreak = 0;
 
   Future<void> _playAt(int index) async {
-    ensureInitialized();
+    if (!await ensureEngineReady()) {
+      playbackState.add(playbackState.value.copyWith(
+        playing: false,
+        processingState: AudioProcessingState.error,
+        errorMessage: '音频服务启动失败，请重启应用',
+      ));
+      return;
+    }
     if (index < 0 || index >= _songs.length) return;
 
     if (_loading) {
@@ -211,6 +238,8 @@ class TiernanAudioHandler extends BaseAudioHandler
       // 已下载歌曲：本地文件存在时直接离线播放，跳过网络解析（F4）
       final local = song.localPath;
       if (local != null && local.isNotEmpty && File(local).existsSync()) {
+        _isPreview = false;
+        _previewController.add(false);
         await _player.setAudioSource(
           AudioSource.uri(Uri.file(local), tag: mediaItem.value),
         );
@@ -218,6 +247,8 @@ class TiernanAudioHandler extends BaseAudioHandler
         final result = await _repository.resolveUrl(detailed);
         if (token != _playToken) return;
         _actualQualityController.add(result.quality);
+        _isPreview = result.isPreview;
+        _previewController.add(_isPreview);
         _songs[index] = detailed.copyWith(quality: result.quality);
         await _player.setAudioSource(
           AudioSource.uri(
@@ -238,6 +269,7 @@ class TiernanAudioHandler extends BaseAudioHandler
         _pendingSongIndex = index;
         _verificationController.add(api);
         playbackState.add(playbackState.value.copyWith(
+          playing: false,
           processingState: AudioProcessingState.error,
           errorMessage: '需要人机验证',
         ));
@@ -245,9 +277,15 @@ class TiernanAudioHandler extends BaseAudioHandler
       }
       // 播放失败，尝试下一首（连续失败达到队列长度即停止，防止无限循环）
       playbackState.add(playbackState.value.copyWith(
+        playing: false,
         processingState: AudioProcessingState.error,
         errorMessage: '播放失败：$e',
       ));
+      // 失败后必须真正停住引擎，否则 player.playing 仍为 true，
+      // UI 的播放按钮会卡在"暂停"态（真机反馈：播放态滞留）
+      try {
+        await _playerOrNull?.pause();
+      } catch (_) {}
       _failureStreak++;
       final canAdvance =
           token == _playToken && _songs.length > 1 && _failureStreak < _songs.length;
@@ -287,34 +325,37 @@ class TiernanAudioHandler extends BaseAudioHandler
   }
 
   @override
-  Future<void> play() {
-    ensureInitialized();
-    return _player.play();
+  Future<void> play() async {
+    if (!await ensureEngineReady()) return;
+    await _player.play();
   }
 
   @override
-  Future<void> pause() {
-    ensureInitialized();
-    return _player.pause();
+  Future<void> pause() async {
+    final p = _playerOrNull;
+    if (p == null) return;
+    await p.pause();
   }
 
   @override
   Future<void> stop() async {
-    ensureInitialized();
-    await _player.stop();
+    final p = _playerOrNull;
+    if (p == null) return;
+    await p.stop();
     _currentSongController.add(null);
     await super.stop();
   }
 
   @override
-  Future<void> seek(Duration position) {
-    ensureInitialized();
-    return _player.seek(position);
+  Future<void> seek(Duration position) async {
+    final p = _playerOrNull;
+    if (p == null) return;
+    await p.seek(position);
   }
 
   @override
   Future<void> skipToNext() async {
-    ensureInitialized();
+    if (!await ensureEngineReady()) return;
     if (_songs.isEmpty) return;
     if (_player.shuffleModeEnabled) {
       final next = _randomIndex();
@@ -334,7 +375,7 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> skipToPrevious() async {
-    ensureInitialized();
+    if (!await ensureEngineReady()) return;
     if (_songs.isEmpty) return;
     // 播放超过 3 秒回到开头
     if (_player.position > const Duration(seconds: 3)) {
@@ -358,7 +399,7 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
-    ensureInitialized();
+    if (!await ensureEngineReady()) return;
     await _player.setShuffleModeEnabled(
         shuffleMode == AudioServiceShuffleMode.all);
     _broadcastState(_player.playbackEvent);
@@ -366,7 +407,7 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
-    ensureInitialized();
+    if (!await ensureEngineReady()) return;
     await _player.setLoopMode(switch (repeatMode) {
       AudioServiceRepeatMode.none => LoopMode.off,
       AudioServiceRepeatMode.all => LoopMode.all,
@@ -378,16 +419,16 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> onTaskRemoved() async {
-    ensureInitialized();
+    final p = _playerOrNull;
+    if (p == null) return;
     // 任务被移除时若未在播放则停止服务
-    if (!_player.playing) {
+    if (!p.playing) {
       await stop();
     }
   }
 
   @override
   Future<void> onNotificationDeleted() async {
-    ensureInitialized();
-    await _player.stop();
+    await _playerOrNull?.stop();
   }
 }

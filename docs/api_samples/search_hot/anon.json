@@ -1,0 +1,2498 @@
+{
+  "_meta": {
+    "endpoint": "/search/hot",
+    "method": "GET",
+    "base": "https://kapi.344977.xyz",
+    "params": {},
+    "state": "anon",
+    "http": 200,
+    "verdict": "ok",
+    "expect": "status=1 + data.list[]",
+    "captured_at": "2026-11-02T22:03:31"
+  },
+  "response": {
+    "status": 1,
+    "errcode": 0,
+    "data": {
+      "timestamp": 1793628210,
+      "list": [
+        {
+          "name": "热搜榜",
+          "keywords": [
+            {
+              "reason": "时过境迁",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "时过境迁",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "隔岸",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "隔岸",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "说好再见却再也不见",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "说好再见却再也不见",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "call your name",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "call your name",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "季候风",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "季候风",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "秋风慢慢吹",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "秋风慢慢吹",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "无奈的思绪",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "无奈的思绪",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "天龙八部之宿敌",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "天龙八部之宿敌",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "我好像在哪见过你",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "我好像在哪见过你",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "风吹过",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "风吹过",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "我不难过",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "我不难过",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "若你看见花开 杨小壮",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "若你看见花开 杨小壮",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "我好想你",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "我好想你",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "hong kong",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "hong kong",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "发如雪",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "发如雪",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "不死鸟",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "不死鸟",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "大漠长明",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "大漠长明",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "过渡期",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "过渡期",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "恋爱的条件",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "恋爱的条件",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "海屿你",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "海屿你",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "如果人生还能重来一场",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "如果人生还能重来一场",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "为你而来",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "为你而来",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "若遗憾真能被时间冲淡",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "若遗憾真能被时间冲淡",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "泪海",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "泪海",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "趁早",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "趁早",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "谁",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "谁",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "甲乙丙丁",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "甲乙丙丁",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "牡丹亭",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "牡丹亭",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "you are all i need",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "you are all i need",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "我听人说思念像风一样",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "我听人说思念像风一样",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            }
+          ]
+        },
+        {
+          "name": "飙升榜",
+          "keywords": [
+            {
+              "reason": "美人吟",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "美人吟",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "明年依然好时节",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "明年依然好时节",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "我的情深你若懂",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "我的情深你若懂",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "错的人",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "错的人",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "最后是我开了口",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "最后是我开了口",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "爱的传说",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "爱的传说",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "只欠秋天",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "只欠秋天",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "一晃就老了",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "一晃就老了",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "飞天",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "飞天",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "希望",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "希望",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "今生最爱",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "今生最爱",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "연애의 조건",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "연애의 조건",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "天天看到你",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "天天看到你",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "幸福就是",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "幸福就是",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "天真的橡皮",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "天真的橡皮",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "三年的赌注",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "三年的赌注",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "天龙八部之宿敌",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "天龙八部之宿敌",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "时间都去哪儿了",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "时间都去哪儿了",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "逆流成河",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "逆流成河",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "falling u",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "falling u",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "逃不开躲不过",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "逃不开躲不过",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "sugar",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "sugar",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "空空",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "空空",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "planet",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "planet",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "怎么爱都爱不够",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "怎么爱都爱不够",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "生日快乐歌",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "生日快乐歌",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "黄玫瑰",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "黄玫瑰",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "i hate myself for loving you",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "i hate myself for loving you",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "爱情买卖",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "爱情买卖",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "dan dan 心魅かれてく",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "dan dan 心魅かれてく",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            }
+          ]
+        },
+        {
+          "name": "DJ榜",
+          "keywords": [
+            {
+              "reason": "琵琶曲 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "琵琶曲 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "今生最爱 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "今生最爱 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "海阔天空 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "海阔天空 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "八千里路明月照 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "八千里路明月照 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "pa pa pa dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "pa pa pa dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "无奈的思绪 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "无奈的思绪 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "爱你爱到无路可退 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "爱你爱到无路可退 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "朋友的酒 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "朋友的酒 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "闭上眼你还在身边 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "闭上眼你还在身边 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "大漠长明 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "大漠长明 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "像梦一样 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "像梦一样 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "真英雄 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "真英雄 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "婆婆丁 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "婆婆丁 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "真的用了心 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "真的用了心 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "香水有毒 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "香水有毒 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "梅花三弄 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "梅花三弄 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "牡丹亭 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "牡丹亭 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "夜色 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "夜色 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "苦乐年华 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "苦乐年华 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "走了你还有谁 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "走了你还有谁 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "山风山风等等我 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "山风山风等等我 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "五百年桑田沧海 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "五百年桑田沧海 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "美丽的神话 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "美丽的神话 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "江南夜色 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "江南夜色 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "酒干倘卖无 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "酒干倘卖无 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "青衣 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "青衣 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "心上人出嫁 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "心上人出嫁 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "野心也曾大过天 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "野心也曾大过天 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "梦的翅膀受了伤 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "梦的翅膀受了伤 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "我好像在哪见过你 dj",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "我好像在哪见过你 dj",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            }
+          ]
+        },
+        {
+          "name": "外语热搜",
+          "keywords": [
+            {
+              "reason": "cry for me",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "cry for me",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "pa pa pa",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "pa pa pa",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "whatever happens",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "whatever happens",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "cherry candy",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "cherry candy",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "lonely",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "lonely",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "self doubt",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "self doubt",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "neon",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "neon",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "the way i still love you",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "the way i still love you",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "time machine",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "time machine",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "take me hand",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "take me hand",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "moonride",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "moonride",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "baby",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "baby",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "die for you",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "die for you",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "angel",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "angel",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "7 years",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "7 years",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "just give me a reason",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "just give me a reason",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "teeth",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "teeth",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "insomnia",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "insomnia",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "onelove",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "onelove",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "call of silence",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "call of silence",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "counting stars",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "counting stars",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "until you",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "until you",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "normal no more",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "normal no more",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "duvet",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "duvet",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "stay with me",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "stay with me",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "call you tonight",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "call you tonight",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "shape of you",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "shape of you",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "we don't talk anymore",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "we don't talk anymore",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "alive",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "alive",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "wonderful u",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "wonderful u",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            }
+          ]
+        },
+        {
+          "name": "抖音榜",
+          "keywords": [
+            {
+              "reason": "人生路漫漫",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "人生路漫漫",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "冷夜",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "冷夜",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "西厢寻他",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "西厢寻他",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "我听见了，你的痛苦成立",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "我听见了，你的痛苦成立",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "左转灯",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "左转灯",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "读心术",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "读心术",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "零距离的思念",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "零距离的思念",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "star crossing night",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "star crossing night",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "99",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "99",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "怎么看你一眼就心动",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "怎么看你一眼就心动",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "fala sério",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "fala sério",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "孤独person",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "孤独person",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "就骗我一次",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "就骗我一次",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "此刻最好的都在身边",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "此刻最好的都在身边",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "何必相逢",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "何必相逢",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "踏遍青山",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "踏遍青山",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "御姐进行曲",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "御姐进行曲",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "你是我的宝贝",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "你是我的宝贝",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "顺其自然",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "顺其自然",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "你知道天空有多蓝",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "你知道天空有多蓝",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "瓦莱塔的风",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "瓦莱塔的风",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "lucky day by day",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "lucky day by day",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "proof",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "proof",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "天下第一好",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "天下第一好",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "stay with me",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "stay with me",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "小小的你 慢慢长大",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "小小的你 慢慢长大",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "目光归我",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "目光归我",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "阿拉拉姆",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "阿拉拉姆",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "we never",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "we never",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "她",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "她",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            }
+          ]
+        },
+        {
+          "name": "国风热搜",
+          "keywords": [
+            {
+              "reason": "我本该命途齐天",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "我本该命途齐天",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "茶汤",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "茶汤",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "青丝",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "青丝",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "金玉良缘",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "金玉良缘",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "三生三世",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "三生三世",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "琵琶行",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "琵琶行",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "燕无歇",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "燕无歇",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "烟花易冷",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "烟花易冷",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "荒",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "荒",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "落了白",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "落了白",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "无情画",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "无情画",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "牵丝戏",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "牵丝戏",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "知我",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "知我",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "百战成诗",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "百战成诗",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "一笑江湖",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "一笑江湖",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "红尘客栈",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "红尘客栈",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "游京",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "游京",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "青花瓷",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "青花瓷",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "如果当时",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "如果当时",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "相思",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "相思",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "半壶纱",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "半壶纱",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "天若有情",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "天若有情",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "孤城",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "孤城",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "卜卦",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "卜卦",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "年轮",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "年轮",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "江南",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "江南",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "天下",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "天下",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "九万字",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "九万字",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "冷夜",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "冷夜",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "晚枫歌",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "晚枫歌",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            }
+          ]
+        },
+        {
+          "name": "情歌热搜",
+          "keywords": [
+            {
+              "reason": "雨爱",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "雨爱",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "永不失联的爱",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "永不失联的爱",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "慢慢离开你",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "慢慢离开你",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "黄昏",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "黄昏",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "茶汤",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "茶汤",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "只要有你",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "只要有你",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "该死的温柔",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "该死的温柔",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "情歌",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "情歌",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "青丝",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "青丝",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "金玉良缘",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "金玉良缘",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "樱花草",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "樱花草",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "今生最爱",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "今生最爱",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "幻听",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "幻听",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "空心",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "空心",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "他真的对你好吗",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "他真的对你好吗",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "最美的期待",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "最美的期待",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "红色高跟鞋",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "红色高跟鞋",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "把回忆拼好给你",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "把回忆拼好给你",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "爱情买卖",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "爱情买卖",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "错的人",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "错的人",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "等你的季节",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "等你的季节",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "我走后",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "我走后",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "罗生门",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "罗生门",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "不懂事",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "不懂事",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "三生三世",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "三生三世",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "琵琶行",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "琵琶行",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "燕无歇",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "燕无歇",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "我的歌声里",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "我的歌声里",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "情人",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "情人",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "遗失的心跳",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "遗失的心跳",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            }
+          ]
+        },
+        {
+          "name": "纯音乐热搜",
+          "keywords": [
+            {
+              "reason": "the truth that you leave",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "the truth that you leave",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "瞬间的永恒",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "瞬间的永恒",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "windy hill",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "windy hill",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "夜间巡航",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "夜间巡航",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "merry christmas mr.lawrence",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "merry christmas mr.lawrence",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "flower dance",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "flower dance",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "夜、萤火虫和你",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "夜、萤火虫和你",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "古筝禅境 疏肝养身曲",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "古筝禅境 疏肝养身曲",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "夜空的寂静",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "夜空的寂静",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "爱乐之城",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "爱乐之城",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "囚笼",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "囚笼",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "我怀疑大禹治水",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "我怀疑大禹治水",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "城南花已开",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "城南花已开",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "黄昏尾奏solo",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "黄昏尾奏solo",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "回家",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "回家",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "诀别书",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "诀别书",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "秋的思念",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "秋的思念",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "感官过载",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "感官过载",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "肝木之音 疏肝理气",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "肝木之音 疏肝理气",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "m3",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "m3",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "【free】lucky",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "【free】lucky",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "time to love",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "time to love",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "葬花",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "葬花",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "高山流水",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "高山流水",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "五行养生音乐 调心疏肝 滋养脾胃",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "五行养生音乐 调心疏肝 滋养脾胃",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "五音疗愈 疏肝理气",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "五音疗愈 疏肝理气",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "追逐水星",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "追逐水星",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "琵琶语",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "琵琶语",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "五行静心 养生曲",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "五行静心 养生曲",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "大自然的雨声 失重催眠曲",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "大自然的雨声 失重催眠曲",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            }
+          ]
+        },
+        {
+          "name": "综艺热搜",
+          "keywords": [
+            {
+              "reason": "情歌 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "情歌 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "想见你想见你想见你 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "想见你想见你想见你 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "在梅边 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "在梅边 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "慢慢 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "慢慢 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "弥渡山歌 听，谁在唱歌第二季",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "弥渡山歌 听，谁在唱歌第二季",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "Dear John 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "Dear John 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "红玫瑰 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "红玫瑰 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "当爱已成往事 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "当爱已成往事 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "bad guy 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "bad guy 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "父亲写的散文诗 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "父亲写的散文诗 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "Alright 鹭卓、陈卓璇",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "Alright 鹭卓、陈卓璇",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "友情期限 许明明",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "友情期限 许明明",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "爱河 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "爱河 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "抱抱你自己 吴克群、毕夏",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "抱抱你自己 吴克群、毕夏",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "你的姑娘 隔壁老樊_樊凯杰",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "你的姑娘 隔壁老樊_樊凯杰",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "一生所爱 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "一生所爱 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "她 周震南",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "她 周震南",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "思念像一场重感冒 余佳运",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "思念像一场重感冒 余佳运",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "逃离人海 Over Shine 听，谁在唱歌第二季",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "逃离人海 Over Shine 听，谁在唱歌第二季",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "月光闪 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "月光闪 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "别在伤口撒盐 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "别在伤口撒盐 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "祝你自由 陆虎",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "祝你自由 陆虎",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "Believer 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "Believer 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "你在哪呢，我的爱人 听，谁在唱歌第二季",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "你在哪呢，我的爱人 听，谁在唱歌第二季",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "诀爱 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "诀爱 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "消散对白 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "消散对白 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "没退路 听，谁在唱歌第二季",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "没退路 听，谁在唱歌第二季",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "狂爱 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "狂爱 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "4U 披荆斩棘2026",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "4U 披荆斩棘2026",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            },
+            {
+              "reason": "Vanilla 张碧晨",
+              "json_url": "",
+              "jumpurl": "",
+              "keyword": "Vanilla 张碧晨",
+              "is_cover_word": 0,
+              "type": 1,
+              "icon": 0
+            }
+          ]
+        }
+      ]
+    },
+    "error": ""
+  }
+}

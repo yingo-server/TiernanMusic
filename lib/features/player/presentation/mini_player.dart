@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../../../core/image/app_image_cache.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,10 +25,10 @@ class MiniPlayer extends ConsumerStatefulWidget {
 class _MiniPlayerState extends ConsumerState<MiniPlayer> {
   @override
   Widget build(BuildContext context) {
-    final song = ref.watch(currentSongProvider).value;
+    final song = ref.watch(currentSongProvider).valueOrNull;
     if (song == null) return const SizedBox.shrink();
 
-    final isPlaying = ref.watch(isPlayingProvider).value ?? false;
+    final isPlaying = ref.watch(isPlayingProvider).valueOrNull ?? false;
     final controller = ref.read(playerControllerProvider);
     final theme = Theme.of(context);
 
@@ -68,6 +69,7 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
                                 height: 44,
                                 child: song.cover.isNotEmpty
                                     ? CachedNetworkImage(
+                    cacheManager: AppImageCache.instance,
                                         imageUrl: song.cover,
                                         fit: BoxFit.cover,
                                         fadeInDuration:
@@ -149,8 +151,8 @@ class _MiniProgressBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final position = ref.watch(positionProvider).value ?? Duration.zero;
-    final total = ref.watch(durationProvider).value ?? Duration.zero;
+    final position = ref.watch(positionProvider).valueOrNull ?? Duration.zero;
+    final total = ref.watch(durationProvider).valueOrNull ?? Duration.zero;
     final progress = total.inMilliseconds > 0
         ? (position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0)
         : 0.0;

@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import '../image/app_image_cache.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
@@ -80,6 +81,7 @@ class SongTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: cover != null && cover!.isNotEmpty
             ? CachedNetworkImage(
+                    cacheManager: AppImageCache.instance,
                 imageUrl: cover!,
                 width: 52,
                 height: 52,

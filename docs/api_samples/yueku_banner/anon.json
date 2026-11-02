@@ -1,0 +1,16 @@
+{
+  "_meta": {
+    "endpoint": "/yueku/banner",
+    "method": "GET",
+    "base": "https://kapi.344977.xyz",
+    "params": {},
+    "state": "anon",
+    "http": 0,
+    "verdict": "http_error",
+    "expect": "实测 error_code=31136（上游无数据）",
+    "captured_at": "2026-11-02T22:04:15"
+  },
+  "response": {
+    "_http_error": "HTTP Error 502: Bad Gateway"
+  }
+}

@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/image/app_image_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -49,7 +50,7 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
   bool _hasMore = true;
   String? _error;
 
-  bool get _isLoggedIn => ref.read(authStateProvider).value != null;
+  bool get _isLoggedIn => ref.read(authStateProvider).valueOrNull != null;
 
   @override
   void initState() {
@@ -234,6 +235,8 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
                                 radius: 16,
                                 backgroundImage: c.avatar.isNotEmpty
                                     ? CachedNetworkImageProvider(
+        cacheManager: AppImageCache.instance,
+        
                                         c.avatar,
                                         // 头像显示尺寸约 32px × dpr
                                         maxWidth: (32 *

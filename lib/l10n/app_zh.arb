@@ -508,5 +508,7 @@
   },
   "accountNeedRelogin": "该账号需要重新登录",
   "downloadOpenFileFailed": "打开文件失败",
-  "downloadFallbackHint": "文件位于应用私有目录（Android/data），部分文件管理器可能无法访问"
+  "downloadFallbackHint": "文件位于应用私有目录（Android/data），部分文件管理器可能无法访问",
+  "previewOnly": "试听",
+  "playlistUnavailableSoon": "该歌单暂不支持打开（缺少全局 ID）"
 }

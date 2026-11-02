@@ -87,7 +87,11 @@ class MvRepository {
       url = backup;
     }
     if (url.isEmpty) throw ApiException(-1, 'MV 暂无播放地址');
-    return AppConfig.proxyMvUrl(url);
+    // 优先直连原始 HTTP 地址：
+    // - network_security_config 已对 kugou.com（含子域）放行 cleartext；
+    // - 酷狗 CDN 支持 Range，ExoPlayer 才能边下边播 / 拖动；
+    // - 走前缀代理时，代理不转发 Range 请求，实测表现就是「只能播开头」。
+    return url;
   }
 
   /// 32 位十六进制 hash（视频 hash 均为大写十六进制）。

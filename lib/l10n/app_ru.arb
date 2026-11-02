@@ -500,5 +500,7 @@
       }
     }
   },
-  "accountNeedRelogin": "Этот аккаунт требует повторного входа"
+  "accountNeedRelogin": "Этот аккаунт требует повторного входа",
+  "previewOnly": "试听",
+  "playlistUnavailableSoon": "该歌单暂不支持打开（缺少全局 ID）"
 }

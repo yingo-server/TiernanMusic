@@ -1,0 +1,202 @@
+{
+  "_meta": {
+    "endpoint": "/search",
+    "method": "GET",
+    "base": "https://kapi.344977.xyz",
+    "params": {
+      "keywords": "晴天",
+      "type": "mv",
+      "page": 1,
+      "pagesize": 3
+    },
+    "state": "anon",
+    "http": 200,
+    "verdict": "ok",
+    "expect": "status=1 + data.lists[]（MvHash 才是视频 hash）",
+    "captured_at": "2026-11-02T22:03:28"
+  },
+  "response": {
+    "status": 1,
+    "error_code": 0,
+    "error_msg": "",
+    "data": {
+      "pagesize": 3,
+      "page": 1,
+      "from": 0,
+      "size": 3,
+      "total": 500,
+      "correctiontype": 0,
+      "correctionforce": 0,
+      "correctiontip": "",
+      "lists": [
+        {
+          "MvID": 117613,
+          "AudioID": "20505418",
+          "FileName": "周杰伦 - 晴天",
+          "SingerName": "周杰伦",
+          "MvName": "晴天",
+          "Auxiliary": "",
+          "OstAuxiliary": "",
+          "AlbumAux": "",
+          "Remark": "",
+          "IpRemark": "",
+          "Description": "",
+          "MvHot": 6208,
+          "PublishAge": 255,
+          "MvHash": "3B1F32C55F9774501794213C09168A18",
+          "MvTrac": 3,
+          "MvType": 2,
+          "FileHash": "B3A52A7A958BF0AED0EBFBA2E9A818B7",
+          "FileSize": 4317292,
+          "ExtName": "mp3",
+          "Duration": 317,
+          "Bitrate": 128,
+          "AudioCdn": 100,
+          "Privilege": 10,
+          "MixSongID": "32100650",
+          "PublishDate": "2003-07-31 00:00:00",
+          "Pic": "20200620174316264397.jpg",
+          "ErectPic": "20231208231353568089.jpg",
+          "IsNew": 0,
+          "Scid": 20505418,
+          "MvHashMark": "1080P",
+          "IsOfficial": 1,
+          "Isshort": 0,
+          "Username": "",
+          "Userid": 0,
+          "HistoryHeat": 105385206,
+          "IsUgc": 0,
+          "ThumbGif": "http://musiclibpicbssdl.cloud.kugou.com/f43cf12730b40efa7d11b3a900811b60.gif",
+          "ThumbMp4": "http://musiclibpicbssdl.cloud.kugou.com/112c561b42c268dbc5fa50b311d734f7.mp4",
+          "goods_info": {
+            "pay_type": 0
+          },
+          "AlgPath": "",
+          "SingerID": [
+            3520
+          ],
+          "AlbumID": "966846",
+          "Singers": [
+            {
+              "name": "周杰伦",
+              "id": 3520
+            }
+          ]
+        },
+        {
+          "MvID": 2622295,
+          "AudioID": "62284096",
+          "FileName": "周杰伦 - 晴天 - 周杰伦地表最强世界巡回演唱会",
+          "SingerName": "周杰伦",
+          "MvName": "晴天",
+          "Auxiliary": "",
+          "OstAuxiliary": "",
+          "AlbumAux": "",
+          "Remark": "周杰伦地表最强世界巡回演唱会",
+          "IpRemark": "",
+          "Description": "弹唱浪漫的少年情歌",
+          "MvHot": 550,
+          "PublishAge": 255,
+          "MvHash": "0B1BBF415E0D9D16E6019C1A9121932F",
+          "MvTrac": 3,
+          "MvType": 2,
+          "FileHash": "76096C059B26EBAA16B482F921A07BE0",
+          "FileSize": 3997575,
+          "ExtName": "mp3",
+          "Duration": 247,
+          "Bitrate": 128,
+          "AudioCdn": 100,
+          "Privilege": 10,
+          "MixSongID": "228372093",
+          "PublishDate": "2020-05-23 20:00:00",
+          "Pic": "20200522185823329213.jpg",
+          "ErectPic": "20231208233144977992.jpg",
+          "IsNew": 0,
+          "Scid": 62284096,
+          "MvHashMark": "1080P",
+          "IsOfficial": 0,
+          "Isshort": 0,
+          "Username": "",
+          "Userid": 0,
+          "HistoryHeat": 3917861,
+          "IsUgc": 0,
+          "ThumbGif": "http://musiclibpicbssdl.cloud.kugou.com/c023caa4319220c92eb36754d6781e59.gif",
+          "ThumbMp4": "http://musiclibpicbssdl.cloud.kugou.com/2a7ca9df445f3da8f972cfd51194668d.mp4",
+          "goods_info": {
+            "pay_type": 0
+          },
+          "AlgPath": "",
+          "SingerID": [
+            3520
+          ],
+          "AlbumID": "32414842",
+          "Singers": [
+            {
+              "name": "周杰伦",
+              "id": 3520
+            }
+          ]
+        },
+        {
+          "MvID": 3644079,
+          "AudioID": "244283",
+          "FileName": "周杰伦 - 晴天 - 2004年无与伦比演唱会",
+          "SingerName": "周杰伦",
+          "MvName": "晴天",
+          "Auxiliary": "",
+          "OstAuxiliary": "",
+          "AlbumAux": "",
+          "Remark": "2004年无与伦比演唱会",
+          "IpRemark": "",
+          "Description": "",
+          "MvHot": 240,
+          "PublishAge": 255,
+          "MvHash": "D3D363BFC577255F8712A48EEB6BDA6D",
+          "MvTrac": 3,
+          "MvType": 2,
+          "FileHash": "EB2CD30DD7258994F008E6DBDCE79024",
+          "FileSize": 4790884,
+          "ExtName": "mp3",
+          "Duration": 301,
+          "Bitrate": 128,
+          "AudioCdn": 100,
+          "Privilege": 10,
+          "MixSongID": "68426443",
+          "PublishDate": "2005-01-20 00:00:00",
+          "Pic": "20201222141732872999.jpg",
+          "ErectPic": "20231208235825452221.jpg",
+          "IsNew": 0,
+          "Scid": 244283,
+          "MvHashMark": "超清",
+          "IsOfficial": 0,
+          "Isshort": 0,
+          "Username": "",
+          "Userid": 0,
+          "HistoryHeat": 1460654,
+          "IsUgc": 0,
+          "ThumbGif": "http://musiclibpicbssdl.cloud.kugou.com/23e3bb5115ef80e98df10f789b3d66ba.gif",
+          "ThumbMp4": "http://musiclibpicbssdl.cloud.kugou.com/ffec91236ebb1bc11b1649fd1e9d95e6.mp4",
+          "goods_info": {
+            "pay_type": 0
+          },
+          "AlgPath": "",
+          "SingerID": [
+            3520
+          ],
+          "AlbumID": "2996504",
+          "Singers": [
+            {
+              "name": "周杰伦",
+              "id": 3520
+            }
+          ]
+        }
+      ],
+      "aggregation": [],
+      "kuwalists": [],
+      "kuwatotal": 0,
+      "istag": 0,
+      "istagresult": 0
+    }
+  }
+}

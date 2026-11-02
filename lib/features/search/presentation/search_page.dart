@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../../core/image/app_image_cache.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -606,6 +607,7 @@ class _PlaylistResultTab extends ConsumerWidget {
                         onTap: () =>
                             context.push('/playlist/${p.globalCollectionId}'),
                         child: CachedNetworkImage(
+                    cacheManager: AppImageCache.instance,
                           imageUrl: p.cover,
                           width: double.infinity,
                           fit: BoxFit.cover,
@@ -669,6 +671,7 @@ class _GenericResultTab extends ConsumerWidget {
               leading: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: CachedNetworkImage(
+                    cacheManager: AppImageCache.instance,
                   imageUrl: s.cover,
                   width: 48,
                   height: 48,

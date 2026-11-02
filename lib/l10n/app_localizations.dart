@@ -301,6 +301,8 @@ const _strings_de = <String, String>{
   'switchAccountSuccess': 'Konto gewechselt',
   'switchAccountFailed': 'Kontowechsel fehlgeschlagen: {error}',
   'accountNeedRelogin': 'Dieses Konto muss sich erneut anmelden',
+  'previewOnly': '试听',
+  'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
 };
 
 const _strings_en = <String, String>{
@@ -600,6 +602,8 @@ const _strings_en = <String, String>{
   'switchAccountSuccess': 'Account switched',
   'switchAccountFailed': 'Account switch failed: {error}',
   'accountNeedRelogin': 'This account needs to sign in again',
+  'previewOnly': '试听',
+  'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
 };
 
 const _strings_es = <String, String>{
@@ -899,6 +903,8 @@ const _strings_es = <String, String>{
   'switchAccountSuccess': 'Cuenta cambiada',
   'switchAccountFailed': 'Error al cambiar de cuenta: {error}',
   'accountNeedRelogin': 'Esta cuenta debe iniciar sesión de nuevo',
+  'previewOnly': '试听',
+  'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
 };
 
 const _strings_fr = <String, String>{
@@ -1198,6 +1204,8 @@ const _strings_fr = <String, String>{
   'switchAccountSuccess': 'Compte changé',
   'switchAccountFailed': 'Échec du changement de compte : {error}',
   'accountNeedRelogin': 'Ce compte doit se reconnecter',
+  'previewOnly': '试听',
+  'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
 };
 
 const _strings_ja = <String, String>{
@@ -1497,6 +1505,8 @@ const _strings_ja = <String, String>{
   'switchAccountSuccess': 'アカウントを切り替えました',
   'switchAccountFailed': 'アカウントの切り替えに失敗しました：{error}',
   'accountNeedRelogin': 'このアカウントは再ログインが必要です',
+  'previewOnly': '试听',
+  'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
 };
 
 const _strings_ko = <String, String>{
@@ -1796,6 +1806,8 @@ const _strings_ko = <String, String>{
   'switchAccountSuccess': '계정이 전환되었습니다',
   'switchAccountFailed': '계정 전환 실패: {error}',
   'accountNeedRelogin': '이 계정은 다시 로그인해야 합니다',
+  'previewOnly': '试听',
+  'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
 };
 
 const _strings_pt = <String, String>{
@@ -2095,6 +2107,8 @@ const _strings_pt = <String, String>{
   'switchAccountSuccess': 'Conta alterada',
   'switchAccountFailed': 'Falha ao alternar conta: {error}',
   'accountNeedRelogin': 'Esta conta precisa entrar novamente',
+  'previewOnly': '试听',
+  'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
 };
 
 const _strings_ru = <String, String>{
@@ -2394,6 +2408,8 @@ const _strings_ru = <String, String>{
   'switchAccountSuccess': 'Аккаунт переключён',
   'switchAccountFailed': 'Не удалось переключить аккаунт: {error}',
   'accountNeedRelogin': 'Этот аккаунт требует повторного входа',
+  'previewOnly': '试听',
+  'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
 };
 
 const _strings_zh = <String, String>{
@@ -2693,6 +2709,8 @@ const _strings_zh = <String, String>{
   'switchAccountSuccess': '已切换账号',
   'switchAccountFailed': '切换账号失败：{error}',
   'accountNeedRelogin': '该账号需要重新登录',
+  'previewOnly': '试听',
+  'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -2992,6 +3010,8 @@ const _strings_zh_CN = <String, String>{
   'switchAccountSuccess': '已切换账号',
   'switchAccountFailed': '切换账号失败：{error}',
   'accountNeedRelogin': '该账号需要重新登录',
+  'previewOnly': '试听',
+  'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3291,6 +3311,8 @@ const _strings_zh_TW = <String, String>{
   'switchAccountSuccess': '已切換帳號',
   'switchAccountFailed': '切換帳號失敗：{error}',
   'accountNeedRelogin': '該帳號需要重新登入',
+  'previewOnly': '试听',
+  'playlistUnavailableSoon': '该歌单暂不支持打开（缺少全局 ID）',
 };
 
 const _template = _strings_zh_CN;
@@ -3646,6 +3668,8 @@ class AppLocalizations {
   String get switchAccountSuccess => _t('switchAccountSuccess');
   String switchAccountFailed(String error) => _t('switchAccountFailed').r({'error': error});
   String get accountNeedRelogin => _t('accountNeedRelogin');
+  String get previewOnly => _t('previewOnly');
+  String get playlistUnavailableSoon => _t('playlistUnavailableSoon');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

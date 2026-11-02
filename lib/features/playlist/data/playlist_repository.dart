@@ -132,6 +132,14 @@ class PlaylistDetail {
     } else {
       data = <String, dynamic>{};
     }
+    // 实测：传数字 specialid（如排行榜 rankid）时上游返回 `data:{}`，
+    // 之前会渲染出一个全空的歌单页（用户观感"进不去"）。这里明确报错。
+    if (data.isEmpty) {
+      throw ApiException(
+        -1,
+        '歌单不存在或 ID 无效（需要 collection_ 形式的全局 ID）',
+      );
+    }
     var cover = '${data['pic'] ?? data['imgurl'] ?? data['flexible_cover'] ?? data['cover'] ?? ''}';
     cover = cover.replaceAll('{size}', '480');
     return PlaylistDetail(

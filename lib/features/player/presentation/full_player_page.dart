@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/image/app_image_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,7 +19,7 @@ import 'queue_sheet.dart';
 /// 歌词 Provider（当前歌曲）
 final currentLyricProvider = FutureProvider.autoDispose<
     ({KrcLyric? lyric, String? error})>((ref) async {
-  final song = ref.watch(currentSongProvider).value;
+  final song = ref.watch(currentSongProvider).valueOrNull;
   if (song == null) return (lyric: null, error: null);
   final repo = ref.watch(lyricRepositoryProvider);
   final candidate = await repo.findCandidate(
@@ -50,11 +51,12 @@ class FullPlayerPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final song = ref.watch(currentSongProvider).value;
-    final quality = ref.watch(actualQualityProvider).value;
-    final isPlaying = ref.watch(isPlayingProvider).value ?? false;
-    final shuffle = ref.watch(shuffleProvider).value ?? false;
-    final loopMode = ref.watch(repeatProvider).value ?? LoopMode.off;
+    final song = ref.watch(currentSongProvider).valueOrNull;
+    final quality = ref.watch(actualQualityProvider).valueOrNull;
+    final isPreview = ref.watch(previewProvider).valueOrNull ?? false;
+    final isPlaying = ref.watch(isPlayingProvider).valueOrNull ?? false;
+    final shuffle = ref.watch(shuffleProvider).valueOrNull ?? false;
+    final loopMode = ref.watch(repeatProvider).valueOrNull ?? LoopMode.off;
     final controller = ref.read(playerControllerProvider);
     final theme = Theme.of(context);
 
@@ -141,6 +143,22 @@ class FullPlayerPage extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      if (isPreview) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.tertiaryContainer,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            context.l10n.previewOnly,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onTertiaryContainer),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       if (quality != null) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -338,7 +356,7 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
   Widget build(BuildContext context) {
     final lyricMode = ref.watch(lyricModeProvider);
     final lyricAsync = ref.watch(currentLyricProvider);
-    final position = ref.watch(positionProvider).value ?? Duration.zero;
+    final position = ref.watch(positionProvider).valueOrNull ?? Duration.zero;
     final theme = Theme.of(context);
 
     return GestureDetector(
@@ -419,6 +437,7 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
             aspectRatio: 1,
             child: song != null && song.cover.isNotEmpty
                 ? CachedNetworkImage(
+                    cacheManager: AppImageCache.instance,
                     imageUrl: song.cover,
                     fit: BoxFit.cover,
                     // 封面约屏宽（减去边距）× dpr，限制解码分辨率
@@ -440,11 +459,11 @@ class _ProgressBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final position = ref.watch(positionProvider).value ?? Duration.zero;
+    final position = ref.watch(positionProvider).valueOrNull ?? Duration.zero;
     final buffered =
-        ref.watch(bufferedPositionProvider).value ?? Duration.zero;
+        ref.watch(bufferedPositionProvider).valueOrNull ?? Duration.zero;
     final total =
-        ref.watch(durationProvider).value ?? Duration.zero;
+        ref.watch(durationProvider).valueOrNull ?? Duration.zero;
     final controller = ref.read(playerControllerProvider);
     final theme = Theme.of(context);
 

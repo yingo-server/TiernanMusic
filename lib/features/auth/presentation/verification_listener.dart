@@ -26,7 +26,7 @@ class _VerificationListenerState extends ConsumerState<VerificationListener> {
   Widget build(BuildContext context) {
     // 首次进入订阅一次播放器的验证事件流
     ref.listen(verificationStreamProvider, (previous, next) {
-      final api = next.value;
+      final api = next.valueOrNull;
       if (api == null || _handling) return;
       final ssaCode = api.ssaCode;
       if (ssaCode == null || ssaCode.isEmpty) return;

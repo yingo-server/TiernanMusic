@@ -1,0 +1,27 @@
+{
+  "_meta": {
+    "endpoint": "/song/url",
+    "method": "GET",
+    "base": "https://kapi.344977.xyz",
+    "params": {
+      "hash": "9839C10AB3BE538976A3D1157B3707DB",
+      "album_id": "212744061",
+      "album_audio_id": "979006105",
+      "quality": "128"
+    },
+    "state": "anon",
+    "http": 200,
+    "verdict": "needs_verification",
+    "expect": "status=1 + data.url[]（数组）；VIP 曲匿名 status=2",
+    "captured_at": "2026-11-02T22:03:46"
+  },
+  "response": {
+    "fail_process": [
+      "pkg"
+    ],
+    "errcode": 20028,
+    "status": 2,
+    "error": "本次请求需要验证",
+    "ssaCode": "gz_tx_event_e919e112e37e5a2034be25e5ebd05157"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "_meta": {
+    "endpoint": "/search",
+    "method": "GET",
+    "base": "https://kapi.344977.xyz",
+    "params": {
+      "keywords": "周杰伦",
+      "type": "author",
+      "page": 1,
+      "pagesize": 3
+    },
+    "state": "anon",
+    "http": 200,
+    "verdict": "ok",
+    "expect": "status=1 + data.lists[]",
+    "captured_at": "2026-11-02T22:03:26"
+  },
+  "response": {
+    "status": 1,
+    "error_code": 0,
+    "error_msg": "",
+    "data": {
+      "pagesize": 3,
+      "page": 1,
+      "from": 0,
+      "size": 3,
+      "total": 29,
+      "correctiontype": 0,
+      "correctionforce": 0,
+      "correctiontip": "",
+      "lists": [
+        {
+          "AuthorId": 3520,
+          "AuthorName": "周杰伦",
+          "IsSettledAuthor": 0,
+          "Avatar": "http://singerimg.kugou.com/uploadpic/softhead/240/20260324/20260324203006202058.jpg",
+          "Heat": 22059933,
+          "Auxiliary": "",
+          "AlbumCount": 49,
+          "AudioCount": 1858,
+          "VideoCount": 2840,
+          "LyricistCount": 19176,
+          "ComposerCount": 677623282,
+          "Identity": 1135,
+          "ComplexSongName": "",
+          "FansNum": 25879601,
+          "UserId": 0,
+          "AuthorStatus": 0,
+          "AlgPath": "",
+          "FirstFrameImage": "http://singerimg.kugou.com/uploadpic/softhead/{size}/20260326/20260326154852384779.jpg",
+          "IsReal": 1
+        },
+        {
+          "AuthorId": 9895911,
+          "AuthorName": "周杰伦音乐集",
+          "IsSettledAuthor": 0,
+          "Avatar": "",
+          "Heat": 100,
+          "Auxiliary": "",
+          "AlbumCount": 0,
+          "AudioCount": 1,
+          "VideoCount": 0,
+          "LyricistCount": 0,
+          "ComposerCount": 0,
+          "Identity": 1,
+          "ComplexSongName": "",
+          "FansNum": 349,
+          "UserId": 0,
+          "AuthorStatus": 0,
+          "AlgPath": "",
+          "FirstFrameImage": "",
+          "IsReal": 0
+        },
+        {
+          "AuthorId": 6417371,
+          "AuthorName": "周杰伦微博台",
+          "IsSettledAuthor": 0,
+          "Avatar": "http://singerimg.kugou.com/uploadpic/softhead/240/20250103/20250103135144174203.jpg",
+          "Heat": 5210,
+          "Auxiliary": "",
+          "AlbumCount": 2,
+          "AudioCount": 177,
+          "VideoCount": 0,
+          "LyricistCount": 0,
+          "ComposerCount": 0,
+          "Identity": 1,
+          "ComplexSongName": "",
+          "FansNum": 6490,
+          "UserId": 0,
+          "AuthorStatus": 0,
+          "AlgPath": "",
+          "FirstFrameImage": "",
+          "IsReal": 0
+        }
+      ]
+    }
+  }
+}

@@ -5,14 +5,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'core/cache/cache_manager.dart';
 import 'core/api/kugou_api_client.dart';
 import 'core/direct/kg_client.dart';
 import 'core/direct/kg_providers.dart';
+import 'core/audio/audio_service_bootstrap.dart';
 import 'core/router/app_router.dart';
+import 'features/home/data/home_repository.dart' show homeDataProvider;
 import 'core/theme/app_theme.dart';
 import 'core/theme/settings_provider.dart';
 import 'core/utils/error_logger.dart';
@@ -102,16 +103,11 @@ Future<void> main() async {
         device = KgDevice.generate();
       }
 
-      // 音频后台服务：失败不阻塞（否则整机白屏）
-      try {
-        await JustAudioBackground.init(
-          androidNotificationChannelId: 'com.tiernan.music.channel.audio',
-          androidNotificationChannelName: '汀澜音乐播放',
-          androidNotificationOngoing: true,
-        ).timeout(const Duration(seconds: 8));
-      } catch (e) {
-        debugPrint('[startup] JustAudioBackground.init failed: $e');
-      }
+      // 音频后台服务：这里只「发起」初始化，不阻塞首帧。
+      // 播放前由 AudioServiceBootstrap.ensureReady() 等待完成。
+      // （原先 await + timeout(8s) 会在超时后放弃等待，但底层仍未就绪，
+      //   之后创建 AudioPlayer 必抛 LateInitializationError: _audioHandler）
+      AudioServiceBootstrap.start();
     } catch (e, st) {
       // 兜底：准备阶段出现任何未预期异常，记录并继续 runApp（不让启动屏卡死）
       _startupError = e;
@@ -214,7 +210,10 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
       if (next.isLoading) return;
       try {
         final client = ref.read(kgClientProvider);
-        final user = next.value;
+        final user = next.valueOrNull;
+        // 登录态变化后，首页个性化区块（每日推荐）与"我的歌单"必须重新拉取，
+        // 否则登录成功返回首页仍是登录前的内容（真机反馈：登录不刷新）。
+        ref.invalidate(homeDataProvider);
         // 退出登录时必须清空，否则会继续以旧账号身份请求
         client.token = user?.token ?? '';
         client.userid = user?.userid ?? '0';

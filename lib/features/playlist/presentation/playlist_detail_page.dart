@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/image/app_image_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -104,6 +105,7 @@ class PlaylistDetailPage extends ConsumerWidget {
                   children: [
                     if (detail.cover.isNotEmpty)
                       CachedNetworkImage(
+                    cacheManager: AppImageCache.instance,
                         imageUrl: detail.cover,
                         fit: BoxFit.cover,
                         // 头图按屏宽 × dpr 限制解码分辨率

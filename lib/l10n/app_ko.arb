@@ -500,5 +500,7 @@
       }
     }
   },
-  "accountNeedRelogin": "이 계정은 다시 로그인해야 합니다"
+  "accountNeedRelogin": "이 계정은 다시 로그인해야 합니다",
+  "previewOnly": "试听",
+  "playlistUnavailableSoon": "该歌单暂不支持打开（缺少全局 ID）"
 }

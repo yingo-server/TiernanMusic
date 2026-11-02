@@ -30,9 +30,9 @@ final audioHandlerProvider = Provider<TiernanAudioHandler>((ref) {
   return TiernanAudioHandler(ref.watch(playerRepositoryProvider));
 });
 
-/// 底层 just_audio 播放器。
+/// 底层 just_audio 播放器（音频引擎未就绪时为 null）。
 final audioPlayerProvider =
-    Provider<AudioPlayer>((ref) => ref.watch(audioHandlerProvider).player);
+    Provider<AudioPlayer?>((ref) => ref.watch(audioHandlerProvider).player);
 
 /// 当前播放歌曲。
 final currentSongProvider = StreamProvider<Song?>((ref) =>
@@ -41,6 +41,10 @@ final currentSongProvider = StreamProvider<Song?>((ref) =>
 /// 实际播放音质。
 final actualQualityProvider = StreamProvider<AudioQuality?>(
     (ref) => ref.watch(audioHandlerProvider).actualQualityStream);
+
+/// 当前是否为 60 秒试听（VIP/付费曲的官方免费试听）。
+final previewProvider = StreamProvider<bool>(
+    (ref) => ref.watch(audioHandlerProvider).previewStream);
 
 /// 需要人机验证的事件流。
 final verificationStreamProvider = StreamProvider<ApiException?>((ref) async* {
@@ -59,29 +63,49 @@ final queueProvider = StreamProvider<List<Song>>((ref) async* {
   }
 });
 
-/// 播放进度。
-final positionProvider = StreamProvider<Duration>((ref) =>
-    ref.watch(audioPlayerProvider).positionStream);
+/// 播放进度 / 缓冲 / 时长 / 播放态 / 随机 / 循环。
+///
+/// 引擎未就绪（just_audio_background 启动失败）时返回稳定的空值流，
+/// 避免直接用 null 播放器导致空指针。
+final positionProvider = StreamProvider<Duration>((ref) {
+  final p = ref.watch(audioPlayerProvider);
+  if (p == null) return Stream<Duration>.value(Duration.zero);
+  return p.positionStream;
+});
 
-/// 缓冲进度。
-final bufferedPositionProvider = StreamProvider<Duration>((ref) =>
-    ref.watch(audioPlayerProvider).bufferedPositionStream);
+final bufferedPositionProvider = StreamProvider<Duration>((ref) {
+  final p = ref.watch(audioPlayerProvider);
+  if (p == null) return Stream<Duration>.value(Duration.zero);
+  return p.bufferedPositionStream;
+});
 
-/// 总时长。
-final durationProvider = StreamProvider<Duration?>((ref) =>
-    ref.watch(audioPlayerProvider).durationStream);
+final durationProvider = StreamProvider<Duration?>((ref) {
+  final p = ref.watch(audioPlayerProvider);
+  if (p == null) return Stream<Duration?>.value(null);
+  return p.durationStream;
+});
 
-/// 是否正在播放。
-final isPlayingProvider = StreamProvider<bool>((ref) =>
-    ref.watch(audioPlayerProvider).playingStream);
+final isPlayingProvider = StreamProvider<bool>((ref) {
+  final p = ref.watch(audioPlayerProvider);
+  if (p == null) return Stream<bool>.value(false);
+  return p.playingStream;
+});
 
-/// 随机播放开关。
-final shuffleProvider = StreamProvider<bool>((ref) =>
-    ref.watch(audioPlayerProvider).shuffleModeEnabledStream);
+final shuffleProvider = StreamProvider<bool>((ref) {
+  final p = ref.watch(audioPlayerProvider);
+  if (p == null) return Stream<bool>.value(false);
+  return p.shuffleModeEnabledStream;
+});
 
-/// 循环模式。
-final repeatProvider = StreamProvider<LoopMode>(
-    (ref) => ref.watch(audioPlayerProvider).loopModeStream);
+final repeatProvider = StreamProvider<LoopMode>((ref) {
+  final p = ref.watch(audioPlayerProvider);
+  if (p == null) return Stream<LoopMode>.value(LoopMode.off);
+  return p.loopModeStream;
+});
+
+/// 音频引擎是否可用（false 时可提示"音频服务启动失败"）。
+final audioEngineReadyProvider = Provider<bool>(
+    (ref) => ref.watch(audioHandlerProvider).isEngineReady);
 
 /// 播放控制器，供 UI 调用。
 final playerControllerProvider = Provider<PlayerController>(
@@ -124,26 +148,38 @@ class PlayerController {
   Future<void> prev() => _handler.skipToPrevious();
 
   /// 播放 / 暂停切换。
-  Future<void> togglePlay() {
-    final player = _handler.player;
-    return player.playing ? _handler.pause() : _handler.play();
+  Future<void> togglePlay() async {
+    final p = _handler.player;
+    if (p == null) {
+      // 引擎未就绪：尝试拉起（首次点播放时初始化可能尚未完成）
+      if (!await _handler.ensureEngineReady()) return;
+      await _handler.play();
+      return;
+    }
+    if (p.playing) {
+      await _handler.pause();
+    } else {
+      await _handler.play();
+    }
   }
 
   /// 跳转进度。
   Future<void> seekTo(Duration position) => _handler.seek(position);
 
   /// 切换随机播放。
-  Future<void> toggleShuffle() {
-    final enabled = _handler.player.shuffleModeEnabled;
-    return _handler.setShuffleMode(enabled
+  Future<void> toggleShuffle() async {
+    final p = _handler.player;
+    if (p == null) return;
+    await _handler.setShuffleMode(p.shuffleModeEnabled
         ? AudioServiceShuffleMode.none
         : AudioServiceShuffleMode.all);
   }
 
   /// 循环模式轮转：列表循环 → 单曲循环 → 顺序播放。
-  Future<void> cycleRepeatMode() {
-    final mode = _handler.player.loopMode;
-    return _handler.setRepeatMode(switch (mode) {
+  Future<void> cycleRepeatMode() async {
+    final p = _handler.player;
+    if (p == null) return;
+    await _handler.setRepeatMode(switch (p.loopMode) {
       LoopMode.all => AudioServiceRepeatMode.one,
       LoopMode.one => AudioServiceRepeatMode.none,
       LoopMode.off => AudioServiceRepeatMode.all,

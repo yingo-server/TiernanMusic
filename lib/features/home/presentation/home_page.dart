@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../../core/image/app_image_cache.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -168,6 +169,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: CachedNetworkImage(
+                    cacheManager: AppImageCache.instance,
                   imageUrl: widget.banners[i].imageUrl,
                   fit: BoxFit.cover,
                   memCacheWidth:
@@ -240,6 +242,7 @@ class _DailyRecommend extends ConsumerWidget {
                           width: 78,
                           height: 78,
                           child: CachedNetworkImage(
+                    cacheManager: AppImageCache.instance,
                             imageUrl: s.cover,
                             fit: BoxFit.cover,
                             memCacheWidth:
@@ -320,9 +323,16 @@ class _PlaylistRow extends StatelessWidget {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () =>
-                          context.push('/playlist/${p.globalCollectionId}'),
+                      onTap: () {
+                    final gid = p.globalCollectionId;
+                    if (!gid.startsWith('collection_')) {
+                      Toast.show(context, context.l10n.playlistUnavailableSoon);
+                      return;
+                    }
+                    context.push('/playlist/${Uri.encodeComponent(gid)}');
+                  },
                       child: CachedNetworkImage(
+                    cacheManager: AppImageCache.instance,
                         imageUrl: p.cover,
                         width: 130,
                         height: 130,
@@ -408,6 +418,7 @@ class _RankRow extends StatelessWidget {
                       Opacity(
                         opacity: 0.5,
                         child: CachedNetworkImage(
+                    cacheManager: AppImageCache.instance,
                           imageUrl: r.cover,
                           fit: BoxFit.cover,
                           colorBlendMode: BlendMode.luminosity,

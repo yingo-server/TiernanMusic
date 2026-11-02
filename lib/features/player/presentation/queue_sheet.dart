@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/image/app_image_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,8 +27,8 @@ class QueueSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final queue = ref.watch(queueProvider).value ?? const [];
-    final current = ref.watch(currentSongProvider).value;
+    final queue = ref.watch(queueProvider).valueOrNull ?? const [];
+    final current = ref.watch(currentSongProvider).valueOrNull;
     final controller = ref.read(playerControllerProvider);
 
     return Column(
@@ -73,6 +74,7 @@ class QueueSheet extends ConsumerWidget {
                           height: 44,
                           child: s.cover.isNotEmpty
                               ? CachedNetworkImage(
+                    cacheManager: AppImageCache.instance,
                                   imageUrl: s.cover,
                                   fit: BoxFit.cover,
                                   // 44px 显示尺寸 × dpr，限制解码分辨率

@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "endpoint": "/get/verify/info",
+    "method": "GET",
+    "base": "https://kapi.344977.xyz",
+    "params": {
+      "eventid": "gz_tx_event_invalid_sample"
+    },
+    "state": "anon",
+    "http": 0,
+    "verdict": "http_error",
+    "expect": "无效 eventid → 36001（仅验证连通）",
+    "captured_at": "2026-11-02T22:04:37"
+  },
+  "response": {
+    "_http_error": "HTTP Error 502: Bad Gateway"
+  }
+}

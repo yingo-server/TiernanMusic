@@ -1,0 +1,611 @@
+{
+  "_meta": {
+    "endpoint": "/search",
+    "method": "GET",
+    "base": "https://kapi.344977.xyz",
+    "params": {
+      "keywords": "晴天",
+      "type": "song",
+      "page": 1,
+      "pagesize": 5
+    },
+    "state": "anon",
+    "http": 200,
+    "verdict": "ok",
+    "expect": "status=1 + data.lists[]",
+    "captured_at": "2026-11-02T22:03:16"
+  },
+  "response": {
+    "status": 1,
+    "error_code": 0,
+    "error_msg": "",
+    "data": {
+      "pagesize": 5,
+      "page": 1,
+      "total": 480,
+      "correctiontype": 0,
+      "correctionforce": 0,
+      "correctiontip": "",
+      "correctionrelate": "",
+      "lists": [
+        {
+          "FileName": "周杰伦 - 晴天",
+          "SingerName": "周杰伦",
+          "OriSongName": "晴天",
+          "OtherName": "",
+          "Suffix": "",
+          "Auxiliary": "",
+          "FileHash": "B3A52A7A958BF0AED0EBFBA2E9A818B7",
+          "FileSize": 4317292,
+          "ExtName": "mp3",
+          "Duration": 269,
+          "Bitrate": 128,
+          "PublishAge": 255,
+          "AlbumID": "966846",
+          "AlbumName": "叶惠美",
+          "AlbumAux": "",
+          "MixSongID": "32100650",
+          "Scid": 20505418,
+          "Audioid": 20505418,
+          "Type": "audio",
+          "OldCpy": 0,
+          "AlbumPrivilege": 5,
+          "PayType": 0,
+          "FailProcess": 0,
+          "IsOriginal": 1,
+          "Uploader": "",
+          "UploaderContent": "",
+          "PublishTime": "",
+          "PublishDate": "2003-07-31",
+          "TagContent": "TOP500 第82名",
+          "RankId": 8888,
+          "Accompany": 1,
+          "FoldType": 0,
+          "Source": "",
+          "SourceID": 0,
+          "TopID": 0,
+          "M4aSize": 0,
+          "recommend_type": 0,
+          "ShowingFlag": 0,
+          "OwnerCount": 2407840,
+          "MatchFlag": 8,
+          "HeatLevel": 6,
+          "Singers": [
+            {
+              "name": "周杰伦",
+              "id": 3520,
+              "ip_id": 0
+            }
+          ],
+          "TagDetails": [
+            {
+              "type": 4,
+              "content": "TOP500 第82名",
+              "version": 1,
+              "rankid": 8888
+            }
+          ],
+          "HQ": {
+            "Hash": "1B56126A8A03924F1DD066259C095CBC",
+            "FileSize": 10792943,
+            "Privilege": 5
+          },
+          "SQ": {
+            "Hash": "0A69169202DE95AAF24A9944CCF0730D",
+            "FileSize": 31633244,
+            "Privilege": 5
+          },
+          "Res": {
+            "Privilege": 5,
+            "Hash": "D667BC5EE93F201126697CB3BA745009",
+            "FileSize": 55397039,
+            "BitRate": 1642,
+            "TimeLength": 269
+          },
+          "isPrepublish": 0,
+          "PrepublishInfo": {
+            "ReserveCount": 0,
+            "PublishTime": "",
+            "DisplayTime": "",
+            "Id": 0
+          },
+          "trans_param": {
+            "hash_multitrack": "7207ED4C710C8308EEF9EA1F76778CB5",
+            "display": 32,
+            "classmap": {
+              "attr0": 234885128
+            },
+            "is_original": 1,
+            "flags": {},
+            "ogg_128_hash": "D6E0229D1BCD4453981743F6B53F9D75",
+            "cpy_attr0": 0,
+            "cpy_map": "0",
+            "ogg_320_filesize": 10331568,
+            "musicpack_advance": 0,
+            "cpy_level": 1,
+            "ipmap": {
+              "attr0": 2200130555908,
+              "bits": "10020042001004"
+            },
+            "ogg_320_hash": "6BB59E9DAFACFE4332E07F9E9841E912",
+            "pay_block_tpl": 1,
+            "ogg_128_filesize": 2927865,
+            "cpy_grade": 5,
+            "qualitymap": {
+              "attr0": 2134884468,
+              "attr1": 1747189759,
+              "bits": "8fffc0db411ffffff3fc074"
+            },
+            "union_cover": "http://imge.kugou.com/stdmusic/{size}/20230920/20230920142503632013.jpg",
+            "display_rate": 1,
+            "language": "国语",
+            "cid": 2456863
+          },
+          "Image": "http://imge.kugou.com/stdmusic/{size}/20230920/20230920142503632013.jpg",
+          "AlbumImage": "",
+          "bitflag": 1,
+          "mvdata": [
+            {
+              "typ": 0,
+              "hash": "92B86DA2E11C3C84DE3A944ED12D97F1",
+              "id": "117613",
+              "trk": "3"
+            }
+          ],
+          "SongID": 689,
+          "version": 3,
+          "Grp": []
+        },
+        {
+          "FileName": "蓝心羽 - 晴天",
+          "SingerName": "蓝心羽",
+          "OriSongName": "晴天",
+          "OtherName": "",
+          "Suffix": "",
+          "Auxiliary": "",
+          "FileHash": "48C685F679FFC7CF08B8A8341CA9DB44",
+          "FileSize": 2829338,
+          "ExtName": "mp3",
+          "Duration": 176,
+          "Bitrate": 128,
+          "PublishAge": 255,
+          "AlbumID": "79360569",
+          "AlbumName": "网瘾少女叽",
+          "AlbumAux": "",
+          "MixSongID": "130783548",
+          "Scid": 50359489,
+          "Audioid": 50359489,
+          "Type": "audio",
+          "OldCpy": 1,
+          "AlbumPrivilege": 0,
+          "PayType": 0,
+          "FailProcess": 0,
+          "IsOriginal": 0,
+          "Uploader": "",
+          "UploaderContent": "",
+          "PublishTime": "",
+          "PublishDate": "2018-08-17",
+          "TagContent": "评论过万",
+          "RankId": 0,
+          "Accompany": 1,
+          "FoldType": 0,
+          "Source": "",
+          "SourceID": 0,
+          "TopID": 0,
+          "M4aSize": 0,
+          "recommend_type": 0,
+          "ShowingFlag": 0,
+          "OwnerCount": 31543,
+          "MatchFlag": 8,
+          "HeatLevel": 5,
+          "Singers": [
+            {
+              "name": "蓝心羽",
+              "id": 806063,
+              "ip_id": 0
+            }
+          ],
+          "TagDetails": [
+            {
+              "type": 5,
+              "content": "评论过万",
+              "version": 1
+            }
+          ],
+          "HQ": {
+            "Hash": "28F83BBD8CAB043895039E98366AD2B4",
+            "FileSize": 7074003,
+            "Privilege": 0
+          },
+          "SQ": {
+            "Hash": "857879479E698D729640A5716DC3E56F",
+            "FileSize": 14324496,
+            "Privilege": 0
+          },
+          "isPrepublish": 0,
+          "PrepublishInfo": {
+            "ReserveCount": 0,
+            "PublishTime": "",
+            "DisplayTime": "",
+            "Id": 0
+          },
+          "trans_param": {
+            "display": 0,
+            "cid": 533002702,
+            "language": "国语",
+            "ogg_128_filesize": 1796350,
+            "is_original": 2,
+            "pay_block_tpl": 1,
+            "cpy_attr0": 58720256,
+            "cpy_map": "2",
+            "flags": {},
+            "classmap": {
+              "attr0": 234881032
+            },
+            "ogg_128_hash": "640087A326E9923C5366F3254E16CF34",
+            "qualitymap": {
+              "attr0": 2000666677,
+              "attr1": 1746993151,
+              "bits": "801fc0db4107ffff73fc035"
+            },
+            "ipmap": {
+              "attr0": 17213427712,
+              "bits": "10000402001000"
+            },
+            "musicpack_advance": 0,
+            "display_rate": 0,
+            "cpy_grade": 25,
+            "cpy_level": 1,
+            "hash_multitrack": "6829E07CFA4CBB760A6637A30446FC49",
+            "union_cover": "http://imge.kugou.com/stdmusic/{size}/20231016/20231016104901469008.jpg"
+          },
+          "Image": "http://imge.kugou.com/stdmusic/{size}/20231016/20231016104901469008.jpg",
+          "AlbumImage": "",
+          "bitflag": 1,
+          "mvdata": [
+            {
+              "typ": 0,
+              "hash": "BBAD7DF8DE41B034208A56017BF894A4",
+              "id": "9077910",
+              "trk": "3"
+            }
+          ],
+          "SongID": 90024573,
+          "version": 3,
+          "Grp": []
+        },
+        {
+          "FileName": "维也纳碎片 - 晴天 (交响改编版)",
+          "SingerName": "维也纳碎片",
+          "OriSongName": "晴天",
+          "OtherName": "",
+          "Suffix": "(交响改编版)",
+          "Auxiliary": "",
+          "FileHash": "6D5DB4310E1573FFB6152712E68E009C",
+          "FileSize": 1906017,
+          "ExtName": "mp3",
+          "Duration": 119,
+          "Bitrate": 128,
+          "PublishAge": 255,
+          "AlbumID": "",
+          "AlbumName": "",
+          "AlbumAux": "",
+          "MixSongID": "977979832",
+          "Scid": 667105916,
+          "Audioid": 667105916,
+          "Type": "audio",
+          "OldCpy": 1,
+          "AlbumPrivilege": 5,
+          "PayType": 0,
+          "FailProcess": 0,
+          "IsOriginal": 0,
+          "Uploader": "",
+          "UploaderContent": "",
+          "PublishTime": "",
+          "PublishDate": "2026-10-23",
+          "TagContent": "",
+          "RankId": 0,
+          "Accompany": 0,
+          "FoldType": 0,
+          "Source": "",
+          "SourceID": 0,
+          "TopID": 0,
+          "M4aSize": 0,
+          "recommend_type": 0,
+          "ShowingFlag": 0,
+          "OwnerCount": 4858,
+          "MatchFlag": 8,
+          "HeatLevel": 3,
+          "Singers": [
+            {
+              "name": "维也纳碎片",
+              "id": 21555454,
+              "ip_id": 0
+            }
+          ],
+          "TagDetails": [],
+          "isPrepublish": 0,
+          "PrepublishInfo": {
+            "ReserveCount": 0,
+            "PublishTime": "",
+            "DisplayTime": "",
+            "Id": 0
+          },
+          "trans_param": {
+            "ogg_128_filesize": 1325085,
+            "provider": 2,
+            "cid": -1,
+            "songname_suffix": "(交响改编版)",
+            "flags": {},
+            "cpy_attr0": 0,
+            "union_cover": "http://singerimg.kugou.com/uploadpic/softhead/{size}/20260427/20260427091131157350.jpg",
+            "musicpack_advance": 0,
+            "cpy_map": "0",
+            "classmap": {
+              "attr0": 234881032
+            },
+            "language": "纯音乐",
+            "ogg_128_hash": "9C71772E3CFEDDE47F8AEC232E109030",
+            "pay_block_tpl": 1,
+            "display": 0,
+            "display_rate": 0,
+            "qualitymap": {
+              "attr0": 4,
+              "attr1": 0,
+              "bits": "4"
+            },
+            "ipmap": {
+              "attr0": 137975840768,
+              "bits": "10002020004000"
+            }
+          },
+          "Image": "http://singerimg.kugou.com/uploadpic/softhead/{size}/20260427/20260427091131157350.jpg",
+          "AlbumImage": "",
+          "bitflag": 1,
+          "mvdata": [],
+          "SongID": 708900231,
+          "version": 3,
+          "Grp": []
+        },
+        {
+          "FileName": "吉拉朵 - 晴天 (温柔女声版)",
+          "SingerName": "吉拉朵",
+          "OriSongName": "晴天",
+          "OtherName": "",
+          "Suffix": "(温柔女声版)",
+          "Auxiliary": "",
+          "FileHash": "91A662A6DD6F74A96B0A7609EAEFDF3A",
+          "FileSize": 2091929,
+          "ExtName": "mp3",
+          "Duration": 130,
+          "Bitrate": 128,
+          "PublishAge": 255,
+          "AlbumID": "64905936",
+          "AlbumName": "晴天 (温柔女声版)",
+          "AlbumAux": "",
+          "MixSongID": "464881361",
+          "Scid": 207160911,
+          "Audioid": 207160911,
+          "Type": "audio",
+          "OldCpy": 1,
+          "AlbumPrivilege": 5,
+          "PayType": 0,
+          "FailProcess": 0,
+          "IsOriginal": 0,
+          "Uploader": "",
+          "UploaderContent": "",
+          "PublishTime": "",
+          "PublishDate": "2022-11-17",
+          "TagContent": "",
+          "RankId": 0,
+          "Accompany": 1,
+          "FoldType": 0,
+          "Source": "",
+          "SourceID": 0,
+          "TopID": 0,
+          "M4aSize": 0,
+          "recommend_type": 0,
+          "ShowingFlag": 0,
+          "OwnerCount": 12592,
+          "MatchFlag": 8,
+          "HeatLevel": 4,
+          "Singers": [
+            {
+              "name": "吉拉朵",
+              "id": 7336700,
+              "ip_id": 0
+            }
+          ],
+          "TagDetails": [],
+          "HQ": {
+            "Hash": "A17F3B9786A1DA13EC412269FCC70A3F",
+            "FileSize": 5229758,
+            "Privilege": 5
+          },
+          "SQ": {
+            "Hash": "F8C7CB401E4668AA105E79AC62241045",
+            "FileSize": 16519293,
+            "Privilege": 5
+          },
+          "isPrepublish": 0,
+          "PrepublishInfo": {
+            "ReserveCount": 0,
+            "PublishTime": "",
+            "DisplayTime": "",
+            "Id": 0
+          },
+          "trans_param": {
+            "qualitymap": {
+              "bits": "801fc0db410007fb73fc035",
+              "attr0": 926924853,
+              "attr1": 1746927871
+            },
+            "union_cover": "http://imge.kugou.com/stdmusic/{size}/20230417/20230417153347394677.jpg",
+            "cpy_attr0": 50331648,
+            "cpy_map": "0",
+            "classmap": {
+              "attr0": 234881032
+            },
+            "language": "国语",
+            "is_original": 2,
+            "flags": {},
+            "pay_block_tpl": 1,
+            "hash_multitrack": "0C6E1B0B24CEF00A66066CC054D67DC9",
+            "ipmap": {
+              "attr0": 17213427712,
+              "bits": "10000402001000"
+            },
+            "display": 0,
+            "display_rate": 0,
+            "songname_suffix": "(温柔女声版)",
+            "musicpack_advance": 0,
+            "cid": -1
+          },
+          "Image": "http://imge.kugou.com/stdmusic/{size}/20230417/20230417153347394677.jpg",
+          "AlbumImage": "",
+          "bitflag": 1,
+          "mvdata": [
+            {
+              "typ": 0,
+              "hash": "FFE767EBF6341EB2145CF1BF6305AAFE",
+              "id": "11529364",
+              "trk": "3"
+            }
+          ],
+          "SongID": 275568103,
+          "version": 3,
+          "Grp": []
+        },
+        {
+          "FileName": "梅菜扣肉肉 - 晴天 (女声独唱版)",
+          "SingerName": "梅菜扣肉肉",
+          "OriSongName": "晴天",
+          "OtherName": "",
+          "Suffix": "(女声独唱版)",
+          "Auxiliary": "",
+          "FileHash": "0DF69FAEAEAC7358E4665BC7ACD72B5F",
+          "FileSize": 4294730,
+          "ExtName": "mp3",
+          "Duration": 268,
+          "Bitrate": 128,
+          "PublishAge": 255,
+          "AlbumID": "50484043",
+          "AlbumName": "晴天 (独唱版)",
+          "AlbumAux": "",
+          "MixSongID": "350605324",
+          "Scid": 129520305,
+          "Audioid": 129520305,
+          "Type": "audio",
+          "OldCpy": 0,
+          "AlbumPrivilege": 10,
+          "PayType": 1,
+          "FailProcess": 4,
+          "IsOriginal": 0,
+          "Uploader": "",
+          "UploaderContent": "",
+          "PublishTime": "",
+          "PublishDate": "2021-11-16",
+          "TagContent": "",
+          "RankId": 0,
+          "Accompany": 1,
+          "FoldType": 0,
+          "Source": "",
+          "SourceID": 0,
+          "TopID": 0,
+          "M4aSize": 0,
+          "recommend_type": 0,
+          "ShowingFlag": 0,
+          "OwnerCount": 17733,
+          "MatchFlag": 8,
+          "HeatLevel": 4,
+          "Singers": [
+            {
+              "name": "梅菜扣肉肉",
+              "id": 5673217,
+              "ip_id": 0
+            }
+          ],
+          "TagDetails": [],
+          "HQ": {
+            "Hash": "7FC97AABCCA66129F3BCA012B81D544D",
+            "FileSize": 10735884,
+            "Privilege": 10
+          },
+          "SQ": {
+            "Hash": "537EBFB6D07DACFE20F5539DB83F1CEA",
+            "FileSize": 34271159,
+            "Privilege": 10
+          },
+          "isPrepublish": 0,
+          "PrepublishInfo": {
+            "ReserveCount": 0,
+            "PublishTime": "",
+            "DisplayTime": "",
+            "Id": 0
+          },
+          "trans_param": {
+            "is_original": 2,
+            "qualitymap": {
+              "attr0": 1999683636,
+              "attr1": 1746993151,
+              "bits": "800000db4107ffff730c034"
+            },
+            "language": "国语",
+            "display_rate": 0,
+            "cpy_level": 1,
+            "cpy_map": "2",
+            "classmap": {
+              "attr0": 234881032
+            },
+            "ipmap": {
+              "attr0": 17213427712,
+              "bits": "10000402001000"
+            },
+            "songname_suffix": "(女声独唱版)",
+            "musicpack_advance": 0,
+            "pay_block_tpl": 1,
+            "display": 0,
+            "cid": 180726642,
+            "ogg_128_hash": "2383BC252A31C66771C7537E0F636F56",
+            "ogg_128_filesize": 3205855,
+            "union_cover": "http://imge.kugou.com/stdmusic/{size}/20260513/20260513001916595930.jpg",
+            "flags": {},
+            "identity_block": 1,
+            "cpy_grade": 5,
+            "cpy_attr0": 58728448,
+            "hash_multitrack": "D83966A5E8ED66F0ACB568A27DC53D04"
+          },
+          "Image": "http://imge.kugou.com/stdmusic/{size}/20260513/20260513001916595930.jpg",
+          "AlbumImage": "",
+          "bitflag": 1,
+          "mvdata": [
+            {
+              "typ": 0,
+              "hash": "3161B97889449638D09BBF8FDDA7ADD0",
+              "id": "16995560",
+              "trk": "3"
+            }
+          ],
+          "SongID": 276914433,
+          "version": 3,
+          "Grp": []
+        }
+      ],
+      "sec_aggre_v2": [],
+      "istag": 0,
+      "istagresult": 0,
+      "allowerr": 0,
+      "isshareresult": 0,
+      "size": 5,
+      "AlgPath": "",
+      "from": 0,
+      "tab": "全部",
+      "version": 3,
+      "pin_topn": 10
+    },
+    "reco_aggre": {
+      "hit": false,
+      "source": ""
+    }
+  }
+}
