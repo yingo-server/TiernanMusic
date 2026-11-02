@@ -151,6 +151,13 @@ class KgDirectApiClient extends KugouApiClient {
         return _directOrFallback(() => _kmrAudioMv(q), kapi, '/kmr/audio/mv');
       case 'comment/music':
         return _directOrFallback(() => _commentMusic(q), kapi, '/comment/music');
+      case 'comment/music/send':
+      case 'comment/playlist/send':
+      case 'comment/album/send':
+        return _directOrFallback(
+            () => _commentSend(q), kapi, '/comment/${n}/send');
+      case 'playlist/del':
+        return _directOrFallback(() => _playlistDel(q), kapi, '/playlist/del');
       case 'playlist/add':
         return _directOrFallback(() => _playlistAdd(q), kapi, '/playlist/add');
       case 'playlist/tracks/add':
@@ -430,6 +437,106 @@ class KgDirectApiClient extends KugouApiClient {
           if (q['hash'] == null && q['special_id'] != null)
             'childrenid': q['special_id'],
         });
+  }
+
+  /// 发评论（module/_comment.js buildCommentSendConfig，需登录）
+  ///
+  /// POST /index.php?r=commentsv3/add
+  /// - clearDefaultParams + notSignature（自带 key，不走通用签名）
+  /// - key = signParamsKey(clienttime + mid + data)
+  /// - x-router m.comment.service.kugou.com
+  Future<KgResponse> _commentSend(Map<String, dynamic> q) {
+    final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final contentData = <String, dynamic>{
+      'content': '${q['content'] ?? ''}',
+      if (q['mixsongid'] != null) 'album_audio_id': '${q['mixsongid']}',
+      if (q['title'] != null) 'title': '${q['title']}',
+      'images': const <String>[],
+    };
+    final data = jsonEncode({'data': contentData});
+    return kg.request('/index.php',
+        method: 'POST',
+        clearDefaultParams: true,
+        notSignature: true,
+        headers: {
+          'x-router': 'm.comment.service.kugou.com',
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        params: {
+          'r': 'commentsv3/add',
+          'code': _commentCodeOf('${q['resource_type'] ?? 'song'}'),
+          'childrenid': '${q['special_id'] ?? q['childrenid'] ?? q['id'] ?? ''}',
+          if (q['name'] != null) 'childrenname': '${q['name']}',
+          'kugouid': kg.userid,
+          'ver': 6,
+          'clienttoken': kg.token,
+          'appid': KgConfig.appid,
+          'clientver': KgConfig.clientver,
+          'mid': kg.device.mid,
+          'clienttime': '$clienttime',
+          // key = md5(appid + salt + clientver + clienttime + mid + data)
+          'key': KgSignature.paramsKey('$clienttime${kg.device.mid}$data'),
+          'uuid': '-',
+          'dfid': kg.device.dfid.isEmpty ? '-' : kg.device.dfid,
+        },
+        data: data);
+  }
+
+  /// 评论资源类型 → code
+  static String _commentCodeOf(String resourceType) => switch (resourceType) {
+        'playlist' => 'ca53b96fe5a1d9c22d71c8f522ef7c4f',
+        'album' => '94f1792ced1df89aa68a7939eaf2efca',
+        _ => 'fc4be23b4e972707f36b8a828a93ba8a',
+      };
+
+  /// 删除/取消收藏歌单（module/playlist_del.js，需登录）
+  ///
+  /// 协议：body = playlistAesEncrypt({listid, total_ver:0, type:1}) 的 Base64，
+  /// query `p` = RSA({aes:seed, uid, token}) 大写 hex，响应是 AES 加密二进制。
+  Future<KgResponse> _playlistDel(Map<String, dynamic> q) async {
+    final userid = kg.userid.isEmpty ? '0' : kg.userid;
+    final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    final aes = KgCrypto.aesEncryptHex(jsonEncode({
+      'listid': int.tryParse('${q['listid'] ?? 0}') ?? 0,
+      'total_ver': 0,
+      'type': 1,
+    }));
+    final p = KgCrypto.rsaEncryptRawHex(
+      jsonEncode({'aes': aes.key, 'uid': userid, 'token': kg.token}),
+    ).toUpperCase();
+
+    final res = await kg.request('/v2/delete_list',
+        method: 'POST',
+        headers: {'x-router': 'cloudlist.service.kugou.com'},
+        params: {
+          'clienttime': '$clienttime',
+          'key': KgSignature.paramsKey('$clienttime'),
+          'last_area': 'gztx',
+          'clientver': KgConfig.clientver,
+          'appid': KgConfig.appid,
+          'last_time': '$clienttime',
+          'p': p,
+        },
+        data: aes.str);
+
+    // 响应是 AES 加密二进制，用同一 seed 解密
+    try {
+      final bytes = res.rawBytes;
+      if (bytes != null && bytes.isNotEmpty) {
+        final decoded = KgCrypto.aesDecryptPlaylistB64(base64Encode(bytes), aes.key);
+        if (decoded.containsKey('status')) {
+          return KgResponse(
+            status: res.status,
+            body: decoded,
+            headers: res.headers,
+          );
+        }
+      }
+    } catch (_) {
+      // 解密失败不影响判定
+    }
+    return res;
   }
 
   /// 收藏/新建歌单（module/playlist_add.js，需登录）

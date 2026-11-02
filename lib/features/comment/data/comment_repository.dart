@@ -73,9 +73,18 @@ class CommentRepository {
     };
     final query = switch (type) {
       CommentResourceType.song => {
-          'mixsongid': id, 'content': content, if (name != null) 'name': name,
+          'mixsongid': id,
+          'content': content,
+          'resource_type': 'song',
+          if (name != null) 'name': name,
         },
-      _ => {'id': id, 'content': content, if (name != null) 'name': name},
+      _ => {
+          'id': id,
+          'content': content,
+          // 直连层按 resource_type 选 code（歌曲/歌单/专辑各不相同）
+          'resource_type': type.name,
+          if (name != null) 'name': name,
+        },
     };
     await _api.post(path, {}, query: query);
   }
