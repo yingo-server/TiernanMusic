@@ -4,7 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 /// 启动页：SVG 图标「从左到右逐笔绘出」的动画。
 ///
 /// flutter_svg 的 [SvgPicture.asset] 不支持按 path 分段绘制，
-/// 因此用 ClipRect + 横向推进的遮罩模拟「从左到右写出来」的效果。
+/// 这里用外层固定尺寸 + 内部按进度裁剪的布局模拟「从左到右写出来」。
 class AnimatedSvgLogo extends StatefulWidget {
   const AnimatedSvgLogo({
     super.key,
@@ -48,23 +48,24 @@ class _AnimatedSvgLogoState extends State<AnimatedSvgLogo>
       animation: _controller,
       builder: (context, _) {
         final t = _curve.value.clamp(0.0, 1.0);
-        return SvgPicture.asset(
-          widget.svgAsset,
+        return SizedBox(
           width: widget.size,
           height: widget.size,
-          colorFilter: widget.color == null
-              ? null
-              : ColorFilter.mode(widget.color!, BlendMode.srcIn),
-          builder: (context, child) => child == null
-              ? const SizedBox.shrink()
-              : ClipRect(
-                  alignment: Alignment.centerLeft,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: t,
-                    child: child,
-                  ),
-                ),
+          // 外层裁剪：只露出左侧 t 比例的区域，形成「逐渐写出」的效果
+          child: ClipRect(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              widthFactor: t,
+              child: SvgPicture.asset(
+                widget.svgAsset,
+                width: widget.size,
+                height: widget.size,
+                colorFilter: widget.color == null
+                    ? null
+                    : ColorFilter.mode(widget.color!, BlendMode.srcIn),
+              ),
+            ),
+          ),
         );
       },
     );
