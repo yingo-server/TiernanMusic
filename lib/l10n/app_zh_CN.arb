@@ -536,5 +536,11 @@
   "loginToViewFavorites": "登录后查看收藏",
   "@loginToViewFavorites": {
     "description": "提示登录后查看收藏"
+  },
+  "@expand": {
+    "description": "展开文本"
+  },
+  "@collapse": {
+    "description": "收起文本"
   }
 }

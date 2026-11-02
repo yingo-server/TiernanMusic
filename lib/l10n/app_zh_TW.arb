@@ -350,7 +350,7 @@
   "commentsCount": "共 {count} 條評論",
   "playlistIntro": "歌單簡介",
   "expand": "展開",
-  "collapse": "收起",
+  "collapse": "收合",
   "noSongsInPlaylist": "歌單中暫無歌曲",
   "playNext": "下一首播放",
   "addToQueue": "加入播放隊列",

@@ -14,6 +14,7 @@ class ArtistInfo {
     this.mvCount = 0,
     this.fans = 0,
     this.intro = '',
+    this.longIntro = const <String>[],
   });
 
   final String id;
@@ -24,6 +25,9 @@ class ArtistInfo {
   final int mvCount;
   final int fans;
   final String intro;
+
+  /// 详细简介分段（实测 `long_intro[]` = `{title, content}`）
+  final List<String> longIntro;
 
   static int _i(Object? v) =>
       v is int ? v : int.tryParse('${v ?? ''}') ?? 0;
@@ -42,6 +46,21 @@ class ArtistInfo {
       mvCount: _i(d['mv_count']),
       fans: _i(d['fansnums'] ?? d['fans']),
       intro: _s(d['intro']),
+      // long_intro 是 [{title, content}]，拼接成分段文本
+      longIntro: (d['long_intro'] is List)
+          ? (d['long_intro'] as List)
+              .whereType<Map>()
+              .map((e) {
+                final m = Map<String, dynamic>.from(e);
+                final title = _s(m['title']);
+                final content = _s(m['content']);
+                if (title.isEmpty) return content;
+                if (content.isEmpty) return title;
+                return '$title\n$content';
+              })
+              .where((e) => e.isNotEmpty)
+              .toList()
+          : const <String>[],
     );
   }
 }

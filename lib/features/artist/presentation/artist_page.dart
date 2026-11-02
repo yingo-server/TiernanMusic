@@ -358,6 +358,11 @@ class _Header extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  // 简介：实测 `intro` 是简述，`long_intro[]` 是详细分段
+                  if (_introText(info).isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    _IntroBlock(text: _introText(info)),
+                  ],
                 ],
               ),
             ),
@@ -365,6 +370,12 @@ class _Header extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// 组合简介：优先详细分段（long_intro），否则用简述（intro）
+  static String _introText(ArtistInfo info) {
+    if (info.longIntro.isNotEmpty) return info.longIntro.join('\n\n');
+    return info.intro;
   }
 
   static String _fans(int n) {
@@ -450,4 +461,49 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(_TabBarDelegate old) =>
       old.tabBar != tabBar || old.background != background;
+}
+
+/// 歌手简介（可展开/收起）
+class _IntroBlock extends StatefulWidget {
+  const _IntroBlock({required this.text});
+  final String text;
+
+  @override
+  State<_IntroBlock> createState() => _IntroBlockState();
+}
+
+class _IntroBlockState extends State<_IntroBlock> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.text,
+          maxLines: _expanded ? null : 3,
+          overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            height: 1.5,
+          ),
+        ),
+        if (widget.text.length > 80)
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                _expanded ? context.l10n.collapse : context.l10n.expand,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

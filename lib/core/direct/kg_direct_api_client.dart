@@ -494,12 +494,13 @@ class KgDirectApiClient extends KugouApiClient {
     final clienttime = '${DateTime.now().millisecondsSinceEpoch ~/ 1000}';
     return kg.request('/kmr/v1/audio_group/author',
         method: 'POST',
-        // 【实测】签名输入 = **defaultParams + body 全部参数**（query 同样
-        // 带上 body 的字段），不是「query 只有 signature」。
-        //   ❌ clearDefaultParams: true → ec=20006（签名对不上）
-        //   ❌ 默认参数不带 body 字段 → 同样 ec=20006
-        // Node artist_audios.js 的 body 显式给 appid/clientver/mid/clienttime/key，
-        // 而 util/request.js 会把 defaultParams 与 options.params 合并后参与签名。
+        // 【实测】该端点的 key 由**服务端从 body 读**，签名只校验 defaultParams。
+        // 三种形态实测结果：
+        //   A) query=defaultParams+signature，body 另带 appid/key/... → ✅ st=1
+        //   B) query=defaultParams+body字段+signature → ✅ st=1
+        //   C) clearDefaultParams（query 只有 body 字段）→ ❌ ec=20006
+        // 故保持 A（默认参数进 query + body 独立），不要开 clearDefaultParams。
+        // 注意 body 里的 clienttime 必须是**秒级**，key=signParamsKey(clienttime)。
         data: {
           'appid': KgConfig.appid,
           'clientver': KgConfig.clientver,
