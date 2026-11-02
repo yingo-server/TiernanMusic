@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/direct/kg_client.dart';
 import '../../../core/direct/kg_crypto.dart';
-import '../../../core/providers.dart' show kgClientProvider;
+import '../../../core/direct/kg_providers.dart' show kgClientProvider;
 import '../../home/data/models.dart' show kugouImageUrl;
 
 /// 我收藏的 MV

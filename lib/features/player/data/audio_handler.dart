@@ -34,11 +34,23 @@ class TiernanAudioHandler extends BaseAudioHandler
   /// 音频引擎是否可用（just_audio_background 已就绪且 AudioPlayer 已创建）。
   bool get isEngineReady => _initialized;
 
+  /// 引擎初始化失败的原因（供 UI 展示；null = 未失败）
+  String? engineError;
+
   /// 等待音频后台服务就绪；失败返回 false（调用方给友好错误，不要播放）。
   Future<bool> ensureEngineReady() async {
     if (_initialized) return true;
     final ok = await AudioServiceBootstrap.ensureReady();
-    if (!ok) return false;
+    if (!ok) {
+      // 记录失败原因并同步播放态，避免 UI 停留在「播放中」假象
+      engineError ??= '音频服务未就绪，请稍后重试';
+      _broadcastState(playbackState.value.copyWith(
+        playing: false,
+        processingState: AudioProcessingState.idle,
+      ));
+      _errorController.add(engineError!);
+      return false;
+    }
     if (_initialized) return true;
     _initialized = true;
     final p = _playerInstance = AudioPlayer();
@@ -57,6 +69,12 @@ class TiernanAudioHandler extends BaseAudioHandler
   final _currentSongController = StreamController<Song?>.broadcast();
   final _actualQualityController =
       StreamController<AudioQuality?>.broadcast();
+
+  /// 播放错误（引擎未就绪 / 权益不足 / 验证失败等），供 UI 展示
+  final _errorController = StreamController<String>.broadcast();
+
+  /// 播放错误事件流
+  Stream<String> get errors => _errorController.stream;
 
   /// 是否 60 秒试听（VIP/付费曲走官方免费试听通道时置 true）
   final _previewController = StreamController<bool>.broadcast();
@@ -276,6 +294,7 @@ class TiernanAudioHandler extends BaseAudioHandler
         return;
       }
       // 播放失败，尝试下一首（连续失败达到队列长度即停止，防止无限循环）
+      _errorController.add('播放失败：$e');
       playbackState.add(playbackState.value.copyWith(
         playing: false,
         processingState: AudioProcessingState.error,

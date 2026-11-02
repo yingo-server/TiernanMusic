@@ -38,6 +38,10 @@ final audioPlayerProvider =
 final currentSongProvider = StreamProvider<Song?>((ref) =>
     ref.watch(audioHandlerProvider).currentSongStream);
 
+/// 播放错误事件流（引擎未就绪 / 权益不足 / 播放失败）
+final playerErrorProvider = StreamProvider<String>(
+    (ref) => ref.watch(audioHandlerProvider).errors);
+
 /// 实际播放音质。
 final actualQualityProvider = StreamProvider<AudioQuality?>(
     (ref) => ref.watch(audioHandlerProvider).actualQualityStream);

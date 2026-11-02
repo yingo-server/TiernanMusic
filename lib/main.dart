@@ -16,11 +16,13 @@ import 'core/router/app_router.dart';
 import 'features/home/data/home_repository.dart' show homeDataProvider;
 import 'core/theme/app_theme.dart';
 import 'core/theme/settings_provider.dart';
+import 'core/utils/toast.dart';
 import 'core/utils/error_logger.dart';
 import 'core/storage/secure_storage.dart';
 import 'features/auth/data/auth_providers.dart';
 import 'features/download/download_provider.dart';
-import 'features/player/player_provider.dart' show recentPlayRecorderProvider;
+import 'features/player/player_provider.dart'
+    show playerErrorProvider, recentPlayRecorderProvider;
 import 'l10n/l10n.dart';
 
 /// 启动阶段致命错误（用于在 UI 上直接展示，而不是白屏卡死）
@@ -200,10 +202,25 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
     MemoryCache.instance.clear();
   }
 
+  /// 播放错误提示（引擎未就绪 / 权益不足 / 播放失败）
+  ///
+  /// 之前引擎初始化失败会静默 return，UI 停留在「播放中」假象；
+  /// 现在统一通过 Toast 告知用户真实原因。
+  void _onPlayerError(String message, WidgetRef ref) {
+    final ctx = ref.context;
+    if (!ctx.mounted) return;
+    Toast.show(ctx, message);
+  }
+
   @override
   Widget build(BuildContext context) {
     // 激活最近播放记录器（F2：监听 onSongStarted 写最近播放，全局一次即可）
     ref.watch(recentPlayRecorderProvider);
+    // 播放错误统一 Toast 提示（引擎未就绪 / 权益不足 / 播放失败）
+    ref.listen(playerErrorProvider, (_, next) {
+      final msg = next.value;
+      if (msg != null && msg.isNotEmpty) _onPlayerError(msg, ref);
+    });
     // 登录态变化时同步到直连客户端（仅在有值时创建 client，避免启动期强依赖）
     ref.listen(authStateProvider, (_, next) {
       // loading 期间不做任何事（避免把已登录态误清空）
