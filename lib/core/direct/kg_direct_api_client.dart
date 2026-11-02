@@ -151,6 +151,12 @@ class KgDirectApiClient extends KugouApiClient {
         return _directOrFallback(() => _kmrAudioMv(q), kapi, '/kmr/audio/mv');
       case 'comment/music':
         return _directOrFallback(() => _commentMusic(q), kapi, '/comment/music');
+      case 'comment/floor/send':
+        return _directOrFallback(
+            () => _commentFloorSend(q), kapi, '/comment/floor/send');
+      case 'comment/music/del':
+        return _directOrFallback(
+            () => _commentDel(q), kapi, '/comment/music/del');
       case 'comment/music/send':
       case 'comment/playlist/send':
       case 'comment/album/send':
@@ -480,6 +486,66 @@ class KgDirectApiClient extends KugouApiClient {
           'dfid': kg.device.dfid.isEmpty ? '-' : kg.device.dfid,
         },
         data: data);
+  }
+
+  /// 楼中楼回复（module/_comment.js buildCommentReplyConfig，需登录）
+  /// POST /index.php?r=commentsv2/reply
+  /// key = signParamsKey(clienttime + mid)（**不含 data**）
+  Future<KgResponse> _commentFloorSend(Map<String, dynamic> q) {
+    final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final content = '${q['content'] ?? ''}';
+    return kg.request('/index.php',
+        method: 'POST',
+        clearDefaultParams: true,
+        notSignature: true,
+        headers: {'x-router': 'm.comment.service.kugou.com'},
+        params: {
+          'r': 'commentsv2/reply',
+          'code': _commentCodeOf('${q['resource_type'] ?? 'song'}'),
+          'childrenid': '${q['special_id'] ?? q['childrenid'] ?? q['id'] ?? ''}',
+          if (q['name'] != null) 'childrenname': '${q['name']}',
+          'kugouid': kg.userid,
+          'ver': 6,
+          'clienttoken': kg.token,
+          'appid': KgConfig.appid,
+          'clientver': KgConfig.clientver,
+          'mid': kg.device.mid,
+          'clienttime': '$clienttime',
+          'key': KgSignature.paramsKey('$clienttime${kg.device.mid}'),
+          'uuid': '-',
+          'dfid': kg.device.dfid.isEmpty ? '-' : kg.device.dfid,
+          'content': content,
+          'tid': '${q['tid'] ?? ''}',
+          if (q['pid'] != null) 'pid': '${q['pid']}',
+        });
+  }
+
+  /// 删除评论（module/_comment.js buildCommentDelConfig，需登录）
+  /// POST /index.php?r=commentsv2/delcomment
+  Future<KgResponse> _commentDel(Map<String, dynamic> q) {
+    final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    return kg.request('/index.php',
+        method: 'POST',
+        clearDefaultParams: true,
+        notSignature: true,
+        headers: {'x-router': 'm.comment.service.kugou.com'},
+        params: {
+          'r': 'commentsv2/delcomment',
+          'code': _commentCodeOf('${q['resource_type'] ?? 'song'}'),
+          'childrenid': '${q['special_id'] ?? q['childrenid'] ?? q['id'] ?? ''}',
+          'cid': '${q['cid'] ?? ''}',
+          if (q['tid'] != null) 'tid': '${q['tid']}',
+          'kugouid': kg.userid,
+          'ver': 6,
+          'clienttoken': kg.token,
+          'appid': KgConfig.appid,
+          'clientver': KgConfig.clientver,
+          'mid': kg.device.mid,
+          'clienttime': '$clienttime',
+          'key': KgSignature.paramsKey('$clienttime${kg.device.mid}'),
+          'uuid': '-',
+          'dfid': kg.device.dfid.isEmpty ? '-' : kg.device.dfid,
+        });
   }
 
   /// 评论资源类型 → code

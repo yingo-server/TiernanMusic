@@ -177,6 +177,7 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
             widget.args.type == CommentResourceType.song ? widget.args.id : null,
         specialId: widget.args.specialId,
         tid: widget.args.tid,
+        resourceType: widget.args.type,
       );
       if (!mounted) return;
       Toast.show(context, context.l10n.deleted);

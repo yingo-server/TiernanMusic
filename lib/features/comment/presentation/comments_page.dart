@@ -119,7 +119,8 @@ class _CommentsController extends StateNotifier<AsyncValue<CommentPage>> {
         cid: cid,
         mixsongid: _args.type == CommentResourceType.song ? _args.id : null,
         specialId: specialId,
-        tid: tid);
+        tid: tid,
+        resourceType: _args.type);
     await load(refresh: true);
   }
 }

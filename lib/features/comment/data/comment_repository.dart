@@ -114,9 +114,12 @@ class CommentRepository {
     String? mixsongid,
     String? specialId,
     String? tid,
+    CommentResourceType resourceType = CommentResourceType.song,
   }) async {
     await _api.post('/comment/music/del', {}, query: {
       'cid': cid,
+      // 直连层按 resource_type 选评论 code（歌曲/歌单/专辑各不相同）
+      'resource_type': resourceType.name,
       if (mixsongid != null) 'mixsongid': mixsongid,
       if (specialId != null) 'special_id': specialId,
       if (tid != null) 'tid': tid,
