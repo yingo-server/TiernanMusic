@@ -238,7 +238,7 @@ class _AlbumPageState extends ConsumerState<AlbumPage> {
                   hasScrollBody: false,
                   child: EmptyState(
                     icon: Icons.music_note_outlined,
-                    title: context.l10n.noData,
+                    message: context.l10n.noData,
                   ),
                 )
               else
@@ -262,7 +262,7 @@ class _AlbumPageState extends ConsumerState<AlbumPage> {
                       title: s.name,
                       artist: s.artist,
                       cover: s.cover,
-                      duration: s.duration,
+                      duration: s.duration.inSeconds,
                       onTap: () => _playAt(i),
                     );
                   },

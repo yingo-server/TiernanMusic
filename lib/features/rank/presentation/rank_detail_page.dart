@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/settings_provider.dart';
+import '../../../l10n/l10n.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../../player/data/models.dart' show Song;
 import '../../player/play_helper.dart';

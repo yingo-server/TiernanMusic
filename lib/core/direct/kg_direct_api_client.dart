@@ -502,7 +502,7 @@ class KgDirectApiClient extends KugouApiClient {
         data: {
           'appid': KgConfig.appid,
           'clientver': KgConfig.clientver,
-          'mid': kg.mid,
+          'mid': kg.device.mid,
           'clienttime': clienttime,
           // signParamsKey(clienttime) = md5(appid + salt + clientver + clienttime)
           'key': KgSignature.paramsKey(clienttime),

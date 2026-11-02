@@ -7,11 +7,18 @@
         </trust-anchors>
     </base-config>
 
-    <!-- 允许酷狗域名 cleartext（MV HTTP 流） -->
+    <!-- 允许酷狗域名 cleartext（MV / 音频 HTTP 流） -->
     <domain-config cleartextTrafficPermitted="true">
+        <!-- *.kugou.com 一级子域 -->
         <domain includeSubdomains="true">kugou.com</domain>
-        <domain includeSubdomains="true">kugouaudio.com</domain>
+        <!-- 二级子域：*.tx.kugou.com / *.mobile.kugou.com 等不被上一条覆盖 -->
+        <domain includeSubdomains="true">tx.kugou.com</domain>
+        <domain includeSubdomains="true">mobile.kugou.com</domain>
+        <domain includeSubdomains="true">service.kugou.com</domain>
+        <domain includeSubdomains="true">fsandroid.kugou.com</domain>
         <domain includeSubdomains="true">fsmvpc.kugou.com</domain>
         <domain includeSubdomains="true">fsmvpc.tx.kugou.com</domain>
+        <domain includeSubdomains="true">fsandroid.tx.kugou.com</domain>
+        <domain includeSubdomains="true">kugouaudio.com</domain>
     </domain-config>
 </network-security-config>

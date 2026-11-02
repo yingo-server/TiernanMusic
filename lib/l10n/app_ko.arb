@@ -418,10 +418,6 @@
   "all": "전체",
   "showPassword": "비밀번호 표시",
   "hidePassword": "비밀번호 숨기기",
-  "albumPageComingSoon": "앨범 페이지 준비 중입니다.",
-  "@albumPageComingSoon": {
-    "description": "Shown when tapping an album search result while the album page is not yet available"
-  },
   "hotSearchLoadFailed": "인기 검색 로드 실패",
   "@hotSearchLoadFailed": {
     "description": "Empty state message when the hot search board fails to load"
@@ -502,7 +498,7 @@
   },
   "accountNeedRelogin": "이 계정은 다시 로그인해야 합니다",
   "previewOnly": "试听",
-  "playlistUnavailableSoon": "该歌单暂不支持打开（缺少全局 ID）",
+  "playlistUnavailableSoon": "이 플레이리스트는 열 수 없습니다(전역 ID 없음)",
   "loginRequiredTitle": "需要登录",
   "loginRequiredHint": "该功能需要登录酷狗账号后使用。",
   "loginRequiredAction": "「{action}」需要登录后才能使用。",

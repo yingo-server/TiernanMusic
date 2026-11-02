@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/kugou_api_client.dart';
+import '../../../core/providers.dart' show kugouApiClientProvider;
 import '../../home/data/models.dart' show kugouImageUrl;
 
 /// 排行榜歌曲列表项

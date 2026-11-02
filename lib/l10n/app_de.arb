@@ -418,10 +418,6 @@
   "all": "Alle",
   "showPassword": "Passwort anzeigen",
   "hidePassword": "Passwort verbergen",
-  "albumPageComingSoon": "Die Albumseite ist in Entwicklung.",
-  "@albumPageComingSoon": {
-    "description": "Shown when tapping an album search result while the album page is not yet available"
-  },
   "hotSearchLoadFailed": "Hot Searches konnten nicht geladen werden",
   "@hotSearchLoadFailed": {
     "description": "Empty state message when the hot search board fails to load"
@@ -502,7 +498,7 @@
   },
   "accountNeedRelogin": "Dieses Konto muss sich erneut anmelden",
   "previewOnly": "试听",
-  "playlistUnavailableSoon": "该歌单暂不支持打开（缺少全局 ID）",
+  "playlistUnavailableSoon": "Diese Playlist kann nicht geöffnet werden (globale ID fehlt)",
   "loginRequiredTitle": "需要登录",
   "loginRequiredHint": "该功能需要登录酷狗账号后使用。",
   "loginRequiredAction": "「{action}」需要登录后才能使用。",

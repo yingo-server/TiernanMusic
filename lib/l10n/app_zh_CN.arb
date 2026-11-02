@@ -426,10 +426,6 @@
   "all": "全部",
   "showPassword": "显示密码",
   "hidePassword": "隐藏密码",
-  "albumPageComingSoon": "专辑详情页开发中，敬请期待",
-  "@albumPageComingSoon": {
-    "description": "Shown when tapping an album search result while the album page is not yet available"
-  },
   "hotSearchLoadFailed": "热搜加载失败",
   "@hotSearchLoadFailed": {
     "description": "Empty state message when the hot search board fails to load"

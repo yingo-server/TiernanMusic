@@ -223,7 +223,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     if (_songs.isEmpty) {
       return EmptyState(
         icon: Icons.music_note_outlined,
-        title: context.l10n.noData,
+        message: context.l10n.noData,
       );
     }
 
@@ -277,7 +277,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     if (_albums.isEmpty) {
       return EmptyState(
         icon: Icons.album_outlined,
-        title: context.l10n.noData,
+        message: context.l10n.noData,
       );
     }
     return GridView.builder(

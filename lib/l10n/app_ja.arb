@@ -418,10 +418,6 @@
   "all": "すべて",
   "showPassword": "パスワードを表示",
   "hidePassword": "パスワードを非表示",
-  "albumPageComingSoon": "アルバムページは開発中です。お楽しみに",
-  "@albumPageComingSoon": {
-    "description": "Shown when tapping an album search result while the album page is not yet available"
-  },
   "hotSearchLoadFailed": "ホット検索の読み込みに失敗しました",
   "@hotSearchLoadFailed": {
     "description": "Empty state message when the hot search board fails to load"
@@ -502,7 +498,7 @@
   },
   "accountNeedRelogin": "このアカウントは再ログインが必要です",
   "previewOnly": "试听",
-  "playlistUnavailableSoon": "该歌单暂不支持打开（缺少全局 ID）",
+  "playlistUnavailableSoon": "このプレイリストは開けません（グローバル ID がない）",
   "loginRequiredTitle": "需要登录",
   "loginRequiredHint": "该功能需要登录酷狗账号后使用。",
   "loginRequiredAction": "「{action}」需要登录后才能使用。",
