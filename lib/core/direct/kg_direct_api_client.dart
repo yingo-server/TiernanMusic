@@ -171,6 +171,16 @@ class KgDirectApiClient extends KugouApiClient {
         return _directOrFallback(() => _yuekuBanner(q), kapi, '/yueku/banner');
       case 'video/detail':
         return _directOrFallback(() => _videoDetail(q), kapi, '/video/detail');
+      case 'artist/audios':
+        return _directOrFallback(() => _artistAudios(q), kapi, '/artist/audios');
+      case 'artist/detail':
+        return _directOrFallback(() => _artistDetail(q), kapi, '/artist/detail');
+      case 'artist/albums':
+        return _directOrFallback(() => _artistAlbums(q), kapi, '/artist/albums');
+      case 'album/detail':
+        return _directOrFallback(() => _albumDetail(q), kapi, '/album/detail');
+      case 'album/songs':
+        return _directOrFallback(() => _albumSongs(q), kapi, '/album/songs');
     }
     return super.get(path, query: query);
   }
@@ -206,6 +216,18 @@ class KgDirectApiClient extends KugouApiClient {
       case 'verify/user/info':
         return _directOrFallback(
             () => _verifyUserInfo(d), kapi, '/verify/user/info');
+      case 'artist/detail':
+        return _directOrFallback(
+            () => _artistDetail({...q, ...d}), kapi, '/artist/detail');
+      case 'artist/albums':
+        return _directOrFallback(
+            () => _artistAlbums({...q, ...d}), kapi, '/artist/albums');
+      case 'album/detail':
+        return _directOrFallback(
+            () => _albumDetail({...q, ...d}), kapi, '/album/detail');
+      case 'album/songs':
+        return _directOrFallback(
+            () => _albumSongs({...q, ...d}), kapi, '/album/songs');
     }
     return super.post(path, data, query: query);
   }
@@ -418,6 +440,86 @@ class KgDirectApiClient extends KugouApiClient {
           'area_code': 1,
           'req_multi': 1,
         });
+  }
+
+  // ---------- 歌手 / 专辑（原生 openapi.kugou.com，实测字段见 docs/api_samples） ----------
+
+  /// 歌手详情（module/artist_detail.js）
+  /// POST /kmr/v3/author + x-router: openapi.kugou.com + kg-tid: 36
+  Future<KgResponse> _artistDetail(Map<String, dynamic> q) {
+    return kg.request('/kmr/v3/author',
+        method: 'POST',
+        data: {'author_id': '${q['id'] ?? q['author_id'] ?? ''}'},
+        headers: {'x-router': 'openapi.kugou.com', 'kg-tid': '36'});
+  }
+
+  /// 歌手单曲（module/artist_audios_new.js）
+  /// GET gateway/openapi/kmr/v2/audio_group/author，kg-tid: 36
+  /// 实测：pagesize 上限 100，超过返回 error_code=20010；字段名为 audio_name（非 songname）。
+  Future<KgResponse> _artistAudios(Map<String, dynamic> q) {
+    var ps = int.tryParse('${q['pagesize'] ?? 30}') ?? 30;
+    if (ps > 100) ps = 100;
+    return kg.request('/openapi/kmr/v2/audio_group/author',
+        method: 'GET',
+        params: {
+          'author_id': '${q['id'] ?? q['author_id'] ?? ''}',
+          'area_code': 'all',
+          // 1：最热，2：最新
+          'sort': q['sort'] == 'hot' ? 1 : 2,
+          'page': int.tryParse('${q['page'] ?? 1}') ?? 1,
+          'pagesize': ps,
+          'replace_api_version': 1,
+          'mvdata_need': 1,
+          'show_audio_honor': 1,
+          'show_audio_tag': 1,
+          'replace_need': 1,
+        },
+        headers: {'kg-tid': '36'});
+  }
+
+  /// 歌手专辑（module/artist_albums.js）Postg /kmr/v1/author/albums，kg-tid: 36
+  Future<KgResponse> _artistAlbums(Map<String, dynamic> q) {
+    return kg.request('/kmr/v1/author/albums',
+        method: 'POST',
+        data: {
+          'author_id': '${q['id'] ?? q['author_id'] ?? ''}',
+          'pagesize': int.tryParse('${q['pagesize'] ?? 30}') ?? 30,
+          'page': int.tryParse('${q['page'] ?? 1}') ?? 1,
+          // 3：最热，1：最新
+          'sort': q['sort'] == 'hot' ? 3 : 1,
+          'category': 1,
+          'area_code': 'all',
+        },
+        headers: {'x-router': 'openapi.kugou.com', 'kg-tid': '36'});
+  }
+
+  /// 专辑详情（module/album_detail.js）kg-tid: 255
+  Future<KgResponse> _albumDetail(Map<String, dynamic> q) {
+    return kg.request('/kmr/v2/albums',
+        method: 'POST',
+        data: {
+          'data': [
+            {'album_id': '${q['id'] ?? q['album_id'] ?? ''}'}
+          ],
+          'is_buy': q['is_buy'] ?? 0,
+          'fields': 'album_id,album_name,publish_date,sizable_cover,intro,'
+              'language,is_publish,heat,type,quality,authors,exclusive,'
+              'author_name,trans_param',
+        },
+        headers: {'x-router': 'openapi.kugou.com', 'kg-tid': '255'});
+  }
+
+  /// 专辑歌曲（module/album_songs.js）kg-tid: 255
+  Future<KgResponse> _albumSongs(Map<String, dynamic> q) {
+    return kg.request('/v1/album_audio/lite',
+        method: 'POST',
+        data: {
+          'album_id': '${q['id'] ?? q['album_id'] ?? ''}',
+          'is_buy': q['is_buy'] ?? '',
+          'page': int.tryParse('${q['page'] ?? 1}') ?? 1,
+          'pagesize': int.tryParse('${q['pagesize'] ?? 30}') ?? 30,
+        },
+        headers: {'x-router': 'openapi.kugou.com', 'kg-tid': '255'});
   }
 
   Future<KgResponse> _rankList(Map<String, dynamic> q) {

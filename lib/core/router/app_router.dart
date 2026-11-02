@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/login_page.dart';
+import '../../features/artist/presentation/artist_page.dart';
+import '../../features/album/presentation/album_page.dart';
+import '../../features/home/presentation/rank_detail_page.dart';
 import '../../features/auth/presentation/verification_listener.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/player/presentation/full_player_page.dart';
@@ -53,6 +56,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/downloads',
         builder: (_, __) => const DownloadPage(),
+      ),
+      GoRoute(
+        path: '/artist/:id',
+        builder: (_, state) =>
+            ArtistPage(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/album/:id',
+        builder: (_, state) => AlbumPage(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/rank/:id',
+        builder: (_, state) => RankDetailPage(
+          rankId: state.pathParameters['id']!,
+          title: state.uri.queryParameters['title'] ?? '',
+        ),
       ),
       GoRoute(
         path: '/mv/:hash',

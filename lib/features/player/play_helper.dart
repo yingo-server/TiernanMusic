@@ -81,6 +81,12 @@ class PlayHelper {
   Future<void> playSong(Song song) async {
     await _controller.playSong(song);
   }
+
+  /// 通用队列播放（歌手页 / 专辑页等直接构造 Song 的场景）。
+  Future<void> playQueue(List<Song> songs, int index) async {
+    if (songs.isEmpty) return;
+    await _controller.playQueue(songs, index);
+  }
 }
 
 final playHelperProvider = Provider<PlayHelper>(PlayHelper.new);
