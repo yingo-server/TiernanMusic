@@ -263,7 +263,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           title: s.name,
           artist: s.artist,
           cover: s.cover,
-          duration: s.duration,
+          duration: s.duration.inSeconds,
           onTap: () => _playAt(i - 1),
         );
       },

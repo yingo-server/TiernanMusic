@@ -89,6 +89,7 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
       final result = await _repo.fetchFloor(
         specialId: widget.args.specialId,
         tid: widget.args.tid,
+        type: widget.args.type,
         mixsongid:
             widget.args.type == CommentResourceType.song ? widget.args.id : null,
         page: 1,
@@ -116,6 +117,7 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
       final result = await _repo.fetchFloor(
         specialId: widget.args.specialId,
         tid: widget.args.tid,
+        type: widget.args.type,
         mixsongid:
             widget.args.type == CommentResourceType.song ? widget.args.id : null,
         page: next,

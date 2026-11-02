@@ -263,7 +263,6 @@ class _AlbumPageState extends ConsumerState<AlbumPage> {
                       artist: s.artist,
                       cover: s.cover,
                       duration: s.duration,
-                      subtitleTrailing: i == 0 ? null : null,
                       onTap: () => _playAt(i),
                     );
                   },

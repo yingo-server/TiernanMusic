@@ -34,6 +34,19 @@ class KgDirectApiClient extends KugouApiClient {
 
     // status == 1 → 成功
     if (status == 1) {
+      // ⚠️ mcomment 系列接口用 `err_code` 表达业务错误（不是 error_code/errcode）。
+      //    实测「歌单/专辑楼中楼」用错端点或错 code 时返回：
+      //      status=1, err_code=60102, list 为空
+      //    若不检查 err_code，会被判成成功 → 不回退 kapi → 页面恒显示「暂无回复」。
+      final errCode = body['err_code'];
+      if (errCode is int && errCode != 0) {
+        throw ApiException(
+          errCode,
+          '${body['error'] ?? body['error_msg'] ?? body['errmsg'] ?? body['info'] ?? '请求失败'}',
+          ssaCode: r.ssaCode,
+          body: body,
+        );
+      }
       // 警告码 + 有数据 → 放过；无数据且有错码 → 视为失败
       if (errorCode == 0 || _hasData(body)) return body;
       throw ApiException(
@@ -118,6 +131,8 @@ class KgDirectApiClient extends KugouApiClient {
         return _directOrFallback(() => _yueku(), kapi, '/yueku');
       case 'rank/list':
         return _directOrFallback(() => _rankList(q), kapi, '/rank/list');
+      case 'rank/audio':
+        return _directOrFallback(() => _rankAudio(q), kapi, '/rank/audio');
       case 'top/song':
         return _directOrFallback(() => _topSong(q), kapi, '/top/song');
       case 'playlist/track/all':
@@ -193,6 +208,8 @@ class KgDirectApiClient extends KugouApiClient {
     final n = _norm(path);
     final kapi = () => super.post(path, data, query: query);
     switch (n) {
+      case 'rank/audio':
+        return _directOrFallback(() => _rankAudio(q), kapi, '/rank/audio');
       case 'comment/music':
         return _directOrFallback(() => _commentMusic(q), kapi, '/comment/music');
       case 'kmr/audio/mv':
@@ -419,7 +436,14 @@ class KgDirectApiClient extends KugouApiClient {
           'pagesize': q['pagesize'] ?? 30,
           'show_classify': q['show_classify'] ?? 1,
           'show_hotword_list': q['show_hotword_list'] ?? 1,
-          'code': 'fc4be23b4e972707f36b8a828a93ba8a',
+          'code': switch (resourceType) {
+            // 歌单评论 code（实测：配 /m.comment.service 端点才返回 err_code=0）
+            'playlist' => 'ca53b96fe5a1d9c22d71c8f522ef7c4f',
+            // 专辑评论 code
+            'album' => '94f1792ced1df89aa68a7939eaf2efca',
+            // 歌曲评论 code
+            _ => 'fc4be23b4e972707f36b8a828a93ba8a',
+          },
           'tid': q['tid'],
           if (q['mixsongid'] != null) 'mixsongid': q['mixsongid'],
         });
@@ -453,28 +477,43 @@ class KgDirectApiClient extends KugouApiClient {
         headers: {'x-router': 'openapi.kugou.com', 'kg-tid': '36'});
   }
 
-  /// 歌手单曲（module/artist_audios_new.js）
-  /// GET gateway/openapi/kmr/v2/audio_group/author，kg-tid: 36
-  /// 实测：pagesize 上限 100，超过返回 error_code=20010；字段名为 audio_name（非 songname）。
+  /// 歌手单曲（module/artist_audios.js）
+  /// POST openapi.kugou.com/kmr/v1/audio_group/author，kg-tid: 220
+  ///
+  /// ⚠️ 必须用 v1 而非 v2：
+  ///   v1（/kmr/v1/audio_group/author）→ `data` 是 **List**、顶层有 `total`，
+  ///   字段平铺在顶层（hash / timelength / audio_name），与本仓库解析口径一致；
+  ///   v2（/kmr/v2/audio_group/author）→ `data` 是 **Map**（data.songs / data.total），
+  ///   且 hash/timelength 藏在 `audio_info` 内 —— 解析会得到空列表且**不会触发回退**
+  ///   （响应 status=1 / error_code=0，_wrap 判成功）。
+  /// 实测 v1 匿名可返回 30 首，pagesize 上限 100（超过 error_code=20010）。
   Future<KgResponse> _artistAudios(Map<String, dynamic> q) {
     var ps = int.tryParse('${q['pagesize'] ?? 30}') ?? 30;
     if (ps > 100) ps = 100;
-    return kg.request('/openapi/kmr/v2/audio_group/author',
-        method: 'GET',
-        params: {
+    // clienttime 是**秒级**（Node: Math.floor(Date.now()/1000)）
+    final clienttime = '${DateTime.now().millisecondsSinceEpoch ~/ 1000}';
+    return kg.request('/kmr/v1/audio_group/author',
+        method: 'POST',
+        // ⚠️ 必须 clearDefaultParams：Node 的 artist_audios.js 是在 **body** 里
+        // 显式给 appid/clientver/mid/clienttime/key，query 里只有 signature。
+        // 若不清理默认参数，dfid/uuid/token 等会混入 query 并参与签名，
+        // 与 Node 的签名输入不一致 → 上游返回 ec=20006（签名错误）。
+        clearDefaultParams: true,
+        data: {
+          'appid': KgConfig.appid,
+          'clientver': KgConfig.clientver,
+          'mid': kg.mid,
+          'clienttime': clienttime,
+          // signParamsKey(clienttime) = md5(appid + salt + clientver + clienttime)
+          'key': KgSignature.paramsKey(clienttime),
           'author_id': '${q['id'] ?? q['author_id'] ?? ''}',
           'area_code': 'all',
           // 1：最热，2：最新
           'sort': q['sort'] == 'hot' ? 1 : 2,
           'page': int.tryParse('${q['page'] ?? 1}') ?? 1,
           'pagesize': ps,
-          'replace_api_version': 1,
-          'mvdata_need': 1,
-          'show_audio_honor': 1,
-          'show_audio_tag': 1,
-          'replace_need': 1,
         },
-        headers: {'kg-tid': '36'});
+        headers: {'x-router': 'openapi.kugou.com', 'kg-tid': '220'});
   }
 
   /// 歌手专辑（module/artist_albums.js）Postg /kmr/v1/author/albums，kg-tid: 36
@@ -522,6 +561,35 @@ class KgDirectApiClient extends KugouApiClient {
         headers: {'x-router': 'openapi.kugou.com', 'kg-tid': '255'});
   }
 
+  /// 榜单歌曲列表（module/rank_audio.js）
+  /// POST gateway /openapi/kmr/v2/rank/audio，kg-tid: 369
+  ///
+  /// 【实测】data 是 Map：`{total, songlist[]}`。songlist 项字段：
+  /// songname / author_name / authors[].author_name / audio_id /
+  /// album_audio_id / album_info{sizable_cover,album_name} /
+  /// audio_info{hash_128,hash_320,hash_flac,duration_128,...} /
+  /// trans_param{union_cover} / video_info{video_hash}
+  ///
+  /// ⚠️ 签名用 **defaultParams + body**（dfid/mid/uuid/appid/clientver/
+  /// clienttime 参与签名且同时进 query）——与 artist_audios 那种
+  /// clearDefaultParams 模式相反，勿混用。
+  Future<KgResponse> _rankAudio(Map<String, dynamic> q) {
+    return kg.request('/openapi/kmr/v2/rank/audio',
+        method: 'POST',
+        headers: {'kg-tid': '369'},
+        data: {
+          'show_portrait_mv': 1,
+          'show_type_total': 1,
+          'filter_original_remarks': 1,
+          'area_code': 1,
+          'pagesize': int.tryParse('${q['pagesize'] ?? 30}') ?? 30,
+          'rank_cid': 0,
+          'type': 1,
+          'page': int.tryParse('${q['page'] ?? 1}') ?? 1,
+          'rank_id': int.tryParse('${q['rankid'] ?? q['rank_id'] ?? 0}') ?? 0,
+        });
+  }
+
   Future<KgResponse> _rankList(Map<String, dynamic> q) {
     // 原生域名 ocean.kugou.com：gateway 的路由前缀 ocean/ 需去掉（带前缀 404）。
     return kg.request('/v6/rank/list',
@@ -564,11 +632,13 @@ class KgDirectApiClient extends KugouApiClient {
   }
 
   Future<KgResponse> _topPlaylist(Map<String, dynamic> q) {
-    final now = DateTime.now();
-    final dateTime =
-        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.hour.toString().padLeft(2, '0')}';
+    // Node top_playlist.js: `const dateTime = (Date.now()/1000).toFixed(0)` —— **秒级**。
+    // （此前误用 YYYYMMDDHH，导致 signParamsKey 的输入与 Node 不一致 → ec=200101）
+    final dateTime = '${DateTime.now().millisecondsSinceEpoch ~/ 1000}';
     return kg.request('/v2/special_recommend',
         method: 'POST',
+        // 【实测】special_recommend 直连恒 ec=200101（匿名/VIP、多组参数均
+        // 复现，Node 上游同样如此），该端点疑似上游已收紧 → 保留 kapi 回退。
         // 实测 specialrec.service.kugou.com 为三标签域名，*.kugou.com 证书不覆盖
         // （SAN 仅 *.kugou.com），Dart/Dio TLS 拒绝 → 保持 gateway + x-router。
         headers: {'x-router': 'specialrec.service.kugou.com'},

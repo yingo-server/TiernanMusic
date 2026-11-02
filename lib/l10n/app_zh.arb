@@ -520,5 +520,15 @@
         "type": "String"
       }
     }
-  }
+  },
+  "fansLabel": "粉丝 {count}",
+  "@fansLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sortNew": "最新",
+  "sortHot": "最热"
 }

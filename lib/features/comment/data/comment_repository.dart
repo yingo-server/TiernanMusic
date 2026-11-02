@@ -43,12 +43,16 @@ class CommentRepository {
   Future<CommentPage> fetchFloor({
     required String specialId, // special_child_id
     required String tid, // 顶层评论 id
+    CommentResourceType type = CommentResourceType.song,
     String? mixsongid,
     int page = 1,
   }) async {
     final data = await _api.get('/comment/floor', query: {
       'special_id': specialId,
       'tid': tid,
+      // ⚠️ 必须传 resource_type：直连层据此选择「端点 + comment code」，
+      // 缺失时歌单/专辑会走歌曲分支 → err_code=60102 → 恒空且不回退。
+      'resource_type': type.name,
       if (mixsongid != null) 'mixsongid': mixsongid,
       'page': page,
     });

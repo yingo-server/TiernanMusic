@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/artist/presentation/artist_page.dart';
 import '../../features/album/presentation/album_page.dart';
-import '../../features/home/presentation/rank_detail_page.dart';
+import '../../features/rank/presentation/rank_detail_page.dart';
 import '../../features/auth/presentation/verification_listener.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/player/presentation/full_player_page.dart';
@@ -67,10 +67,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => AlbumPage(id: state.pathParameters['id']!),
       ),
       GoRoute(
-        path: '/rank/:id',
+        path: '/rank/:rankId',
         builder: (_, state) => RankDetailPage(
-          rankId: state.pathParameters['id']!,
-          title: state.uri.queryParameters['title'] ?? '',
+          rankId: int.tryParse(state.pathParameters['rankId'] ?? '') ?? 0,
+          name: state.uri.queryParameters['name'] ?? '',
         ),
       ),
       GoRoute(

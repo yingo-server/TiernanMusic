@@ -402,7 +402,7 @@ class _RankRow extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () => context.push(
-                      '/playlist/${r.globalCollectionId}'),
+                      '/rank/${r.id}?name=${Uri.encodeComponent(r.name)}'),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [

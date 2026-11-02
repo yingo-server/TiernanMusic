@@ -512,5 +512,15 @@
         "type": "String"
       }
     }
-  }
+  },
+  "fansLabel": "팬 {count}",
+  "@fansLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sortNew": "최신",
+  "sortHot": "인기"
 }

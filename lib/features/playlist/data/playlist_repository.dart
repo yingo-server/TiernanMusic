@@ -23,14 +23,51 @@ class PlaylistRepository {
   }
 
   /// 公共歌单歌曲（分页）
-  Future<PlaylistTracks> fetchTracks(String globalCollectionId,
-      {int page = 1, int pageSize = 100}) async {
-    final q = {'id': globalCollectionId, 'page': page, 'pagesize': pageSize};
-    final cacheKey = MemoryCache.keyOf('/playlist/track/all', q);
-    final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
-    final data = cached ?? await _api.get('/playlist/track/all', query: q);
-    if (cached == null) MemoryCache.instance.set(cacheKey, data);
-    return PlaylistTracks.fromJson(data);
+  /// 歌单歌曲
+  ///
+  /// 【排序语义】用户要求「整体从新到旧」。
+  /// 实测上游分页方向：**page=1 是最新，page 越大越旧**；且**页内也是从新到旧**。
+  /// 因此「整体从新到旧」= 倒序取页（最后一页 → 第一页），再把各页反序拼接。
+  ///
+  /// [newestFirst] = true 时按上述语义返回；false 时保持上游原序（第 1 页在前）。
+  /// [allPages] = true 时一次性拉完所有页（用于需要完整列表的场景）。
+  Future<PlaylistTracks> fetchTracks(
+    String globalCollectionId, {
+    int page = 1,
+    int pageSize = 100,
+    bool newestFirst = true,
+    bool allPages = false,
+  }) async {
+    Future<Map<String, dynamic>> fetch(int p) async {
+      final q = {
+        'id': globalCollectionId,
+        'page': p,
+        'pagesize': pageSize,
+      };
+      final cacheKey = MemoryCache.keyOf('/playlist/track/all', q);
+      final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
+      final data = cached ?? await _api.get('/playlist/track/all', query: q);
+      if (cached == null) MemoryCache.instance.set(cacheKey, data);
+      return data;
+    }
+
+    final first = await fetch(page);
+    final firstTracks = PlaylistTracks.fromJson(first);
+    if (!newestFirst || !allPages) return firstTracks;
+
+    final totalPages = (firstTracks.total / pageSize).ceil();
+    if (totalPages <= 1) return firstTracks;
+
+    // 倒序取剩余页（最后一页 → 第 2 页），每页内部反序后再拼到前面
+    final older = <PlaylistSong>[];
+    for (var p = totalPages; p >= 2; p--) {
+      final t = PlaylistTracks.fromJson(await fetch(p));
+      older.insertAll(0, t.songs.reversed);
+    }
+    return PlaylistTracks(
+      songs: [...firstTracks.songs, ...older],
+      total: firstTracks.total,
+    );
   }
 
   /// 我的歌单（需登录）

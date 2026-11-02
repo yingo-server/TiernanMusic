@@ -26,25 +26,16 @@ final playlistDetailProvider = FutureProvider.family
   return ref.watch(_playlistRepoProvider).fetchDetail(id);
 });
 
+/// 歌单歌曲（一次性拉完，按「整体从新到旧」排序）
+///
+/// 上游分页方向：page=1 最新、页越大越旧，页内也是从新到旧。
+/// 仓库在 Repository 层倒序取页并反序拼接，保证列表整体从新到旧。
 final playlistTracksProvider = FutureProvider.family
     .autoDispose<PlaylistTracks, String>((ref, id) {
-  return ref.watch(_playlistRepoProvider).fetchTracks(id);
-});
-
-/// 歌单歌曲追加页（>100 首的公共歌单分页加载）
-final _playlistMoreTracksProvider =
-    FutureProvider.family.autoDispose<PlaylistTracks, _MoreTracksArgs>(
-        (ref, args) {
   return ref
       .watch(_playlistRepoProvider)
-      .fetchTracks(args.id, page: args.page);
+      .fetchTracks(id, newestFirst: true, allPages: true);
 });
-
-class _MoreTracksArgs {
-  _MoreTracksArgs(this.id, this.page);
-  final String id;
-  final int page;
-}
 
 /// 加载更多后手动触发 UI 重建的计数器
 final _tracksReloadProvider = StateProvider<int>((ref) => 0);
@@ -237,7 +228,6 @@ class PlaylistDetailPage extends ConsumerWidget {
   /// 歌曲列表 + 截断提示/加载更多（>100 首的公共歌单不再静默截断）
   Widget _buildTracksSlivers(BuildContext context, WidgetRef ref,
       PlaylistDetail detail, PlaylistTracks tracks, ThemeData theme) {
-    final truncated = tracks.total > tracks.songs.length;
     return SliverMainAxisGroup(
       slivers: [
         SliverList(
@@ -279,57 +269,7 @@ class PlaylistDetailPage extends ConsumerWidget {
             childCount: tracks.songs.length,
           ),
         ),
-        // 截断提示 + 加载更多（直接 fetchTracks 第 2 页追加，简单实现）
-        if (truncated)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                children: [
-                  Text(
-                    context.l10n
-                        .onlyShowsFirstN(tracks.songs.length, tracks.total),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color:
-                          theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final nextPage =
-                          (tracks.songs.length / 100).floor() + 1;
-                      final args =
-                          _MoreTracksArgs(detail.id, nextPage);
-                      try {
-                        final more =
-                            await ref.read(_playlistMoreTracksProvider(args).future);
-                        // 去重后追加（翻页间可能重复）
-                        final seen =
-                            tracks.songs.map((s) => s.hash).toSet();
-                        final fresh = more.songs
-                            .where((s) => seen.add(s.hash))
-                            .toList();
-                        tracks.songs.addAll(fresh);
-                        if (context.mounted) {
-                          // 追加成功，触发本页重建展示新歌曲
-                          ref.read(_tracksReloadProvider.notifier).state++;
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          Toast.show(
-                              context, context.l10n.operateFailed('$e'));
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.expand_more, size: 18),
-                    label: Text(context.l10n.loadMore),
-                  ),
-                ],
-              ),
-            ),
-          ),
+
       ],
     );
   }

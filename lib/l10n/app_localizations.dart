@@ -306,6 +306,9 @@ const _strings_de = <String, String>{
   'loginRequiredTitle': '需要登录',
   'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
   'loginRequiredAction': '「{action}」需要登录后才能使用。',
+  'fansLabel': 'Fans {count}',
+  'sortNew': 'Neueste',
+  'sortHot': 'Beliebt',
 };
 
 const _strings_en = <String, String>{
@@ -610,6 +613,9 @@ const _strings_en = <String, String>{
   'loginRequiredTitle': '需要登录',
   'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
   'loginRequiredAction': '「{action}」需要登录后才能使用。',
+  'fansLabel': 'Fans {count}',
+  'sortNew': 'Newest',
+  'sortHot': 'Popular',
 };
 
 const _strings_es = <String, String>{
@@ -914,6 +920,9 @@ const _strings_es = <String, String>{
   'loginRequiredTitle': '需要登录',
   'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
   'loginRequiredAction': '「{action}」需要登录后才能使用。',
+  'fansLabel': 'Fans {count}',
+  'sortNew': 'Más recientes',
+  'sortHot': 'Populares',
 };
 
 const _strings_fr = <String, String>{
@@ -1218,6 +1227,9 @@ const _strings_fr = <String, String>{
   'loginRequiredTitle': '需要登录',
   'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
   'loginRequiredAction': '「{action}」需要登录后才能使用。',
+  'fansLabel': 'Fans {count}',
+  'sortNew': 'Plus récents',
+  'sortHot': 'Populaires',
 };
 
 const _strings_ja = <String, String>{
@@ -1522,6 +1534,9 @@ const _strings_ja = <String, String>{
   'loginRequiredTitle': '需要登录',
   'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
   'loginRequiredAction': '「{action}」需要登录后才能使用。',
+  'fansLabel': 'ファン {count}',
+  'sortNew': '最新',
+  'sortHot': '人気',
 };
 
 const _strings_ko = <String, String>{
@@ -1826,6 +1841,9 @@ const _strings_ko = <String, String>{
   'loginRequiredTitle': '需要登录',
   'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
   'loginRequiredAction': '「{action}」需要登录后才能使用。',
+  'fansLabel': '팬 {count}',
+  'sortNew': '최신',
+  'sortHot': '인기',
 };
 
 const _strings_pt = <String, String>{
@@ -2130,6 +2148,9 @@ const _strings_pt = <String, String>{
   'loginRequiredTitle': '需要登录',
   'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
   'loginRequiredAction': '「{action}」需要登录后才能使用。',
+  'fansLabel': 'Fãs {count}',
+  'sortNew': 'Mais recentes',
+  'sortHot': 'Populares',
 };
 
 const _strings_ru = <String, String>{
@@ -2434,6 +2455,9 @@ const _strings_ru = <String, String>{
   'loginRequiredTitle': '需要登录',
   'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
   'loginRequiredAction': '「{action}」需要登录后才能使用。',
+  'fansLabel': 'Подписчики {count}',
+  'sortNew': 'Новые',
+  'sortHot': 'Популярные',
 };
 
 const _strings_zh = <String, String>{
@@ -2738,6 +2762,9 @@ const _strings_zh = <String, String>{
   'loginRequiredTitle': '需要登录',
   'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
   'loginRequiredAction': '「{action}」需要登录后才能使用。',
+  'fansLabel': '粉丝 {count}',
+  'sortNew': '最新',
+  'sortHot': '最热',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -3042,6 +3069,9 @@ const _strings_zh_CN = <String, String>{
   'loginRequiredTitle': '需要登录',
   'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
   'loginRequiredAction': '「{action}」需要登录后才能使用。',
+  'fansLabel': '粉丝 {count}',
+  'sortNew': '最新',
+  'sortHot': '最热',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3346,6 +3376,9 @@ const _strings_zh_TW = <String, String>{
   'loginRequiredTitle': '需要登录',
   'loginRequiredHint': '该功能需要登录酷狗账号后使用。',
   'loginRequiredAction': '「{action}」需要登录后才能使用。',
+  'fansLabel': '粉絲 {count}',
+  'sortNew': '最新',
+  'sortHot': '最熱',
 };
 
 const _template = _strings_zh_CN;
@@ -3706,6 +3739,9 @@ class AppLocalizations {
   String get loginRequiredTitle => _t('loginRequiredTitle');
   String get loginRequiredHint => _t('loginRequiredHint');
   String loginRequiredAction(String action) => _t('loginRequiredAction').r({'action': action});
+  String fansLabel(int count) => _t('fansLabel').r({'count': count});
+  String get sortNew => _t('sortNew');
+  String get sortHot => _t('sortHot');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

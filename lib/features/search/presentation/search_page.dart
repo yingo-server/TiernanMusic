@@ -700,13 +700,13 @@ class _GenericResultTab extends ConsumerWidget {
               onTap: () {
                 if (type == 'mv' && s.hash != null) {
                   context.push('/mv/${s.hash}');
-                } else if (type == 'album') {
-                  // 专辑 albumid 是数字 ID，/playlist/:id 需要
-                  // global_collection_id 形式，跳过去会拿到空详情。
-                  // 专辑专页接入前不响应跳转。
-                  Toast.show(context, context.l10n.albumPageComingSoon);
+                } else if (type == 'album' && s.id.isNotEmpty) {
+                  // 专辑：albumid 数字 ID → /album/:id
+                  context.push('/album/${s.id}');
+                } else if (type == 'author' && s.id.isNotEmpty) {
+                  // 歌手：AuthorId → /artist/:id
+                  context.push('/artist/${s.id}');
                 }
-                // TODO(播放模块): 歌手页跳接待补充
               },
             );
           },
