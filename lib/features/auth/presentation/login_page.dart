@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/providers.dart' show kugouApiClientProvider;
+import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/toast.dart';
 import '../../../l10n/l10n.dart';
 import '../data/auth_providers.dart';
@@ -156,11 +157,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
 /// 显示错误提示（项目统一用 Toast，避免 Snackbar 刷屏）
 void _showError(BuildContext context, Object e) {
-  final msg = e is ApiException
-      ? e.message
-      : e is CaptchaRequiredException
-          ? e.message
-          : '$e';
+  // A2-07（审查②）：直连层抛 DioException(error: ApiException)，
+  // 必须经 unwrapApi 解包，否则落到 '$e' 显示技术文本。
+  final api = unwrapApi(e);
+  final msg = api?.message ??
+      (e is CaptchaRequiredException ? e.message : friendlyError(e));
   Toast.show(context, msg.isEmpty ? context.l10n.operationFailed : msg);
 }
 

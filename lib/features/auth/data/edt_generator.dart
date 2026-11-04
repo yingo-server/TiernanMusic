@@ -265,7 +265,10 @@ rQIDAQAB''';
     final exponent =
         (keySeq.elements![1] as ASN1Integer).integer as BigInt;
 
-    final oaep = OAEPEncoding(RSAEngine())
+    // A2-03（审查②）：上游 generate_simulate.js 用 RSA-OAEP(SHA-256, MGF1-SHA256)。
+    // pointycastle 的 OAEPEncoding(RSAEngine()) 工厂默认走 withSHA1，哈希不匹配
+    // 会导致服务端解密失败。必须显式用 withSHA256。
+    final oaep = OAEPEncoding.withSHA256(RSAEngine())
       ..init(
         true,
         PublicKeyParameter<RSAPublicKey>(RSAPublicKey(modulus, exponent)),

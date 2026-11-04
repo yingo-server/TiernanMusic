@@ -260,7 +260,10 @@ class AuthRepository {
 
   /// 已知「凭证失效」的 error_code（401 类/token 过期），网络错误绝不算
   bool _isTokenInvalidCode(int code, String message) {
-    const invalidCodes = {1011, 20010, 30791, 401};
+    // A2-09（审查②）：20010 是网关通用「参数缺失/参数错误」码，不专指
+    // token 失效——t1 空/dfid='-' 也会返回它。一次参数性失败就把有效会话
+    // 清空，用户必须重登。移出名单，参数性失败走 _degradedUser 降级。
+    const invalidCodes = {1011, 30791, 401};
     if (invalidCodes.contains(code)) return true;
     return code == -1 && message.contains('token');
   }
@@ -356,6 +359,10 @@ class AuthRepository {
   }
 
   /// 从 DioException 中提取原始响应体
+  ///
+  /// A2-01（审查②）：直连层的 DioException 不带 response（只有 .error），
+  /// 此处从包装的 ApiException 中兜底取 ssaCode/响应体，否则密码登录
+  /// 命中 20028 时 ssaCode 恒为空，验证页永不弹出。
   Map<String, dynamic>? _errorResponseData(DioException e) {
     final data = e.response?.data;
     if (data is Map<String, dynamic>) return data;
@@ -364,6 +371,13 @@ class AuthRepository {
         final decoded = jsonDecode(data);
         if (decoded is Map<String, dynamic>) return decoded;
       } catch (_) {}
+    }
+    // 直连包装的异常：从 ApiException 兜底
+    final err = e.error;
+    if (err is ApiException) {
+      if (err.ssaCode != null && err.ssaCode!.isNotEmpty) {
+        return {'ssaCode': err.ssaCode};
+      }
     }
     return null;
   }

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/providers.dart';
+import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/toast.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart';
@@ -371,17 +372,21 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
       if (mounted) {
         Toast.show(context, context.l10n.commentSuccess);
       }
-    } on ApiException catch (e) {
+    } catch (e) {
+      // A2-07（审查②）：直连层抛 DioException(error: ApiException)，
+      // `on ApiException` 永远不命中。统一 unwrapApi 解包。
+      final e0 = unwrapApi(e);
       // 20028 风控：弹人机验证页（复用 CaptchaPage）。
       // 验证通过后**不自动重试**（红线：禁止自动重试），提示用户手动再点发送。
       if (mounted &&
-          e.needsVerification &&
-          (e.ssaCode?.isNotEmpty ?? false)) {
+          e0 != null &&
+          e0.needsVerification &&
+          (e0.ssaCode?.isNotEmpty ?? false)) {
         final ok = await Navigator.of(context).push<bool>(
           MaterialPageRoute(
             fullscreenDialog: true,
             builder: (_) => CaptchaPage(
-              ssaCode: e.ssaCode!,
+              ssaCode: e0.ssaCode!,
               api: ref.read(kugouApiClientProvider),
             ),
           ),
