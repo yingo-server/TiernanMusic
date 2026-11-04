@@ -463,7 +463,9 @@ class _MyPlaylistRow extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, i) {
           final p = playlists[i];
-          // TODO(跳转): 用户歌单详情页待接入
+          // 跳转到「我的歌单」详情：
+          // 详情页用 gid（公共歌单同款接口），歌曲用数字 listid。
+          final gid = p.globalCollectionId;
           return SizedBox(
             width: 120,
             child: Column(
@@ -473,7 +475,17 @@ class _MyPlaylistRow extends StatelessWidget {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: CachedNetworkImage(
+                      child: GestureDetector(
+                        onTap: () {
+                          if (gid.isEmpty && p.listid.isEmpty) return;
+                          final detailId = Uri.encodeComponent(
+                              gid.isEmpty ? p.listid : gid);
+                          final user = p.listid.isEmpty
+                              ? ''
+                              : '?user=${Uri.encodeComponent(p.listid)}';
+                          context.push('/playlist/$detailId$user');
+                        },
+                        child: CachedNetworkImage(
                     cacheManager: AppImageCache.instance,
                         imageUrl: p.cover,
                         width: 120,

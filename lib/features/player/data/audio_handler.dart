@@ -54,6 +54,8 @@ class TiernanAudioHandler extends BaseAudioHandler
     if (_initialized) return true;
     _initialized = true;
     final p = _playerInstance = AudioPlayer();
+    // 通知 UI：引擎已就绪，播放态流可以接上了
+    _engineReadyController.add(p);
     p.playbackEventStream.listen(_broadcastState);
     p.processingStateStream.listen((state) {
       if (state == ProcessingState.completed) skipToNext();
@@ -75,6 +77,17 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   /// 播放错误事件流
   Stream<String> get errors => _errorController.stream;
+
+  /// 引擎就绪事件流。
+  ///
+  /// 关键：AudioPlayer 是在首次播放时才创建的（惰性），
+  /// 若 UI 只依赖一次性 getter 读取 player，会永久拿到缓存的 null，
+  /// 导致进度条/播放键/时长/随机/循环全部不更新。
+  /// 这里用广播流把「引擎何时可用」变成可观察事件。
+  final _engineReadyController = StreamController<AudioPlayer?>.broadcast();
+
+  /// 引擎就绪事件流（首次为 null，引擎就绪后推送真实 player）
+  Stream<AudioPlayer?> get engineReady => _engineReadyController.stream;
 
   /// 是否 60 秒试听（VIP/付费曲走官方免费试听通道时置 true）
   final _previewController = StreamController<bool>.broadcast();

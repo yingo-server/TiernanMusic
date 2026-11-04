@@ -105,9 +105,13 @@ class HomeRepository {
   }
 
   /// 每日推荐（需登录，未登录等错误返回 null 以隐藏入口）
+  /// 每日推荐（**登录态强相关**）
+  ///
+  /// ⚠️ 该接口的返回依赖登录态，因此**绝不能进 MemoryCache**：
+  /// 匿名态的响应被缓存后，登录后 invalidate 重取仍命中缓存 → 每日推荐不出现。
   Future<List<HomeSong>?> fetchDailyRecommend() async {
     try {
-      final json = await _cachedGet('/everyday/recommend');
+      final json = await _api.get('/everyday/recommend');
       final data = json['data'];
       final raw = _asList(
           data is Map

@@ -57,6 +57,11 @@ class KgDirectApiClient extends KugouApiClient {
       );
     }
 
+    // ⚠️ status == 200 也是成功语义（歌词类接口实测如此：
+    //    status=200 + errcode=200 + candidates[]）。必须先放行，
+    //    否则 errcode=200 会被当成错误码 → 歌词搜索恒失败。
+    if (status == 200) return body;
+
     if (status == 0 || status == 2 || errorCode != 0) {
       throw ApiException(
         errorCode,

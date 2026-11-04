@@ -158,29 +158,10 @@ class KugouApiClient {
   Dio get dio => _dio;
   CookieJar get cookieJar => _cookieJar;
 
-  /// 设备 mid（登录/注册后由服务端 cookie 注入，用于行为指纹）
-  String mid = '';
+  /// 登录用户 id（直连签名/权益查询用；匿名为 '0'）
   String userid = '';
   String dfid = '';
   String webglHash = '11664606328242161144';
-
-  /// 从 cookie 中刷新 mid / userid，供 sid/edt 生成使用
-  Future<void> refreshDeviceContext() async {
-    try {
-      final uri = Uri.parse(AppConfig.kugouApiBase);
-      final cookies = await _cookieJar.loadForRequest(uri);
-      for (final c in cookies) {
-        switch (c.name) {
-          case 'KUGOU_API_MID':
-            if (c.value.isNotEmpty) mid = c.value;
-            break;
-          case 'userid':
-            if (c.value.isNotEmpty) userid = c.value;
-            break;
-        }
-      }
-    } catch (_) {}
-  }
 
   Future<Map<String, dynamic>> get(String path,
       {Map<String, dynamic>? query}) async {

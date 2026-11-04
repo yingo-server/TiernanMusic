@@ -37,7 +37,11 @@ class DownloadSheet extends ConsumerWidget {
           coverUrl: song.cover,
           albumId: song.albumId,
           albumAudioId: song.albumAudioId,
-          quality: song.quality.value,
+          // 音质：歌曲自带 > 用户默认设置（与播放链路同一事实源）
+          quality: (song.quality != AudioQuality.q128
+                  ? song.quality
+                  : preferredQuality())
+              .value,
           durationSec: song.duration.inSeconds,
         );
 

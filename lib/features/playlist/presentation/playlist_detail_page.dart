@@ -37,17 +37,34 @@ final playlistTracksProvider = FutureProvider.family
       .fetchTracks(id, newestFirst: true, allPages: true);
 });
 
+/// 用户（我的）歌单歌曲：按 `listid` 走 `/playlist/track/all/new`。
+///
+/// 与公共歌单的 gid 不同，用户歌单只有数字 `listid`。
+final userPlaylistTracksProvider = FutureProvider.family
+    .autoDispose<PlaylistTracks, String>((ref, listId) {
+  return ref.watch(_playlistRepoProvider).fetchUserTracks(listId);
+});
+
 /// 加载更多后手动触发 UI 重建的计数器
 final _tracksReloadProvider = StateProvider<int>((ref) => 0);
 
 class PlaylistDetailPage extends ConsumerWidget {
-  const PlaylistDetailPage({super.key, required this.id});
+  const PlaylistDetailPage({super.key, required this.id, this.userListId});
   final String id;
+
+  /// 用户（我的）歌单的 listid。
+  ///
+  /// 非空时按「我的歌单」渲染：详情用 gid 取、歌曲用 listid 取
+  /// （用户歌单的歌曲接口 `/playlist/track/all/new` 只认数字 listid）。
+  final String? userListId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(playlistDetailProvider(id));
-    final tracksAsync = ref.watch(playlistTracksProvider(id));
+    // 我的歌单：歌曲走 listid；公共歌单：歌曲走 gid
+    final tracksAsync = (userListId != null && userListId!.isNotEmpty)
+        ? ref.watch(userPlaylistTracksProvider(userListId!))
+        : ref.watch(playlistTracksProvider(id));
     // 加载更多后 bump 触发本页重建（ songs 列表是本地可变对象，直接展示）
     ref.watch(_tracksReloadProvider);
     final theme = Theme.of(context);

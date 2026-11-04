@@ -34,11 +34,26 @@ class KgResponse {
   /// 需要自行用 seed 派生 key/iv 解密。
   final List<int>? rawBytes;
 
-  bool get isOk => status == 200 && body['status'] == 1;
+  /// HTTP 200 + 业务 status 成功。
+  ///
+  /// ⚠️ 业务成功语义不统一（docs/api_verified.md 实测）：
+  /// - 多数业务接口：`body.status == 1`
+  /// - 歌词类（lyrics.kugou.com）：HTTP 200 + `body.status == 200` + `errcode == 200`
+  /// 故这里把 `status == 200` 也视为成功；细节判定仍由各端点的 `_wrap` 负责。
+  bool get isOk => this.status == 200 && (body['status'] == 1 || body['status'] == 200);
 
   /// 业务错误码
+  ///
+  /// 读取顺序：`error_code`（通用）→ `errcode`（网关）→ `err_code`
+  /// （mcomment 系列业务码，实测 status=1 + err_code=60102 表示失败）。
   int get errorCode {
-    final v = body['error_code'] ?? body['errcode'] ?? 0;
+    final v = body['error_code'] ?? body['errcode'] ?? body['err_code'] ?? 0;
+    return v is int ? v : int.tryParse('$v') ?? 0;
+  }
+
+  /// mcomment 专有业务码（与 [errorCode] 分开读，避免普通接口误判）
+  int get businessErrorCode {
+    final v = body['err_code'] ?? 0;
     return v is int ? v : int.tryParse('$v') ?? 0;
   }
 
@@ -125,6 +140,8 @@ class KgClient {
       : _dio = Dio(BaseOptions(
           connectTimeout: const Duration(seconds: 15),
           receiveTimeout: const Duration(seconds: 25),
+          // 设备注册 / 云歌单 / 歌词下载等较慢接口，请求体发出也需要上限
+          sendTimeout: const Duration(seconds: 30),
           responseType: ResponseType.bytes,
           validateStatus: (_) => true,
         ));
@@ -286,7 +303,17 @@ class KgClient {
     );
   }
 
-  bool _needsVerify(KgResponse r) => r.errorCode == 20028;
+  /// 是否需要走人机验证。
+  ///
+  /// 对齐 Node request.js:234-246：任意失败响应（status==0 或 error_code!=0）
+  /// 只要带 `ssa-code` 头/体，就应生成 sid/edt 提交验证后重试，
+  /// 而非只认 20028。实测 20006（签名错风控）也会带 ssa-code。
+  bool _needsVerify(KgResponse r) {
+    if (r.status != 200) return false;
+    final failed =
+        r.body['status'] == 0 || r.errorCode != 0;
+    return failed && (r.ssaCode?.isNotEmpty ?? false);
+  }
 
   /// 生成 sid/edt 并提交 /verify/user/info
   Future<bool> submitFingerprintVerification(String ssaCode) async {

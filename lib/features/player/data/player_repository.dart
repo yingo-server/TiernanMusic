@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive/hive.dart';
 
 import '../../../core/api/kugou_api_client.dart';
+import '../../../core/audio/preferred_quality.dart';
 import '../../../core/direct/kg_play_api.dart';
 import '../../../core/direct/kg_providers.dart';
 import '../../../core/storage/secure_storage.dart';
@@ -87,6 +87,9 @@ class PlayerRepository {
           duration:
               merged.duration > Duration.zero ? merged.duration : song.duration,
           quality: song.quality,
+          // ⚠️ 必须回填 localPath：否则离线歌曲播过一次后，
+          // 队列里的对象被详情覆盖，切回来就退化成在线播放（终审 P1-5）。
+          localPath: song.localPath,
         );
       }
       if (data is Map<String, dynamic>) {
@@ -103,6 +106,9 @@ class PlayerRepository {
           duration:
               merged.duration > Duration.zero ? merged.duration : song.duration,
           quality: song.quality,
+          // ⚠️ 必须回填 localPath：否则离线歌曲播过一次后，
+          // 队列里的对象被详情覆盖，切回来就退化成在线播放（终审 P1-5）。
+          localPath: song.localPath,
         );
       }
     } catch (_) {
@@ -112,15 +118,8 @@ class PlayerRepository {
   }
 
   /// 读取用户设置的默认音质（Hive settings['defaultQuality']，缺省 320）
-  AudioQuality _preferredFromSettings() {
-    try {
-      if (Hive.isBoxOpen('settings')) {
-        final v = Hive.box<dynamic>('settings').get('defaultQuality');
-        if (v is String) return AudioQuality.fromString(v);
-      }
-    } catch (_) {}
-    return AudioQuality.q320;
-  }
+  /// 用户默认音质（与下载链路共用同一事实源）
+  AudioQuality _preferredFromSettings() => preferredQuality();
 
   /// 获取可播放 URL：直连优先，失败回退 kapi。
   Future<PlayableResult> resolveUrl(Song song,

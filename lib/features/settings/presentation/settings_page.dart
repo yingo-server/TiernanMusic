@@ -41,7 +41,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         '128': c.l10n.quality128,
         '320': c.l10n.quality320,
         'flac': c.l10n.qualityFlac,
-        'hires': c.l10n.qualityHigh,
+        // key 必须与 AudioQuality.value 一致（'high'）；
+        // 旧版写的 'hires' 由 AudioQuality.fromString 兼容
+        'high': c.l10n.qualityHigh,
+        'super': c.l10n.qualitySuper,
       };
 
   /// 日志目录路径（**必须是 State 字段**）
@@ -135,9 +138,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         }
       }
       // 清除临时目录
+      // ⚠️ 必须排除下载临时目录（downloads_tmp）：否则正在下载的任务
+      // 会在 publish 阶段找不到文件而失败，且报错与真实原因无关（终审 P1-6）。
       final tmp = await getTemporaryDirectory();
       if (await tmp.exists()) {
         await for (final entity in tmp.list(recursive: false)) {
+          if (entity.path.endsWith('downloads_tmp')) continue;
           try {
             await entity.delete(recursive: true);
           } catch (_) {}

@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
+import '../../../core/direct/kg_providers.dart';
 import '../../../core/providers.dart';
+import '../../../core/storage/secure_storage.dart';
 import 'auth_repository.dart';
 import 'account_manager.dart';
 
@@ -20,6 +22,17 @@ class AuthStateNotifier extends AsyncNotifier<AuthUser?> {
   @override
   Future<AuthUser?> build() async {
     await AccountManager.instance.init();
+    // ⚠️ 必须**先补 t1** 再 restoreSession：
+    // 直连 /login/token 的签名用 kg.t1，若此刻为空则刷新必然失败
+    // （原本要等 authState 变化后才补，而那已经晚于这次请求了）。
+    try {
+      final cred = await SecureStorage.instance.readCredentials();
+      if (cred?.t1 != null && cred!.t1!.isNotEmpty) {
+        ref.read(kgClientProvider).t1 = cred.t1!;
+      }
+    } catch (_) {
+      // 读不到凭证就按无 t1 继续，后续有降级路径
+    }
     return ref.read(authRepositoryProvider).restoreSession();
   }
 

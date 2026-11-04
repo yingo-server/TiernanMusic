@@ -209,7 +209,17 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                       onRefresh: () => ref
                           .read(_commentsProvider(_args).notifier)
                           .load(refresh: true),
-                      child: ListView.builder(
+                      child: Column(
+                        children: [
+                          // 分类标签 + 热词（上游已返回，此前未渲染）
+                          if ((page.classifies?.isNotEmpty ?? false) ||
+                              (page.hotWords?.isNotEmpty ?? false))
+                            _CommentTags(
+                              classifies: page.classifies ?? const [],
+                              hotWords: page.hotWords ?? const [],
+                            ),
+                          Expanded(
+                            child: ListView.builder(
                         controller: _scroll,
                         itemCount: page.comments.length + 1,
                         itemBuilder: (context, index) {
@@ -254,6 +264,10 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                                 : null,
                           );
                         },
+                      ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
             ),
@@ -577,6 +591,64 @@ class _CommentTile extends StatelessWidget {
         ],
       ),
       isThreeLine: true,
+    );
+  }
+}
+
+/// 评论分类标签 + 热词（上游 `/comment/music` 已返回，此前未渲染）
+class _CommentTags extends StatelessWidget {
+  const _CommentTags({required this.classifies, required this.hotWords});
+
+  final List<CommentClassify> classifies;
+  final List<String> hotWords;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (classifies.isNotEmpty) ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final c in classifies)
+                  Chip(
+                    label: Text(c.name),
+                    avatar: c.count > 0
+                        ? Text('${c.count}',
+                            style: theme.textTheme.labelSmall)
+                        : null,
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (hotWords.isNotEmpty)
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final w in hotWords)
+                  Chip(
+                    label: Text(w),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    backgroundColor: theme.colorScheme.secondaryContainer,
+                    labelStyle:
+                        theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }

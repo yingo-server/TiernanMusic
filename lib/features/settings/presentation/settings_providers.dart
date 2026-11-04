@@ -9,7 +9,7 @@ Box<dynamic>? _box() {
   return null;
 }
 
-/// 默认音质：128 / 320 / flac / hires
+/// 默认音质：128 / 320 / flac / high / super（与 AudioQuality.value 一致）
 class DefaultQualityNotifier extends StateNotifier<String> {
   DefaultQualityNotifier()
       : super((_box()?.get('defaultQuality', defaultValue: '320') as String?) ??

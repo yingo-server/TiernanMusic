@@ -519,5 +519,6 @@
   },
   "sortNew": "Новые",
   "sortHot": "Популярные",
-  "loginToViewFavorites": "Войдите, чтобы увидеть избранное"
+  "loginToViewFavorites": "Войдите, чтобы увидеть избранное",
+  "qualitySuper": "Мастер-качество"
 }

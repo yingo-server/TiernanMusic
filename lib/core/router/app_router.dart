@@ -43,8 +43,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/player', builder: (_, __) => const FullPlayerPage()),
       GoRoute(
         path: '/playlist/:id',
-        builder: (_, state) =>
-            PlaylistDetailPage(id: state.pathParameters['id']!),
+        builder: (_, state) => PlaylistDetailPage(
+          id: state.pathParameters['id']!,
+          // 用户（我的）歌单：数字 listid，走 /playlist/track/all/new
+          userListId: state.uri.queryParameters['user'],
+        ),
       ),
       GoRoute(
         path: '/comments/:type/:id',

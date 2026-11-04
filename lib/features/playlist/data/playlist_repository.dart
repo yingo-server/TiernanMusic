@@ -314,12 +314,19 @@ class UserPlaylist {
     required this.cover,
     required this.count,
     required this.isMine,
+    this.globalCollectionId = '',
   });
   final String listid;
   final String name;
   final String cover;
   final int count;
   final bool isMine;
+
+  /// 全局歌单 ID（`collection_...` 形式）。
+  ///
+  /// 实测 `/user/playlist` 每项都带 `global_collection_id`；
+  /// 直连 `/playlist/detail` 只认这个形式（数字 `listid` 会 20010）。
+  final String globalCollectionId;
 
   /// 实测用户歌单项：`listid` / `name` / `pic` / `count` /
   /// `list_create_type` / `global_collection_id`。
@@ -333,6 +340,8 @@ class UserPlaylist {
       count: _toInt(json['count'] ?? json['songcount']),
       isMine: _toInt(json['list_create_type'], fallback: 1) == 0 ||
           '${json['is_create'] ?? ''}' == '1',
+      globalCollectionId:
+          '${json['global_collection_id'] ?? json['global_specialid'] ?? ''}',
     );
   }
 }

@@ -21,9 +21,29 @@ enum AudioQuality {
     q128,
   ];
 
+  /// 从字符串解析音质。
+  ///
+  /// 兼容历史/别名写法（设置页旧版本写入过 'hires'）：
+  /// - 'hires' / 'Hi-Res' → high
+  /// - 'master' / '母带'   → superQuality
+  ///
+  /// ⚠️ 若别名缺失，用户在设置页选了「Hi-Res」而实际只请求 128k
+  /// （设置页显示已生效但音质没变），属于数据一致性红线。
   static AudioQuality fromString(String? s) {
+    if (s == null) return q128;
+    final v = s.trim().toLowerCase();
     for (final q in values) {
-      if (q.value == s) return q;
+      if (q.value == v) return q;
+    }
+    switch (v) {
+      case 'hires':
+      case 'hi-res':
+      case 'hiresample':
+        return high;
+      case 'master':
+      case '母带':
+      case '臻品':
+        return superQuality;
     }
     return q128;
   }

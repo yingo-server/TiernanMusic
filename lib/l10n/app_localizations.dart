@@ -309,6 +309,7 @@ const _strings_de = <String, String>{
   'sortNew': 'Neueste',
   'sortHot': 'Beliebt',
   'loginToViewFavorites': 'Anmelden, um Favoriten zu sehen',
+  'qualitySuper': 'Master-Qualität',
 };
 
 const _strings_en = <String, String>{
@@ -616,6 +617,7 @@ const _strings_en = <String, String>{
   'sortNew': 'Newest',
   'sortHot': 'Popular',
   'loginToViewFavorites': 'Log in to view favorites',
+  'qualitySuper': 'Master Quality',
 };
 
 const _strings_es = <String, String>{
@@ -923,6 +925,7 @@ const _strings_es = <String, String>{
   'sortNew': 'Más recientes',
   'sortHot': 'Populares',
   'loginToViewFavorites': 'Inicia sesión para ver los favoritos',
+  'qualitySuper': 'Calidad maestra',
 };
 
 const _strings_fr = <String, String>{
@@ -1230,6 +1233,7 @@ const _strings_fr = <String, String>{
   'sortNew': 'Plus récents',
   'sortHot': 'Populaires',
   'loginToViewFavorites': 'Connectez-vous pour voir vos favoris',
+  'qualitySuper': 'Qualité master',
 };
 
 const _strings_ja = <String, String>{
@@ -1537,6 +1541,7 @@ const _strings_ja = <String, String>{
   'sortNew': '最新',
   'sortHot': '人気',
   'loginToViewFavorites': 'ログインするとお気に入りが見られます',
+  'qualitySuper': 'マスター品質',
 };
 
 const _strings_ko = <String, String>{
@@ -1844,6 +1849,7 @@ const _strings_ko = <String, String>{
   'sortNew': '최신',
   'sortHot': '인기',
   'loginToViewFavorites': '로그인하면 즐겨찾기를 볼 수 있습니다',
+  'qualitySuper': '마스터 음질',
 };
 
 const _strings_pt = <String, String>{
@@ -2151,6 +2157,7 @@ const _strings_pt = <String, String>{
   'sortNew': 'Mais recentes',
   'sortHot': 'Populares',
   'loginToViewFavorites': 'Faça login para ver os favoritos',
+  'qualitySuper': 'Qualidade mestre',
 };
 
 const _strings_ru = <String, String>{
@@ -2458,6 +2465,7 @@ const _strings_ru = <String, String>{
   'sortNew': 'Новые',
   'sortHot': 'Популярные',
   'loginToViewFavorites': 'Войдите, чтобы увидеть избранное',
+  'qualitySuper': 'Мастер-качество',
 };
 
 const _strings_zh = <String, String>{
@@ -2765,6 +2773,7 @@ const _strings_zh = <String, String>{
   'sortNew': '最新',
   'sortHot': '最热',
   'loginToViewFavorites': '登录后查看收藏',
+  'qualitySuper': '臻品母带',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -3072,6 +3081,7 @@ const _strings_zh_CN = <String, String>{
   'sortNew': '最新',
   'sortHot': '最热',
   'loginToViewFavorites': '登录后查看收藏',
+  'qualitySuper': '臻品母带',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3379,6 +3389,7 @@ const _strings_zh_TW = <String, String>{
   'sortNew': '最新',
   'sortHot': '最熱',
   'loginToViewFavorites': '登入後檢視收藏',
+  'qualitySuper': '臻品母帶',
 };
 
 const _template = _strings_zh_CN;
@@ -3742,6 +3753,7 @@ class AppLocalizations {
   String get sortNew => _t('sortNew');
   String get sortHot => _t('sortHot');
   String get loginToViewFavorites => _t('loginToViewFavorites');
+  String get qualitySuper => _t('qualitySuper');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

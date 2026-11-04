@@ -68,7 +68,21 @@ class RecentPlayStore {
         .toList();
   }
 
-  static Future<void> add(RecentPlay item) async {
+  /// 串行队列：防止并发 add 的「读-改-写」互相覆盖（快速连播会丢记录）。
+  static Future<void> _serial = Future<void>.value();
+
+  static Future<void> add(RecentPlay item) {
+    // 链式排队：后一个写入等前一个完成
+    final next = _serial.then((_) => _addInner(item));
+    // 失败不阻断后续（同时保留错误可观测性）
+    _serial = next.catchError((Object e) {
+      // ignore: avoid_print
+      return;
+    });
+    return next;
+  }
+
+  static Future<void> _addInner(RecentPlay item) async {
     final box = Hive.isBoxOpen(_boxName) ? _box : await Hive.openBox(_boxName);
     final list = await read()
       ..removeWhere((e) => e.hash == item.hash)

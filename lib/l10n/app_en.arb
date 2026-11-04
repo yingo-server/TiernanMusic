@@ -519,5 +519,6 @@
   },
   "sortNew": "Newest",
   "sortHot": "Popular",
-  "loginToViewFavorites": "Log in to view favorites"
+  "loginToViewFavorites": "Log in to view favorites",
+  "qualitySuper": "Master Quality"
 }

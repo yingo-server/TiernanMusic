@@ -17,8 +17,6 @@ class AppConfig {
 
   // 缓存
   static const int memoryCacheSeconds = 90;
-  static const int diskCacheMaxMb = 2048;
-  static const Duration diskCacheMaxAge = Duration(days: 30);
 
   // 歌词
   static const int lyricTranslateMaxLinesPerBatch = 40;
@@ -41,10 +39,4 @@ class AppConfig {
     'pt': 'Português',
     'ru': 'Русский',
   };
-
-  /// MV HTTP 地址转为代理 HTTPS
-  static String proxyMvUrl(String httpUrl) {
-    if (httpUrl.startsWith('https://')) return httpUrl;
-    return '$proxyBase/$httpUrl';
-  }
 }

@@ -542,5 +542,9 @@
   },
   "@collapse": {
     "description": "收起文本"
+  },
+  "qualitySuper": "臻品母带",
+  "@qualitySuper": {
+    "description": "音质：臻品母带"
   }
 }

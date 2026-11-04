@@ -81,16 +81,34 @@ class AccountManager {
   }
 
   /// 全部账号
+  ///
+  /// ⚠️ 未初始化 / box 未打开时返回**空列表而非抛异常**：
+  /// 启动异常路径下 authStateProvider.build() 会失败，此时设置页若读
+  /// accounts 就会整页崩溃（终审 P1-3）。这里降级为「无账号」。
   List<AccountRecord> get accounts {
-    final raw = _b.get(_kList, defaultValue: <dynamic>[]) as List<dynamic>;
-    return raw
-        .whereType<Map<dynamic, dynamic>>()
-        .map(AccountRecord.fromJson)
-        .toList();
+    final b = _box;
+    if (b == null || !b.isOpen) return const [];
+    try {
+      final raw = b.get(_kList, defaultValue: <dynamic>[]) as List<dynamic>;
+      return raw
+          .whereType<Map<dynamic, dynamic>>()
+          .map(AccountRecord.fromJson)
+          .toList();
+    } catch (_) {
+      return const [];
+    }
   }
 
   /// 当前账号 userid
-  String? get currentUserid => _b.get(_kCurrent) as String?;
+  String? get currentUserid {
+    final b = _box;
+    if (b == null || !b.isOpen) return null;
+    try {
+      return b.get(_kCurrent) as String?;
+    } catch (_) {
+      return null;
+    }
+  }
 
   AccountRecord? get currentAccount {
     final id = currentUserid;

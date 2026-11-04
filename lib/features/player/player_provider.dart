@@ -31,8 +31,17 @@ final audioHandlerProvider = Provider<TiernanAudioHandler>((ref) {
 });
 
 /// 底层 just_audio 播放器（音频引擎未就绪时为 null）。
-final audioPlayerProvider =
-    Provider<AudioPlayer?>((ref) => ref.watch(audioHandlerProvider).player);
+///
+/// ⚠️ 必须是 **StreamProvider**：AudioPlayer 是首次播放时才惰性创建的，
+/// 若用普通 Provider，首帧拿到的 null 会被永久缓存，导致
+/// 进度条/播放键/时长/随机/循环全部不随真实播放更新（终审 P0-1）。
+final audioPlayerProvider = StreamProvider<AudioPlayer?>((ref) async* {
+  final handler = ref.watch(audioHandlerProvider);
+  yield handler.player; // 可能是 null（引擎未就绪）
+  await for (final p in handler.engineReady) {
+    yield p;
+  }
+});
 
 /// 当前播放歌曲。
 final currentSongProvider = StreamProvider<Song?>((ref) =>
@@ -71,40 +80,64 @@ final queueProvider = StreamProvider<List<Song>>((ref) async* {
 ///
 /// 引擎未就绪（just_audio_background 启动失败）时返回稳定的空值流，
 /// 避免直接用 null 播放器导致空指针。
-final positionProvider = StreamProvider<Duration>((ref) {
-  final p = ref.watch(audioPlayerProvider);
-  if (p == null) return Stream<Duration>.value(Duration.zero);
-  return p.positionStream;
+final positionProvider = StreamProvider<Duration>((ref) async* {
+  await for (final p in ref.watch(audioPlayerProvider)) {
+    if (p == null) {
+      yield Duration.zero;
+      continue;
+    }
+    yield* p.positionStream;
+  }
 });
 
-final bufferedPositionProvider = StreamProvider<Duration>((ref) {
-  final p = ref.watch(audioPlayerProvider);
-  if (p == null) return Stream<Duration>.value(Duration.zero);
-  return p.bufferedPositionStream;
+final bufferedPositionProvider = StreamProvider<Duration>((ref) async* {
+  await for (final p in ref.watch(audioPlayerProvider)) {
+    if (p == null) {
+      yield Duration.zero;
+      continue;
+    }
+    yield* p.bufferedPositionStream;
+  }
 });
 
-final durationProvider = StreamProvider<Duration?>((ref) {
-  final p = ref.watch(audioPlayerProvider);
-  if (p == null) return Stream<Duration?>.value(null);
-  return p.durationStream;
+final durationProvider = StreamProvider<Duration?>((ref) async* {
+  await for (final p in ref.watch(audioPlayerProvider)) {
+    if (p == null) {
+      yield null;
+      continue;
+    }
+    yield* p.durationStream;
+  }
 });
 
-final isPlayingProvider = StreamProvider<bool>((ref) {
-  final p = ref.watch(audioPlayerProvider);
-  if (p == null) return Stream<bool>.value(false);
-  return p.playingStream;
+final isPlayingProvider = StreamProvider<bool>((ref) async* {
+  await for (final p in ref.watch(audioPlayerProvider)) {
+    if (p == null) {
+      yield false;
+      continue;
+    }
+    yield* p.playingStream;
+  }
 });
 
-final shuffleProvider = StreamProvider<bool>((ref) {
-  final p = ref.watch(audioPlayerProvider);
-  if (p == null) return Stream<bool>.value(false);
-  return p.shuffleModeEnabledStream;
+final shuffleProvider = StreamProvider<bool>((ref) async* {
+  await for (final p in ref.watch(audioPlayerProvider)) {
+    if (p == null) {
+      yield false;
+      continue;
+    }
+    yield* p.shuffleModeEnabledStream;
+  }
 });
 
-final repeatProvider = StreamProvider<LoopMode>((ref) {
-  final p = ref.watch(audioPlayerProvider);
-  if (p == null) return Stream<LoopMode>.value(LoopMode.off);
-  return p.loopModeStream;
+final repeatProvider = StreamProvider<LoopMode>((ref) async* {
+  await for (final p in ref.watch(audioPlayerProvider)) {
+    if (p == null) {
+      yield LoopMode.off;
+      continue;
+    }
+    yield* p.loopModeStream;
+  }
 });
 
 /// 音频引擎是否可用（false 时可提示"音频服务启动失败"）。
