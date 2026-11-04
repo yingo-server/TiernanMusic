@@ -158,3 +158,9 @@
 - 本地 dart analyze：CI 全绿 + 4446 条全为包缺失噪音，无 Dart 语法级错误
 
 ### S2 出口：全清单核完，无待接项
+
+## S3b-R1 重构完成（2026-11-05）
+- kg_direct_api_client.dart：1634 → 606 行（路由分发+wrap+fallback）
+- 新增 7 个端点文件（组合委托）：search/comment/playlist/media/artist_album/home/auth
+- 47 个方法委托替换，dart analyze 0 真语法错误
+- commit 010cd79，已 push
