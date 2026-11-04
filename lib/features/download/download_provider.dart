@@ -101,10 +101,18 @@ class DownloadManager extends StateNotifier<DownloadState> {
   Future<void> add(DownloadTask task) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final exists = state.tasks.any((t) => t.id == task.id);
+    // DL-03（审查③）：同 id 重复下载必须**取消旧任务**——否则旧 _run
+    // 完成后会把新任务改回 completed（写旧音质的文件信息）。
+    if (exists && _running.contains(task.id)) {
+      _tokens[task.id]?.cancel('re-added');
+      _tokens.remove(task.id);
+      _running.remove(task.id);
+    }
+    // DL-12（审查③）：createdAt 用 now（新建任务默认 0，持久化排序会错乱）
     final newTask = task.copyWith(
       status: DownloadTaskStatus.queued,
       clearError: true,
-      createdAt: exists ? task.createdAt : now,
+      createdAt: now,
       updatedAt: now,
     );
     _replace(newTask);
@@ -168,6 +176,14 @@ class DownloadManager extends StateNotifier<DownloadState> {
           path: task.filePath.isEmpty ? null : task.filePath,
         ),
       );
+      // DL-05（审查③）：连临时文件一起清（下载中/失败的任务不会有已发布文件）
+      try {
+        final tmpDir = await PublicMediaStore.tempDir();
+        final f = File(
+            '${tmpDir.path}/${task.hash}_${task.type.name}${task.type.fileExtension}');
+        // （文件名规则与 _run 的 tempPath 一致；删除失败静默）
+        if (f.existsSync()) f.deleteSync();
+      } catch (_) {}
     }
     state = state.copyWith(
       tasks: state.tasks.where((t) => t.id != id).toList(),
@@ -278,6 +294,8 @@ class DownloadManager extends StateNotifier<DownloadState> {
         ));
       }
 
+      // DL-02（审查③）：audio 任务的真实扩展名（服务端 extName 决定）
+      var realTempPath = tempPath;
       switch (task.type) {
         case DownloadTaskType.audio:
           final url = await _repo.resolveAudioUrl(
@@ -286,7 +304,16 @@ class DownloadManager extends StateNotifier<DownloadState> {
             albumAudioId: task.albumAudioId,
             quality: task.quality,
           );
-          await _repo.downloadFile(url, tempPath,
+          // DL-02（审查③）：按服务端 extName 决定真实扩展名，
+          // 无损/Hi-Res 落盘不再是 .mp3
+          final ext = await _repo.resolveAudioExt(
+            hash: task.hash,
+            albumId: task.albumId,
+            albumAudioId: task.albumAudioId,
+            quality: task.quality,
+          );
+          realTempPath = tempPath.replaceAll(RegExp(r'\.mp3$'), ext);
+          await _repo.downloadFile(url, realTempPath,
               onProgress: onProgress, cancelToken: token);
           break;
         case DownloadTaskType.cover:
@@ -318,11 +345,19 @@ class DownloadManager extends StateNotifier<DownloadState> {
       if (exist != null) {
         await PublicMediaStore.instance.delete(exist);
       }
-      final published = await _repo.publish(task, tempPath, strategy: _strategy);
-      final size = await File(tempPath).exists() ? await File(tempPath).length() : 0;
+      final published =
+          await _repo.publish(task, realTempPath, strategy: _strategy);
+      final size = await File(realTempPath).exists()
+          ? await File(realTempPath).length()
+          : 0;
 
       final cur = _find(task.id);
       if (cur != null) {
+        // DL-05（审查③）：发布成功后删除临时文件（tempPath 只在本方法内使用）
+        try {
+          final f = File(realTempPath);
+          if (f.existsSync()) f.deleteSync();
+        } catch (_) {}
         _update(cur.copyWith(
           status: DownloadTaskStatus.completed,
           // Android 10+ 走 MediaStore，只有 uri（content://）可用；
@@ -338,6 +373,9 @@ class DownloadManager extends StateNotifier<DownloadState> {
         ));
       }
     } on DioException catch (e) {
+      // DL-04（审查③）：与通用 catch 一致——旧 _run 的 cancel 异常
+      // 不得污染 resume 后的新任务状态。
+      if (_tokens[task.id] != token) return;
       final cur = _find(task.id);
       if (cur != null) {
         final cancelled = e.type == DioExceptionType.cancel;
@@ -361,7 +399,13 @@ class DownloadManager extends StateNotifier<DownloadState> {
       }
     } finally {
       if (_tokens[task.id] == token) _tokens.remove(task.id);
-      _running.remove(task.id);
+      // DL-04（审查③）：并发槽释放也要校验归属，否则 resume 后新任务
+      // 占的槽被旧 _run 释放，调度器会超额启动下载。
+      if (_running.contains(task.id) && _tokens[task.id] != token) {
+        // 新 _run 已接管该任务：不要动它的槽
+      } else {
+        _running.remove(task.id);
+      }
       unawaited(_schedule());
     }
   }

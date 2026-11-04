@@ -59,8 +59,38 @@ class DownloadRepository {
     if (url == null || url.isEmpty) {
       throw StateError(result.message.isEmpty ? '无可用播放地址' : result.message);
     }
+    // DL-01（审查③）：试听片段（60s）不能当完整歌曲落盘——
+    // isPreview 时直接拒绝，错误信息带上 failProcess 让用户知道原因。
+    if (result.isPreview) {
+      throw StateError(result.failProcess.isNotEmpty
+          ? '该音质需要会员或付费（${result.failProcess.join('/')}），不支持下载'
+          : '仅获取到试听片段，完整歌曲需要相应权益');
+    }
     // 直连原始地址（kugou 子域已允许 cleartext），代理不支持 Range 会拖慢/截断下载
     return url;
+  }
+
+  /// DL-02（审查③）：服务端实际扩展名（extName 缺失时从 URL 推断）。
+  /// 供下载侧写入正确的文件名与 MIME，不再硬编码 .mp3。
+  Future<String> resolveAudioExt(
+      {required String hash,
+      required String albumId,
+      required String albumAudioId,
+      required String quality}) async {
+    final api = _playApi;
+    if (api == null) return '.mp3';
+    final result = await api.songUrl(
+      hash: hash,
+      albumId: int.tryParse(albumId) ?? 0,
+      albumAudioId: int.tryParse(albumAudioId) ?? 0,
+      quality: quality,
+    );
+    final ext = result.extName.trim().toLowerCase();
+    if (ext.isNotEmpty && ext != 'mp3') return '.$ext';
+    // 从 URL 路径兜底
+    final url = result.bestUrl ?? '';
+    final m = RegExp(r'\.(mp3|flac|ogg|m4a|wav)(\?|$)').firstMatch(url);
+    return m != null ? '.${m.group(1)}' : '.mp3';
   }
 
   /// 解析 MV 播放地址（http → 代理 https）

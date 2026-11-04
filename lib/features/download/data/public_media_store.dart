@@ -145,8 +145,18 @@ class PublicMediaStore {
     }
 
     final target = File('$dirPath/$displayName');
-    await target.writeAsBytes(await File(tempFilePath).readAsBytes(),
-        flush: true);
+    // PB-01（审查③）：流式复制——readAsBytes 会把数百 MB 的 MV/无损整文件
+    // 读进内存，Android ≤9 降级场景下 OOM。
+    final inRaf = File(tempFilePath).openRead();
+    final outRaf = target.openWrite(mode: FileMode.write, flush: true);
+    try {
+      await for (final chunk in inRaf) {
+        outRaf.add(chunk);
+      }
+      await outRaf.flush();
+    } finally {
+      await outRaf.close();
+    }
     return PublishedFile(path: target.path, displayPath: display);
   }
 
