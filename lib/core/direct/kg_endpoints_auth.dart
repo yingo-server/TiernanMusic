@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'kg_client.dart';
