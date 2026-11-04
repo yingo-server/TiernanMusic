@@ -1,4 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/api/kugou_api_client.dart';
+import '../../../core/providers.dart';
 import '../../../core/cache/cache_manager.dart';
 
 /// 宽松地转 int：数字直接取整，字符串解析，失败返回 fallback。
@@ -353,3 +356,8 @@ class TrackRef {
   final String? albumId;
   final String? albumAudioId;
 }
+
+
+/// 歌单仓库单例（此前是 UI 层 throw UnimplementedError 导致歌单页必崩，后收敛至此）
+final playlistRepositoryProvider = Provider<PlaylistRepository>(
+    (ref) => PlaylistRepository(ref.watch(kugouApiClientProvider)));

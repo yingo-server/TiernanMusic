@@ -431,7 +431,7 @@ class _LoginGuideCard extends StatelessWidget {
 final _userPlaylistsProvider = FutureProvider.autoDispose
     .family<List<UserPlaylist>, bool>((ref, loggedIn) async {
   if (!loggedIn) return const [];
-  final repo = PlaylistRepository(ref.watch(kugouApiClientProvider));
+  final repo = ref.watch(playlistRepositoryProvider);
   return repo.fetchUserPlaylists();
 });
 

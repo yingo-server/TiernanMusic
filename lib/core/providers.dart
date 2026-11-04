@@ -22,3 +22,4 @@ final lyricRepositoryProvider = Provider<LyricRepository>((ref) =>
 // 它没有 ProviderScope 的 override（尤其 kgDeviceProvider），一旦被读取会抛
 // UnimplementedError。需要访问客户端时一律通过 Provider 的 ref 获取，
 // 例如 ref.watch(kugouApiClientProvider)。
+
