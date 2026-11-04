@@ -21,15 +21,25 @@ class SecureStorage {
     String? auth,
     String? dfid,
   }) async {
-    await Future.wait([
+    // C-03（审查②）：null 必须**删除**旧键——切号时新响应常不带 t1/auth，
+    // 保留旧值会造成 A 账号票据配 B 账号 token 的串号。
+    final ops = <Future<void>>[
       _storage.write(key: _kToken, value: token),
       _storage.write(key: _kUserId, value: userId),
-      // C-03（审查②）：null 必须**删除**旧键——切号时新响应常不带 t1/auth，
-      // 保留旧值会造成 A 账号票据配 B 账号 token 的串号。
-      if (t1 != null) { await _storage.write(key: _kT1, value: t1); } else { await _storage.delete(key: _kT1); }
-      if (auth != null) { await _storage.write(key: _kAuth, value: auth); } else { await _storage.delete(key: _kAuth); }
-      if (dfid != null) { await _storage.write(key: _kDfid, value: dfid); } else { await _storage.delete(key: _kDfid); }
-    ]);
+      if (t1 != null)
+        _storage.write(key: _kT1, value: t1)
+      else
+        _storage.delete(key: _kT1),
+      if (auth != null)
+        _storage.write(key: _kAuth, value: auth)
+      else
+        _storage.delete(key: _kAuth),
+      if (dfid != null)
+        _storage.write(key: _kDfid, value: dfid)
+      else
+        _storage.delete(key: _kDfid),
+    ];
+    await Future.wait(ops);
   }
 
   Future<Credentials?> readCredentials() async {

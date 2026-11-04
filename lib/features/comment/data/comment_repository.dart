@@ -76,8 +76,11 @@ class CommentRepository {
     String? childrenId;
     if (type == CommentResourceType.song) {
       try {
-        final page = await fetchComments(id: id, page: 1, pageSize: 1);
-        childrenId = page.specialChildId?.toString();
+        final page = await fetchComments(
+            type: CommentResourceType.song, id: id, page: 1, pageSize: 1);
+        childrenId = page.comments.isNotEmpty
+            ? page.comments.first.specialChildId
+            : null;
       } catch (_) {
         // 查询失败不阻断发送，childrenid 交给直连层兜底
       }
