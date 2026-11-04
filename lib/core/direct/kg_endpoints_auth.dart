@@ -235,7 +235,7 @@ class KgEndpointAuth {
     final url =
         'https://h5.kugou.com/apps/loginQRCode/html/index.html?qrcode=$key';
     final wantImg = '${q['qrimg'] ?? ''}' == '1' || q['qrimg'] == 1;
-    final b64 = wantImg ? await _qrPngBase64(url) : '';
+    final b64 = wantImg ? await qrPngBase64(url) : '';
     return KgResponse(
       status: 200,
       body: <String, dynamic>{

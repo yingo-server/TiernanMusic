@@ -4,6 +4,7 @@ import 'kg_client.dart';
 import 'kg_crypto.dart';
 
 import 'kg_direct_api_client.dart';
+import 'kg_play_api.dart' show KgSharedParams;
 
 /// 媒体端点（MV/视频/播放地址/权益）
 ///
