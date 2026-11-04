@@ -135,3 +135,26 @@
 ### 20. clearDefaultParams 5 处 ✅（逐处与实测一致）
 
 ## S1.1 出口：20/20 ✅（网络层终审完成，仅 top/playlist 回退）
+
+## S2 功能过审进度（清单来自 PLAN_v2_final.md S2.1）
+
+### B. 搜索页
+- [x] 热搜词：点击**直接搜索**（onTapKeyword→_submit，主流行为）✅（原清单写"填入框"，实际直搜更合理）
+- [x] 专辑 Tab → /album/{albumid}、歌手 Tab → /artist/{AuthorId}（本轮已接）
+
+### A. 首页（核过）
+- [x] 轮播 Timer：Tab 切走停翻页 + App 后台停（ModalRoute.isCurrent + WidgetsBindingObserver）
+- [x] 下拉刷新清缓存 + refresh
+
+### C. 播放器待接 2 项
+- [ ] 音质标签渲染 actualQualityProvider
+- [ ] 试听角标渲染 previewProvider
+
+## S2 功能过审完成（2026-11-05）
+
+### 播放器（C 组）
+- [x] 音质标签：actualQualityProvider 渲染在歌名行（primary 边框 chip）✅ 已实现
+- [x] 试听角标：previewProvider 渲染「仅试听」（tertiaryContainer chip）✅ 已实现
+- 本地 dart analyze：CI 全绿 + 4446 条全为包缺失噪音，无 Dart 语法级错误
+
+### S2 出口：全清单核完，无待接项
