@@ -176,3 +176,21 @@ S4 发布验证（不变，含 3.2 行为清单）
 | 错误 | 用户可见错误走 `friendlyError`；底层错误走 ErrorLogger；无静默吞 |
 | 测试 | 关键纯函数（wrap/quality/sort/krc）100% 覆盖；CI 绿 |
 | 文档 | PLAN / api_verified / check_0* / keystore_setup 与代码同步 |
+
+---
+
+## 附：执行记录（2026-11-05）
+
+| 项 | 状态 | 说明 |
+|----|------|------|
+| R1 | ✅ | kg_direct_api_client 1634→606 行 + 7 端点域文件（组合委托，commit 010cd79） |
+| R2 | ✅ | song_tile 641→196 行 + 5 组件文件（export 兼容，commit dcf45e3） |
+| R3 | ⏸ 缩减 | settings/login/search/comments 页面 state 共享度高，强拆引入 props 钻透复杂度 > 收益；**决策：页面级拆分记为技术债**，仅完成真正独立的组件抽离（R2 已覆盖） |
+| R4 | ✅ | provider 归位 data 层（playlist_repository.dart），commit 96a5c3e |
+| R5 | ✅ | UI 构造 Repository 清零（library_page 改 watch）；core/router 的 features import 收敛为 app 层例外（main.dart 组装根） |
+| 死代码 | ✅ | proxyMvUrl/diskCacheMax*/refreshDeviceContext/KugouApiClient.mid 清理 |
+
+### 技术债登记
+- TD-1: settings_page(935)/login_page(730)/search_page(724)/comments_page(654) 拆分（需先设计 state 边界）
+- TD-2: 歌手页 sort=hot/new 切换按钮（数据就绪，UI 未加）
+- TD-3: 专辑页发行日期/语言/热度展示（数据就绪）
