@@ -201,7 +201,6 @@ class KugouApiClient {
   Future<void> clearCredentials() async {
     // 用实例自己的 jar：若调用方传了 cookieStoragePath，清 sharedCookieJar 会清错
     await _cookieJar.deleteAll();
-    mid = '';
     userid = '';
     dfid = '';
   }

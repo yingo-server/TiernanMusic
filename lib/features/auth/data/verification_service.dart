@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/api/kugou_api_client.dart';
+import '../../../core/direct/kg_client.dart';
 import '../../../core/storage/secure_storage.dart';
 import 'captcha_types.dart';
 import 'edt_generator.dart';
@@ -13,9 +14,12 @@ import 'edt_generator.dart';
 /// 3. 按类型产出 verifycode，连同 eventid/v_type/sid/edt 提交 `/verify/user/info`
 /// 4. 成功后**重试原请求**
 class VerificationService {
-  VerificationService(this._api);
+  VerificationService(this._api, [KgClient? client]) : _directClient = client;
 
   final KugouApiClient _api;
+
+  /// 直连客户端（mid 权威来源：KgDevice 由 guid 计算）
+  final KgClient? _directClient;
 
   /// 获取验证类型信息
   Future<VerifySession> getVerifyInfo(String ssaCode) async {
@@ -29,7 +33,10 @@ class VerificationService {
   Future<EdtResult> buildSidEdt() async {
     final dfid = await SecureStorage.instance.readDfid() ?? '0';
     return EdtGenerator.generate(
-      mid: _api.mid.isNotEmpty ? _api.mid : '0',
+      // mid 权威来源是直连层 KgDevice（由 guid 计算），KugouApiClient 不再持有
+      mid: (_directClient?.device.mid.isNotEmpty ?? false)
+          ? _directClient!.device.mid
+          : '0',
       userid: _api.userid.isNotEmpty ? _api.userid : '0',
       dfid: dfid,
       webglHash: _api.webglHash,

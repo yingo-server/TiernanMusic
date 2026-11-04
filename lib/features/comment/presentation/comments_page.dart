@@ -265,7 +265,6 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                           );
                         },
                       ),
-                            ),
                           ),
                         ],
                       ),

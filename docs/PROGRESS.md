@@ -61,3 +61,51 @@
 - diff 内容：14 文件（批3时期 settings_page 重构 + kg_providers）
 - 独有内容检查：localPath / switchAccount 均已存在于当前代码 → **无独有内容**
 - 处置：已 drop（stash list 清零）
+
+## S0 出口状态
+- commit: f6c7ead（单 commit：S0.1 全检 + S0.2 N1-N4 + stash 处置）
+- push: ✅（一次到底原则）
+- CI: 定时器已挂（3 分钟后检查）
+
+---
+
+## S1 网络层终审（主代理自查清单，S1.1）
+
+逐条核对 50 个直连 case（基准：docs/api_verified.md + Node 源码）。每完成一项 append。
+
+
+### 1. search 系列 ✅（2026-11-05）
+- song: complexsearch /v3/search/song（与 kapi 0 差异）✅
+- album/author/mv/special: complexsearch 对应 v1 端点 ✅（抽查 _search 内分支结构一致）
+- lyric: lyrics.kugou.com/search，clearDefaultParams+notSignature，status=200 语义 ✅
+- 回退 kapi 全部就位 ✅
+
+### 2. comment/music ✅
+- gateway /mcomment/v1/cmtlist，query 形态（非 body）✅
+- code=歌曲码硬编码正确（该端点只服务歌曲）✅
+- 运行时字段差异已被注释记录（like.count±1 / A/B 文案）✅
+
+### 3. comment/count ✅
+- gateway /index.php web 签名 + 裸 Map 返回 ✅（此前实测 {hash:710442}）
+
+### 4. comment/floor ✅
+- 双端点（song=/mcomment、playlist|album=/m.comment.service）✅
+- 三套 code switch ✅；childrenid=special_id ✅
+- send/reply/del：clearDefaultParams+notSignature+key 算法 ✅（song=ct+mid+data；reply=ct+mid）
+
+### 5. playlist/detail ✅
+- pubsongs /v3/get_list_info，body data[{gid}]，1..10 项 ✅
+
+### 6. playlist/track/all ✅
+- pubsongs /v2/get_other_list_file_nofilt，collection_ 形式自动切 specialid ✅
+
+## S0 CI 回归修复（2026-11-05，CI 报 14 错 → 全修）
+1. verification_service: mid 改从 KgClient(KgDevice) 注入（KugouApiClient.mid 已删）；CaptchaPage 转 ConsumerState 注入
+2. comments_page: Column 嵌套闭合错位修正（插入 chips 时遗留）
+3. download_sheet: preferredQuality import 补上
+4. library_page: GestureDetector 闭合缺失修正（我的歌单跳转）
+5. player_provider: P0-1 修复 bug——`ref.watch(StreamProvider)` 返回 AsyncValue 不能 for-in，改 `.stream` ×6
+
+## S1.1 网络层自查清单进度
+1 search ✅ / 2 comment.music ✅ / 3 count ✅ / 4 floor ✅ / 5 playlist.detail ✅ / 6 track.all ✅
+（余 14 项进行中）

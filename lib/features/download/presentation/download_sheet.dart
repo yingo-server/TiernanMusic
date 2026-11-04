@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/audio/preferred_quality.dart';
 import '../../../l10n/l10n.dart';
 import '../../player/data/models.dart';
 import '../data/download_task.dart';

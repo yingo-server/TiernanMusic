@@ -507,6 +507,7 @@ class _MyPlaylistRow extends StatelessWidget {
                         ),
                       ),
                     ),
+                    ),
                     Positioned(
                       right: 6,
                       bottom: 6,

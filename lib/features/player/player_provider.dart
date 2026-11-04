@@ -81,7 +81,7 @@ final queueProvider = StreamProvider<List<Song>>((ref) async* {
 /// 引擎未就绪（just_audio_background 启动失败）时返回稳定的空值流，
 /// 避免直接用 null 播放器导致空指针。
 final positionProvider = StreamProvider<Duration>((ref) async* {
-  await for (final p in ref.watch(audioPlayerProvider)) {
+  await for (final p in ref.watch(audioPlayerProvider.stream)) {
     if (p == null) {
       yield Duration.zero;
       continue;
@@ -91,7 +91,7 @@ final positionProvider = StreamProvider<Duration>((ref) async* {
 });
 
 final bufferedPositionProvider = StreamProvider<Duration>((ref) async* {
-  await for (final p in ref.watch(audioPlayerProvider)) {
+  await for (final p in ref.watch(audioPlayerProvider.stream)) {
     if (p == null) {
       yield Duration.zero;
       continue;
@@ -101,7 +101,7 @@ final bufferedPositionProvider = StreamProvider<Duration>((ref) async* {
 });
 
 final durationProvider = StreamProvider<Duration?>((ref) async* {
-  await for (final p in ref.watch(audioPlayerProvider)) {
+  await for (final p in ref.watch(audioPlayerProvider.stream)) {
     if (p == null) {
       yield null;
       continue;
@@ -111,7 +111,7 @@ final durationProvider = StreamProvider<Duration?>((ref) async* {
 });
 
 final isPlayingProvider = StreamProvider<bool>((ref) async* {
-  await for (final p in ref.watch(audioPlayerProvider)) {
+  await for (final p in ref.watch(audioPlayerProvider.stream)) {
     if (p == null) {
       yield false;
       continue;
@@ -121,7 +121,7 @@ final isPlayingProvider = StreamProvider<bool>((ref) async* {
 });
 
 final shuffleProvider = StreamProvider<bool>((ref) async* {
-  await for (final p in ref.watch(audioPlayerProvider)) {
+  await for (final p in ref.watch(audioPlayerProvider.stream)) {
     if (p == null) {
       yield false;
       continue;
@@ -131,7 +131,7 @@ final shuffleProvider = StreamProvider<bool>((ref) async* {
 });
 
 final repeatProvider = StreamProvider<LoopMode>((ref) async* {
-  await for (final p in ref.watch(audioPlayerProvider)) {
+  await for (final p in ref.watch(audioPlayerProvider.stream)) {
     if (p == null) {
       yield LoopMode.off;
       continue;

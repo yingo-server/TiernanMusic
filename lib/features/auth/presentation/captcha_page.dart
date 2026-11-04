@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/kugou_api_client.dart';
+import '../../../core/direct/kg_providers.dart';
 import '../data/captcha_types.dart';
 import '../data/verification_service.dart';
 
@@ -39,9 +41,10 @@ class CaptchaPage extends StatefulWidget {
   State<CaptchaPage> createState() => _CaptchaPageState();
 }
 
-class _CaptchaPageState extends State<CaptchaPage> {
+class _CaptchaPageState extends ConsumerState<CaptchaPage> {
   late final VerificationService _service =
-      VerificationService(widget.api);
+      VerificationService(
+          widget.api, ref.read(kgClientProvider));
 
   VerifySession? _session;
   String? _error;
