@@ -279,41 +279,26 @@ class TiernanAudioHandler extends BaseAudioHandler
       final localUsable = local != null &&
           local.isNotEmpty &&
           (local.startsWith('content://') || File(local).existsSync());
-      if (!localUsable) {
-        // 在线歌：补全详情（专辑信息等），不阻塞失败
+
+      if (localUsable) {
+        // ---- 离线分支 ----
+        _isPreview = false;
+        _previewController.add(false);
+        await _player.setAudioSource(
+          AudioSource.uri(
+            local.startsWith('content://')
+                ? Uri.parse(local)
+                : Uri.file(local),
+            tag: mediaItem.value,
+          ),
+        );
+      } else {
+        // ---- 在线分支：补全详情 + 解析 URL ----
         final detailed = await _repository.fetchDetail(song);
         if (token != _playToken) return;
         _songs[index] = detailed;
         _emitMediaItem();
-      }
 
-      // 已下载歌曲：本地资源存在时直接离线播放，跳过网络解析（F4）
-      //
-      // 两种本地源：
-      // - 绝对路径（Android ≤9 / 降级目录）→ Uri.file
-      // - MediaStore Uri（Android 10+）→ 直接用 content://（just_audio 支持）
-      if (localUsable) {
-          _isPreview = false;
-          _previewController.add(false);
-          await _player.setAudioSource(
-            AudioSource.uri(
-              isContentUri ? Uri.parse(local) : Uri.file(local),
-              tag: mediaItem.value,
-            ),
-          );
-        } else {
-          // 本地文件已被系统清理 → 回落到网络解析
-          final result = await _repository.resolveUrl(detailed);
-          if (token != _playToken) return;
-          _actualQualityController.add(result.quality);
-          _isPreview = result.isPreview;
-          _previewController.add(_isPreview);
-          _songs[index] = detailed.copyWith(quality: result.quality);
-          await _player.setAudioSource(
-            AudioSource.uri(Uri.parse(result.url), tag: mediaItem.value),
-          );
-        }
-      } else {
         final result = await _repository.resolveUrl(detailed);
         if (token != _playToken) return;
         _actualQualityController.add(result.quality);
@@ -321,10 +306,7 @@ class TiernanAudioHandler extends BaseAudioHandler
         _previewController.add(_isPreview);
         _songs[index] = detailed.copyWith(quality: result.quality);
         await _player.setAudioSource(
-          AudioSource.uri(
-            Uri.parse(result.url),
-            tag: mediaItem.value,
-          ),
+          AudioSource.uri(Uri.parse(result.url), tag: mediaItem.value),
         );
       }
       if (token != _playToken) return;
