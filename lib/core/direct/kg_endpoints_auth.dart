@@ -389,7 +389,7 @@ class KgEndpointAuth {
           data['token'] = dec;
         }
       } catch (e) {
-        debugPrint('secu_params 解密', e);
+        debugPrint('secu_params 解密失败: $e');
       }
     }
     final token = '${data['token'] ?? ''}';
