@@ -76,10 +76,11 @@ class KugouApiClient {
           // 表现为播放页无歌词并刷屏报错。
           final okStatus = status == 1 || status == 200;
           final failedStatus = status == 0 || status == 2;
-          // 警告码：0 表示无错；151/152/200/201 是上游"有结果但需提示"的码
+          // 警告码：0 表示无错；151/152/200/201 是上游"有结果但需提示"的码。
+          // C-06（审查②）：不得把 1-299 全部放行——error_code=1/2 是真实
+          // 参数/系统错误，放行会让上层拿到错误体当正常数据。
           const warningCodes = {0, 151, 152, 200, 201};
-          final isWarning = warningCodes.contains(errorCode) ||
-              (errorCode > 0 && errorCode < 300);
+          final isWarning = warningCodes.contains(errorCode);
 
           if (failedStatus ||
               (hasErrorCode && errorCode != 0 && !(okStatus && isWarning))) {
@@ -146,9 +147,12 @@ class KugouApiClient {
   static String? cookieStoragePath;
 
   static bool _needsTimestamp(String path) {
+    // C-07（审查②）：kapi 对全部 200 响应按 URL 做 2 分钟全局缓存。
+    // 登录/设备/验证类接口若命中缓存：二维码串号、dfid 复用、短信不下发。
     const list = [
-      '/login/qr/check', '/login/wx/check', '/login/qq/qr/check',
-      '/login/token', '/playlist/add', '/playlist/del',
+      '/login/', '/register/dev', '/get/verify/info', '/verify/user/info',
+      '/sidedt', '/captcha/sent',
+      '/playlist/add', '/playlist/del',
       '/playlist/tracks/add', '/playlist/tracks/del',
       '/comment/', '/import/',
     ];
@@ -189,9 +193,10 @@ class KugouApiClient {
     final cookies = [
       Cookie('token', token),
       Cookie('userid', userid),
-      if (t1 != null) Cookie('t1', t1),
-      if (auth != null) Cookie('auth', auth),
-      if (dfid != null) Cookie('dfid', dfid),
+      // C-03（审查②）：null 时显式写空 cookie 清除旧值（切号防串号）
+      Cookie('t1', t1 ?? ''),
+      Cookie('auth', auth ?? ''),
+      Cookie('dfid', dfid ?? ''),
     ];
     await _cookieJar.saveFromResponse(uri, cookies);
     this.userid = userid;

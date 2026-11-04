@@ -81,7 +81,9 @@ class ErrorLogger {
     if (stack != null) {
       sb.writeln('堆栈:\n$stack');
     }
-    final text = sb.toString();
+    // C-02（审查②）：落盘前必须脱敏——日志在公共 Documents 目录，
+    // 任何 DioException 的 toString 都可能带 token/t1 查询参数。
+    final text = _redact(sb.toString());
 
     _recent.insert(0, text);
     if (_recent.length > 200) _recent.removeLast();

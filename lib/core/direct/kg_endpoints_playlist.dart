@@ -25,7 +25,9 @@ class KgEndpointPlaylist {
       'total_ver': 0,
       'type': 1,
     }));
-    final p = KgCrypto.rsaEncryptRawHex(
+    // P0-4（审查①）：Node rsaEncrypt2 = RSAES-PKCS1-V1_5 填充（crypto.js:264-270），
+    // 此前误用无填充裸 RSA，服务端无法解出 {aes,uid,token}。
+    final p = KgCrypto.rsaEncryptPkcs1(
       jsonEncode({'aes': aes.key, 'uid': userid, 'token': kg.token}),
     ).toUpperCase();
 
@@ -103,7 +105,9 @@ class KgEndpointPlaylist {
   Future<KgResponse> playlistTracksAdd(Map<String, dynamic> q) {
     final userid = kg.userid.isEmpty ? '0' : kg.userid;
     final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final raw = q['data'] ?? q['songs'] ?? '';
+    // P0-5（审查①）：Node 把 `名称|hash|album_id|album_audio_id` 逗号串解析成
+    // 对象数组再发送（playlist_tracks_add.js:8-21）；字符串形态会导致参数错误。
+    final resource = _parseTracksResource('${q['data'] ?? q['songs'] ?? ''}');
     return kg.request('/cloudlist.service/v6/add_song',
         method: 'POST',
         params: {
@@ -120,7 +124,7 @@ class KgEndpointPlaylist {
           'type': 0,
           'slow_upload': 1,
           'scene': 'false;null',
-          'data': raw,
+          'data': resource,
         });
   }
 
@@ -131,12 +135,18 @@ class KgEndpointPlaylist {
     return kg.request('/cloudlist.service/v4/delete_songs',
         method: 'POST',
         headers: {'x-router': 'cloudlist.service.kugou.com'},
+        // P0-6（审查①）：Node playlist_tracks_del.js 发 data:[{fileid}] + list_ver:0
         data: {
           'userid': userid,
           'token': kg.token,
           'listid': '${q['listid'] ?? ''}',
           'type': 0,
-          'fileids': '${q['fileids'] ?? q['data'] ?? ''}',
+          'data': '${q['fileids'] ?? q['data'] ?? ''}'
+              .split(',')
+              .where((e) => e.trim().isNotEmpty)
+              .map((e) => {'fileid': int.tryParse(e.trim()) ?? 0})
+              .toList(),
+          'list_ver': 0,
           'area_code': 1,
           'allplatform': 1,
         });
@@ -237,4 +247,24 @@ class KgEndpointPlaylist {
         baseUrl: 'https://pubsongs.kugou.com',
         params: params);
   }
+}
+
+/// `名称|hash|album_id|album_audio_id` 逗号分隔串 → Node 形态的对象数组
+/// （对应 Node playlist_tracks_add.js:8-21 的 split(',').map(...)）
+List<Map<String, dynamic>> _parseTracksResource(String raw) {
+  if (raw.trim().isEmpty) return const [];
+  return raw
+      .split(',')
+      .where((e) => e.trim().isNotEmpty)
+      .map((e) {
+        final f = e.split('|');
+        String f0(int i) => i < f.length ? f[i].trim() : '';
+        return {
+          'name': f0(0),
+          'hash': f0(1),
+          'album_id': int.tryParse(f0(2)) ?? 0,
+          'mixsongid': int.tryParse(f0(3)) ?? 0,
+        };
+      })
+      .toList();
 }

@@ -71,11 +71,24 @@ class CommentRepository {
       CommentResourceType.playlist => '/comment/playlist/send',
       CommentResourceType.album => '/comment/album/send',
     };
+    // P0-7（审查①）：Node comment_music_send.js:10-23 会先用 mixsongid 查
+    // specialChildId 作为 childrenid（缺失时返回 400）。直连层同理需要。
+    String? childrenId;
+    if (type == CommentResourceType.song) {
+      try {
+        final page = await fetchComments(id: id, page: 1, pageSize: 1);
+        childrenId = page.specialChildId?.toString();
+      } catch (_) {
+        // 查询失败不阻断发送，childrenid 交给直连层兜底
+      }
+    }
     final query = switch (type) {
       CommentResourceType.song => {
           'mixsongid': id,
           'content': content,
           'resource_type': 'song',
+          if (childrenId != null && childrenId.isNotEmpty)
+            'special_id': childrenId,
           if (name != null) 'name': name,
         },
       _ => {

@@ -56,13 +56,18 @@ class AppImageCache extends CacheManager {
   }) =>
       _serial(() => super.getSingleFile(url, key: key, headers: headers));
 
+  /// C-01（审查②）：CachedNetworkImage 的加载链路走 getFileStream，
+  /// 不串行化则 sqflite 并发写事务 → SQLITE_BUSY。
+  /// async* 包串行队列：每次调用排队，消费 super 的流并转发。
   @override
   Stream<FileResponse> getFileStream(
     String url, {
     String? key,
     Map<String, String>? headers,
     bool withProgress = false,
-  }) =>
-      super.getFileStream(url,
-          key: key, headers: headers, withProgress: withProgress);
+  }) async* {
+    await _serial(() async {});
+    yield* super.getFileStream(url,
+        key: key, headers: headers, withProgress: withProgress);
+  }
 }

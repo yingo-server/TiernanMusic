@@ -64,11 +64,15 @@ class VerificationService {
     };
 
     try {
-      final res = await _api.dio.get<Map<String, dynamic>>(
+      // P1-6（审查①）：Node verify_user_info.js:40-48 是 POST；
+      // 且必须走 _api.post 才能命中直连层（此前 _api.dio.get 绕过了直连实现）。
+      // P1-6（审查①）：Node verify_user_info.js:40-48 是 POST；
+      // 且必须走 _api.post 才能命中直连层（此前 _api.dio.get 绕过了直连实现）。
+      final data = await _api.post(
         '/verify/user/info',
-        queryParameters: query,
+        {}, // body 为空：参数全部走 query
+        query: query,
       );
-      final data = res.data ?? {};
       final status = data['status'];
       final ok = status == 1 ||
           status == '1' ||

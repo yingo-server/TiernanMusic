@@ -6,6 +6,7 @@ library;
 
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -25,6 +26,32 @@ class KgDirectApiClient extends KugouApiClient {
   KgDirectApiClient(this.kg, {super.baseUrl});
 
   final KgClient kg;
+
+  /// P0-3（审查①）：同步登录态到 KgClient。
+  /// setCredentials 只更新父类字段与 CookieJar，直连层的签名取 kg.token/kg.userid，
+  /// 不同步则冷启动 login/token 首次请求缺登录态（与 Node cookie 注入行为不一致）。
+  @override
+  Future<void> setCredentials({
+    required String token,
+    required String userid,
+    String? t1,
+    String? auth,
+    String? dfid,
+  }) async {
+    kg.token = token;
+    kg.userid = userid;
+    if (t1 != null) kg.t1 = t1;
+    await super.setCredentials(
+        token: token, userid: userid, t1: t1, auth: auth, dfid: dfid);
+  }
+
+  @override
+  Future<void> clearCredentials() async {
+    kg.token = '';
+    kg.userid = '0';
+    kg.t1 = '';
+    await super.clearCredentials();
+  }
 
   // ---- 端点组（R1 拆分：实现移至 kg_endpoints_*.dart，本类只做委托）----
   late final _epSearch = KgEndpointSearch(kg);
@@ -119,11 +146,37 @@ class KgDirectApiClient extends KugouApiClient {
   ) async {
     try {
       return _wrap(await direct());
+    } on ApiException catch (e) {
+      _logError(label, e);
+      // P0-1（审查①）：保持与 kapi 拦截器一致的异常契约——
+      // 上层（AuthRepository/verification_guard）只捕获 DioException 并从
+      // .error 取 ApiException。直连若裸抛会被上层泛 catch 吞掉，
+      // 导致 20028 验证、20034 多账号、token 失效清理全部失效。
+      if (!fallbackToKapi ||
+          e.needsVerification ||
+          e.errorCode == 20034) {
+        throw DioException(
+          requestOptions: RequestOptions(path: label),
+          error: e,
+        );
+      }
+      try {
+        return await kapi();
+      } on ApiException catch (e2) {
+        _logError('$label (kapi 回退)', e2);
+        throw DioException(
+          requestOptions: RequestOptions(path: label),
+          error: e2,
+        );
+      } catch (e2) {
+        _logError('$label (kapi 回退)', e2);
+        rethrow;
+      }
     } catch (e) {
       _logError(label, e);
+      // 编程错误（TypeError/NoSuchMethodError）不回退、不吞，直接暴露
+      if (e is TypeError || e is NoSuchMethodError) rethrow;
       if (!fallbackToKapi) rethrow;
-      // 风控/验证（20028）不回退：回退等于同一业务请求打两次，会加重风控。
-      if (e is ApiException && e.needsVerification) rethrow;
       try {
         return await kapi();
       } catch (e2) {
