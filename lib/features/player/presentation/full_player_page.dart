@@ -263,7 +263,10 @@ class FullPlayerPage extends ConsumerWidget {
   }
 }
 
-/// MV 入口按钮：首次构建时查询当前歌是否有 MV，有则显示。
+/// 播放页次级入口：评论（始终显示）+ MV（仅有 MV 时显示）。
+///
+/// UI-04（审查②）：此前评论按钮在「无 MV」early return 之后，
+/// 绝大多数歌曲的播放页完全不显示评论入口。
 class _MvEntry extends ConsumerWidget {
   const _MvEntry({this.song});
   final Song? song;
@@ -272,16 +275,30 @@ class _MvEntry extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final albumAudioId = song?.albumAudioId ?? '';
     if (albumAudioId.isEmpty) return const SizedBox.shrink();
+
     final mvAsync = ref.watch(songMvProvider(albumAudioId));
     final mv = mvAsync.value;
-    if (mv == null || mv.videoId.isEmpty) return const SizedBox.shrink();
+    final hasMv = mv != null && mv.videoId.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Row(
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
+          // 评论入口：始终渲染，不再被 MV 判定连带隐藏
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(0, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.comment_outlined, size: 18),
+            label: Text(context.l10n.comments),
+            onPressed: () => context.push(
+                '/comments/song/${Uri.encodeComponent(albumAudioId)}'),
+          ),
+          if (hasMv) ...[
+            const SizedBox(width: 12),
+            OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(0, 40),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -304,20 +321,7 @@ class _MvEntry extends ConsumerWidget {
                 );
               },
             ),
-          ),
-          const SizedBox(width: 12),
-          // 评论入口（之前整个评论功能不可达）
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(0, 40),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              visualDensity: VisualDensity.compact,
-            ),
-            icon: const Icon(Icons.comment_outlined, size: 18),
-            label: Text(context.l10n.comments),
-            onPressed: () => context.push(
-                '/comments/song/${Uri.encodeComponent(albumAudioId)}'),
-          ),
+          ],
         ],
       ),
     );
@@ -454,11 +458,19 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
   }
 }
 
-class _ProgressBar extends ConsumerWidget {
+class _ProgressBar extends ConsumerStatefulWidget {
   const _ProgressBar();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ProgressBar> createState() => _ProgressBarState();
+}
+
+class _ProgressBarState extends ConsumerState<_ProgressBar> {
+  /// UI-05（审查②）：拖动期间的本地值，避免 position 流把滑块拉回旧位置
+  double? _dragMs;
+
+  @override
+  Widget build(BuildContext context) {
     final position = ref.watch(positionProvider).valueOrNull ?? Duration.zero;
     final buffered =
         ref.watch(bufferedPositionProvider).valueOrNull ?? Duration.zero;
@@ -488,11 +500,16 @@ class _ProgressBar extends ConsumerWidget {
                   theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
             ),
             child: Slider(
-              value: posMs,
+              // 拖动中显示本地值，松手才 seek（UI-05）
+              value: _dragMs ?? posMs,
               max: maxMs,
               secondaryTrackValue: bufMs,
-              onChanged: (v) =>
-                  controller.seekTo(Duration(milliseconds: v.round())),
+              onChangeStart: (v) => setState(() => _dragMs = v),
+              onChanged: (v) => setState(() => _dragMs = v),
+              onChangeEnd: (v) {
+                controller.seekTo(Duration(milliseconds: v.round()));
+                setState(() => _dragMs = null);
+              },
             ),
           ),
           Padding(

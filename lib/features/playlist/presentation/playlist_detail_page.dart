@@ -192,7 +192,13 @@ class PlaylistDetailPage extends ConsumerWidget {
                 // 主操作：FilledButton（播放全部）
                 child: FilledButton.icon(
                   onPressed: () {
-                    final tracks = ref.read(playlistTracksProvider(id)).value;
+                    // UI-03（审查②）：数据源要与页面顶部一致——
+                    // 用户歌单（?user=）走 userPlaylistTracksProvider
+                    final tracksAsync = (userListId != null &&
+                            userListId!.isNotEmpty)
+                        ? ref.read(userPlaylistTracksProvider(userListId!))
+                        : ref.read(playlistTracksProvider(id));
+                    final tracks = tracksAsync.value;
                     if (tracks != null && tracks.songs.isNotEmpty) {
                       ref.read(playHelperProvider).playPlaylistQueue(
                           tracks.songs, 0, cover: detail.cover);

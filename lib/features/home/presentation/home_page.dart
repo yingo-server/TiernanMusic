@@ -120,21 +120,31 @@ class _BannerCarousel extends StatefulWidget {
   State<_BannerCarousel> createState() => _BannerCarouselState();
 }
 
-class _BannerCarouselState extends State<_BannerCarousel> {
+class _BannerCarouselState extends State<_BannerCarousel>
+    with WidgetsBindingObserver {
   final _controller = PageController();
   Timer? _timer;
   int _index = 0;
+  // UI-08（审查②）：IndexedStack 下 isCurrent 无法表达 Tab 可见性，
+  // 需显式跟踪生命周期 + Tab 可见性
+  bool _visible = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startAutoPlay();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _visible = state == AppLifecycleState.resumed;
   }
 
   void _startAutoPlay() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted || widget.banners.length < 2) return;
+      if (!mounted || widget.banners.length < 2 || !_visible) return;
       // StatefulShellRoute 用 IndexedStack 保活：非当前 Tab 时不要后台翻页（省电、避免 setState 堆积）。
       final route = ModalRoute.of(context);
       if (route != null && !route.isCurrent) return;
@@ -150,6 +160,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   @override
   void dispose() {
     _timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
   }
@@ -547,43 +558,49 @@ class _HomeSkeleton extends StatelessWidget {
                   const SkeletonBox(height: 150, radius: 16),
                   // 每日推荐
                   header(110),
+                  // UI-01（审查②）：骨架横向块改 ListView（Row 固定宽在 360dp 屏溢出）
                   SizedBox(
                     height: 110,
-                    child: Row(children: [
-                      for (var i = 0; i < 2; i++) ...[
-                        if (i > 0) const SizedBox(width: 12),
-                        const SkeletonBox(width: 220, height: 110, radius: 12),
-                      ],
-                    ]),
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.zero,
+                      itemCount: 3,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (_, __) =>
+                          const SkeletonBox(width: 220, height: 110, radius: 12),
+                    ),
                   ),
                   // 推荐歌单：130x130 圆角卡横排（高 180 与实际一致）
                   header(140),
                   SizedBox(
                     height: 180,
-                    child: Row(children: [
-                      for (var i = 0; i < 3; i++) ...[
-                        if (i > 0) const SizedBox(width: 12),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SkeletonBox(width: 130, height: 130, radius: 16),
-                            SizedBox(height: 6),
-                            SkeletonText(width: 100),
-                          ],
-                        ),
-                      ],
-                    ]),
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.zero,
+                      itemCount: 4,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (_, __) => const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SkeletonBox(width: 130, height: 130, radius: 16),
+                          SizedBox(height: 6),
+                          SkeletonText(width: 100),
+                        ],
+                      ),
+                    ),
                   ),
                   // 排行榜横排卡
                   header(90),
                   SizedBox(
                     height: 150,
-                    child: Row(children: [
-                      for (var i = 0; i < 2; i++) ...[
-                        if (i > 0) const SizedBox(width: 12),
-                        const SkeletonBox(width: 200, height: 150, radius: 16),
-                      ],
-                    ]),
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.zero,
+                      itemCount: 3,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (_, __) =>
+                          const SkeletonBox(width: 200, height: 150, radius: 16),
+                    ),
                   ),
                   // 新歌列表行（56 封面 + 两行文字）
                   header(120),

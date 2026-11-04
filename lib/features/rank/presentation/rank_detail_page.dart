@@ -25,6 +25,7 @@ class _RankDetailPageState extends ConsumerState<RankDetailPage> {
   int _page = 1;
   bool _loadingMore = false;
   bool _hasMore = true;
+  String? _error; // UI-02（审查②）
   final List<RankSong> _songs = [];
 
   @override
@@ -47,9 +48,8 @@ class _RankDetailPageState extends ConsumerState<RankDetailPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.loadFailed)),
-      );
+      // UI-02（审查②）：记录错误态，渲染重试入口而非永久转圈
+      setState(() => _error = e.toString());
     }
   }
 
@@ -106,7 +106,25 @@ class _RankDetailPageState extends ConsumerState<RankDetailPage> {
         ],
       ),
       body: _songs.isEmpty
-          ? const Center(child: CircularProgressIndicator())
+          ? (_error != null
+              // UI-02（审查②）：错误态给重试入口，不再永久转圈
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(context.l10n.loadFailed),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: () {
+                          setState(() => _error = null);
+                          _load();
+                        },
+                        child: Text(context.l10n.reload),
+                      ),
+                    ],
+                  ),
+                )
+              : const Center(child: CircularProgressIndicator()))
           : ListView.builder(
               itemCount: _songs.length + 1,
               itemBuilder: (context, i) {
