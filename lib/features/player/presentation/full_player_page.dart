@@ -500,8 +500,9 @@ class _ProgressBarState extends ConsumerState<_ProgressBar> {
                   theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
             ),
             child: Slider(
-              // 拖动中显示本地值，松手才 seek（UI-05）
-              value: _dragMs ?? posMs,
+              // 拖动中显示本地值，松手才 seek（UI-05）；
+              // V3-08（复查）：夹取上界，切歌/时长回填时防 Slider 断言
+              value: (_dragMs ?? posMs).clamp(0.0, maxMs),
               max: maxMs,
               secondaryTrackValue: bufMs,
               onChangeStart: (v) => setState(() => _dragMs = v),

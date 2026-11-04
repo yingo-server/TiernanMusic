@@ -64,13 +64,13 @@ class VerificationService {
     };
 
     try {
-      // P1-6（审查①）：Node verify_user_info.js:40-48 是 POST；
-      // 且必须走 _api.post 才能命中直连层（此前 _api.dio.get 绕过了直连实现）。
-      // P1-6（审查①）：Node verify_user_info.js:40-48 是 POST；
-      // 且必须走 _api.post 才能命中直连层（此前 _api.dio.get 绕过了直连实现）。
+      // P1-6（审查①）/ V3-05（复查）：Node verify_user_info.js:40-48 是 POST。
+      // 直连层 `case 'verify/user/info'` 只把 **body** 传给端点实现，
+      // query 会被丢弃——此前参数全放 query 导致直连分支拿到空 eventid。
+      // 修复：参数同时放 body（端点读 body）与 query（kapi 回退读 query）。
       final data = await _api.post(
         '/verify/user/info',
-        {}, // body 为空：参数全部走 query
+        query,
         query: query,
       );
       final status = data['status'];

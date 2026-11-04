@@ -401,11 +401,9 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
         return;
       }
       if (mounted) {
-        Toast.show(context, context.l10n.commentFailed('$e'));
-      }
-    } catch (e) {
-      if (mounted) {
-        Toast.show(context, context.l10n.commentFailed('$e'));
+        // V3-09（复查）：用解包结果出文案，不裸出 '$e' 技术串
+        Toast.show(context,
+            context.l10n.commentFailed(e0 != null ? e0.message : '$e'));
       }
     }
   }

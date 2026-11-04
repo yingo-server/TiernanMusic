@@ -221,7 +221,11 @@ class PlaylistDetailPage extends ConsumerWidget {
                   height: 200,
                   child: ErrorRetry(
                     error: e,
-                    onRetry: () => ref.invalidate(playlistTracksProvider(id)),
+                    // V3-06（复查）：重试必须指向当前数据源
+                    onRetry: () => ref.invalidate(
+                        (userListId != null && userListId!.isNotEmpty)
+                            ? userPlaylistTracksProvider(userListId!)
+                            : playlistTracksProvider(id)),
                   ),
                 ),
               ),

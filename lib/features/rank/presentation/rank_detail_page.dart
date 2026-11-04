@@ -26,6 +26,7 @@ class _RankDetailPageState extends ConsumerState<RankDetailPage> {
   bool _loadingMore = false;
   bool _hasMore = true;
   String? _error; // UI-02（审查②）
+  bool _loaded = false; // V3-12（复查）
   final List<RankSong> _songs = [];
 
   @override
@@ -45,6 +46,7 @@ class _RankDetailPageState extends ConsumerState<RankDetailPage> {
           ..clear()
           ..addAll(r.songs);
         _hasMore = _songs.length < r.total;
+        _loaded = true; // V3-12（复查）
       });
     } catch (e) {
       if (!mounted) return;
@@ -65,6 +67,7 @@ class _RankDetailPageState extends ConsumerState<RankDetailPage> {
         _songs.addAll(r.songs);
         _page++;
         _hasMore = _songs.length < r.total;
+        _loaded = true; // V3-12（复查）
       });
     } catch (_) {
       // 静默：保留已有列表
@@ -124,7 +127,8 @@ class _RankDetailPageState extends ConsumerState<RankDetailPage> {
                     ],
                   ),
                 )
-              : const Center(child: CircularProgressIndicator()))
+              // V3-12（复查）：加载完成但空结果 → 空态，不再永久转圈
+              : (_loaded ? Center(child: Text(context.l10n.noData)) : const Center(child: CircularProgressIndicator())))
           : ListView.builder(
               itemCount: _songs.length + 1,
               itemBuilder: (context, i) {

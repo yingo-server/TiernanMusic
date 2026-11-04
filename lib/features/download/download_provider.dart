@@ -298,16 +298,10 @@ class DownloadManager extends StateNotifier<DownloadState> {
       var realTempPath = tempPath;
       switch (task.type) {
         case DownloadTaskType.audio:
-          final url = await _repo.resolveAudioUrl(
+          // V3-11（复查）：一次解析同时拿 url + 扩展名（原来调两次 songUrl，
+          // 请求翻倍且两次结果可能不一致）
+          final (url, ext) = await _repo.resolveAudioUrlWithExt(
             task.hash,
-            albumId: task.albumId,
-            albumAudioId: task.albumAudioId,
-            quality: task.quality,
-          );
-          // DL-02（审查③）：按服务端 extName 决定真实扩展名，
-          // 无损/Hi-Res 落盘不再是 .mp3
-          final ext = await _repo.resolveAudioExt(
-            hash: task.hash,
             albumId: task.albumId,
             albumAudioId: task.albumAudioId,
             quality: task.quality,
@@ -399,9 +393,14 @@ class DownloadManager extends StateNotifier<DownloadState> {
       }
     } finally {
       if (_tokens[task.id] == token) _tokens.remove(task.id);
-      // DL-04（审查③）：并发槽释放也要校验归属，否则 resume 后新任务
-      // 占的槽被旧 _run 释放，调度器会超额启动下载。
-      if (_running.contains(task.id) && _tokens[task.id] != token) {
+      // V3-01（复查 P0）：槽位归属校验写反导致正常完成时 _running 永不释放
+      // （token 已删 → _tokens[id] != token 恒真 → 走"新任务接管"空分支），
+      // 两次下载后队列彻底停摆。正确逻辑：
+      //   - 新 _run 已接管（_running 有且 token 已易主）→ 不动；
+      //   - 否则（正常完成 / 旧请求被取消）→ 释放。
+      final tokenChanged = _tokens[task.id] != null &&
+          _tokens[task.id] != token;
+      if (_running.contains(task.id) && tokenChanged) {
         // 新 _run 已接管该任务：不要动它的槽
       } else {
         _running.remove(task.id);

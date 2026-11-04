@@ -72,11 +72,17 @@ class DownloadRepository {
 
   /// DL-02（审查③）：服务端实际扩展名（extName 缺失时从 URL 推断）。
   /// 供下载侧写入正确的文件名与 MIME，不再硬编码 .mp3。
+  /// DL-02 / V3-02（审查③+复查）：真实音频扩展名。
+  ///
+  /// ⚠️ `extName` 在本仓库其它位置是**音质 token**（128/320/flac/high/super），
+  /// 直接拼 `.320`/`.super` 会产生非法后缀。这里只接受**真实容器格式**
+  /// 白名单；否则从 URL 路径推断；再不行回落 `.mp3`。
   Future<String> resolveAudioExt(
       {required String hash,
       required String albumId,
       required String albumAudioId,
       required String quality}) async {
+    const audioExts = {'mp3', 'flac', 'ogg', 'm4a', 'wav', 'aac', 'ape'};
     final api = _playApi;
     if (api == null) return '.mp3';
     final result = await api.songUrl(
@@ -86,11 +92,52 @@ class DownloadRepository {
       quality: quality,
     );
     final ext = result.extName.trim().toLowerCase();
-    if (ext.isNotEmpty && ext != 'mp3') return '.$ext';
-    // 从 URL 路径兜底
+    if (audioExts.contains(ext) && ext != 'mp3') return '.$ext';
+    // 从 URL 路径兜底（更可靠：URL 里有真实资源后缀）
     final url = result.bestUrl ?? '';
-    final m = RegExp(r'\.(mp3|flac|ogg|m4a|wav)(\?|$)').firstMatch(url);
-    return m != null ? '.${m.group(1)}' : '.mp3';
+    final m = RegExp(r'\.(mp3|flac|ogg|m4a|wav|aac|ape)(\?|$)').firstMatch(url);
+    if (m != null) return '.${m.group(1)}';
+    return '.mp3';
+  }
+
+
+  /// V3-11（复查）：单次 songUrl 同时返回播放地址与真实扩展名。
+  /// 此前 resolveAudioUrl 与 resolveAudioExt 各调一次接口（请求翻倍且
+  /// 两次结果可能不一致）。
+  Future<(String, String)> resolveAudioUrlWithExt(
+      String hash,
+      {required String albumId,
+      required String albumAudioId,
+      required String quality}) async {
+    final api = _playApi;
+    if (api == null) throw StateError('播放接口未初始化');
+    final result = await api.songUrl(
+      hash: hash,
+      albumId: int.tryParse(albumId) ?? 0,
+      albumAudioId: int.tryParse(albumAudioId) ?? 0,
+      quality: quality,
+    );
+    final url = result.bestUrl;
+    if (url == null || url.isEmpty) {
+      throw StateError(result.message.isEmpty ? '无可用播放地址' : result.message);
+    }
+    // DL-01：试听片段不能当完整歌曲落盘
+    if (result.isPreview) {
+      throw StateError(result.failProcess.isNotEmpty
+          ? '该音质需要会员或付费（${result.failProcess.join('/')}），不支持下载'
+          : '仅获取到试听片段，完整歌曲需要相应权益');
+    }
+    const audioExts = {'mp3', 'flac', 'ogg', 'm4a', 'wav', 'aac', 'ape'};
+    final ext = result.extName.trim().toLowerCase();
+    String resolved;
+    if (audioExts.contains(ext) && ext != 'mp3') {
+      resolved = '.$ext';
+    } else {
+      final m = RegExp(r'\.(mp3|flac|ogg|m4a|wav|aac|ape)(\?|$)')
+          .firstMatch(url);
+      resolved = m != null ? '.${m.group(1)}' : '.mp3';
+    }
+    return (url, resolved);
   }
 
   /// 解析 MV 播放地址（http → 代理 https）
