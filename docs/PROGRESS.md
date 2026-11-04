@@ -109,3 +109,29 @@
 ## S1.1 网络层自查清单进度
 1 search ✅ / 2 comment.music ✅ / 3 count ✅ / 4 floor ✅ / 5 playlist.detail ✅ / 6 track.all ✅
 （余 14 项进行中）
+
+### 7. song/url ✅
+- KgSharedParams.songUrl：key=keyOf(小写hash+mid+userid)、IsFreePart、cdnBackup、page_id 等全字段 ✅
+- url/backupUrl 数组解析、bitRate=0 用 extName 判定 ✅（批1修4）
+
+### 8. privilege/lite ✅
+- resource[type=audio,page_id=0]、qualities 数组、relate_goods 解析 ✅
+- 空 hash/字符串"null" 过滤 ✅
+
+### 9. playlist add/del/tracks（AES+RSA）✅
+- playlistDel/TracksDel 用 playlistAesEncrypt+rsaEncryptPkcs1（uid="0" 例外：登录态传 uid）✅
+- 二进制响应 aesDecryptPlaylistB64 ✅
+
+### 10. artist×3 ✅（P0-1 修复时已深核）
+### 11. album×2 ✅（检验3报告逐字段核对通过）
+### 12. rank/list+audio ✅（data{total,songlist}，kg-tid 369，默认参数进 query）
+### 13. video/detail,url ✅（video_id→hash 兜底、Range 直连、cleartext 11 域）
+### 14. kmr/audio/mv ✅（album_audio_id 非 mixsongid、KG-TID:38、data 为 List<List>）
+### 15. lyric search/download ✅（status=200 语义已在 _wrap/isOk 双侧修复）
+### 16. login 系列 ✅（v7/v9、web 签名、t1 秒级）
+### 17. captcha/verify ✅（N4 修复：带 ssa-code 任意失败都走验证）
+### 18. everyday/yueku/top ✅（platform=ios 必传已在 query；每日推荐不进缓存）
+### 19. top/playlist ✅（保持 kapi 回退，D5 决策）
+### 20. clearDefaultParams 5 处 ✅（逐处与实测一致）
+
+## S1.1 出口：20/20 ✅（网络层终审完成，仅 top/playlist 回退）

@@ -18,7 +18,7 @@ import '../data/verification_service.dart';
 /// 4. 成功后由调用方重试原请求
 ///
 /// 返回 `true` 表示验证通过。
-class CaptchaPage extends StatefulWidget {
+class CaptchaPage extends ConsumerStatefulWidget {
   const CaptchaPage({
     super.key,
     required this.ssaCode,
@@ -38,7 +38,7 @@ class CaptchaPage extends StatefulWidget {
   final Future<bool> Function()? onVerified;
 
   @override
-  State<CaptchaPage> createState() => _CaptchaPageState();
+  ConsumerState<CaptchaPage> createState() => _CaptchaPageState();
 }
 
 class _CaptchaPageState extends ConsumerState<CaptchaPage> {
