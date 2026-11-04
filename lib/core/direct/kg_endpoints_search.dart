@@ -18,7 +18,7 @@ class KgEndpointSearch {
 
 
 
-  Future<KgResponse> _search(Map<String, dynamic> q) async {
+  Future<KgResponse> search(Map<String, dynamic> q) async {
     final type = ['special', 'lyric', 'song', 'album', 'author', 'mv']
             .contains(q['type'])
         ? q['type'] as String
@@ -84,7 +84,7 @@ class KgEndpointSearch {
   /// 返回 `x-kg-errcode: 200` 与 candidates 数组。
   /// 该接口不校验 signature，保持 clearDefaultParams + notSignature。
   /// duration 传毫秒：搜索结果 Duration 是秒，服务端候选 duration=269792。
-  Future<KgResponse> _searchLyric(Map<String, dynamic> q) {
+  Future<KgResponse> searchLyric(Map<String, dynamic> q) {
     final durationSec = int.tryParse('${q['duration'] ?? 0}') ?? 0;
     return kg.request('/search',
         baseUrl: 'https://lyrics.kugou.com',
@@ -107,7 +107,7 @@ class KgEndpointSearch {
         });
   }
 
-  Future<KgResponse> _lyric(Map<String, dynamic> q) async {
+  Future<KgResponse> lyric(Map<String, dynamic> q) async {
     final fmt = '${q['fmt'] ?? 'krc'}';
     final r = await kg.request('/download',
         baseUrl: 'https://lyrics.kugou.com',

@@ -18,7 +18,7 @@ class KgEndpointComment {
 
 
 
-  Future<KgResponse> _commentMusic(Map<String, dynamic> q) {
+  Future<KgResponse> commentMusic(Map<String, dynamic> q) {
     // 源码（comment_music.js）无 x-router/baseURL → 上游即打 gateway.kugou.com
     // 的 /mcomment/v1/cmtlist（mcomment 服务本身挂在 gateway 根路径下，两标签）。
     // 实测匿名/VIP 均 200 status=1；与 kapi 差异仅运行时字段（like.count ±1、
@@ -38,7 +38,7 @@ class KgEndpointComment {
         });
   }
 
-  Future<KgResponse> _commentCount(Map<String, dynamic> q) {
+  Future<KgResponse> commentCount(Map<String, dynamic> q) {
     return kg.request('/index.php',
         method: 'GET',
         encryptType: 'web',
@@ -62,7 +62,7 @@ class KgEndpointComment {
   /// - clearDefaultParams + notSignature（自带 key，不走通用签名）
   /// - key = signParamsKey(clienttime + mid + data)
   /// - x-router m.comment.service.kugou.com
-  Future<KgResponse> _commentSend(Map<String, dynamic> q) {
+  Future<KgResponse> commentSend(Map<String, dynamic> q) {
     final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final contentData = <String, dynamic>{
       'content': '${q['content'] ?? ''}',
@@ -102,7 +102,7 @@ class KgEndpointComment {
   /// 楼中楼回复（module/_comment.js buildCommentReplyConfig，需登录）
   /// POST /index.php?r=commentsv2/reply
   /// key = signParamsKey(clienttime + mid)（**不含 data**）
-  Future<KgResponse> _commentFloorSend(Map<String, dynamic> q) {
+  Future<KgResponse> commentFloorSend(Map<String, dynamic> q) {
     final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final content = '${q['content'] ?? ''}';
     return kg.request('/index.php',
@@ -133,7 +133,7 @@ class KgEndpointComment {
 
   /// 删除评论（module/_comment.js buildCommentDelConfig，需登录）
   /// POST /index.php?r=commentsv2/delcomment
-  Future<KgResponse> _commentDel(Map<String, dynamic> q) {
+  Future<KgResponse> commentDel(Map<String, dynamic> q) {
     final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     return kg.request('/index.php',
         method: 'POST',
@@ -171,7 +171,7 @@ class KgEndpointComment {
   /// 协议：body = playlistAesEncrypt({listid, total_ver:0, type:1}) 的 Base64，
   /// query `p` = RSA({aes:seed, uid, token}) 大写 hex，响应是 AES 加密二进制。
 
-  Future<KgResponse> _commentPlaylist(Map<String, dynamic> q) {
+  Future<KgResponse> commentPlaylist(Map<String, dynamic> q) {
     return kg.request('/m.comment.service/v1/cmtlist',
         method: 'POST',
         params: {
@@ -189,7 +189,7 @@ class KgEndpointComment {
 
   /// 专辑评论（module/comment_album.js）
   /// POST /m.comment.service/v1/cmtlist，childrenid = album_id，code = 专辑码
-  Future<KgResponse> _commentAlbum(Map<String, dynamic> q) {
+  Future<KgResponse> commentAlbum(Map<String, dynamic> q) {
     return kg.request('/m.comment.service/v1/cmtlist',
         method: 'POST',
         params: {
@@ -203,7 +203,7 @@ class KgEndpointComment {
         });
   }
 
-  Future<KgResponse> _commentFloor(Map<String, dynamic> q) {
+  Future<KgResponse> commentFloor(Map<String, dynamic> q) {
     final resourceType = '${q['resource_type'] ?? 'song'}';
     final isPlaylistOrAlbum =
         resourceType == 'playlist' || resourceType == 'album';

@@ -18,7 +18,7 @@ class KgEndpointHome {
 
 
 
-  Future<KgResponse> _yueku() {
+  Future<KgResponse> yueku() {
     // 实测 service.mobile.kugou.com 证书为网宿 CDN 证书（CN=default.chinanetcenter.com，
     // SAN 不含该三标签域名），Dart/Dio 会 TLS 拒绝 → 保持 gateway + x-router。
     return kg.request('/v1/yueku/recommend_v2',
@@ -37,7 +37,7 @@ class KgEndpointHome {
 
   /// 歌手详情（module/artist_detail.js）
 
-  Future<KgResponse> _rankList(Map<String, dynamic> q) {
+  Future<KgResponse> rankList(Map<String, dynamic> q) {
     // 原生域名 ocean.kugou.com：gateway 的路由前缀 ocean/ 需去掉（带前缀 404）。
     return kg.request('/v6/rank/list',
         method: 'GET',
@@ -53,7 +53,7 @@ class KgEndpointHome {
   /// 原生域名 musicadservice.kugou.com（去掉 gateway 路由前缀 musicadservice/）。
   /// 实测：POST body {rank_id,userid,page,pagesize,tags:[]}，data 为数组，
   /// 与 kapi /top/song 结构逐字段一致（0 差异）。
-  Future<KgResponse> _topSong(Map<String, dynamic> q) {
+  Future<KgResponse> topSong(Map<String, dynamic> q) {
     return kg.request('/container/v1/newsong_publish',
         method: 'POST',
         baseUrl: 'https://musicadservice.kugou.com',
@@ -66,7 +66,7 @@ class KgEndpointHome {
         });
   }
 
-  Future<KgResponse> _everydayRecommend(Map<String, dynamic> q) {
+  Future<KgResponse> everydayRecommend(Map<String, dynamic> q) {
     // 实测 everydayrec.service.kugou.com 为三标签域名，*.kugou.com 通配符证书
     // 不覆盖 → Dart/Dio TLS 拒绝，保持 gateway + x-router。
     //
@@ -78,7 +78,7 @@ class KgEndpointHome {
         params: {'platform': '${q['platform'] ?? 'ios'}'});
   }
 
-  Future<KgResponse> _topPlaylist(Map<String, dynamic> q) {
+  Future<KgResponse> topPlaylist(Map<String, dynamic> q) {
     // Node top_playlist.js: `const dateTime = (Date.now()/1000).toFixed(0)` —— **秒级**。
     // （此前误用 YYYYMMDDHH，导致 signParamsKey 的输入与 Node 不一致 → ec=200101）
     final dateTime = '${DateTime.now().millisecondsSinceEpoch ~/ 1000}';
@@ -117,7 +117,7 @@ class KgEndpointHome {
   /// 原生域名 msearch.kugou.com（两标签，*.kugou.com 通配证书覆盖，实测 TLS OK），
   /// gateway 路由前缀 msearch/ 需去掉。实测 200 status=1，data.list[] 每项
   /// 含 name + keywords[]，与 kapi /search/hot 结构一致。
-  Future<KgResponse> _searchHot(Map<String, dynamic> q) {
+  Future<KgResponse> searchHot(Map<String, dynamic> q) {
     return kg.request('/api/v3/search/hot_tab',
         method: 'GET',
         baseUrl: 'https://msearch.kugou.com',
@@ -132,7 +132,7 @@ class KgEndpointHome {
   /// 【实测】匿名态恒返回 error_code=31136（无数据）——Node 版同样如此
   /// （依赖登录态/风控态），属上游行为非实现差异；失败由 _wrap 抛出 →
   /// _directOrFallback 回退 kapi（同样 31136）→ fetchBanners 容错置空。
-  Future<KgResponse> _yuekuBanner(Map<String, dynamic> q) {
+  Future<KgResponse> yuekuBanner(Map<String, dynamic> q) {
     return kg.request('/ads.gateway/v3/listen_banner',
         method: 'POST',
         data: {
@@ -155,7 +155,7 @@ class KgEndpointHome {
   /// 不覆盖（docs/api_report_player.md：TLS 硬失败）→ 保持 gateway + x-router。
   /// 实测 200 status=1，data 数组首项含 hd/sd/qhd/ld_hash、timelength 等，
   /// 与 kapi /video/detail 结构一致（既往验证 + 本轮复核）。
-  Future<KgResponse> _videoDetail(Map<String, dynamic> q) {
+  Future<KgResponse> videoDetail(Map<String, dynamic> q) {
     final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final dfid = kg.device.dfid.isEmpty ? '-' : kg.device.dfid;
     return kg.request('/v1/video',

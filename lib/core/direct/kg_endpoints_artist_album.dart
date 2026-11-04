@@ -20,7 +20,7 @@ class KgEndpointArtistAlbum {
 
   /// 歌手详情（module/artist_detail.js）
   /// POST /kmr/v3/author + x-router: openapi.kugou.com + kg-tid: 36
-  Future<KgResponse> _artistDetail(Map<String, dynamic> q) {
+  Future<KgResponse> artistDetail(Map<String, dynamic> q) {
     return kg.request('/kmr/v3/author',
         method: 'POST',
         data: {'author_id': '${q['id'] ?? q['author_id'] ?? ''}'},
@@ -37,7 +37,7 @@ class KgEndpointArtistAlbum {
   ///   且 hash/timelength 藏在 `audio_info` 内 —— 解析会得到空列表且**不会触发回退**
   ///   （响应 status=1 / error_code=0，_wrap 判成功）。
   /// 实测 v1 匿名可返回 30 首，pagesize 上限 100（超过 error_code=20010）。
-  Future<KgResponse> _artistAudios(Map<String, dynamic> q) {
+  Future<KgResponse> artistAudios(Map<String, dynamic> q) {
     var ps = int.tryParse('${q['pagesize'] ?? 30}') ?? 30;
     if (ps > 100) ps = 100;
     // clienttime 是**秒级**（Node: Math.floor(Date.now()/1000)）
@@ -69,7 +69,7 @@ class KgEndpointArtistAlbum {
   }
 
   /// 歌手专辑（module/artist_albums.js）Postg /kmr/v1/author/albums，kg-tid: 36
-  Future<KgResponse> _artistAlbums(Map<String, dynamic> q) {
+  Future<KgResponse> artistAlbums(Map<String, dynamic> q) {
     return kg.request('/kmr/v1/author/albums',
         method: 'POST',
         data: {
@@ -85,7 +85,7 @@ class KgEndpointArtistAlbum {
   }
 
   /// 专辑详情（module/album_detail.js）kg-tid: 255
-  Future<KgResponse> _albumDetail(Map<String, dynamic> q) {
+  Future<KgResponse> albumDetail(Map<String, dynamic> q) {
     return kg.request('/kmr/v2/albums',
         method: 'POST',
         data: {
@@ -101,7 +101,7 @@ class KgEndpointArtistAlbum {
   }
 
   /// 专辑歌曲（module/album_songs.js）kg-tid: 255
-  Future<KgResponse> _albumSongs(Map<String, dynamic> q) {
+  Future<KgResponse> albumSongs(Map<String, dynamic> q) {
     return kg.request('/v1/album_audio/lite',
         method: 'POST',
         data: {
@@ -125,7 +125,7 @@ class KgEndpointArtistAlbum {
   /// ⚠️ 签名用 **defaultParams + body**（dfid/mid/uuid/appid/clientver/
   /// clienttime 参与签名且同时进 query）——与 artist_audios 那种
   /// clearDefaultParams 模式相反，勿混用。
-  Future<KgResponse> _rankAudio(Map<String, dynamic> q) {
+  Future<KgResponse> rankAudio(Map<String, dynamic> q) {
     return kg.request('/openapi/kmr/v2/rank/audio',
         method: 'POST',
         headers: {'kg-tid': '369'},

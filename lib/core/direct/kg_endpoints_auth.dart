@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:qr_flutter/qr_flutter.dart';
+
 import 'kg_client.dart';
 import 'kg_crypto.dart';
 
@@ -32,7 +34,7 @@ class KgEndpointAuth {
   }
 
   /// 酷狗设备注册（对应 module/register_dev.js，复用 kg.registerDevice）
-  Future<KgResponse> _registerDev() async {
+  Future<KgResponse> registerDev() async {
     final ok = await kg.registerDevice();
     if (ok && kg.device.dfid.isNotEmpty) {
       return KgResponse(
@@ -50,7 +52,7 @@ class KgEndpointAuth {
   }
 
   /// 发送短信验证码（对应 module/captcha_sent.js）
-  Future<KgResponse> _captchaSent(Map<String, dynamic> q) {
+  Future<KgResponse> captchaSent(Map<String, dynamic> q) {
     return kg.request('/v7/send_mobile_code',
         baseUrl: 'http://login.user.kugou.com',
         method: 'POST',
@@ -63,7 +65,7 @@ class KgEndpointAuth {
   }
 
   /// 手机验证码登录（对应 module/login_cellphone.js）
-  Future<KgResponse> _loginCellphone(Map<String, dynamic> q) async {
+  Future<KgResponse> loginCellphone(Map<String, dynamic> q) async {
     final dateTime = DateTime.now().millisecondsSinceEpoch;
     final encrypt = KgCrypto.aesEncryptCbcAuto(jsonEncode({
       'mobile': '${q['mobile'] ?? ''}',
@@ -120,7 +122,7 @@ class KgEndpointAuth {
   }
 
   /// 用户名密码登录（对应 module/login.js）
-  Future<KgResponse> _login(
+  Future<KgResponse> login(
       Map<String, dynamic> q, Map<String, dynamic> d) async {
     final dateNow = DateTime.now().millisecondsSinceEpoch;
     final encrypt = KgCrypto.aesEncryptCbcAuto(jsonEncode({
@@ -157,7 +159,7 @@ class KgEndpointAuth {
   }
 
   /// 刷新登录态（对应 module/login_token.js）
-  Future<KgResponse> _loginToken(Map<String, dynamic> q) async {
+  Future<KgResponse> loginToken(Map<String, dynamic> q) async {
     final dateNow = DateTime.now().millisecondsSinceEpoch;
     final token = '${q['token'] ?? (kg.token.isNotEmpty ? kg.token : '')}';
     final userid = '${q['userid'] ?? (kg.userid.isNotEmpty ? kg.userid : '0')}';
@@ -211,7 +213,7 @@ class KgEndpointAuth {
   }
 
   /// 二维码 key 生成（对应 module/login_qr_key.js）
-  Future<KgResponse> _loginQrKey(Map<String, dynamic> q) {
+  Future<KgResponse> loginQrKey(Map<String, dynamic> q) {
     final type = '${q['type'] ?? ''}';
     return kg.request('/v2/qrcode',
         baseUrl: 'https://login-user.kugou.com',
@@ -228,7 +230,7 @@ class KgEndpointAuth {
   }
 
   /// 二维码图片生成（对应 module/login_qr_create.js，本地生成 PNG base64）
-  Future<KgResponse> _loginQrCreate(Map<String, dynamic> q) async {
+  Future<KgResponse> loginQrCreate(Map<String, dynamic> q) async {
     final key = '${q['key'] ?? ''}';
     final url =
         'https://h5.kugou.com/apps/loginQRCode/html/index.html?qrcode=$key';
@@ -244,25 +246,9 @@ class KgEndpointAuth {
     );
   }
 
-  /// 用 qr_flutter 把二维码 URL 渲染为 PNG base64
-  Future<String> _qrPngBase64(String data) async {
-    try {
-      final painter = QrPainter(
-        data: data,
-        version: QrVersions.auto,
-        gapless: true,
-      );
-      final bytes = await painter.toImageData(480);
-      if (bytes == null) return '';
-      return base64.encode(bytes.buffer.asUint8List());
-    } catch (e) {
-      _logError('二维码生成', e);
-      return '';
-    }
-  }
 
   /// 二维码状态检测（对应 module/login_qr_check.js）
-  Future<KgResponse> _loginQrCheck(Map<String, dynamic> q) async {
+  Future<KgResponse> loginQrCheck(Map<String, dynamic> q) async {
     // 直连不像 kapi 会自动加时间戳，这里自行加入以绕过缓存
     final timestamp =
         q['timestamp'] ?? DateTime.now().millisecondsSinceEpoch.toString();
@@ -290,7 +276,7 @@ class KgEndpointAuth {
   }
 
   /// 用户信息（对应 module/user_detail.js）
-  Future<KgResponse> _userDetail(Map<String, dynamic> q) async {
+  Future<KgResponse> userDetail(Map<String, dynamic> q) async {
     final token = '${q['token'] ?? (kg.token.isNotEmpty ? kg.token : '')}';
     final userid = int.tryParse(
             '${q['userid'] ?? (kg.userid.isNotEmpty ? kg.userid : '0')}') ??
@@ -321,7 +307,7 @@ class KgEndpointAuth {
   }
 
   /// 获取人机验证信息（对应 module/get_verify_info.js）
-  Future<KgResponse> _getVerifyInfo(Map<String, dynamic> q) {
+  Future<KgResponse> getVerifyInfo(Map<String, dynamic> q) {
     final userid = int.tryParse(
             '${q['userid'] ?? (kg.userid.isNotEmpty ? kg.userid : '0')}') ??
         0;
@@ -341,7 +327,7 @@ class KgEndpointAuth {
   }
 
   /// 提交人机验证结果（对应 module/verify_user_info.js）
-  Future<KgResponse> _verifyUserInfo(Map<String, dynamic> d) {
+  Future<KgResponse> verifyUserInfo(Map<String, dynamic> d) {
     final vType = int.tryParse('${d['v_type'] ?? 23}') ?? 23;
     final userid = int.tryParse(
             '${d['userid'] ?? (kg.userid.isNotEmpty ? kg.userid : '0')}') ??
@@ -402,7 +388,7 @@ class KgEndpointAuth {
           data['token'] = dec;
         }
       } catch (e) {
-        _logError('secu_params 解密', e);
+        debugPrint('secu_params 解密', e);
       }
     }
     final token = '${data['token'] ?? ''}';
@@ -412,4 +398,15 @@ class KgEndpointAuth {
     final t1 = data['t1']?.toString();
     if (t1 != null && t1.isNotEmpty) kg.t1 = t1;
   }
+  /// QR URL → PNG base64（qr_flutter 渲染）
+  Future<String> qrPngBase64(String data) async {
+    final painter = QrPainter(
+      data: data,
+      version: QrVersions.auto,
+      gapless: true,
+    );
+    final picData = await painter.toImageData(480);
+    return picData == null ? '' : base64Encode(picData.buffer.asUint8List());
+  }
+
 }

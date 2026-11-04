@@ -18,7 +18,7 @@ class KgEndpointMedia {
 
 
 
-  Future<KgResponse> _kmrAudioMv(Map<String, dynamic> q) {
+  Future<KgResponse> kmrAudioMv(Map<String, dynamic> q) {
     // 【实测】body 必须是 `{'data':[{'album_audio_id':X}],'fields':...}`，
     // **不是** `mixsongid`（传 mixsongid 上游返回 [{}] 空对象）。
     final ids = '${q['album_audio_id'] ?? q['mixsongid'] ?? ''}'
@@ -38,7 +38,7 @@ class KgEndpointMedia {
         });
   }
 
-  Future<KgResponse> _videoUrl(Map<String, dynamic> q) async {
+  Future<KgResponse> videoUrl(Map<String, dynamic> q) async {
     final hash = '${q['hash'] ?? ''}';
     final r = await kg.request('/v2/interface/index',
         method: 'GET',
@@ -67,7 +67,7 @@ class KgEndpointMedia {
 
 
 
-  Future<KgResponse> _songUrl(Map<String, dynamic> q) {
+  Future<KgResponse> songUrl(Map<String, dynamic> q) {
     // 参数构造与 KgPlayApi.songUrl **共用** KgSharedParams（别写两份）。
     //
     // 【实测】key 用**小写 hash** + `userid` 字符串（匿名 '0'），
@@ -89,7 +89,7 @@ class KgEndpointMedia {
         params: params);
   }
 
-  Future<KgResponse> _privilege(Map<String, dynamic> q) {
+  Future<KgResponse> privilege(Map<String, dynamic> q) {
     // 参数构造与 KgPlayApi.privilege **共用** KgSharedParams（别写两份）。
     //
     // 【实测】resource 过滤空 hash（避免把字符串 "null" 传上去）、

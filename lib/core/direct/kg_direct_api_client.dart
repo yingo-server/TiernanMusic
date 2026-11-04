@@ -184,7 +184,7 @@ class KgDirectApiClient extends KugouApiClient {
         return _directOrFallback(
             () => _commentSend(q), kapi, '/comment/${n}/send');
       case 'playlist/del':
-        return _directOrFallback(() => _playlistDel(q), kapi, '/playlist/del');
+        return _directOrFallback(() => _epPlaylist.playlistDel(q), kapi, '/playlist/del');
       case 'playlist/add':
         return _directOrFallback(() => _playlistAdd(q), kapi, '/playlist/add');
       case 'playlist/tracks/add':
@@ -307,7 +307,7 @@ class KgDirectApiClient extends KugouApiClient {
 
   // ---------------- 搜索 ----------------
 
-  Future<KgResponse> _search(Map<String, dynamic> q) async  => _epSearch._search(q);
+  Future<KgResponse> _search(Map<String, dynamic> q) async  => _epSearch.search(q);
 
   /// 歌词搜索。
   ///
@@ -317,15 +317,15 @@ class KgDirectApiClient extends KugouApiClient {
   /// 返回 `x-kg-errcode: 200` 与 candidates 数组。
   /// 该接口不校验 signature，保持 clearDefaultParams + notSignature。
   /// duration 传毫秒：搜索结果 Duration 是秒，服务端候选 duration=269792。
-  Future<KgResponse> _searchLyric(Map<String, dynamic> q)  => _epSearch._searchLyric(q);
+  Future<KgResponse> _searchLyric(Map<String, dynamic> q)  => _epSearch.searchLyric(q);
 
-  Future<KgResponse> _lyric(Map<String, dynamic> q) async  => _epSearch._lyric(q);
+  Future<KgResponse> _lyric(Map<String, dynamic> q) async  => _epSearch.lyric(q);
 
   // ---------------- 评论 ----------------
 
-  Future<KgResponse> _commentMusic(Map<String, dynamic> q)  => _epComment._commentMusic(q);
+  Future<KgResponse> _commentMusic(Map<String, dynamic> q)  => _epComment.commentMusic(q);
 
-  Future<KgResponse> _commentCount(Map<String, dynamic> q)  => _epComment._commentCount(q);
+  Future<KgResponse> _commentCount(Map<String, dynamic> q)  => _epComment.commentCount(q);
 
   /// 发评论（module/_comment.js buildCommentSendConfig，需登录）
   ///
@@ -333,16 +333,16 @@ class KgDirectApiClient extends KugouApiClient {
   /// - clearDefaultParams + notSignature（自带 key，不走通用签名）
   /// - key = signParamsKey(clienttime + mid + data)
   /// - x-router m.comment.service.kugou.com
-  Future<KgResponse> _commentSend(Map<String, dynamic> q)  => _epComment._commentSend(q);
+  Future<KgResponse> _commentSend(Map<String, dynamic> q)  => _epComment.commentSend(q);
 
   /// 楼中楼回复（module/_comment.js buildCommentReplyConfig，需登录）
   /// POST /index.php?r=commentsv2/reply
   /// key = signParamsKey(clienttime + mid)（**不含 data**）
-  Future<KgResponse> _commentFloorSend(Map<String, dynamic> q)  => _epComment._commentFloorSend(q);
+  Future<KgResponse> _commentFloorSend(Map<String, dynamic> q)  => _epComment.commentFloorSend(q);
 
   /// 删除评论（module/_comment.js buildCommentDelConfig，需登录）
   /// POST /index.php?r=commentsv2/delcomment
-  Future<KgResponse> _commentDel(Map<String, dynamic> q)  => _epComment._commentDel(q);
+  Future<KgResponse> _commentDel(Map<String, dynamic> q)  => _epComment.commentDel(q);
 
   /// 评论资源类型 → code
   static String _commentCodeOf(String resourceType) => switch (resourceType) {
@@ -353,52 +353,52 @@ class KgDirectApiClient extends KugouApiClient {
 
   /// 删除/取消收藏歌单（module/playlist_del.js，需登录）
   ///
-  /// 协议：body = playlistAesEncrypt({listid, total_ver:0, type:1}) 的 Base64， => _epComment._commentCodeOf(q);
+  /// 协议：body = playlistAesEncrypt({listid, total_ver:0, type:1}) 的 Base64， => _epComment.commentCodeOf(q);
 
   /// 收藏/新建歌单（module/playlist_add.js，需登录）
   /// POST /cloudlist.service/v5/add_list
   /// type=1 收藏公共歌单（需 list_create_userid/list_create_listid/gid）
   /// type=0 新建歌单
-  Future<KgResponse> _playlistAdd(Map<String, dynamic> q)  => _epPlaylist._playlistAdd(q);
+  Future<KgResponse> _playlistAdd(Map<String, dynamic> q)  => _epPlaylist.playlistAdd(q);
 
   /// 歌单加歌（module/playlist_tracks_add.js，需登录）
   /// POST /cloudlist.service/v6/add_song
   /// data 为 `名称|hash|album_id|album_audio_id` 逗号分隔（空字段要占位，不能跳）
-  Future<KgResponse> _playlistTracksAdd(Map<String, dynamic> q)  => _epPlaylist._playlistTracksAdd(q);
+  Future<KgResponse> _playlistTracksAdd(Map<String, dynamic> q)  => _epPlaylist.playlistTracksAdd(q);
 
   /// 歌单删歌（module/playlist_tracks_del.js，需登录）
   /// POST /cloudlist.service/v4/delete_songs，x-router cloudlist.service.kugou.com
-  Future<KgResponse> _playlistTracksDel(Map<String, dynamic> q)  => _epPlaylist._playlistTracksDel(q);
+  Future<KgResponse> _playlistTracksDel(Map<String, dynamic> q)  => _epPlaylist.playlistTracksDel(q);
 
   /// 我的歌单（module/user_playlist.js，需登录）
   /// POST gateway /v7/get_all_list，x-router cloudlist.service.kugou.com
   /// 参数：query 带 plat/userid/token，body 带 total_ver/type/page/pagesize
-  Future<KgResponse> _userPlaylist(Map<String, dynamic> q)  => _epPlaylist._userPlaylist(q);
+  Future<KgResponse> _userPlaylist(Map<String, dynamic> q)  => _epPlaylist.userPlaylist(q);
 
   /// 用户歌单歌曲（module/playlist_track_all_new.js，需登录）
   /// POST gateway /v4/get_list_all_file_v3，x-router cloudlist.service.kugou.com
-  Future<KgResponse> _userPlaylistTracks(Map<String, dynamic> q)  => _epPlaylist._userPlaylistTracks(q);
+  Future<KgResponse> _userPlaylistTracks(Map<String, dynamic> q)  => _epPlaylist.userPlaylistTracks(q);
 
   /// 歌单评论（module/comment_playlist.js）
   /// POST /m.comment.service/v1/cmtlist，参数走 **query**
   /// childrenid = global_collection_id，code = 歌单码，content_type=0，tag=5
-  Future<KgResponse> _commentPlaylist(Map<String, dynamic> q)  => _epComment._commentPlaylist(q);
+  Future<KgResponse> _commentPlaylist(Map<String, dynamic> q)  => _epComment.commentPlaylist(q);
 
   /// 专辑评论（module/comment_album.js）
   /// POST /m.comment.service/v1/cmtlist，childrenid = album_id，code = 专辑码
-  Future<KgResponse> _commentAlbum(Map<String, dynamic> q)  => _epComment._commentAlbum(q);
+  Future<KgResponse> _commentAlbum(Map<String, dynamic> q)  => _epComment.commentAlbum(q);
 
-  Future<KgResponse> _commentFloor(Map<String, dynamic> q)  => _epComment._commentFloor(q);
+  Future<KgResponse> _commentFloor(Map<String, dynamic> q)  => _epComment.commentFloor(q);
 
   // ---------------- 首页 ----------------
 
-  Future<KgResponse> _yueku()  => _epHome._yueku();
+  Future<KgResponse> _yueku()  => _epHome.yueku();
 
   // ---------- 歌手 / 专辑（原生 openapi.kugou.com，实测字段见 docs/api_samples） ----------
 
   /// 歌手详情（module/artist_detail.js）
   /// POST /kmr/v3/author + x-router: openapi.kugou.com + kg-tid: 36
-  Future<KgResponse> _artistDetail(Map<String, dynamic> q)  => _epArtistAlbum._artistDetail(q);
+  Future<KgResponse> _artistDetail(Map<String, dynamic> q)  => _epArtistAlbum.artistDetail(q);
 
   /// 歌手单曲（module/artist_audios.js）
   /// POST openapi.kugou.com/kmr/v1/audio_group/author，kg-tid: 220
@@ -410,16 +410,16 @@ class KgDirectApiClient extends KugouApiClient {
   ///   且 hash/timelength 藏在 `audio_info` 内 —— 解析会得到空列表且**不会触发回退**
   ///   （响应 status=1 / error_code=0，_wrap 判成功）。
   /// 实测 v1 匿名可返回 30 首，pagesize 上限 100（超过 error_code=20010）。
-  Future<KgResponse> _artistAudios(Map<String, dynamic> q)  => _epArtistAlbum._artistAudios(q);
+  Future<KgResponse> _artistAudios(Map<String, dynamic> q)  => _epArtistAlbum.artistAudios(q);
 
   /// 歌手专辑（module/artist_albums.js）Postg /kmr/v1/author/albums，kg-tid: 36
-  Future<KgResponse> _artistAlbums(Map<String, dynamic> q)  => _epArtistAlbum._artistAlbums(q);
+  Future<KgResponse> _artistAlbums(Map<String, dynamic> q)  => _epArtistAlbum.artistAlbums(q);
 
   /// 专辑详情（module/album_detail.js）kg-tid: 255
-  Future<KgResponse> _albumDetail(Map<String, dynamic> q)  => _epArtistAlbum._albumDetail(q);
+  Future<KgResponse> _albumDetail(Map<String, dynamic> q)  => _epArtistAlbum.albumDetail(q);
 
   /// 专辑歌曲（module/album_songs.js）kg-tid: 255
-  Future<KgResponse> _albumSongs(Map<String, dynamic> q)  => _epArtistAlbum._albumSongs(q);
+  Future<KgResponse> _albumSongs(Map<String, dynamic> q)  => _epArtistAlbum.albumSongs(q);
 
   /// 榜单歌曲列表（module/rank_audio.js）
   /// POST gateway /openapi/kmr/v2/rank/audio，kg-tid: 369
@@ -433,32 +433,32 @@ class KgDirectApiClient extends KugouApiClient {
   /// ⚠️ 签名用 **defaultParams + body**（dfid/mid/uuid/appid/clientver/
   /// clienttime 参与签名且同时进 query）——与 artist_audios 那种
   /// clearDefaultParams 模式相反，勿混用。
-  Future<KgResponse> _rankAudio(Map<String, dynamic> q)  => _epHome._rankAudio(q);
+  Future<KgResponse> _rankAudio(Map<String, dynamic> q)  => _epArtistAlbum.rankAudio(q);
 
-  Future<KgResponse> _rankList(Map<String, dynamic> q)  => _epHome._rankList(q);
+  Future<KgResponse> _rankList(Map<String, dynamic> q)  => _epHome.rankList(q);
 
   /// 新歌速递（module/top_song.js）。
   /// 原生域名 musicadservice.kugou.com（去掉 gateway 路由前缀 musicadservice/）。
   /// 实测：POST body {rank_id,userid,page,pagesize,tags:[]}，data 为数组，
   /// 与 kapi /top/song 结构逐字段一致（0 差异）。
-  Future<KgResponse> _topSong(Map<String, dynamic> q)  => _epHome._topSong(q);
+  Future<KgResponse> _topSong(Map<String, dynamic> q)  => _epHome.topSong(q);
 
-  Future<KgResponse> _everydayRecommend(Map<String, dynamic> q)  => _epHome._everydayRecommend(q);
+  Future<KgResponse> _everydayRecommend(Map<String, dynamic> q)  => _epHome.everydayRecommend(q);
 
-  Future<KgResponse> _topPlaylist(Map<String, dynamic> q)  => _epHome._topPlaylist(q);
+  Future<KgResponse> _topPlaylist(Map<String, dynamic> q)  => _epHome.topPlaylist(q);
 
   /// 热搜（search_hot.js）。
   /// 原生域名 msearch.kugou.com（两标签，*.kugou.com 通配证书覆盖，实测 TLS OK），
   /// gateway 路由前缀 msearch/ 需去掉。实测 200 status=1，data.list[] 每项
   /// 含 name + keywords[]，与 kapi /search/hot 结构一致。
-  Future<KgResponse> _searchHot(Map<String, dynamic> q)  => _epHome._searchHot(q);
+  Future<KgResponse> _searchHot(Map<String, dynamic> q)  => _epHome.searchHot(q);
 
   /// 乐库 banner（yueku_banner.js）。
   /// 源码无 x-router/baseURL → gateway 的 /ads.gateway/v3/listen_banner。
   /// 【实测】匿名态恒返回 error_code=31136（无数据）——Node 版同样如此
   /// （依赖登录态/风控态），属上游行为非实现差异；失败由 _wrap 抛出 →
   /// _directOrFallback 回退 kapi（同样 31136）→ fetchBanners 容错置空。
-  Future<KgResponse> _yuekuBanner(Map<String, dynamic> q)  => _epHome._yuekuBanner(q);
+  Future<KgResponse> _yuekuBanner(Map<String, dynamic> q)  => _epHome.yuekuBanner(q);
 
   /// 视频详情（video_detail.js）。
   /// 原生域名 kmr.service.kugou.com 为三标签域名，*.kugou.com 单层通配证书
@@ -495,21 +495,21 @@ class KgDirectApiClient extends KugouApiClient {
   /// 旧写法 `{"listid": [...]}` 不管传 gid 还是数字 specialid、不管 v1/v2/v3
   /// 都返回 `status=0 error_code=20010`（v2 附带 errmsg `data len need in [1, 10]`）。
   /// 数字 listid（用户歌单）不被接受，只认 `collection_x_uid_xx` 形式的 gid。
-  Future<KgResponse> _playlistDetail(Map<String, dynamic> q)  => _epPlaylist._playlistDetail(q);
+  Future<KgResponse> _playlistDetail(Map<String, dynamic> q)  => _epPlaylist.playlistDetail(q);
 
-  Future<KgResponse> _playlistTrackAll(Map<String, dynamic> q)  => _epPlaylist._playlistTrackAll(q);
+  Future<KgResponse> _playlistTrackAll(Map<String, dynamic> q)  => _epPlaylist.playlistTrackAll(q);
 
   // ---------------- MV ----------------
 
-  Future<KgResponse> _kmrAudioMv(Map<String, dynamic> q)  => _epMedia._kmrAudioMv(q);
+  Future<KgResponse> _kmrAudioMv(Map<String, dynamic> q)  => _epMedia.kmrAudioMv(q);
 
-  Future<KgResponse> _videoUrl(Map<String, dynamic> q) async  => _epMedia._videoUrl(q);
+  Future<KgResponse> _videoUrl(Map<String, dynamic> q) async  => _epMedia.videoUrl(q);
 
   // ---------------- 播放/权益（供 kapi 回退路径复用） ----------------
 
-  Future<KgResponse> _songUrl(Map<String, dynamic> q)  => _epMedia._songUrl(q);
+  Future<KgResponse> _songUrl(Map<String, dynamic> q)  => _epMedia.songUrl(q);
 
-  Future<KgResponse> _privilege(Map<String, dynamic> q)  => _epMedia._privilege(q);
+  Future<KgResponse> _privilege(Map<String, dynamic> q)  => _epMedia.privilege(q);
 
   // ---------------- 账号 / 登录 / 验证 ----------------
   //
@@ -527,55 +527,40 @@ class KgDirectApiClient extends KugouApiClient {
   }
 
   /// 酷狗设备注册（对应 module/register_dev.js，复用 kg.registerDevice）
-  Future<KgResponse> _registerDev() async  => _epAuth._registerDev();
+  Future<KgResponse> _registerDev() async  => _epAuth.registerDev();
 
   /// 发送短信验证码（对应 module/captcha_sent.js）
-  Future<KgResponse> _captchaSent(Map<String, dynamic> q)  => _epAuth._captchaSent(q);
+  Future<KgResponse> _captchaSent(Map<String, dynamic> q)  => _epAuth.captchaSent(q);
 
   /// 手机验证码登录（对应 module/login_cellphone.js）
-  Future<KgResponse> _loginCellphone(Map<String, dynamic> q) async  => _epAuth._loginCellphone(q);
+  Future<KgResponse> _loginCellphone(Map<String, dynamic> q) async  => _epAuth.loginCellphone(q);
 
   /// 用户名密码登录（对应 module/login.js）
   Future<KgResponse> _login(
-      Map<String, dynamic> q, Map<String, dynamic> d) async  => _epAuth._login(q);
+      Map<String, dynamic> q, Map<String, dynamic> d) async  => _epAuth.login(q, d);
 
   /// 刷新登录态（对应 module/login_token.js）
-  Future<KgResponse> _loginToken(Map<String, dynamic> q) async  => _epAuth._loginToken(q);
+  Future<KgResponse> _loginToken(Map<String, dynamic> q) async  => _epAuth.loginToken(q);
 
   /// 二维码 key 生成（对应 module/login_qr_key.js）
-  Future<KgResponse> _loginQrKey(Map<String, dynamic> q)  => _epAuth._loginQrKey(q);
+  Future<KgResponse> _loginQrKey(Map<String, dynamic> q)  => _epAuth.loginQrKey(q);
 
   /// 二维码图片生成（对应 module/login_qr_create.js，本地生成 PNG base64）
-  Future<KgResponse> _loginQrCreate(Map<String, dynamic> q) async  => _epAuth._loginQrCreate(q);
+  Future<KgResponse> _loginQrCreate(Map<String, dynamic> q) async  => _epAuth.loginQrCreate(q);
 
-  /// 用 qr_flutter 把二维码 URL 渲染为 PNG base64
-  Future<String> _qrPngBase64(String data) async {
-    try {
-      final painter = QrPainter(
-        data: data,
-        version: QrVersions.auto,
-        gapless: true,
-      );
-      final bytes = await painter.toImageData(480);
-      if (bytes == null) return '';
-      return base64.encode(bytes.buffer.asUint8List());
-    } catch (e) {
-      _logError('二维码生成', e);
-      return '';
-    }
-  }
+  Future<String> _qrPngBase64(String data) => _epAuth.qrPngBase64(data);
 
   /// 二维码状态检测（对应 module/login_qr_check.js）
-  Future<KgResponse> _loginQrCheck(Map<String, dynamic> q) async  => _epAuth._loginQrCheck(q);
+  Future<KgResponse> _loginQrCheck(Map<String, dynamic> q) async  => _epAuth.loginQrCheck(q);
 
   /// 用户信息（对应 module/user_detail.js）
-  Future<KgResponse> _userDetail(Map<String, dynamic> q) async  => _epAuth._userDetail(q);
+  Future<KgResponse> _userDetail(Map<String, dynamic> q) async  => _epAuth.userDetail(q);
 
   /// 获取人机验证信息（对应 module/get_verify_info.js）
-  Future<KgResponse> _getVerifyInfo(Map<String, dynamic> q)  => _epAuth._getVerifyInfo(q);
+  Future<KgResponse> _getVerifyInfo(Map<String, dynamic> q)  => _epAuth.getVerifyInfo(q);
 
   /// 提交人机验证结果（对应 module/verify_user_info.js）
-  Future<KgResponse> _verifyUserInfo(Map<String, dynamic> d)  => _epAuth._verifyUserInfo(q);
+  Future<KgResponse> _verifyUserInfo(Map<String, dynamic> d)  => _epAuth.verifyUserInfo(d);
 
   /// 登录成功后：解密 secu_params 合并进 data，并回写 kg.token / kg.userid
   void _afterLogin(KgResponse r, String tempKey) {

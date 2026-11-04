@@ -16,7 +16,7 @@ class KgEndpointPlaylist {
   KgEndpointPlaylist(this.kg);
   final KgClient kg;
 
-  Future<KgResponse> _playlistDel(Map<String, dynamic> q) async {
+  Future<KgResponse> playlistDel(Map<String, dynamic> q) async {
     final userid = kg.userid.isEmpty ? '0' : kg.userid;
     final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
@@ -66,7 +66,7 @@ class KgEndpointPlaylist {
   /// POST /cloudlist.service/v5/add_list
   /// type=1 收藏公共歌单（需 list_create_userid/list_create_listid/gid）
   /// type=0 新建歌单
-  Future<KgResponse> _playlistAdd(Map<String, dynamic> q) {
+  Future<KgResponse> playlistAdd(Map<String, dynamic> q) {
     final userid = kg.userid.isEmpty ? '0' : kg.userid;
     final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final type = int.tryParse('${q['type'] ?? 0}') ?? 0;
@@ -100,7 +100,7 @@ class KgEndpointPlaylist {
   /// 歌单加歌（module/playlist_tracks_add.js，需登录）
   /// POST /cloudlist.service/v6/add_song
   /// data 为 `名称|hash|album_id|album_audio_id` 逗号分隔（空字段要占位，不能跳）
-  Future<KgResponse> _playlistTracksAdd(Map<String, dynamic> q) {
+  Future<KgResponse> playlistTracksAdd(Map<String, dynamic> q) {
     final userid = kg.userid.isEmpty ? '0' : kg.userid;
     final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final raw = q['data'] ?? q['songs'] ?? '';
@@ -126,7 +126,7 @@ class KgEndpointPlaylist {
 
   /// 歌单删歌（module/playlist_tracks_del.js，需登录）
   /// POST /cloudlist.service/v4/delete_songs，x-router cloudlist.service.kugou.com
-  Future<KgResponse> _playlistTracksDel(Map<String, dynamic> q) {
+  Future<KgResponse> playlistTracksDel(Map<String, dynamic> q) {
     final userid = kg.userid.isEmpty ? '0' : kg.userid;
     return kg.request('/cloudlist.service/v4/delete_songs',
         method: 'POST',
@@ -145,7 +145,7 @@ class KgEndpointPlaylist {
   /// 我的歌单（module/user_playlist.js，需登录）
   /// POST gateway /v7/get_all_list，x-router cloudlist.service.kugou.com
   /// 参数：query 带 plat/userid/token，body 带 total_ver/type/page/pagesize
-  Future<KgResponse> _userPlaylist(Map<String, dynamic> q) {
+  Future<KgResponse> userPlaylist(Map<String, dynamic> q) {
     final userid = kg.userid.isEmpty ? '0' : kg.userid;
     return kg.request('/v7/get_all_list',
         method: 'POST',
@@ -163,7 +163,7 @@ class KgEndpointPlaylist {
 
   /// 用户歌单歌曲（module/playlist_track_all_new.js，需登录）
   /// POST gateway /v4/get_list_all_file_v3，x-router cloudlist.service.kugou.com
-  Future<KgResponse> _userPlaylistTracks(Map<String, dynamic> q) {
+  Future<KgResponse> userPlaylistTracks(Map<String, dynamic> q) {
     final userid = kg.userid.isEmpty ? '0' : kg.userid;
     return kg.request('/v4/get_list_all_file_v3',
         method: 'POST',
@@ -191,7 +191,7 @@ class KgEndpointPlaylist {
   /// 旧写法 `{"listid": [...]}` 不管传 gid 还是数字 specialid、不管 v1/v2/v3
   /// 都返回 `status=0 error_code=20010`（v2 附带 errmsg `data len need in [1, 10]`）。
   /// 数字 listid（用户歌单）不被接受，只认 `collection_x_uid_xx` 形式的 gid。
-  Future<KgResponse> _playlistDetail(Map<String, dynamic> q) {
+  Future<KgResponse> playlistDetail(Map<String, dynamic> q) {
     final ids = '${q['ids'] ?? q['global_collection_id'] ?? ''}'
         .split(',')
         .map((e) => e.trim())
@@ -208,7 +208,7 @@ class KgEndpointPlaylist {
         });
   }
 
-  Future<KgResponse> _playlistTrackAll(Map<String, dynamic> q) {
+  Future<KgResponse> playlistTrackAll(Map<String, dynamic> q) {
     final pagesize = int.tryParse('${q['pagesize'] ?? 30}') ?? 30;
     final page = int.tryParse('${q['page'] ?? 1}') ?? 1;
     final rawId = '${q['id'] ?? q['global_collection_id'] ?? ''}'.trim();
