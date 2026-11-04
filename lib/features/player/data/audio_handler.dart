@@ -208,6 +208,11 @@ class TiernanAudioHandler extends BaseAudioHandler
     if (!await ensureEngineReady()) return;
     // 新的播放请求会清掉 20028 挂起状态，避免验证后跳回旧歌
     _pendingSongIndex = null;
+    // PLY-03（审查③）：队列被整体替换时**立即作废在途请求**——
+    // 旧 _playAt 恢复后按旧 index 写 _songs 会污染新队列（越界或覆盖错歌）。
+    _playToken++;
+    _loading = false;
+    _pendingIndex = null;
     _songs
       ..clear()
       ..addAll(songs);
@@ -222,6 +227,13 @@ class TiernanAudioHandler extends BaseAudioHandler
     _pendingSongIndex = null;
     final existing = _songs.indexOf(song);
     if (existing >= 0) {
+      // PLY-17（审查③）：Song== 只比 hash。若传入歌带 localPath（下载页入口）
+      // 而队列里是同 hash 的在线版本，用本地源覆盖队列项，否则离线播放失效。
+      if ((song.localPath?.isNotEmpty ?? false) &&
+          (_songs[existing].localPath?.isNotEmpty != true)) {
+        _songs[existing] =
+            _songs[existing].copyWith(localPath: song.localPath);
+      }
       await _playAt(existing);
       return;
     }
@@ -260,22 +272,27 @@ class TiernanAudioHandler extends BaseAudioHandler
     try {
       // 先广播缓冲状态
       _broadcastState(_player.playbackEvent);
-      // 补全详情（专辑信息等），不阻塞失败
-      final detailed = await _repository.fetchDetail(song);
-      if (token != _playToken) return;
-      _songs[index] = detailed;
-      _emitMediaItem();
+
+      // PLY-06（审查③）：本地资源可用的歌**先走离线**，不做网络补全——
+      // fetchDetail 要等 20-30s 超时，飞行模式下离线播放基本不可用。
+      final local = song.localPath;
+      final localUsable = local != null &&
+          local.isNotEmpty &&
+          (local.startsWith('content://') || File(local).existsSync());
+      if (!localUsable) {
+        // 在线歌：补全详情（专辑信息等），不阻塞失败
+        final detailed = await _repository.fetchDetail(song);
+        if (token != _playToken) return;
+        _songs[index] = detailed;
+        _emitMediaItem();
+      }
 
       // 已下载歌曲：本地资源存在时直接离线播放，跳过网络解析（F4）
       //
       // 两种本地源：
       // - 绝对路径（Android ≤9 / 降级目录）→ Uri.file
       // - MediaStore Uri（Android 10+）→ 直接用 content://（just_audio 支持）
-      final local = song.localPath;
-      if (local != null && local.isNotEmpty) {
-        final isContentUri = local.startsWith('content://');
-        final exists = isContentUri || File(local).existsSync();
-        if (exists) {
+      if (localUsable) {
           _isPreview = false;
           _previewController.add(false);
           await _player.setAudioSource(
@@ -321,6 +338,8 @@ class TiernanAudioHandler extends BaseAudioHandler
       if (api != null && api.needsVerification) {
         _pendingSongIndex = index;
         _verificationController.add(api);
+        // PLY-02（审查③）：用户必须知道发生了什么，否则停在静默 error 态
+        _errorController.add('需要完成人机验证后重试');
         playbackState.add(playbackState.value.copyWith(
           playing: false,
           processingState: AudioProcessingState.error,

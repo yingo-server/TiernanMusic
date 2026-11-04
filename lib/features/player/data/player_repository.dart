@@ -150,6 +150,8 @@ class PlayerRepository {
 
     int? lastErrorCode;
     String lastMessage = '';
+    // PLY-02（审查③）：20028 的 ssaCode 必须传给上层，否则验证页拿不到 eventid
+    String lastSsaCode = '';
     for (var i = startIndex; i < order.length; i++) {
       final q = order[i];
       final result = await play.songUrl(
@@ -168,6 +170,9 @@ class PlayerRepository {
       }
       lastErrorCode = result.errorCode;
       lastMessage = result.message.isNotEmpty ? result.message : lastMessage;
+      if (result.ssaCode != null && result.ssaCode!.isNotEmpty) {
+        lastSsaCode = result.ssaCode!;
+      }
       // 20028（需验证）直接退出
       if (result.errorCode == 20028) break;
       // 权益不足（需购买/无版权）：先尝试官方 60 秒试听通道（IsFreePart=1），
@@ -187,11 +192,17 @@ class PlayerRepository {
             isPreview: true,
           );
         }
-        break;
+        // PLY-08（审查③）：该档 fail_process 只代表**本档**被拒（flac 需会员
+        // 但 320 可能免费可播），continue 尝试更低音质而非放弃整首。
+        continue;
       }
     }
     if (lastErrorCode != null && lastErrorCode != 0) {
-      throw ApiException(lastErrorCode, lastMessage.isEmpty ? '直连获取播放地址失败' : lastMessage);
+      throw ApiException(
+        lastErrorCode,
+        lastMessage.isEmpty ? '直连获取播放地址失败' : lastMessage,
+        ssaCode: lastSsaCode.isNotEmpty ? lastSsaCode : null,
+      );
     }
     return null;
   }
@@ -201,9 +212,11 @@ class PlayerRepository {
     final q = AudioQuality.fromString(r.extName.isNotEmpty ? r.extName : r.quality);
     if (q != AudioQuality.q128) return q;
     // 否则按码率推断；未知/0 一律按最低，避免把试听错标为高音质
-    if (r.bitrate >= 2000) return AudioQuality.flac;
-    if (r.bitrate >= 900) return AudioQuality.high;
-    if (r.bitrate >= 300) return AudioQuality.q320;
+    // PLY-07（审查③）：服务端 bitRate 是 **bps**（320000/128000），
+    // 此前按 kbps 阈值（2000/900/300）推断，128/320 恒被判成 flac。
+    if (r.bitrate >= 500000) return AudioQuality.flac;
+    if (r.bitrate >= 192000) return AudioQuality.high;
+    if (r.bitrate >= 96000) return AudioQuality.q320;
     return AudioQuality.q128;
   }
 
@@ -232,10 +245,14 @@ class PlayerRepository {
       final errorCode = _int(data['errcode'] ?? data['error_code']);
       final status = _int(data['status']);
       if (errorCode != 0 || (status != null && status != 1)) {
-        throw ApiException(
+        // PLY-04（审查③）：单档失败应**继续尝试更低音质**（fail 常按 quality
+        // 粒度返回：flac 需会员但 320 免费可播），throw 会让降级循环与
+        // 下方 free_part 试听兜底全部变成死代码。
+        lastError = ApiException(
           errorCode ?? -1,
           _songFailureMessage(data, q),
         );
+        continue;
       }
 
       // 优先 url[0]，仅当主地址缺失时才使用 backupUrl[0]。

@@ -89,8 +89,11 @@ class KrcParser {
         final text = StringBuffer();
         for (final wm in _wordRe.allMatches(m.group(3)!)) {
           final word = wm.group(3)!;
+          final lineStart = int.parse(m.group(1)!);
           words.add(KrcWord(
-            startMs: int.parse(wm.group(1)!),
+            // PLY-01（审查③）：KRC 逐字时间是**相对本行开始**的偏移，
+            // 必须加行首时间才是全曲绝对时间；否则除第一行外全部误判。
+            startMs: lineStart + int.parse(wm.group(1)!),
             durationMs: int.parse(wm.group(2)!),
             text: word,
           ));
