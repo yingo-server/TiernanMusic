@@ -102,3 +102,23 @@
 ### 待办
 - [ ] 等 3 份复核报告齐 → 修复
 - [ ] CI v3.2.0 绿 → release 确认
+
+## v3.2 迭代续（第5批复核修复）
+
+### CI 修复
+- ad26926：V3-03 detailed 作用域外引用（analyze 报错）
+- v3.2.0 tag 重打到 ad26926，run 42124284517 构建中
+
+### 第5批复核①直连层 P1 修复（7da9d5d）
+- V3-08：未移植路径 ApiException 裸抛 → 统一 _asDioException 包装（第 8 条）
+- V3-09：登录 dfid 只写 kg.dfid 不进 device.dfid → 签名维度不匹配；已同步（第 5 条）
+- V3-10：requestWithVerify 验证后重试对写操作=重复提交 → 契约声明写端点禁用（第 21 条）
+- V3-11：kapi 基址无语义说明 → 标注仅参考+清理计划（第 27 条）
+
+### 复核③UI 报告要点
+- P1：kapi 固化为默认基址（已用 V3-11 处理：语义澄清，运行期不发包）
+- P2：supportedLocales 双源 10 vs 11（app_zh.arb 裸 zh）——待修
+- P3 若干
+
+### 定时任务
+- dea41ffd：15 分钟后查构建 + 推进第 6 批审查
