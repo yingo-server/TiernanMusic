@@ -41,6 +41,7 @@ class KgDirectApiClient extends KugouApiClient {
     kg.token = token;
     kg.userid = userid;
     if (t1 != null) kg.t1 = t1;
+    if (dfid != null && dfid.isNotEmpty) kg.dfid = dfid;
     await super.setCredentials(
         token: token, userid: userid, t1: t1, auth: auth, dfid: dfid);
   }
@@ -71,47 +72,42 @@ class KgDirectApiClient extends KugouApiClient {
   Map<String, dynamic> _wrap(KgResponse r) {
     final body = r.body;
     final status = body['status'];
-    final rawCode = body['error_code'] ?? body['errcode'] ?? 0;
-    final errorCode =
-        rawCode is int ? rawCode : int.tryParse('$rawCode') ?? 0;
+    int codeOf(Object? v) => v is int ? v : (int.tryParse('$v') ?? 0);
+    final errorCode = codeOf(body['error_code'] ?? body['errcode']);
+
+    String msgOf() =>
+        '${body['error'] ?? body['error_msg'] ?? body['errmsg'] ?? body['info'] ?? '请求失败'}';
+
+    // PLY-10（审查①-A，P1）：mcomment 系列用 `err_code` 表达业务错误，
+    // 与 status 无关——评论/楼中楼在 status=1 或裸 Map 时都可能带 err_code=60102。
+    // 该判定提到所有分支之前，且兼容字符串形态（"60102"）。
+    final errCode = body['err_code'];
+    if (errCode != null && codeOf(errCode) != 0) {
+      throw ApiException(codeOf(errCode), msgOf(),
+          ssaCode: r.ssaCode, body: body);
+    }
 
     // status == 1 → 成功
     if (status == 1) {
-      // ⚠️ mcomment 系列接口用 `err_code` 表达业务错误（不是 error_code/errcode）。
-      //    实测「歌单/专辑楼中楼」用错端点或错 code 时返回：
-      //      status=1, err_code=60102, list 为空
-      //    若不检查 err_code，会被判成成功 → 不回退 kapi → 页面恒显示「暂无回复」。
-      final errCode = body['err_code'];
-      if (errCode is int && errCode != 0) {
-        throw ApiException(
-          errCode,
-          '${body['error'] ?? body['error_msg'] ?? body['errmsg'] ?? body['info'] ?? '请求失败'}',
-          ssaCode: r.ssaCode,
-          body: body,
-        );
-      }
       // 警告码 + 有数据 → 放过；无数据且有错码 → 视为失败
       if (errorCode == 0 || _hasData(body)) return body;
-      throw ApiException(
-        errorCode,
-        '${body['error'] ?? body['error_msg'] ?? body['errmsg'] ?? body['info'] ?? '请求失败'}',
-        ssaCode: r.ssaCode,
-        body: body,
-      );
+      throw ApiException(errorCode, msgOf(), ssaCode: r.ssaCode, body: body);
     }
 
     // ⚠️ status == 200 也是成功语义（歌词类接口实测如此：
-    //    status=200 + errcode=200 + candidates[]）。必须先放行，
-    //    否则 errcode=200 会被当成错误码 → 歌词搜索恒失败。
+    //    status=200 + errcode=200 + candidates[]）。errcode=200 是正常码，
+    //    因此本分支不做 error_code 判定（err_code 已在上面统一校验过）。
     if (status == 200) return body;
 
     if (status == 0 || status == 2 || errorCode != 0) {
-      throw ApiException(
-        errorCode,
-        '${body['error'] ?? body['error_msg'] ?? body['errmsg'] ?? body['info'] ?? '请求失败'}',
-        ssaCode: r.ssaCode,
-        body: body,
-      );
+      throw ApiException(errorCode, msgOf(), ssaCode: r.ssaCode, body: body);
+    }
+
+    // PLY-11（审查①-A，P1）：无 status 且响应体为空 → 风控/网关空包，
+    // 不能当作成功（否则不回退、页面恒空白且无错误提示）。
+    if (body.isEmpty) {
+      throw ApiException(-1, '空响应体（可能被风控拦截）',
+          ssaCode: r.ssaCode, body: body);
     }
     return body;
   }
@@ -139,11 +135,16 @@ class KgDirectApiClient extends KugouApiClient {
   }
 
   /// 先直连，失败则回退 kapi
+  ///
+  /// PLY-08（审查①-A，P0）：写操作（发评论/收藏/加歌/删歌…）**禁止**回退——
+  /// 直连请求可能已被服务端执行，只是响应超时或解析失败；再打一次 kapi
+  /// 会重复提交（重复评论、歌单里两条同名、同批歌加两遍）。
   Future<Map<String, dynamic>> _directOrFallback(
     Future<KgResponse> Function() direct,
     Future<Map<String, dynamic>> Function() kapi,
-    String label,
-  ) async {
+    String label, {
+    bool write = false,
+  }) async {
     try {
       return _wrap(await direct());
     } on ApiException catch (e) {
@@ -152,38 +153,43 @@ class KgDirectApiClient extends KugouApiClient {
       // 上层（AuthRepository/verification_guard）只捕获 DioException 并从
       // .error 取 ApiException。直连若裸抛会被上层泛 catch 吞掉，
       // 导致 20028 验证、20034 多账号、token 失效清理全部失效。
-      if (!fallbackToKapi ||
+      if (write ||
+          !fallbackToKapi ||
           e.needsVerification ||
           e.errorCode == 20034) {
-        throw DioException(
-          requestOptions: RequestOptions(path: label),
-          error: e,
-        );
+        throw _asDioException(label, e);
       }
       try {
         return await kapi();
-      } on ApiException catch (e2) {
-        _logError('$label (kapi 回退)', e2);
-        throw DioException(
-          requestOptions: RequestOptions(path: label),
-          error: e2,
-        );
       } catch (e2) {
+        // PLY-09（审查①-A，P1）：回退路径异常统一包装为 DioException，
+        // 否则上层 on DioException 捕不到，验证/多账号/token 清理失效。
         _logError('$label (kapi 回退)', e2);
-        rethrow;
+        throw _asDioException(label, e2);
       }
     } catch (e) {
       _logError(label, e);
       // 编程错误（TypeError/NoSuchMethodError）不回退、不吞，直接暴露
       if (e is TypeError || e is NoSuchMethodError) rethrow;
-      if (!fallbackToKapi) rethrow;
+      if (write || !fallbackToKapi) {
+        throw _asDioException(label, e);
+      }
       try {
         return await kapi();
       } catch (e2) {
         _logError('$label (kapi 回退)', e2);
-        rethrow;
+        throw _asDioException(label, e2);
       }
     }
+  }
+
+  /// 统一异常形态：无论底层抛什么，上层拿到的都是 DioException + error=ApiException
+  static DioException _asDioException(String label, Object e) {
+    if (e is DioException) return e;
+    return DioException(
+      requestOptions: RequestOptions(path: label),
+      error: e is ApiException ? e : ApiException(-1, '$e'),
+    );
   }
 
   @override
@@ -227,25 +233,26 @@ class KgDirectApiClient extends KugouApiClient {
         return _directOrFallback(() => _commentMusic(q), kapi, '/comment/music');
       case 'comment/floor/send':
         return _directOrFallback(
-            () => _commentFloorSend(q), kapi, '/comment/floor/send');
+            () => _commentFloorSend(q), kapi, '/comment/floor/send', write: true);
       case 'comment/music/del':
         return _directOrFallback(
-            () => _commentDel(q), kapi, '/comment/music/del');
+            () => _commentDel(q), kapi, '/comment/music/del', write: true);
       case 'comment/music/send':
       case 'comment/playlist/send':
       case 'comment/album/send':
         return _directOrFallback(
-            () => _commentSend(q), kapi, '/comment/${n}/send');
+            () => _commentSend(q), kapi, '/comment/${n}/send', write: true);
       case 'playlist/del':
-        return _directOrFallback(() => _epPlaylist.playlistDel(q), kapi, '/playlist/del');
+        return _directOrFallback(() => _epPlaylist.playlistDel(q), kapi, '/playlist/del',
+            write: true);
       case 'playlist/add':
-        return _directOrFallback(() => _playlistAdd(q), kapi, '/playlist/add');
+        return _directOrFallback(() => _playlistAdd(q), kapi, '/playlist/add', write: true);
       case 'playlist/tracks/add':
         return _directOrFallback(
-            () => _playlistTracksAdd(q), kapi, '/playlist/tracks/add');
+            () => _playlistTracksAdd(q), kapi, '/playlist/tracks/add', write: true);
       case 'playlist/tracks/del':
         return _directOrFallback(
-            () => _playlistTracksDel(q), kapi, '/playlist/tracks/del');
+            () => _playlistTracksDel(q), kapi, '/playlist/tracks/del', write: true);
       case 'user/playlist':
         return _directOrFallback(() => _userPlaylist(q), kapi, '/user/playlist');
       case 'playlist/track/all/new':
