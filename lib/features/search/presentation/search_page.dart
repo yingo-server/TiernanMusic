@@ -85,7 +85,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     if (k.isEmpty) return;
     _debounce?.cancel();
     _focusNode.unfocus();
-    await ref.read(searchRepositoryProvider).addHistory(k);
+    try {
+      // R-27（第6批②，P2）：历史写盘失败不应中断搜索提交（第 6/9 条）
+      await ref.read(searchRepositoryProvider).addHistory(k);
+    } catch (e) {
+      debugPrint('[search] addHistory failed (non-fatal): $e');
+    }
+    // R-26（第6批②，P2）：await 后 setState 必须 mounted 检查（第 18 条）
+    if (!mounted) return;
     setState(() {
       _controller.text = k;
       _showSuggest = false;

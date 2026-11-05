@@ -534,3 +534,118 @@
 - 事实：`try { … } catch (_) { /* 查询失败不阻断发送，childrenid 交给直连层兜底 */ }`，而直连层并无兜底（`childrenid` 为空串照发）。
 - 违反：QUALITY_STANDARD 第 6 条（空捕获）、第 31 条（注释声称有兜底，实际没有）
 - 后果：歌曲评论列表接口抖动时，发送的 `childrenid` 为空 → 服务端 err_code=10002/400，用户看到「发送失败」却不知原因；重试仍失败（每次都要先查列表）。
+
+---
+
+## 14. 复核修订（自我更正，避免下批误传）
+
+复核过程中对照 Node 源码后撤回了 3 条初判，如实记录：
+
+1. **撤回** `kg_endpoints_media.dart:47-62 videoUrl 未 lowerCase hash`（原判 P2）。Node `util/helper.js:135-139` 的 `signKey` 不对 hash 归一，`video_url.js` 直接用 `params.hash`；Dart 与 Node 一致。→ 非缺陷。
+2. **撤回** `kg_endpoints_comment.dart:109-113 album_audio_id 字符串`（原判 P2）。Node 的 `params` 来自 HTTP query，`firstValue` 取到的本就是字符串，`JSON.stringify` 结果与 Dart 相同，签名 body 一致。→ 非缺陷。
+3. **降级** `kg_endpoints_search.dart lyric decode 分支无 else`（P2 → P3）。`LyricRepository._fetchLyricByFormat` 在 `decodeContent` 缺失时会用 `content` 走 `KrcDecoder.decodeDetailed`（KRC XOR+zip 客户端已实现），可自愈，仅在「上游 base64 明文」这一少见形态下退化为 LRC。
+4. **降级** `requestWithVerify 重放`（P1 → P2）：当前仅读接口调用，属潜在风险。
+5. **降级** `KgClient.dfid 只写不读`（P1 → P2）：设备 dfid 仍在正常工作，无当前可见故障。
+
+---
+
+## 15. 复核通过项（本轮验证结论：这些修复是对的，不要再改）
+
+| 项 | 结论 | 依据 |
+|---|---|---|
+| A. `fallbackToKapi = const false` + 未移植路径报错 | 语义自洽（写/读都不再打 kapi），但 **get/post 分派表不对称**（见 P0-1）与 `-404` 裸抛（见 P1-1）是两个遗留副作用 | `kg_direct_api_client.dart:214-302` |
+| B. `_wrap` 的 `status==200` 分支 | 正确，且**不再**对 200 作 `error_code` 判定（歌词 `errcode=200` 不会被误杀） | `_wrap` 注释 + api_verified「歌词成功语义 status=200」 |
+| B. `_wrap` 空 Map 判失败 | 正确（PLY-11） | `if (body.isEmpty) throw` |
+| C. 7 个 `write: true` 调用点 | 与 `_directOrFallback` 的 `!fallbackToKapi` 恒真叠加后仍保证写不回退，**功能正确**（冗余见 P3） | `get('judge') switch` 中 7 处 |
+| C. `PlaylistRepository._write` 防重锁 | `add/remove` 成对、`finally` 释放、失败语义按 `DioExceptionType` 分类，**复核通过** | `playlist_repository.dart:265-292` |
+| C. `PlaylistWriteException.maybeSucceeded` | 契约清晰（`false` 可重试 / `true` 结果未知），成功路径缓存失效正确 | 同上 |
+| D. `setCredentials` 同步 `kg.token/kg.userid/kg.t1` | 正确（认证链路必需） | `kg_direct_api_client.dart:32-42` |
+| D. `clearCredentials` | token/userid/t1 清空 + 父类 `deleteAll` 清 CookieJar，**基本对称**；dfid 故意不清但未声明（P2） | `kg_direct_api_client.dart:44-50` |
+| E. search/song | `complexsearch /v3/search/song` + `platform=AndroidFilter` + lite `clientver=201`，与 api_verified 一致 | `kg_endpoints_search.dart:19-33` |
+| E. playlist/detail | `data:[{global_collection_id}]` + `pubsongs.kugou.com`，与 `playlist_detail.js` 等价 | `kg_endpoints_playlist.dart:216-244` |
+| E. playlist tracks add/del | 对象数组 / `{fileid}` 数组、`x-router`、6 键 body，与 Node 逐字段一致 | `kg_endpoints_playlist.dart:151-166` |
+| E. comment send/reply/del | 参数集合、`key` 算法、`clearDefaultParams+notSignature`、GET 删除 全部对齐；**但调用侧走 post 导致不可达**（P0-1） | `kg_endpoints_comment.dart` + `_comment.js` |
+| E. song/url | `page_id/pid/ppage_id/version=11430/key` 全对齐，`hash` 小写 | `kg_play_api.dart:180-228` |
+| E. lyric download | `ver=1&charset=utf8&fmt` 对齐 | `kg_endpoints_search.dart:105-118` |
+| F. 三种盐 / `paramsKey` / `keyOf` / `clienttime` 秒级 | 全部正确（`request()` 用 `~/ 1000`，`paramsKey` 传入秒级） | `kg_client.dart:187`、`kg_crypto.dart:88-120` |
+| F. `signature` 在 query | 正确（进入 `allParams` → `queryParameters`） | `kg_client.dart:215-236` |
+| F. `clearDefaultParams` 白名单 | 5 个白名单端点命中；另有 `kg_media_direct.images` 第 6 处（P3 已记） | 各文件 |
+| G. `playlistAesEncrypt` | key/iv 派生、base64 输出、seed 回传解密一致 | `kg_crypto.dart:212-243` |
+| G. `edt_generator` OAEP-SHA256 | 见 `features/auth/data/edt_generator.dart`（本批未逐行读，沿用既往结论，标注**未复核**） | — |
+| G. KRC XOR+zip | 客户端侧 `KrcDecoder.decodeDetailed` 存在且被 Repository 调用 | `lyric_repository.dart:139-160` |
+| H. 死代码 | `dart analyze` 确认 5 个未使用成员 + 6 个未使用导入（已列 P3），无「注释掉的实现」残留 | `dart analyze lib` |
+
+> 未复核项（明确标注）：`edt_generator.dart`（OAEP-SHA256）不在本批 12 文件清单内，未逐行阅读；`kg_endpoints_media` 的 `kmrAudioMv` 未对照 `kmr_audio_mv.js` 逐字段核（仅依据 `api_verified.md` 记录标 ✅）。
+
+---
+
+## 16. 问题清单（按级别排序）
+
+### P0（2）
+
+| # | 位置 | 问题 | 违反 | 用户可见后果 |
+|---|---|---|---|---|
+| P0-1 | `features/comment/data/comment_repository.dart:97-146` | 发评论/回复/删评论走 `post()`，`KgDirectApiClient.post` 无这些分支 → 恒 `ApiException(-404)` | 第 8、27、32 条 | 评论三件套 100% 失败，提示「接口尚未移植」 |
+| P0-2 | `features/mv/data/mv_collection_repository.dart:104-146` | `setCollected(collect:)` 忽略形参，取消收藏仍发 `/v1/collect` | 第 3、21、32 条 | 取消收藏无效、收藏数只增不减 |
+
+### P1（5）
+
+| # | 位置 | 问题 | 违反 | 用户可见后果 |
+|---|---|---|---|---|
+| P1-1 | `kg_direct_api_client.dart:283-302 / 373-381` | 未移植路径裸抛 `ApiException`，未按 `_asDioException` 统一 | 第 8、9 条 | 上层 `on DioException` 捕不到，`-404` 语义丢失，退化为通用失败 |
+| P1-2 | `kg_endpoints_auth.dart:404-412` | `_afterLogin` 从不写 `kg.vipType/vipToken`（注释声称已写） | 第 5、31、32 条 | VIP 用户被当非会员，会员 banner 拿不到；F4-12 实为未接线 |
+| P1-3 | `kg_endpoints_auth.dart:60-70` | 短信验证码 / token 刷新走明文 `http://` | 第 27 条 + 安全 | 手机号与登录响应可被旁路观察/篡改，存在会话劫持面 |
+| P1-4 | `features/mv/data/mv_collection_repository.dart:120-124` | MV 收藏 `p` 用裸 RSA，playlistDel 已改 PKCS1 | 第 5、28 条 | 服务端解不出 `{aes,uid,token}`，MV 收藏恒失败（且 UI 谎报成功） |
+| P1-5 | `features/mv/data/mv_collection_repository.dart:139-146` | body 发 Base64 文本，Node 发二进制字节 | 第 28 条 | 即使 `p` 修好仍解密失败，MV 收藏不可用 |
+
+### P2（14）
+
+| # | 位置 | 问题 | 违反 |
+|---|---|---|---|
+| P2-1 | `kg_direct_api_client.dart:104-107` | `err_code` 统一提前校验，可能误杀成功响应（未逐端点实测） | 第 29、16 条 |
+| P2-2 | `kg_direct_api_client.dart:32-50` | `setCredentials` 写 dfid、`clearCredentials` 不清不声明 | 第 20、5 条 |
+| P2-3 | `kg_client.dart:213-226` | core 层 import `features/auth/data/edt_generator.dart` | 第 4 条 |
+| P2-4 | `kg_client.dart:196-206` | 网络异常折叠为 `status: 502` 假响应，丢失 type | 第 6、15 条 |
+| P2-5 | `kg_client.dart:268-312` | `requestWithVerify` 无写保护（潜在重放） | 第 21、3 条 |
+| P2-6 | `kg_client.dart:166-186` | `KgClient.dfid` 只写不读 | 第 5、31、32 条 |
+| P2-7 | `kg_endpoints_search.dart:84-103` | 歌词搜索无签名，与 REVIEW_SPEC「必须带 signature」冲突且未留样 | 第 29、3 条 |
+| P2-8 | `kg_endpoints_playlist.dart:62-96` | `playlistAdd` 的 `source` 硬编码、`type` 缺省分支相反、`is_pri` 被忽略 | 第 28、2 条 |
+| P2-9 | `kg_endpoints_playlist.dart:40-59` | `playlistDel` 解密失败静默，写操作结果不可辨 | 第 6、8、16 条 |
+| P2-10 | `kg_endpoints_comment.dart:236-247` | `commentDel` 缺 `cid` 校验与 `mixsongid→special_id` 回查 | 第 3、16 条 |
+| P2-11 | `kg_play_api.dart:203-214` | `privilege` 的 `album_id` 转数值，Node 下发字符串（注释误读 Node） | 第 28、31 条 |
+| P2-12 | `kg_endpoints_auth.dart:244-258` | `loginQrCheck` 端点层改写登录态，缺 t1/vipType/cookie 同步 | 第 5、1 条 |
+| P2-13 | `kg_providers.dart:77-82` | `kgDeviceProvider` 兜底生成不持久化设备 | 第 4、5 条 |
+| P2-14 | `features/mv/data/mv_collection_repository.dart:143-146` | 只判 HTTP 200，解密结果丢弃 | 第 29、6、16 条 |
+
+### P3（53）
+
+已在各文件小节逐条列出（死代码/未使用导入 6 处、注释与实现相反 4 处、参数形态零散分叉 9 处、边界校验缺失 8 处、重复实现 5 处、命名与常量 4 处、性能与小瑕疵其余）。要点：`kg_direct_api_client` 的 5 个未使用成员与 `videoDetail` 三份实现、`_wrap` 空包判定顺序、`kg_crypto` 的 `aesEncryptHex` 命名与 `randomString` 偏差、`search`/`comment`/`home`/`media` 的 6 处循环/未使用导入、`home` 的错位注释、`artist_audios` 的 pagesize 静默截断、`playlistTracksAdd` 的逗号切分。
+
+---
+
+## 17. 统计
+
+| 级别 | 数量 | 占比 |
+|---|---|---|
+| P0 | 2 | 2.6% |
+| P1 | 5 | 6.6% |
+| P2 | 14 | 18.4% |
+| P3 | 53 | 69.7% |
+| 撤回（非缺陷） | 2 | 2.6% |
+| **合计条目** | **76** | 100% |
+| **有效问题** | **74** | — |
+
+- 覆盖：任务书 12 个文件 **全部逐行读完**（kg_direct_api_client 666、kg_client 542、kg_crypto 402、search 153、playlist 288、comment 301、media 131、artist_album 166、home 198、auth 413、play_api 460、providers 98，共 3907 行）；另读 `kg_media_direct.dart`(89)、`kugou_api_client.dart`(212)、`core/providers.dart`(25)、`playlist_repository.dart`(551)、`comment_repository.dart`(264)、`auth_repository.dart`(390)、`auth_providers.dart`(134)、`mv_collection_repository.dart`(148)、`mv_repository.dart`(304 前 150 行)、`lyric_repository.dart`(236) 以完成 C/D 项验证。
+- 对照 Node 源码：`search.js`、`lyric.js`、`playlist_del/add/tracks_add/tracks_del/user_playlist/track_all_new/track_all/detail.js`、`_comment.js`、`comment_*.js`、`song_url.js`、`privilege_lite.js`、`artist_*`/`album_*`/`rank_audio.js`、`captcha_sent.js`、`get_verify_info.js`、`verify_user_info.js`、`mv_collect(_del).js`、`video_url.js`，以及 `util/crypto.js`、`util/helper.js`、`util/request.js` 相关片段。
+- `dart analyze`（过滤 Flutter 包缺失噪音）确认：`kg_direct_api_client` 中 `_commentCodeOf/_qrSrcappid/_maskMobile/_qrPngBase64/_afterLogin` 5 个未使用成员；6 个 `unused_import`（5 个 `kg_direct_api_client.dart` 循环导入 + 3 个 `dart:convert`）。
+
+## 18. 结论
+
+修复复核结果：**多数修复正确**（P0-4 RSA-PKCS1、P0-5 resource 对象化、F4-01/02/03/04/05/06/07/08/09/10/11/16/17/18/24/25 逐条对照 Node 通过）；但仍存在 4 类系统性问题：
+
+1. **get/post 分派表不对称**（P0-1）：写操作一半走 get 分派、一半走 post，post 表缺评论三件套 → 评论功能整体不可用。这是本轮最严重的回归。
+2. **修复未推广到同构端点**（P1-4/P1-5）：playlistDel 的 PKCS1 修复没有同步到 MV 收藏；MV 收藏还有「取消收藏仍收藏」的语义错误（P0-2）。
+3. **「接线」缺失**（P1-2/P2-6）：`vipType` 与 `KgClient.dfid` 两个字段被声明、被注释声称已写入/已使用，实际一处未写、一处未读。
+4. **注释与现实脱节**（P3 多例）：`fallbackToKapi=false` 之后仍有多处「回退 kapi」「兜底」注释，误导后续维护者。
+
+第 5 条（状态单一来源）与第 28 条（调用方式必须逐一实测）是本批命中率最高的两条原则。

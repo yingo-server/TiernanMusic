@@ -344,6 +344,13 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
     duration: const Duration(milliseconds: 400),
   );
 
+  /// R-01（第6批②，P2）：CurvedAnimation 在 State 创建一次并随 State 释放
+  ///（第 20 条资源对称）。此前在 build 内每 tick 新建一个并挂到同一
+  /// controller 上（歌词模式 build 随进度每秒执行多次），监听器无上限
+  /// 累积 → 歌词页停留十几分钟后掉帧。
+  late final CurvedAnimation _fadeCurve =
+      CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOutCubic);
+
   @override
   void initState() {
     super.initState();
@@ -352,6 +359,7 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
 
   @override
   void dispose() {
+    _fadeCurve.dispose();
     _fadeCtrl.dispose();
     super.dispose();
   }
@@ -375,8 +383,7 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
             duration: const Duration(milliseconds: 300),
             child: _showLyric && lyricAsync.value?.lyric != null
                 ? FadeTransition(
-                    opacity: CurvedAnimation(
-                        parent: _fadeCtrl, curve: Curves.easeOutCubic),
+                    opacity: _fadeCurve,
                     child: ClipRect(
                       key: const ValueKey('lyric'),
                       child: LyricView(
