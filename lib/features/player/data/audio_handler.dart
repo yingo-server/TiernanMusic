@@ -454,9 +454,12 @@ class TiernanAudioHandler extends BaseAudioHandler
     if (p == null) return;
     // V3-02（第5批复核②，P2）：暂停必须作废在途播放请求——
     // 否则缓冲中的 _playAt 恢复后会自动 play()，出现「按了暂停却开始播放」
-    //（QUALITY_STANDARD 第 18 条：世代失效要体现在所有停止类入口上）。
+    //（QUALITY_STANDARD 第 18 条）。
+    // V3-13（复核②终审回归）：**只作废世代，不开闸**（第 19 条）——
+    // 在途 _playAt 各 await 点的 `token != _playToken` 检查会放弃后续
+    // play()，闸门仍由它自己的 finally 释放。这里若直接 `_loading=false`，
+    // 旧请求 finally 之前就开闸，第二个请求与旧请求并发 setAudioSource。
     _playToken++;
-    _loading = false;
     _pendingIndex = null;
     await p.pause();
   }
@@ -464,9 +467,9 @@ class TiernanAudioHandler extends BaseAudioHandler
   @override
   Future<void> stop() async {
     // V3-01（第5批复核②，P1）：停止/划掉通知必须作废世代，
-    // 在途 _playAt 恢复后不得再调用 play()（第 18/19 条）。
+    // 在途 _playAt 恢复后不得再调用 play()（第 18 条）。
+    // V3-13：同 pause()，不开闸——闸门由持有者 finally 释放（第 19 条）。
     _playToken++;
-    _loading = false;
     _pendingIndex = null;
     _pendingSongIndex = null;
     final p = _playerOrNull;
@@ -559,9 +562,9 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> onNotificationDeleted() async {
-    // V3-01（第5批复核②，P1）：与 stop() 对称，作废在途请求（第 18/19 条）。
+    // V3-01（第5批复核②，P1）：与 stop() 对称，作废在途请求（第 18 条）。
+    // V3-13：不开闸，闸门由持有者 finally 释放（第 19 条）。
     _playToken++;
-    _loading = false;
     _pendingIndex = null;
     _pendingSongIndex = null;
     await _playerOrNull?.stop();

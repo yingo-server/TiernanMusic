@@ -452,3 +452,79 @@
 - 事实：本文件发 `'sid': '', 'edt': ''`；`kg_client.dart:320-340` 发 `sid: edt.sid, edt: edt.edt` 且带 `i:''`、`wasm:1`。两处 `baseUrl` 也不同（一处 gateway 默认、一处 `verifyservice.kugou.com`）。
 - 违反：QUALITY_STANDARD 第 5 条（同一端点两套权威）；第 8 条（异常/请求形态不一致）
 - 后果：验证页取事件信息与自动重试取事件信息可能来自不同行为的上游路径，出现「验证页能过、自动重试仍 20028」；排障时无法判断是哪一份实现失败。
+
+---
+
+## 12. lib/core/direct/kg_providers.dart（98 行，已完整阅读）
+
+装配链复核**通过**：`kugouApiClientProvider → kgDirectApiProvider → KgDirectApiClient(kgClientProvider)`（`lib/core/providers.dart:9-11`），全仓无生产路径使用裸 `KugouApiClient()`；`kgDeviceProvider` 由 main 覆盖；`onDfidRegistered` 接 `saveDfidSync` 落盘。
+
+### kg_providers.dart:33-40 / 44-52 `loadSync`、`openBox` 的空捕获
+- 级别：P3
+- 事实：`catch (_) {}`（loadSync 解析失败直接重新生成设备；openBox 吞掉 Hive 异常）。
+- 违反：QUALITY_STANDARD 第 6 条（空捕获）、第 9 条（失败不可观测）
+- 后果：`device` box 记录损坏时静默换设备（guid+mid 全变），服务端视为新设备并重置风控计数；用户表现为「莫名其妙要重新验证/登录」，日志无痕。
+
+### kg_providers.dart:54-58 `KgDeviceStore` 声明为单例类但全部方法为 static
+- 级别：P3
+- 事实：`class KgDeviceStore { KgDeviceStore._(); static final instance = KgDeviceStore._(); … static KgDevice loadSync … }`；全类无实例方法，`instance` 无调用点。
+- 违反：QUALITY_STANDARD 第 32 条（无用的实例入口）；第 30 条（命名暗示有状态单例，实则纯函数集合）
+- 后果：读者以为存在单例状态需要维护/释放，实际没有；`instance` 是持续维护成本的来源（P3）。
+
+### kg_providers.dart:77-82 `kgDeviceProvider` 兜底 `KgDevice.generate()` 不持久化，且注释承认「仅防崩」
+- 级别：P2
+- 事实：`return KgDevice.generate();`（每次读取生成新 guid/mid/dfid=''）。任何遗漏 override 的 `ProviderContainer`（测试、后台 isolate、二次 `ProviderScope`）都会拿到不同设备。
+- 违反：QUALITY_STANDARD 第 4 条（隐式依赖：正确性依赖 main 的 override）；第 5 条（同一事实两个来源）
+- 后果：一旦 override 失效，同一台手机上每次启动都是「新设备」，登录态因 cookie 与 mid 不匹配而失效，用户被反复踢下线。
+
+---
+
+## 13. 跨层复核（任务 C / D：写操作、防重、凭证）
+
+### lib/features/comment/data/comment_repository.dart:97-146 三个评论写接口全部走 `post()`，而 `KgDirectApiClient.post` 没有这些分支 → 一律抛 `ApiException(-404)`
+- 级别：P0
+- 事实：`sendComment` → `_api.post('/comment/music/send' | '/comment/playlist/send' | '/comment/album/send', {}, query: …)`；`sendFloorReply` → `_api.post('/comment/floor/send', …)`；`deleteComment` → `_api.post('/comment/music/del', …)`。而 `kg_direct_api_client.dart` 的 **post** switch 只有 15 个 case（rank/audio、comment/music、kmr/audio/mv、everyday/recommend、top/playlist、privilege/lite、search、comment/floor、playlist/detail、login、verify/user/info、artist/detail、artist/albums、album/detail、album/songs），**不含任何评论写路径**；它们只出现在 **get** switch（因为 `_write` 约定用 get 触发写分派）。不匹配即落到 `post` 末尾 `throw ApiException(-404, '接口 /… 尚未移植到原生网关…')`。
+- 违反：QUALITY_STANDARD 第 8 条（异常契约与主路径不一致：这里连 DioException 都不是）；第 32 条（get/post 两套分派表不对称）；第 27 条（功能等于「未移植」）
+- 后果：**发评论、楼中楼回复、删除评论全部 100% 失败**，用户点发送后看到「接口 /comment/music/send 尚未移植到原生网关（kapi 仅作参考，运行期不调用）」。这是本批最严重的功能级缺陷，且与 playlist 的 get 分派形成鲜明反差 —— 同一份代码里两种调用约定并存。
+
+### lib/features/mv/data/mv_collection_repository.dart:104-146 `setCollected` 完全忽略 `collect` 形参，取消收藏实际又发了一次「收藏」
+- 级别：P0
+- 事实：`Future<bool> setCollected(int videoId, {required bool collect})` 的 body 内只出现 `/v1/collect`，`collect` 参数从未参与 URL/payload 选择；Node `mv_collect.js` 用 `/v1/collect`、`mv_collect_del.js` 用 `/v1/cancel_collect`（`ctype:2` 相同、UA 的 `MV/Care` 与 `MV/UnCare` 区分）。
+- 违反：QUALITY_STANDARD 第 3 条（契约声明了「收藏/取消」两种语义，实现只有一种）；第 21 条（写操作语义与 UI 相反 → 重复提交、状态不可逆）；第 32 条（未使用形参）
+- 后果：用户在「我的 MV」里取消收藏，界面提示成功、列表刷新后 MV 仍在（服务端被再收藏一次）；反复操作收藏数只增不减，属服务端状态被错误改写，用户无法取消收藏。
+
+### lib/features/mv/data/mv_collection_repository.dart:120-124 MV 收藏的 `p` 用裸 RSA，与刚修好的 playlistDel（PKCS1）不一致
+- 级别：P1
+- 事实：`final p = KgCrypto.rsaEncryptRawHex(jsonEncode({'aes': aes.key, 'uid': userid, 'token': token})).toUpperCase();`；Node `mv_collect.js`/`mv_collect_del.js` 用 `rsaEncrypt2(...)`，而 `util/crypto.js:264-270` 明确是 `'RSAES-PKCS1-V1_5'`。`kg_endpoints_playlist.dart:23-27` 的 P0-4 已把同一错误修掉并写注释。
+- 违反：QUALITY_STANDARD 第 28 条（同一加密协议两处实现不一致）；第 5 条（同一协议两个权威）
+- 后果：MV 收藏/取消收藏的 `p` 服务端解不出 `{aes,uid,token}` → 操作恒失败；由于此路径只判 HTTP 200，用户看到的还是「收藏成功」。P0-4 的修复没有推广到同构端点，属**修复不彻底**。
+
+### lib/features/mv/data/mv_collection_repository.dart:139-146 请求体发 Base64 文本，Node 发的是二进制
+- 级别：P1
+- 事实：`data: bodyStr`（Base64 字符串），`KgClient.request` 会以 `contentType: application/json` 发送该字符串；Node：`data: Buffer.from(aesEncrypt.str, 'base64')`（二进制），并 `responseType: 'arraybuffer'`。
+- 违反：QUALITY_STANDARD 第 28 条（请求体形态必须与实测一致）
+- 后果：即使 `p` 修好，服务端拿到的仍是 base64 文本而非密文字节 → 解密失败 → 收藏依然不生效；与上一条叠加使 MV 收藏功能整体不可用。
+
+### lib/features/mv/data/mv_collection_repository.dart:143-146 只以 HTTP 200 判定成功，且解密结果被丢弃
+- 级别：P2
+- 事实：`try { … KgCrypto.aesDecryptPlaylistB64(...) } catch (_) {}` 后 `return res.status == 200;`（解密结果未使用、业务 `status`/`error_code` 未检查）。
+- 违反：QUALITY_STANDARD 第 29 条（成功判定口径必须逐端点核对，不可只看 HTTP）；第 6 条（空捕获）；第 16 条（失败与成功不可区分）
+- 后果：服务端返回 `status:0/error_code:xxx`（HTTP 仍 200）时 UI 显示「收藏成功」；用户收藏没生效却以为生效，退出重进发现丢失。
+
+### lib/features/playlist/data/playlist_repository.dart:265-292 `_write` 的防重锁与 `maybeSucceeded` 语义（复核通过，含两处小瑕疵）
+- 级别：P3
+- 事实：`_inFlight.add(dedupeKey)` → `finally { _inFlight.remove(dedupeKey); }` 成对；`_toWriteException` 按 `DioExceptionType` 区分 `maybeSucceeded`；成功路径 `_invalidatePlaylistCaches()`。瑕疵一：命中在飞锁时抛 `maybeSucceeded: true`（其实一条都没发出）。瑕疵二：`on ApiException` 分支被声明在 `on DioException` 之后（当前类型不重叠，可编译），但直连层把几乎所有失败都包成 `DioException`，该分支实际只在 `-404` 场景生效。
+- 违反：QUALITY_STANDARD 第 16 条（在飞拒绝被描述为「可能已生效」）；第 8 条（异常分支覆盖不全）
+- 后果：用户连点两次「收藏」，第二次提示「可能已生效，请刷新确认」并把用户赶去手动确认，体验与事实不符（P3）。
+
+### lib/features/auth/data/auth_repository.dart:69-73 `AuthRepository` 默认 `KugouApiClient()`（裸客户端）
+- 级别：P3
+- 事实：`AuthRepository({KugouApiClient? api, SecureStorage? storage}) : _api = api ?? KugouApiClient()`；`authRepositoryProvider` 已注入 `kugouApiClientProvider`，故生产路径安全，但默认值仍是「整体走 kapi 中转」的实例。
+- 违反：QUALITY_STANDARD 第 2 条（依赖必须显式注入，不得内部构造协作者）；REVIEW_SPEC「Repository 不得 new 裸 KugouApiClient()」
+- 后果：任何直接 `AuthRepository()`（测试、脚本、未来新增的 provider）都会整体走 kapi，与「接口只走原生网关」口径相反，且不会有任何报错提示。
+
+### lib/features/comment/data/comment_repository.dart:99-109 发送前查询 `special_child_id` 失败被静默吞掉
+- 级别：P3
+- 事实：`try { … } catch (_) { /* 查询失败不阻断发送，childrenid 交给直连层兜底 */ }`，而直连层并无兜底（`childrenid` 为空串照发）。
+- 违反：QUALITY_STANDARD 第 6 条（空捕获）、第 31 条（注释声称有兜底，实际没有）
+- 后果：歌曲评论列表接口抖动时，发送的 `childrenid` 为空 → 服务端 err_code=10002/400，用户看到「发送失败」却不知原因；重试仍失败（每次都要先查列表）。

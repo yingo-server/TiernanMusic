@@ -223,10 +223,15 @@ class PlayerRepository {
     // 否则按码率推断；未知/0 一律按最低，避免把试听错标为高音质
     // PLY-07（审查③）：服务端 bitRate 是 **bps**（320000/128000），
     // 此前按 kbps 阈值（2000/900/300）推断，128/320 恒被判成 flac。
-    if (r.bitrate >= 500000) return AudioQuality.flac;
-    if (r.bitrate >= 192000) return AudioQuality.high;
-    if (r.bitrate >= 96000) return AudioQuality.q320;
-    return AudioQuality.q128;
+    if (r.bitrate != null && r.bitrate > 0) {
+      // V3-06 修正（复核②终审）：阈值对齐 AudioQuality 序位
+      //（128 < 320 < flac < Hi-Res < super），192000 边界归 q320 侧：
+      // <192000→q128；<500000→q320；≥500000→flac。
+      final b = r.bitrate;
+      if (b >= 500000) return AudioQuality.flac;
+      if (b >= 192000) return AudioQuality.q320;
+      return AudioQuality.q128;
+    }
   }
 
   /// 获取可播放 URL。从期望音质起逐级降级（super→high→flac→320→128）。
@@ -355,13 +360,13 @@ class PlayerRepository {
 
   static AudioQuality _actualQuality(Map data, AudioQuality requested) {
     // V3-06（第5批复核②，P2）：与 _qualityFromBitrate 共用同一套阈值
-    //（第 5 条：同一判断必须单一来源）。此前 192000 在两处分别被判成
-    // q128 与 high，UI 音质角标在直连/kapi 两路径间漂移。
+    //（第 5 条：同一判断必须单一来源）。
+    // V3-06 修正（复核②终审）：对齐 AudioQuality 序位，192000 归 q320 侧，
+    // 消除「128k 显示高品 320、320k 显示 Hi-Res」的错档。
     final bitrate = _int(data['bitRate']);
     if (bitrate != null && bitrate > 0) {
       if (bitrate >= 500000) return AudioQuality.flac;
-      if (bitrate >= 192000) return AudioQuality.high;
-      if (bitrate >= 96000) return AudioQuality.q320;
+      if (bitrate >= 192000) return AudioQuality.q320;
       return AudioQuality.q128;
     }
     return AudioQuality.fromString('${data['extName'] ?? requested.value}');

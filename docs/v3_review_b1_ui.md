@@ -628,6 +628,50 @@ FadeTransition(
 
 ---
 
+## 14b. `lib/features/download/presentation/download_page.dart`（302 行，通读）与 `download_sheet.dart`（177 行，通读）
+
+### 【P3】`onAppLifecycle` 被两处转发，同一事件派发两次
+- 事实：`main.dart` 的 `_TiernanMusicAppState.didChangeAppLifecycleState` 转发到 `downloadManagerProvider.notifier`；`DownloadPage` 以 `WidgetsBindingObserver` **再转发一次**。同一个 `AppLifecycleState` 在下载页打开时被处理两遍。
+- 违反：**第 21 条**（重复执行未去重）；**第 22 条**（「生命周期事件唯一处理者」这一前提未声明）。
+- 后果：`onAppLifecycle` 内含「重置写入策略缓存 + 重新检测」这类重活被翻倍执行；若下游含「恢复下载队列」语义，则可能出现并发恢复。P3（下游是否幂等需跨模块确认）。
+
+### 【P3】`task.error` 原始错误串直接渲染进列表，且整行状态被省略号吞掉
+- 事实：`'$typeLabel · $statusLabel' '${task.error != null ? ' · ${task.error}' : ''}'` —— 原始异常（含 `DioException [connection error] …`、SDK 路径）进入 subtitle；`maxLines: 1` + `ellipsis` 意味着错误串一长，「· 下载中/失败」这些**用户真正需要的信息**反而被挤到省略号里。
+- 违反：**第 30 条**（用户可见文案未本地化、且技术细节外泄）；本项目 `error_retry.dart` 已确立「不展示原始异常」的约定 → **第 8 条**。
+- 后果：德语长译文 + 原始异常串 → 用户看到「Audio · …」之后全是省略号，既读不懂错误也看不清状态。P3。
+
+### 【P3】点击已完成任务直接打开文件：不 `await`、无失败提示，且与菜单「打开」分支行为不一致
+- 事实：`onTap` 中 `PublicMediaStore.instance.open(...)` 的 Future 无人接管；菜单 `'open'` 分支则会 `if (!opened) Toast(...)`。同一操作两条路径表现不同。
+- 违反：**第 6 条 / 第 9 条**（失败必须可观测）；**第 8 条**（同一层失败形态必须统一）。
+- 后果：文件被移动/删除/无可用播放器时，点条目毫无反应，用户以为应用卡死。P3。
+
+### 【P3】「清空全部」复用单条删除的确认文案
+- 事实：AppBar 的 `delete_sweep` 动作使用 `title: downloadClearAll` 但 `message: downloadDeleteConfirm`（「确定删除该下载内容吗？」）。
+- 违反：**第 30 条**（文案须匹配动作规模）。
+- 后果：用户点「清空下载记录」看到「删除**该**下载内容」，误以为是删单条，确认后整表被清空。P3。
+
+### 【P3】进度值未夹取到 0..1
+- 事实：`LinearProgressIndicator(value: progress)` 直接取 `task.progress`；`task.progress` 由下载层按字节比计算，异常路径（total=0、重试叠加）可能越界或 NaN。
+- 违反：**第 17 条**（进度表示必须选定一种并保持）；**第 14 条**（外部/上游数值未校验）。
+- 后果：越界值导致进度条绘制异常或抛断言（debug 下红屏）。P3。
+
+### 【P3】`download_sheet.dart` 用「quality == q128」推断「歌曲未指定音质」
+- 事实：`quality: (song.quality != AudioQuality.q128 ? song.quality : preferredQuality()).value` —— 把枚举的一个合法取值当作「未设置」哨兵。
+- 违反：**第 2 条**（哨兵值/魔法语义）；**第 16 条**（缺失与合法取值未分离）。
+- 后果：本身就是 128K 的曲目会**静默升级**为用户默认音质（如 FLAC）去下载，可能拉到不支持/更大的文件并以失败告终。P3。
+
+### 【P3】`_OptionTile` 的下载按钮无 tooltip，且 queued/running 状态仍可重复添加
+- 事实：`IconButton(icon: download_outlined, onPressed: () => onDownload())` 无 `tooltip`；`status == queued` 时仍落到该分支（只有 completed/running 有专门分支）。
+- 违反：**第 30 条**（无标签图标按钮对读屏不可表达）；**第 21 条**（重复添加无本地锁）。
+- 后果：TalkBack 只播报「按钮」；排队中的任务被反复点击可能入队多条同名任务（若 manager 无 hash+type 去重）。P3。
+
+### 【P3】弹层 `Column` 无滚动、`_taskOf` 线性扫描
+- 事实：4 个 `ListTile` + 标题 + 全宽按钮放在 `Column(mainAxisSize: min)` 中，无 `SingleChildScrollView`；`_taskOf` 每次 build 三次全表线性查找。
+- 违反：布局（D 项）；**第 26 条**（热路径线性查找）。
+- 后果：大字号 + 小屏时按钮被裁到屏幕外且无法滚动；任务多时每帧 O(3n)。P3。
+
+---
+
 ## 15. 发布合规：`lib/l10n/` 全量键比对 + `app_localizations.dart` + `l10n.dart`
 
 ### 15.1 方法说明
@@ -797,3 +841,137 @@ app_zh_TW 305 缺0 多0 0
 
 ---
 
+## 18. `dart analyze` 结果与局限（仅作佐证，不作结论依据）
+
+命令：`export PATH=$PATH:/opt/dart/bin; dart analyze lib`，共 **4554 issues**。
+
+**噪音说明**：本沙箱没有 Flutter SDK，`package:flutter/*` 全部 `uri_does_not_exist`，导致
+`override_on_non_overriding_member`（约 4000 条）与 `undefined_class`（`Locale`/`BuildContext`/`Localizations`）全部是级联噪音，**不构成缺陷证据**。
+
+**可用的信号**（不依赖 Flutter 解析）：
+1. `lib/l10n/app_localizations.dart`：**36 处 `undefined_method` —— `The method 'r' isn't defined for the type 'String'`**（行 3622–3736）。`String` 是 dart:core 类型，该判定与 Flutter 包无关，**确定性编译错误**。
+   同时 `_Msg`（第 3397 行，含真正实现了占位符替换的 `r()`）被判 `unused_element`——即：生成器把 `r()` 定义在 `_Msg` 上，却让 `_t()` 返回 `String` 再对其调用 `.r()`。
+   → 该提交物**自身无法编译**；再叠加第 15 节所述 `localizationsDelegates` 类型不匹配（单对象 vs `Iterable`），共同决定「仓库内这份 `app_localizations.dart` 直接参与构建则必然失败」。
+2. `lib/l10n/app_localizations.dart:3397 unused_element _Msg`（同上，第 32 条）。
+3. 范围外旁证（仅记录，不计入本批问题）：`features/playlist/data/playlist_repository.dart:312 dead_code`、`features/mv/data/mv_repository.dart:3 unused_import`。
+
+**未能验证的项**：第 6 节所列「未使用 import」（`dart:async` / `toast.dart` / `l10n.dart` / 同目录 widget）因 Flutter 包未解析，analyzer 不报 `unused_import`。该结论来自逐行通读（文件内确无对应符号调用），但与 analyze 无交叉证据，标注为**通读结论**。
+
+---
+
+## 19. 问题清单（按级别汇总）
+
+### P1（发布阻断 / 核心功能风险）
+
+| # | 位置 | 事实 | 违反 | 后果 |
+|---|---|---|---|---|
+| P1-1 | `lib/l10n/app_localizations.dart`（提交入库的生成物） | ①36 处 `_t(...).r(...)` 在 `String` 上调用不存在的 `r()`；②`localizationsDelegates` 是单个 `_Delegate` 对象，而 `main.dart` 传给 `MaterialApp.router` 的参数要求 `Iterable<LocalizationsDelegate<dynamic>>`；③pubspec `generate: true` + `l10n.yaml` 会在构建时用官方 gen-l10n 覆盖同路径文件 | 第 3 条（契约先行）、第 5 条（生成源双轨）、第 2 条（隐式依赖构建时序） | 不触发重生成 → **全应用编译失败，无法出包**；触发重生成 → 该文件为死代码，任何人基于它修改都会被静默丢弃。构建**不可重复**。 |
+| P1-2 | `lib/core/config/app_config.dart:9,11` | `kugouApiBase = https://kapi.344977.xyz`、`proxyBase = https://proxy.344977.xyz` —— 第三方中转主机被固化为默认 API 基址，全仓无「未移植路径清单」与清理计划；域名写死、无远程开关 | **第 27 条**（接口只走原生网关，中转仅可作显式兜底且须写明原因与清理计划）；第 31 条；第 2 条 | 全部业务流量（含登录 token、播放、下载）默认经第三方主机；该主机下线/被劫持即全功能失效或隐私外泄，客户端无法切换直连。 |
+
+### P2（次要功能异常 / 边界态 / 性能 / 可访问性）— 共 35 条
+
+| # | 位置 | 事实 | 违反 | 后果 |
+|---|---|---|---|---|
+| P2-1 | `main.dart:265` | `readCredentials().then` 回填 `client.t1` 时不再校验当前登录态 | 第 18 条、第 5 条 | 退出登录后仍以旧账号 t1 请求，出现旧账号个性化/权益数据 |
+| P2-2 | `main.dart:246–252` | `StartupErrorPage` 分支的 `MaterialApp` 未传 delegates/locale/theme；`_startupError` 为顶层可变全局 | 第 8 条、第 5 条 | 错误页语言与主界面不一致；该页一旦用 l10n 立即抛 `No AppLocalizations` |
+| P2-3 | `app_router.dart:24–76` | `GoRouter` 无 `errorBuilder` | 第 14 条、第 30 条 | 无效深链落到英文默认错误页且无返回出口 |
+| P2-4 | `app_router.dart:66–70` | `/rank/:rankId` 用 `int.tryParse(...) ?? 0`，`name` 缺失 → `''` | 第 11 条、第 16 条、第 14 条 | `rankId=0` 静默请求无效榜单，用户看到空榜/转圈无法区分原因 |
+| P2-5 | `core/providers.dart:3,19` | `core` 层 import `features/lyric` 并定义 `lyricRepositoryProvider` | **第 4 条**（分层回流） | 核心层无法独立编译/测试，歌词模块签名变更波及全仓 |
+| P2-6 | `app_config.dart:31–34` | `AppConfig.supportedLocales`(10) 与生成物 `AppLocalizations.supportedLocales`(11) 双源且顺序不同 | 第 5 条、第 23 条 | 设置页可选语言与实际解析集合不一致；`zh-HK` 用户副标题显示裸 `zh` |
+| P2-7 | `core/widgets/song_tile.dart:9–16` | 一个 widget 文件内 `export` 5 个组件（其中 3 个本文件未使用） | 第 1 条、第 2 条、第 32 条 | 改 `empty_state.dart` 导出名会把编译错误散布到无关页面 |
+| P2-8 | `core/widgets/shimmer.dart:11,40` | `enabled` 注释称用于「prefers-reduced-motion」，但无任何调用方传参、无 `MediaQuery.disableAnimations` 读取；`repeat()` 无条件启动 | 第 11 条、第 32 条 | 关闭系统动画的用户仍被强制播放扫光动画（前庭敏感人群） |
+| P2-9 | `core/widgets/error_retry.dart:225–234` | `error==null && message==null` → `friendly=''`、`hint=''` 的空卡片 | 第 16 条、第 9 条 | 报错页只剩图标与按钮，用户不知发生了什么 |
+| P2-10 | `login_page.dart:61x` (`_checkOnce`) | `catch (_) {}` 全吞 + 固定 3s 轮询无上限、无退避 | 第 6/7/10/25/9 条 | 服务端故障时每 3 秒静默请求直到离开，页面停在「等待扫码」 |
+| P2-11 | `login_page.dart:409–431` | `Row(Expanded(TextField), FilledButton)` 右侧无 Flexible | 布局/字体放大（D 项）、第 24 条 | 大字号/长译文下 RenderFlex 溢出，按钮文案被裁，用户看不到「发送验证码」 |
+| P2-12 | `captcha_page.dart` 全文 | 约 18 处用户可见文案硬编码中文（含内嵌 HTML 的按钮文案） | **第 30 条** | 登录必经路径在 10 语言下整页中文 |
+| P2-13 | `captcha_page.dart:203,214,257` | WebView `onLoadStop`/JS handler 内 `setState` 无 `mounted` | 第 20 条 | 滑块完成瞬间关闭页面 → `setState after dispose`，登录中断 |
+| P2-14 | `captcha_page.dart:317–372` | `_buildExternal`/`_buildUnknown` 的 Column 不可滚动 | 布局（D 项）、第 24 条 | 大字号/横屏溢出，「直接尝试提交」按钮被顶出屏幕 |
+| P2-15 | `settings_providers.dart:14,35,53` | 从 Hive 取值裸 `as String?` / `as bool?` | **第 13 条**、第 14 条 | 老版本存过其它类型 → Notifier 构造抛 `_TypeError`，进设置页/播放页即崩 |
+| P2-16 | `settings_providers.dart:38–63` | `wifiQualityProvider`/`cellularQualityProvider` 在本批全范围内只有写入、无读取 | 第 32 条、第 11 条 | 「Wi-Fi 自动最高音质」是可见假开关（待 player 层交叉确认） |
+| P2-17 | `settings_page.dart:453–500` | 语言列表读 `AppConfig.supportedLocales` | 第 5 条、第 23 条 | 见 P2-6 |
+| P2-18 | `settings_page.dart:462` | 语言列表「跟随系统」项使用 `themeSystem` 文案 | 第 30 条 | 德语等语言显示「Systemvorgabe」，语义错乱 |
+| P2-19 | `settings_page.dart:390,355,530` | 三处 `SegmentedButton` 仅 compact+padding 缓解，仍不滚动/不折行 | 布局（D 项）、第 24 条 | 系统字号最大 + 窄屏时第三段被裁，点不到「跟随系统」 |
+| P2-20 | `settings_page.dart:868–905` | 更新下载链接 `Uri.parse(url)` 未校验 scheme/host，且优先取 `acceleratedUrl` | 第 13/14 条、第 27 条 | 畸形链接抛未捕获异常；从非官方「加速」域下载 APK |
+| P2-21 | `library_page.dart:441–447` | `_currentAccount()` `catch(_){return null;}` | 第 6 条、第 16 条 | 账号数据损坏时已登录用户被显示成「未登录」，歌单区整块消失 |
+| P2-22 | `full_player_page.dart:379–386` | `build` 内联 `CurvedAnimation` 且从不 dispose；页面每 tick 重建 | **第 20 条**、第 25/26 条 | 播放数分钟后父控制器挂数千监听器 → 播放页卡顿、内存增长 |
+| P2-23 | `full_player_page.dart:24–32` + `:365` | provider 返回 `error:'暂无歌词'/'歌词解析失败'`，页面从不读取 | 第 9 条、第 32 条、第 30 条 | 切歌词视图后一片空白，用户无法区分「无歌词」与「失败」 |
+| P2-24 | `full_player_page.dart:296–345` | 评论/MV 两个 `OutlinedButton` 在无 Flexible 的 Row 中 | 布局（D 项）、第 24 条 | 德语 + 大字号溢出，MV 按钮出屏 |
+| P2-25 | `mini_player.dart:44,73–96` | 固定 64dp 内放两行文本 | 布局（D 项）、第 24 条 | 常驻四个 Tab 底部的溢出条，挤压导航栏 |
+| P2-26 | `queue_sheet.dart:47` | 队列弹层标题使用 `nowPlaying`（正在播放） | 第 30 条 | 标题与内容不符，用户以为只显示当前曲 |
+| P2-27 | `comments_page.dart:29–31` | `StateNotifierProvider.family` 无 autoDispose，`_CommentArgs` 无 `==/hashCode` | **第 20 条**、第 25 条、第 5 条 | 每浏览一个评论页就永久驻留一份评论列表，内存随浏览线性上涨 |
+| P2-28 | `comments_page.dart:302–320` | footer 只要 `hasMore` 就转圈；`loadMore` 失败 `catch(_){}` | 第 16/6/9/11 条 | 翻页失败后底部永久转圈，只能下拉刷新整页 |
+| P2-29 | `comments_page.dart:401–403` | 发送前 `clear()`，失败不回填 | 第 9 条、第 21 条 | 用户写好的评论丢失，需重写 |
+| P2-30 | `search_page.dart:610–620` + `:520` | 注释称「footer 重试按钮」，实际 footer 只有转圈；失败后不再自动重试 | 第 31 条、第 16/11/9 条 | 第二页失败后底部永久转圈，无任何恢复入口 |
+| P2-31 | `search_page.dart:695,723` | `_playlistSearchProvider`/`_genericSearchProvider` 无 autoDispose | 第 20 条、第 25 条 | 搜 30 个词 → 90 份结果常驻内存 |
+| P2-32 | `search_page.dart:415–470` | 5 个结果 Tab 全 `AutomaticKeepAliveClientMixin`，`_items` 只增不减 | 第 25 条、第 24 条 | 深翻页后数百条歌曲常驻，切 Tab 也不释放 |
+| P2-33 | `app_en/de/es/fr/ko/pt/ru.arb` | `previewOnly`/`loginRequiredTitle`/`loginRequiredHint`/`loginRequiredAction` 4 条仍为中文 | **第 30 条**、第 23 条 | 播放页「试听」徽标、登录拦截弹层在 8 种语言下显示中文 |
+| P2-34 | `app_localizations.dart:3417–3430`、`:3444` | `supportedLocales` 首项为 `de`；`isSupported => true`；`_t` 回落中文模板 | 第 11 条、第 14 条、第 23 条 | 未支持语言（th/hi/ar/vi）设备整体显示德语或中文 |
+| P2-35 | `main.dart:215–224` | 登录态监听：`ref.invalidate(homeDataProvider)` 在 client 更新前执行 | 第 18 条 | 首页可能在 token 写入前重建并拉到未登录内容（与 P2-1 同源，需统一时序） |
+
+### P3（整洁度 / 命名 / 注释 / 轻微体验）— 共 75 条
+分类计数：未使用 import 与悬空注释 12、命名与语义（第 30 条）11、注释与实现不符（第 31 条）7、魔法值与单位（第 2/15 条）14、可访问性与 48dp 对比度 10、生命周期与防御性缺口 8、异常处理留痕（第 6/9 条）12、analyze 佐证的死类 1。明细见各文件小节（§1–§17、§14b）。
+代表条目：
+- `core/widgets/*`：5 个文件共 12 处未使用 import；4 个文件尾部残留下一个类的孤立 dartdoc。
+- `song_tile.dart:200` `_fmt` 分钟位 `padLeft(1,'0')`、≥1h 无小时位；`full_player_page.dart:36` 同源缺陷。
+- `settings_page.dart:_formatBytes` 大括号后接代码（未 `dart format`）。
+- `l10n/app_localizations.dart:3397` `_Msg` 未被引用（analyze 确认）。
+- `app_zh.arb` 多出 `albumPageComingSoon`，其余 10 个 arb 没有（死键）。
+
+---
+
+## 20. 统计表
+
+| 范围 | 文件数 | P1 | P2 | P3 |
+|---|---|---|---|---|
+| `pubspec.yaml` | 1 | 0 | 0 | 2 |
+| `lib/main.dart` | 1 | 0 | 2 | 5 |
+| `core/router/app_router.dart` | 1 | 0 | 2 | 3 |
+| `core/providers.dart` | 1 | 0 | 1 | 2 |
+| `core/config/app_config.dart` | 1 | **1** | 1 | 2 |
+| `core/widgets/` | 10 | 0 | 3 | 15 |
+| `auth/login_page.dart` | 1 | 0 | 2 | 4 |
+| `auth/captcha_page.dart` | 1 | 0 | 3 | 3 |
+| `settings/settings_providers.dart` | 1 | 0 | 2 | 3 |
+| `settings/settings_page.dart` | 1 | 0 | 4 | 6 |
+| `library/library_page.dart` | 1 | 0 | 1 | 6 |
+| `player/full_player_page.dart` | 1 | 0 | 3 | 5 |
+| `player/mini_player.dart` | 1 | 0 | 1 | 2 |
+| `player/queue_sheet.dart` | 1 | 0 | 1 | 2 |
+| `download/download_page.dart` | 1 | 0 | 0 | 5 |
+| `download/download_sheet.dart` | 1 | 0 | 0 | 3 |
+| `l10n/`（11 arb + 生成物 + l10n.yaml） | 13 | **1** | 2 | 3 |
+| `comment/comments_page.dart` | 1 | 0 | 3 | 5 |
+| `search/search_page.dart` | 1 | 0 | 3 | 5 |
+| `dart analyze` 佐证 | — | 0 | 0 | 1 |
+| **合计** | **41** | **2** | **35** | **75** |
+
+级别分布：P1 1.8% / P2 31.3% / P3 66.9%（合计 112 条）。
+
+---
+
+## 21. 结论与整改优先级
+
+**通过项（明确无问题）**
+1. 版本号 `3.0.0+30` 与 tag `v3.0.0` 一致，`environment.sdk` 与依赖版本自洽（§1）。
+2. **10 种语言的 arb 键与占位符 100% 齐全（各 305 键）**，l10n 生成不会因缺键失败（§15.2）。
+3. pubspec 的 dependencies 覆盖本次审查读到的全部第三方 import（§1）。
+4. 生命周期主体：`_authSub`/`_recentSub`/`Timer`/`AnimationController`/`TabController`/`ScrollController`/`FocusNode` 均成对释放；`_generation` 代次丢弃在评论页、下载管理器均已落地。
+5. 危险操作统一走 `showDestructiveConfirm`（error 色 + 二次确认），未见漏网（§6.5、§10、§11、§16）。
+
+**必须修（P1，发布阻断）**
+1. 删除入库的 `lib/l10n/app_localizations.dart`（或改为 `.gitignore` + 构建期生成），确认 CI 一定执行 `flutter gen-l10n`；修掉 36 处 `.r()` 与 `localizationsDelegates` 类型不匹配。
+2. `AppConfig` 的中转域名改为「直连为主 + 中转显式兜底」，并把「尚未移植路径清单 + 清理计划」写进注释（第 27 条硬要求）。
+
+**建议本迭代修（P2 中影响面最大的 6 条）**
+- P2-22 `CurvedAnimation` 泄漏（播放页卡顿）→ 提到 State 字段并 dispose。
+- P2-33 4 条未翻译文案（播放主路径中文）。
+- P2-15 Hive 裸强转（升级用户进设置页崩溃）。
+- P2-12 人机验证页硬编码（登录必经路径）。
+- P2-27/P2-31 评论与搜索 provider 无 autoDispose（内存线性泄漏）。
+- P2-30/P2-28 footer 永久转圈（翻页失败死路）。
+
+**待人工确认（本批无法闭环）**
+1. `assets/audiomack.svg` 的来源与授权（§6.5）。
+2. `UpdateChecker` 的 `acceleratedUrl` 具体域名（决定 P2-20 是否升 P1）。
+3. `wifiQualityProvider` / `cellularQualityProvider` 在 `player` 层是否真有读取（决定 P2-16 去留）。
+4. `kapi/proxy.344977.xyz` 的归属与是否已有直连迁移计划（决定 P1-2 的整改方案）。

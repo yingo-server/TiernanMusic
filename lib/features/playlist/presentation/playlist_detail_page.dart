@@ -298,10 +298,16 @@ class PlaylistDetailPage extends ConsumerWidget {
   }
 
   /// 收藏歌单（非破坏性操作，无需确认：直接执行，成功后 toast）
+  ///
+  /// V3-14（第5批复核②，P1）：收藏按钮防重（第 21 条）——飞行中禁用，
+  /// 连点不再产生多条同名歌单。catch 区分 PlaylistWriteException 的
+  /// maybeSucceeded 语义（第 8/9 条），不再把原始异常文本拼给用户。
+  bool _collecting = false;
   Future<void> _collectPlaylist(
       BuildContext context, WidgetRef ref, PlaylistDetail detail) async {
-    // 匿名态直接拦截，不发请求（否则服务端拒绝，用户只看到原始错误）
     if (!ensureLoggedIn(context, ref, action: context.l10n.favorite)) return;
+    if (_collecting) return;
+    _collecting = true;
     try {
       await ref.read(_playlistRepoProvider).collectPlaylist(
             name: detail.name,
@@ -310,10 +316,19 @@ class PlaylistDetailPage extends ConsumerWidget {
       if (context.mounted) {
         Toast.show(context, context.l10n.collectSuccess);
       }
+    } on PlaylistWriteException catch (e) {
+      if (!context.mounted) return;
+      Toast.show(
+          context,
+          e.maybeSucceeded
+              ? context.l10n.operateFailed('操作结果未知，请到「我的音乐」确认')
+              : context.l10n.operateFailed(e.message));
     } catch (e) {
       if (context.mounted) {
         Toast.show(context, context.l10n.operateFailed('$e'));
       }
+    } finally {
+      _collecting = false;
     }
   }
 }
