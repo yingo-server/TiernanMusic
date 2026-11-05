@@ -91,6 +91,7 @@ class Song {
     Duration? duration,
     AudioQuality? quality,
     String? localPath,
+    bool clearLocalPath = false,
   }) {
     return Song(
       hash: hash ?? this.hash,
@@ -101,7 +102,10 @@ class Song {
       cover: cover ?? this.cover,
       duration: duration ?? this.duration,
       quality: quality ?? this.quality,
-      localPath: localPath ?? this.localPath,
+      // F4-15（审查②-B，P1）：nullable 字段无法用 `localPath: null` 清除
+      // （`null ?? this.localPath` 永远是旧值），导致「清理失效本地源」是 no-op。
+      // 第 3 条：契约必须显式——清除语义由独立布尔参数表达，编译器也能兜住。
+      localPath: clearLocalPath ? null : (localPath ?? this.localPath),
     );
   }
 

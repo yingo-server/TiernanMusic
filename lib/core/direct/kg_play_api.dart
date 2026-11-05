@@ -44,10 +44,12 @@ class KgPlayApi {
       baseUrl: 'https://trackercdn.kugou.com',
       params: params,
       encryptType: 'android',
-      // F4-01（审查①-B，P1）：Node song_url.js 为 `notSign: true` —— 只带 key、
-      // 不带 signature。kg.request 会自动补 android signature（上游按签名与
-      // encryptKey 端点不匹配返回 20006/20028），故此处显式关掉。
-      notSignature: true,
+      // F4-01（审查①-B，P1→驳回）：报告要求按 Node `notSign: true` 撤掉 signature，
+      // 但实测（curl 直打 trackercdn.kugou.com/v5/url）无 signature 时服务端返回
+      // {"errcode":"20006","status":0,"errmsg":"err signature"}，带 android signature
+      // 才返回 priv_status/hash_offset；且 Node util/request.js 只认 `notSignature`，
+      // `notSign` 拼写根本不生效（该端点实际是**签名**发的）。故保留自动签名，
+      // 见 docs/batch4_fix_1_network.md「F4-01 实测驳回」。
     );
 
     return PlayUrlResult.fromResponse(res);
@@ -76,10 +78,17 @@ class KgPlayApi {
 
     final data = res.body['data'];
     final list = data is List ? data : const [];
-    return list
-        .whereType<Map>()
-        .map((e) => PrivilegeItem.fromJson(Map<String, dynamic>.from(e)))
-        .toList();
+    // F4-08（审查①-B，P1）：Node privilege_lite.js 对每个 hash 按需要的音质
+    // **逐档**在 relate_goods 里挑条目（pickRelate），不是只取 first ——
+    // 128 有 level=1(ogg)/level=2(mp3) 两条，取 first 会把 320/flac 的权益
+    // 当成 128 的，VIP 判定整档失真。
+    final wanted =
+        qualities.isEmpty ? KgSharedParams.defaultQualities : qualities;
+    return [
+      for (final e in list.whereType<Map>())
+        for (final q in wanted)
+          PrivilegeItem.fromJson(Map<String, dynamic>.from(e), quality: q),
+    ];
   }
 }
 
@@ -93,6 +102,32 @@ class KgSharedParams {
   static const List<String> magicQualities = [
     'piano', 'acappella', 'subwoofer', 'ancient', 'dj', 'surnay',
   ];
+
+  /// F4-07（审查①-B，P1）：上游一次请求的**完整**音质表
+  /// （Node privilege_lite.js `UPSTREAM_QUALITIES`）。实测（curl
+  /// gateway/v2/get_res_privilege/lite）只有整表下发才会返回 128 的 ogg 条目
+  /// 与 vip/missing 各档；只传调用方要的那一档时其余档全缺，权益判定失真。
+  /// 输出再按调用方 `qualities` 过滤（Node 同样如此）。
+  static const List<String> upstreamQualities = [
+    '128', '320', 'flac', 'high',
+    'viper_atmos', 'viper_tape', 'viper_clear', 'super', 'multitrack',
+  ];
+
+  /// Node privilege_lite.js 的默认**输出**音质表（与上游表顺序不同：蝰蛇三档在后）
+  static const List<String> defaultQualities = [
+    '128', '320', 'flac', 'high', 'viper_tape', 'viper_clear', 'viper_atmos',
+  ];
+
+  /// F4-08（审查①-B，P1）：音质 → relate_goods.level 的取用顺序
+  /// （Node `QUALITY_LEVEL`）。实测 relate_goods：128→level2、320→4、flac→5、
+  /// high→6 各一条，蝰蛇/多轨 level=0；128 在概念版下可能额外有 level=1 的 ogg。
+  static const Map<String, List<int>> qualityLevels = {
+    '128': [1, 2],
+    '320': [4],
+    'flac': [5],
+    'high': [6],
+    'super': [7],
+  };
 
   /// `/v5/url` 的完整查询参数
   ///
@@ -152,6 +187,9 @@ class KgSharedParams {
   ///
   /// [hashes] 与 [albumIds] 按下标一一对应；被过滤掉的空 hash 不会打乱
   /// 剩余条目的 album_id 对应关系。
+  ///
+  /// F4-07（审查①-B，P1）：上游 `qualities` **恒下发完整表**，不随调用方入参收窄。
+  /// [qualities] 仅作为调用方的**输出**过滤需求保留（由 [KgPlayApi.privilege] 使用）。
   static Map<String, dynamic> privilege({
     required KgClient client,
     required List<String> hashes,
@@ -163,11 +201,16 @@ class KgSharedParams {
       final hash = hashes[i].trim().toLowerCase();
       // 过滤空 hash（避免把字符串 "null" 当成 hash 传给上游）
       if (hash.isEmpty || hash == 'null') continue;
+      // F4-10（审查①-B，P2）：album_id 缺失时下发**数值** 0（Node `|| 0`），
+      // 而不是字符串 '0' —— 上游按字符串解析会返回 20010。
+      final albumId = int.tryParse(
+              i < albumIds.length ? albumIds[i].trim() : '') ??
+          0;
       resource.add({
         'type': 'audio',
         'page_id': 0,
         'hash': hash,
-        'album_id': i < albumIds.length ? albumIds[i] : '0',
+        'album_id': albumId,
       });
     }
 
@@ -180,7 +223,7 @@ class KgSharedParams {
       'relate': 1,
       'support_verify': 1,
       'resource': resource,
-      'qualities': useQualities,
+      'qualities': upstreamQualities,
     };
   }
 
@@ -215,6 +258,10 @@ class PlayUrlResult {
     required this.ssaCode,
     this.failProcess = const [],
     this.extName = '',
+    this.startMs = 0,
+    this.endMs = 0,
+    this.clipHash = '',
+    this.offsetHash = '',
   });
 
   final List<String> urls;
@@ -231,6 +278,22 @@ class PlayUrlResult {
 
   /// 服务端实际返回的音质扩展名（如 flac/320/128）
   final String extName;
+
+  /// F4-09（审查①-B，P1）：`hash_offset` 描述的试听片段区间（毫秒）。
+  /// 实测 /v5/url（IsFreePart=1）返回
+  /// `hash_offset{clip_hash,start_byte,end_byte,start_ms,end_ms,offset_hash,file_type}`：
+  /// 只有 `end_ms` 时无法知道从第几秒开始播，短片段会整段错位。
+  final int startMs;
+  final int endMs;
+
+  /// 试听片段对应的裁剪资源 hash（与整曲 hash 不同，播放/下载应优先用它）
+  final String clipHash;
+
+  /// `hash_offset` 的 offset_hash（服务端区间标识）
+  final String offsetHash;
+
+  /// 试听片段时长（毫秒）；无区间信息时为 0
+  int get clipDurationMs => endMs > startMs ? endMs - startMs : endMs;
 
   String? get bestUrl => urls.isNotEmpty
       ? urls.first
@@ -251,28 +314,45 @@ class PlayUrlResult {
     final bitrate = b['bitRate'] is int
         ? b['bitRate'] as int
         : int.tryParse('${b['bitRate'] ?? ''}') ?? 0;
-    final endMs = (b['hash_offset'] is Map)
-        ? int.tryParse('${(b['hash_offset'] as Map)['end_ms'] ?? ''}') ?? 0
-        : 0;
+    // F4-09（审查①-B，P1）：hash_offset 全字段读取。
+    // 实测结构：{clip_hash, start_byte, end_byte, start_ms, end_ms, offset_hash, file_type}
+    final offset = b['hash_offset'] is Map
+        ? Map<String, dynamic>.from(b['hash_offset'] as Map)
+        : const <String, dynamic>{};
+    int ms(String key) => int.tryParse('${offset[key] ?? ''}') ?? 0;
+    final startMs = ms('start_ms');
+    final endMs = ms('end_ms');
+    final clipHash = '${offset['clip_hash'] ?? ''}';
 
     return PlayUrlResult(
       urls: urls,
       backupUrls: backups,
       quality: '${b['quality'] ?? ''}',
       bitrate: bitrate,
-      // 60s 试听：end_ms 约 60000 或路径含 /p_0_（flac 时 bitRate=0 不可作为依据）
-      isPreview:
-          (endMs > 0 && endMs <= 65000) || urls.any((u) => u.contains('/p_0_')),
+      // 试听判定：区间时长（end_ms-start_ms）≤65s，或路径含 /p_0_（试听前缀）。
+      // 此前只看 end_ms≤65000，短歌整曲（end_ms=全长）会被误判 / 从 120s 起的
+      // 60s 片段（end_ms=180000）反而漏判。
+      isPreview: (endMs > 0 &&
+              (endMs - startMs > 0 ? endMs - startMs : endMs) <= 65000) ||
+          urls.any((u) => u.contains('/p_0_')),
       errorCode: res.errorCode,
       message: '${b['error'] ?? b['error_msg'] ?? b['errmsg'] ?? ''}',
       ssaCode: res.ssaCode,
       failProcess: toList(b['fail_process']),
       extName: '${b['extName'] ?? ''}',
+      startMs: startMs,
+      endMs: endMs,
+      clipHash: clipHash,
+      offsetHash: '${offset['offset_hash'] ?? ''}',
     );
   }
 }
 
 /// 权益条目
+///
+/// F4-08（审查①-B，P1）：一条记录对应「一个 hash × 一个音质档」，
+/// 与 Node privilege_lite.js 的 `qualities[]` 输出逐条对齐 —— 不再把所有
+/// 档位的权益都算到 relate_goods 的第一条上。
 class PrivilegeItem {
   const PrivilegeItem({
     required this.hash,
@@ -284,6 +364,10 @@ class PrivilegeItem {
     required this.pkgPrice,
     this.durationMs,
     this.cover,
+    this.level = 0,
+    this.exists = false,
+    this.bitrate = 0,
+    this.extName = '',
   });
 
   final String hash;
@@ -296,21 +380,40 @@ class PrivilegeItem {
   final int? durationMs;
   final String? cover;
 
-  /// 是否免费可播（privilege=0）
-  bool get isFree => privilege == 0;
+  /// relate_goods.level（2=128、4=320、5=flac、6=Hi-Res、7=DSD，其它为 0）
+  final int level;
+
+  /// 上游是否为该音质提供了权益条目（缺档 = 该音质不存在）
+  final bool exists;
+
+  final int bitrate;
+  final String extName;
+
+  /// 是否免费可播：存在该档权益 + privilege=0 + status≠0
+  /// （Node obtainable = exists && !neesuvip && relateItem.status !== 0；
+  /// 只判 privilege 会把 status=0 的不可播条目当成免费）
+  bool get isFree => exists && privilege == 0 && status != 0;
 
   /// 是否需要付费/会员
   bool get needsPurchase => payType != 0 || privilege != 0;
 
-  factory PrivilegeItem.fromJson(Map<String, dynamic> j) {
+  factory PrivilegeItem.fromJson(Map<String, dynamic> j,
+      {String quality = '128'}) {
     final info = j['info'] is Map
         ? Map<String, dynamic>.from(j['info'] as Map)
         : const <String, dynamic>{};
-    // 真实权益在 data[].relate_goods[]（128 可能同时有 level=1 ogg 与 level=2 mp3）
+    // 真实权益在 data[].relate_goods[]（每档一条：quality + level）
     final goods = j['relate_goods'];
-    final g = (goods is List && goods.isNotEmpty)
-        ? Map<String, dynamic>.from(goods.first as Map)
-        : <String, dynamic>{};
+    final list = goods is List
+        ? goods
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList()
+        : const <Map<String, dynamic>>[];
+    final g = _pickRelate(list, quality);
+    final gInfo = g['info'] is Map
+        ? Map<String, dynamic>.from(g['info'] as Map)
+        : const <String, dynamic>{};
     final fp = g['fail_process'] ?? j['fail_process'];
     return PrivilegeItem(
       hash: '${j['hash'] ?? ''}',
@@ -320,11 +423,36 @@ class PrivilegeItem {
       failProcess: fp is List
           ? fp.map(_int).toList()
           : (_int(fp) > 0 ? [_int(fp)] : const <int>[]),
-      quality: '${g['quality'] ?? j['quality'] ?? ''}',
+      // 音质以**请求档位**为准：关系表缺该档时不能退化成别的档位名
+      quality: quality,
       pkgPrice: _int(g['pkg_price'] ?? j['pkg_price']),
       durationMs: info['duration'] == null ? null : _int(info['duration']),
       cover: info['image']?.toString(),
+      level: _int(g['level']),
+      exists: g.isNotEmpty,
+      bitrate: _int(gInfo['bitrate']),
+      extName: '${gInfo['extname'] ?? ''}',
     );
+  }
+
+  /// 按 [KgSharedParams.qualityLevels] 的 level 顺序逐档挑选该音质的条目
+  /// （128 优先 level=1 的概念版 ogg，其次 level=2 的 mp3）。
+  static Map<String, dynamic> _pickRelate(
+      List<Map<String, dynamic>> goods, String quality) {
+    final q = quality.toLowerCase();
+    for (final level in KgSharedParams.qualityLevels[q] ?? const <int>[]) {
+      for (final g in goods) {
+        if (_int(g['level']) == level &&
+            '${g['quality'] ?? ''}'.toLowerCase() == q) {
+          return g;
+        }
+      }
+    }
+    for (final g in goods) {
+      if ('${g['quality'] ?? ''}'.toLowerCase() == q) return g;
+    }
+    // 该音质在 relate_goods 里不存在：返回空表（exists=false），不得借用别档
+    return const <String, dynamic>{};
   }
 
   static int _int(dynamic v) =>

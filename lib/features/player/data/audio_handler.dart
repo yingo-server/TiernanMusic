@@ -210,8 +210,12 @@ class TiernanAudioHandler extends BaseAudioHandler
     _pendingSongIndex = null;
     // PLY-03（审查③）：队列被整体替换时**立即作废在途请求**——
     // 旧 _playAt 恢复后按旧 index 写 _songs 会污染新队列（越界或覆盖错歌）。
+    // F4-14（审查②-B，P0）：队列替换时**不得**无条件 `_loading = false`。
+    // 旧 _playAt 仍在飞行，提前开闸会让新请求与旧请求真正并发
+    // （QUALITY_STANDARD 第 19 条：闸门必须由持有者成对开关）。
+    // 这里只作废旧请求的世代标记并把新下标排队，闸门由旧请求的 finally 释放，
+    // 释放后立即播放排队中的新下标。
     _playToken++;
-    _loading = false;
     _pendingIndex = null;
     _songs
       ..clear()
@@ -269,6 +273,12 @@ class TiernanAudioHandler extends BaseAudioHandler
     final token = ++_playToken;
     final song = _songs[index];
     _loading = true;
+    // F4-16（审查②-B，P2）：新歌一开始解析就重置试听标记，
+    // 否则上一首的「60 秒试听」角标会挂到这首完整曲上（第 18 条：世代切换即重置派生状态）。
+    if (_isPreview) {
+      _isPreview = false;
+      _previewController.add(false);
+    }
     try {
       // 先广播缓冲状态
       _broadcastState(_player.playbackEvent);
@@ -285,7 +295,8 @@ class TiernanAudioHandler extends BaseAudioHandler
         _isPreview = false;
         _previewController.add(false);
         try {
-          await _player.setAudioSource(
+          final applied = await _applySource(
+            token,
             AudioSource.uri(
               local.startsWith('content://')
                   ? Uri.parse(local)
@@ -293,6 +304,7 @@ class TiernanAudioHandler extends BaseAudioHandler
               tag: mediaItem.value,
             ),
           );
+          if (!applied) return;
         } on Exception {
           // PL-01（审查③）：本地文件失效（被删/迁移/URI 失效）→
           // **同曲回退在线解析**，而不是抛给外层 catch 跳下一首。
@@ -306,11 +318,15 @@ class TiernanAudioHandler extends BaseAudioHandler
           _isPreview = result.isPreview;
           _previewController.add(_isPreview);
           // 清掉失效的 localPath，防止下次再走坏源（PL-04 同源）
-          _songs[index] =
-              detailed.copyWith(quality: result.quality, localPath: null);
-          await _player.setAudioSource(
+          // F4-15（审查②-B，P1）：`localPath: null` 在原 copyWith 中是空操作，
+          // 必须走显式清除标记。
+          _songs[index] = detailed.copyWith(
+              quality: result.quality, clearLocalPath: true);
+          final applied = await _applySource(
+            token,
             AudioSource.uri(Uri.parse(result.url), tag: mediaItem.value),
           );
+          if (!applied) return;
         }
       } else {
         // ---- 在线分支：补全详情 + 解析 URL ----
@@ -325,9 +341,11 @@ class TiernanAudioHandler extends BaseAudioHandler
         _isPreview = result.isPreview;
         _previewController.add(_isPreview);
         _songs[index] = detailed.copyWith(quality: result.quality);
-        await _player.setAudioSource(
+        final applied = await _applySource(
+          token,
           AudioSource.uri(Uri.parse(result.url), tag: mediaItem.value),
         );
+        if (!applied) return;
       }
       if (token != _playToken) return;
       _failureStreak = 0;
@@ -370,6 +388,11 @@ class TiernanAudioHandler extends BaseAudioHandler
         _failureStreak = 0;
       }
     } finally {
+      // F4-14（审查②-B，P0）：闸门只在本处释放（第 19 条）——
+      // playQueue 不再直接置 `_loading = false`，因此「关闭中又开闸」不会发生，
+      // 也就不会出现两个 _playAt 真正并发装载音源的情况。
+      // 被作废的旧请求同样负责放行：它退出后队列里排着的 _pendingIndex
+      // 必须由它交给下一轮 _playAt，否则新请求会被永久挂起。
       _loading = false;
       final pending = _pendingIndex;
       if (pending != null) {
@@ -378,6 +401,18 @@ class TiernanAudioHandler extends BaseAudioHandler
         Future.microtask(() => _playAt(pending));
       }
     }
+  }
+
+  /// 装载音源，并在装载前后各校验一次世代（第 18 条）。
+  ///
+  /// `_player.setAudioSource` 不可取消：旧请求的调用若在新请求之后完成，
+  /// 会把**旧歌**的 URL 装进引擎，而 `_index`/`mediaItem` 已是新歌
+  /// （用户看到新歌封面、听到上一首）。这里用返回值告诉调用方
+  /// 「装载完成后我是否仍是当前有效请求」，不是就放弃后续 play()。
+  Future<bool> _applySource(int token, AudioSource source) async {
+    if (token != _playToken) return false;
+    await _player.setAudioSource(source);
+    return token == _playToken;
   }
 
   /// 待验证的歌曲下标（验证通过后重试）

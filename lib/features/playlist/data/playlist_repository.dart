@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/kugou_api_client.dart';
@@ -10,6 +12,31 @@ int _toInt(dynamic v, {int fallback = 0}) {
   if (v is num) return v.toInt();
   if (v == null) return fallback;
   return int.tryParse('$v') ?? fallback;
+}
+
+/// 歌单写操作失败。
+///
+/// [maybeSucceeded] 是契约的一部分（QUALITY_STANDARD 第 3／8 条）：
+/// - `false` → 服务端明确拒绝或请求未发出，用户可以安全重试；
+/// - `true`  → 请求可能已经执行（超时 / 连接中断 / 响应不可解析），
+///   界面必须提示「可能已生效，请刷新确认」，不得诱导用户直接重试，
+///   否则一次网络抖动就会造成重复收藏、同批歌曲加两遍（第 21 条）。
+class PlaylistWriteException implements Exception {
+  PlaylistWriteException(
+    this.message, {
+    required this.maybeSucceeded,
+    this.cause,
+  });
+
+  final String message;
+  final bool maybeSucceeded;
+  final Object? cause;
+
+  @override
+  String toString() => maybeSucceeded
+      // 用户可见文案：明确区分「确定失败」与「可能已生效」
+      ? '操作结果未知（可能已生效，请刷新确认）：$message'
+      : message;
 }
 
 class PlaylistRepository {
@@ -26,11 +53,12 @@ class PlaylistRepository {
   }
 
   /// 公共歌单歌曲（分页）
-  /// 歌单歌曲
   ///
   /// 【排序语义】用户要求「整体从新到旧」。
   /// 实测上游分页方向：**page=1 是最新，page 越大越旧**；且**页内也是从新到旧**。
-  /// 因此「整体从新到旧」= 倒序取页（最后一页 → 第一页），再把各页反序拼接。
+  /// 因此「整体从新到旧」= 按页号升序拼接（第 1 页 → 第 N 页），**不反转任何一页**。
+  /// 旧实现把第 2 页起的每页 reversed 后插到队首，得到的是
+  /// 「最旧页…→第 1 页」，前后两段方向相反（F4-13 已修）。
   ///
   /// [newestFirst] = true 时按上述语义返回；false 时保持上游原序（第 1 页在前）。
   /// [allPages] = true 时一次性拉完所有页（用于需要完整列表的场景）。
@@ -41,7 +69,7 @@ class PlaylistRepository {
     bool newestFirst = true,
     bool allPages = false,
   }) async {
-    Future<Map<String, dynamic>> fetch(int p) async {
+    Future<PlaylistTracks> fetch(int p) async {
       final q = {
         'id': globalCollectionId,
         'page': p,
@@ -51,25 +79,34 @@ class PlaylistRepository {
       final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
       final data = cached ?? await _api.get('/playlist/track/all', query: q);
       if (cached == null) MemoryCache.instance.set(cacheKey, data);
-      return data;
+      return PlaylistTracks.fromJson(data);
     }
 
-    final first = await fetch(page);
-    final firstTracks = PlaylistTracks.fromJson(first);
+    final firstTracks = await fetch(page);
     if (!newestFirst || !allPages) return firstTracks;
 
-    final totalPages = (firstTracks.total / pageSize).ceil();
-    if (totalPages <= 1) return firstTracks;
+    final songs = <PlaylistSong>[...firstTracks.songs];
+    // 页数上限（第 25 条：所有循环必须有界）。pageSize=100 时 100 页 = 1 万首，
+    // 超过该量级的歌单用户也无法逐条浏览，再拉只是拖慢首屏。
+    const maxPages = 100;
+    var totalPages = (firstTracks.total / pageSize).ceil();
+    // `count` 缺失时 PlaylistTracks.total 会退化为当前页条数，
+    // 分页数被低估成 1（只返回第一页）。这里在「本页满页」时按未知处理，
+    // 继续翻页直到出现不满页（第 16 条：缺失 ≠ 已到底）。
+    final unknownTotal = totalPages <= 1 && firstTracks.songs.length >= pageSize;
 
-    // 倒序取剩余页（最后一页 → 第 2 页），每页内部反序后再拼到前面
-    final older = <PlaylistSong>[];
-    for (var p = totalPages; p >= 2; p--) {
-      final t = PlaylistTracks.fromJson(await fetch(p));
-      older.insertAll(0, t.songs.reversed);
+    var p = page + 1;
+    while (p <= (unknownTotal ? maxPages : totalPages) && p <= maxPages) {
+      final t = await fetch(p);
+      songs.addAll(t.songs);
+      if (t.songs.isEmpty || t.songs.length < pageSize) break;
+      p++;
     }
     return PlaylistTracks(
-      songs: [...firstTracks.songs, ...older],
-      total: firstTracks.total,
+      songs: songs,
+      total: firstTracks.total > songs.length
+          ? firstTracks.total
+          : (unknownTotal ? songs.length : firstTracks.total),
     );
   }
 
@@ -100,40 +137,191 @@ class PlaylistRepository {
   }
 
   /// 收藏歌单（type=1 收藏公共歌单，type=0 新建）
+  ///
+  /// 写操作契约（QUALITY_STANDARD 第 3／8／9／21 条）：
+  /// - 失败一律抛 [PlaylistWriteException]，区分「确定失败」与「可能已生效」；
+  /// - 同一 (操作, 歌单) 在飞行期间拒绝重复提交；
+  /// - 网络层直连失败**不回退** kapi（kg_direct_api_client 的 write: true），
+  ///   否则一次超时就会重复收藏出两条同名歌单。
   Future<void> collectPlaylist({
     required String name,
     String? listCreateUserid,
     String? listCreateListid,
     String? listCreateGid,
   }) async {
-    await _api.get('/playlist/add', query: {
+    final params = <String, dynamic>{
       'type': listCreateUserid != null ? 1 : 0,
       'name': name,
       if (listCreateUserid != null) 'list_create_userid': listCreateUserid,
       if (listCreateListid != null) 'list_create_listid': listCreateListid,
       if (listCreateGid != null) 'list_create_gid': listCreateGid,
-    });
+    };
+    await _write(
+      '/playlist/add',
+      params,
+      dedupeKey: 'add:${listCreateGid ?? ''}:${listCreateListid ?? ''}:$name',
+    );
   }
 
   /// 删除/取消收藏歌单
-  Future<void> deletePlaylist(String listid) =>
-      _api.get('/playlist/del', query: {'listid': listid}).then((_) {});
+  Future<void> deletePlaylist(String listid) async {
+    final id = listid.trim();
+    if (id.isEmpty) {
+      // 边界校验（第 14 条）：空 listid 打上去只会得到一个无法解释的业务错误
+      throw PlaylistWriteException('歌单 ID 为空，操作未执行', maybeSucceeded: false);
+    }
+    await _write('/playlist/del', {'listid': id}, dedupeKey: 'del:$id');
+  }
 
   /// 添加歌曲到歌单
+  ///
+  /// 协议限制：服务端 `data` 是 `名称|hash|album_id|album_audio_id` 逗号分隔串，
+  /// 因此 `|`、`,` 只能作为分隔符出现。歌名里若自带这两个字符，
+  /// 必须替换为全角同形字（第 14 条边界校验），否则整串字段右移，
+  /// 会把「歌名片段」当成 hash 提交，加进歌单的是错歌或无效条目。
   Future<void> addTracks(String listid, List<TrackRef> tracks) async {
-    // 位置参数 data：名称|hash|album_id|album_audio_id，
-    // 空字段必须占位（不能 skip，否则后字段前移导致服务端解析错位）
-    final data = tracks
-        .map((t) =>
-            [t.name, t.hash, t.albumId ?? '', t.albumAudioId ?? ''].join('|'))
-        .join(',');
-    await _api.get('/playlist/tracks/add', query: {'listid': listid, 'data': data});
+    final id = listid.trim();
+    if (id.isEmpty) {
+      throw PlaylistWriteException('歌单 ID 为空，操作未执行', maybeSucceeded: false);
+    }
+    if (tracks.isEmpty) return;
+
+    final seen = <String>{};
+    final rows = <String>[];
+    for (final t in tracks) {
+      final hash = _safeId(t.hash);
+      // hash 是唯一可播放标识，缺失即无法定位歌曲，直接判为非法入参
+      if (hash.isEmpty) {
+        throw PlaylistWriteException('歌曲「${t.name}」缺少 hash，本次未提交',
+            maybeSucceeded: false);
+      }
+      if (!seen.add(hash)) continue; // 批次内去重（第 21 条：同一批不重复加歌）
+      rows.add([
+        _safeName(t.name),
+        hash,
+        _safeId(t.albumId),
+        _safeId(t.albumAudioId),
+      ].join('|'));
+    }
+    if (rows.isEmpty) return;
+
+    await _write(
+      '/playlist/tracks/add',
+      {'listid': id, 'data': rows.join(',')},
+      dedupeKey: 'tracks-add:$id:${rows.join(',')}',
+    );
   }
 
   /// 从歌单删除歌曲
-  Future<void> removeTracks(String listid, List<String> fileids) =>
-      _api.get('/playlist/tracks/del',
-          query: {'listid': listid, 'fileids': fileids.join(',')}).then((_) {});
+  Future<void> removeTracks(String listid, List<String> fileids) async {
+    final id = listid.trim();
+    if (id.isEmpty) {
+      throw PlaylistWriteException('歌单 ID 为空，操作未执行', maybeSucceeded: false);
+    }
+    final ids = fileids.map(_safeId).where((e) => e.isNotEmpty).toSet().toList();
+    if (ids.isEmpty) {
+      throw PlaylistWriteException('没有可删除的歌曲（fileid 全为空）',
+          maybeSucceeded: false);
+    }
+    await _write(
+      '/playlist/tracks/del',
+      {'listid': id, 'fileids': ids.join(',')},
+      dedupeKey: 'tracks-del:$id:${ids.join(',')}',
+    );
+  }
+
+  /// 分隔符安全化：hash / id 只允许数字与字母。
+  ///
+  /// 返回空串表示该字段非法（调用方决定是拒绝还是占位）。
+  static String _safeId(String? raw) {
+    final v = (raw ?? '').trim();
+    if (v.isEmpty) return '';
+    // 协议分隔符与空白一律不合法，出现即说明上游字段已损坏
+    return v.replaceAll(RegExp(r'[|,\s]'), '');
+  }
+
+  /// 歌名安全化：仅替换协议分隔符，保留其余字符（中文/空格/引号）。
+  ///
+  /// 用全角同形字替换而不是删除，用户仍能认出原歌名（第 14 条：边界校验，
+  /// 但不静默丢信息）。
+  static String _safeName(String raw) {
+    var v = raw.trim();
+    if (v.isEmpty) v = '未知歌曲';
+    if (v.contains('|') || v.contains(',')) {
+      debugPrint('[playlist] 歌名含协议分隔符，已替换为全角：$raw');
+      v = v.replaceAll('|', '｜').replaceAll(',', '，');
+    }
+    return v;
+  }
+
+  /// 写操作统一出口。
+  ///
+  /// 为什么走 `get()`：`KgDirectApiClient` 把歌单写接口（/playlist/add、
+  /// /playlist/del、/playlist/tracks/*）分派在 **get 分支**，并标记
+  /// `write: true`（直连失败不回退 kapi）；真正的线上请求仍是原生 POST
+  /// （`/cloudlist.service/v5/add_list` 等）。若改用客户端 `post()`，
+  /// 这些路径在直连层没有 post 分派，会直接落到 kapi 网关，
+  /// 违反 QUALITY_STANDARD 第 27 条（接口只走原生网关）——
+  /// 因此保留 get 分派，并在本层补齐防重与失败语义。
+  Future<void> _write(
+    String path,
+    Map<String, dynamic> params, {
+    required String dedupeKey,
+  }) async {
+    // 防重（第 21／22 条）：同一次提交在飞行期间不被重复触发
+    if (!_inFlight.add(dedupeKey)) {
+      throw PlaylistWriteException('相同操作正在提交中，请稍候', maybeSucceeded: true);
+    }
+    try {
+      await _api.get(path, query: params);
+      _invalidatePlaylistCaches();
+    } on DioException catch (e) {
+      throw _toWriteException(path, e);
+    } on ApiException catch (e) {
+      // 服务端明确返回业务错误码 → 请求已到达并被拒绝，可安全重试
+      throw PlaylistWriteException(e.message, maybeSucceeded: false, cause: e);
+    } finally {
+      _inFlight.remove(dedupeKey);
+    }
+  }
+
+  /// 飞行中的写操作键（进程内防重锁）
+  final Set<String> _inFlight = <String>{};
+
+  /// 把底层异常翻译成带「是否可能已生效」语义的领域异常（第 8 条）。
+  PlaylistWriteException _toWriteException(String path, DioException e) {
+    final inner = e.error;
+    final type = e.type;
+    final maybeSucceeded = switch (type) {
+      // 连接阶段失败：请求尚未发出，服务端一定没执行
+      DioExceptionType.connectionError || DioExceptionType.badCertificate => false,
+      DioExceptionType.connectionTimeout => false,
+      // 已发出但未拿到（或拿不全）响应：服务端可能已执行
+      DioExceptionType.sendTimeout ||
+      DioExceptionType.receiveTimeout ||
+      DioExceptionType.unknown =>
+        true,
+      // 有响应：按响应体判断（业务错误=确定失败；空响应/风控=结果未知）
+      DioExceptionType.badResponse => inner is ApiException && inner.errorCode > 0
+          ? false
+          : true,
+      DioExceptionType.cancel => false,
+    };
+    final message = inner is ApiException
+        ? inner.message
+        : (inner?.toString() ?? e.message ?? '网络异常');
+    return PlaylistWriteException(message,
+        maybeSucceeded: maybeSucceeded, cause: e);
+  }
+
+  /// 写操作成功后让相关读缓存失效（第 5 条：状态单一来源）。
+  ///
+  /// 否则加歌/删歌后 90 秒内再次进入歌单页仍显示旧列表，用户以为没生效，
+  /// 重复点击进一步放大重复提交风险。
+  void _invalidatePlaylistCaches() {
+    MemoryCache.instance.removeWhere((key) =>
+        key.startsWith('/playlist/') || key.startsWith('/user/playlist'));
+  }
 }
 
 class PlaylistDetail {

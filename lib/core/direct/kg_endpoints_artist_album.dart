@@ -23,6 +23,10 @@ class KgEndpointArtistAlbum {
   Future<KgResponse> artistDetail(Map<String, dynamic> q) {
     return kg.request('/kmr/v3/author',
         method: 'POST',
+        // F4-03（审查①-B，P2）：落原生域 openapi.kugou.com（口径 27）。
+        // 实测 openapi 直连 200 且 author_name/avatar 等字段与 gateway+x-router
+        // 完全一致（curl 三种形态逐字段对比）。
+        baseUrl: 'https://openapi.kugou.com',
         data: {'author_id': '${q['id'] ?? q['author_id'] ?? ''}'},
         headers: {'x-router': 'openapi.kugou.com', 'kg-tid': '36'});
   }
@@ -41,9 +45,14 @@ class KgEndpointArtistAlbum {
     var ps = int.tryParse('${q['pagesize'] ?? 30}') ?? 30;
     if (ps > 100) ps = 100;
     // clienttime 是**秒级**（Node: Math.floor(Date.now()/1000)）
-    final clienttime = '${DateTime.now().millisecondsSinceEpoch ~/ 1000}';
+    final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     return kg.request('/kmr/v1/audio_group/author',
         method: 'POST',
+        // F4-03（审查①-B，P1）：Node artist_audios.js 明确有
+        // `baseURL: 'https://openapi.kugou.com'`，此前只剩 gateway + x-router，
+        // 违反口径 27（原生域优先）。实测 openapi 直连 200、total/data 与
+        // gateway 路由逐字段一致。
+        baseUrl: 'https://openapi.kugou.com',
         // 【实测】该端点的 key 由**服务端从 body 读**，签名只校验 defaultParams。
         // 三种形态实测结果：
         //   A) query=defaultParams+signature，body 另带 appid/key/... → ✅ st=1
@@ -102,11 +111,21 @@ class KgEndpointArtistAlbum {
 
   /// 专辑歌曲（module/album_songs.js）kg-tid: 255
   Future<KgResponse> albumSongs(Map<String, dynamic> q) {
+    // F4-24（审查①-B，P2）：Node 是 `is_buy: params?.is_buy || ''` —— 0/false
+    // 要落成空串（0 会被上游当「非购买态」过滤掉曲目，付费专辑少歌）。
+    final isBuy = q['is_buy'];
+    final isBuyParam = (isBuy == null ||
+            isBuy == 0 ||
+            isBuy == '0' ||
+            isBuy == false ||
+            isBuy == 'false')
+        ? ''
+        : isBuy;
     return kg.request('/v1/album_audio/lite',
         method: 'POST',
         data: {
           'album_id': '${q['id'] ?? q['album_id'] ?? ''}',
-          'is_buy': q['is_buy'] ?? '',
+          'is_buy': isBuyParam,
           'page': int.tryParse('${q['page'] ?? 1}') ?? 1,
           'pagesize': int.tryParse('${q['pagesize'] ?? 30}') ?? 30,
         },
@@ -126,6 +145,7 @@ class KgEndpointArtistAlbum {
   /// clienttime 参与签名且同时进 query）——与 artist_audios 那种
   /// clearDefaultParams 模式相反，勿混用。
   Future<KgResponse> rankAudio(Map<String, dynamic> q) {
+    final rankId = int.tryParse('${q['rankid'] ?? q['rank_id'] ?? ''}');
     return kg.request('/openapi/kmr/v2/rank/audio',
         method: 'POST',
         headers: {'kg-tid': '369'},
@@ -138,7 +158,9 @@ class KgEndpointArtistAlbum {
           'rank_cid': 0,
           'type': 1,
           'page': int.tryParse('${q['page'] ?? 1}') ?? 1,
-          'rank_id': int.tryParse('${q['rankid'] ?? q['rank_id'] ?? 0}') ?? 0,
+          // F4-25（审查①-B，P2）：Node 是 `rank_id: params.rankid`，缺省时
+          // JSON.stringify 直接丢弃该键；此前填 0 会让上游回落到某个默认榜。
+          if (rankId != null) 'rank_id': rankId,
         });
   }
 }

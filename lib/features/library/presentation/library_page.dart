@@ -6,11 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/providers.dart' show kugouApiClientProvider;
+// F4-32（审查③-B，P2）：删除未使用的 kugouApiClientProvider 导入——
+// UI 层不得持有网络客户端（QUALITY_STANDARD 第 4 条分层单向依赖 / 第 32 条死代码）。
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/utils/toast.dart';
 import '../../../core/widgets/shimmer.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../../auth/data/account_manager.dart';
+import '../../auth/data/auth_providers.dart';
 import '../../playlist/data/playlist_repository.dart';
 import '../../player/data/models.dart';
 import '../../player/play_helper.dart';
@@ -43,6 +46,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       if (!mounted) return;
       setState(() {});
       ref.invalidate(_userPlaylistsProvider);
+      // F4-34（审查③-B，P3）：账号切换后「我收藏的 MV」也属于该账号的私有数据，
+      // 必须一并失效，否则 A→B 切换后仍展示 A 的收藏（第 5 条状态单一来源 / 第 18 条世代）。
+      ref.invalidate(_collectedMvsProvider);
     });
     // 播放记录写入后刷新最近播放。
     _recentSub = RecentPlayStore.changes.listen((_) {
@@ -58,9 +64,17 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   }
 
   Future<void> _loadRecent() async {
-    final list = await RecentPlayStore.read();
-    if (!mounted) return;
-    setState(() => _recent = list);
+    // F4-33（审查③-B，P3）：本地记录读取失败必须留痕并降级为空列表——
+    // 原实现无 catch，异常会让「最近播放」区块永远停在上一次状态（第 6/9 条）。
+    try {
+      final list = await RecentPlayStore.read();
+      if (!mounted) return;
+      setState(() => _recent = list);
+    } catch (e) {
+      debugPrint('[library] 读取最近播放失败: $e');
+      if (!mounted) return;
+      setState(() => _recent = const []);
+    }
   }
 
   @override
@@ -271,7 +285,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         }
         return Column(
           children: [
-            for (final mv in list)
+            // F4-35（审查③-B，P2）：MV 收藏同样必须具备上限——
+            // 与其他区块一致的 20 条口径，避免上百条 ListTile 一次性构建（第 24/25 条）。
+            for (final mv in list.take(20))
               ListTile(
                 leading: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
@@ -324,12 +340,12 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
 // ---------- 账号卡片 ----------
 
-class _AccountCard extends StatelessWidget {
+class _AccountCard extends ConsumerWidget {
   const _AccountCard({required this.account});
   final AccountRecord? account;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return Padding(
@@ -390,6 +406,55 @@ class _AccountCard extends StatelessWidget {
               FilledButton(
                 onPressed: () => context.push('/login'),
                 child: Text(context.l10n.login),
+              )
+            else
+              // F4-36（审查③-B，P2）：已登录后账号卡片此前无任何可点区域，
+              // 用户在本页找不到切换账号/退出入口（第 16 条语义分离之外的可达性缺口）。
+              PopupMenuButton<String>(
+                tooltip: context.l10n.moreActions,
+                onSelected: (v) async {
+                  if (v == 'manage') {
+                    await context.push<void>('/settings');
+                    return;
+                  }
+                  if (v == 'logout') {
+                    final ok = await showDestructiveConfirm(
+                      context,
+                      title: context.l10n.logout,
+                      message: context.l10n.logoutConfirm,
+                      confirmLabel: context.l10n.logout,
+                    );
+                    if (!ok || !context.mounted) return;
+                    try {
+                      await ref.read(authStateProvider.notifier).logout();
+                    } catch (e) {
+                      if (context.mounted) {
+                        Toast.show(context, context.l10n.logoutFailed(''));
+                      }
+                      debugPrint('[library] 退出登录失败: $e');
+                    }
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'manage',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.manage_accounts_outlined),
+                      title: Text(context.l10n.accountManage),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'logout',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.logout,
+                          color: scheme.error),
+                      title: Text(context.l10n.logout,
+                          style: TextStyle(color: scheme.error)),
+                    ),
+                  ),
+                ],
               ),
           ],
         ),
@@ -526,10 +591,14 @@ class _MyPlaylistRow extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(p.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall),
+                // F4-37（审查③-B，P3）：标题改用 Flexible 吸收剩余高度，
+                // 系统字体放大到 1.3x 以上时不再把 170dp 的列顶出黄黑溢出条（第 24 条惰性/布局健壮性）。
+                Flexible(
+                  child: Text(p.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall),
+                ),
               ],
             ),
           );

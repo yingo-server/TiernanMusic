@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 /// KRC 逐字歌词解析器
 ///
 /// 格式：[start,duration]<wordStart,wordDuration,0>字<...>
@@ -51,13 +53,19 @@ class KrcParser {
   static final _lineRe = RegExp(r'^\[(\d+),(\d+)\](.*)$');
   static final _wordRe = RegExp(r'<(\d+),(\d+),\d+>([^<]*)');
   static final _metaRe = RegExp(r'^\[([a-zA-Z]+):(.*)\]$');
-  static final _lrcLineRe = RegExp(r'^\[(\d+):(\d+(?:\.\d+)?)\](.*)$');
+  // F4-17（审查②-B，P1）：LRC 允许**一行多个时间戳**
+  // （`[00:12.00][00:45.00]歌词`，副歌复用处极常见）。
+  // 旧正则只匹配第一个时间戳，group(3) 会把第二个 `[00:45.00]` 当正文，
+  // 导致方括号时间戳被显示成歌词，且第二个时间点永远不生成独立行。
+  static final _lrcTimeRe = RegExp(r'\[(\d+):(\d+(?:\.\d+)?)\]');
 
   static KrcLyric parse(String krcText) {
     String? title, artist, album;
     var offset = 0;
     List<String>? embeddedTranslations;
     final lines = <KrcLine>[];
+    // F4-20：文件头部无时间标签的提示文本（版权/译者注）暂存于此
+    final leadingText = StringBuffer();
 
     for (final raw in const LineSplitter().split(krcText)) {
       // 只 trim 行尾，避免破坏歌词正文两侧有意的空白。
@@ -114,38 +122,116 @@ class KrcParser {
         continue;
       }
 
-      final lrc = _lrcLineRe.firstMatch(line);
-      if (lrc != null) {
-        final minutes = int.parse(lrc.group(1)!);
-        final seconds = double.parse(lrc.group(2)!);
-        lines.add(KrcLine(
-          startMs: minutes * 60000 + (seconds * 1000).round(),
-          durationMs: 0,
-          words: const [],
-          text: lrc.group(3)!,
-        ));
-        continue;
+      final lrc = _lrcTimeRe.firstMatch(line);
+      if (lrc != null && line.startsWith('[')) {
+        // 收集行首连续的多个时间戳，正文从最后一个时间戳之后开始
+        final times = <int>[];
+        var cursor = 0;
+        for (final m in _lrcTimeRe.allMatches(line)) {
+          if (m.start != cursor) break; // 只吃行首连续时间戳
+          final minutes = int.parse(m.group(1)!);
+          final seconds = double.parse(m.group(2)!);
+          times.add(minutes * 60000 + (seconds * 1000).round());
+          cursor = m.end;
+        }
+        if (times.isNotEmpty) {
+          final body = line.substring(cursor);
+          for (final startMs in times) {
+            lines.add(KrcLine(
+              startMs: startMs,
+              // F4-18（审查②-B，P2）：LRC 无逐字时间，duration 先留 0，
+              // 全部解析完再按下一条的 startMs 回填，避免 endMs 退化为
+              // 零长度区间导致整首不高亮。
+              durationMs: 0,
+              words: const [],
+              text: body,
+            ));
+          }
+          continue;
+        }
       }
 
       // 既无时间标签也非元数据的正文：不能静默丢弃（会丢歌词）。
       // 归并到上一行，保证内容完整。
       if (lines.isNotEmpty) {
         final last = lines.removeLast();
+        // F4-19（审查②-B，P2）：合并行若保留旧 words，words 拼出的文本与
+        // text 不一致（逐字高亮下标错位 / 尾字丢失）。清空 words 让它按整行渲染。
         lines.add(KrcLine(
           startMs: last.startMs,
           durationMs: last.durationMs,
-          words: last.words,
+          words: const [],
           text: last.text.isEmpty ? line : '${last.text}$line',
         ));
+      } else {
+        // F4-20（审查②-B，P2）：头部无时间标签的提示文本（版权/译者注）
+        // 旧实现直接丢弃；这里先留存，正文为空时至少还能显示出来。
+        leadingText.write(line);
       }
     }
 
-    if (embeddedTranslations != null) {
-      for (var i = 0; i < lines.length && i < embeddedTranslations.length; i++) {
+    // F4-18：LRC 行没有时长 → 用下一条 startMs 回填（最后一条按 5 秒估）。
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      if (line.durationMs > 0) continue;
+      final next = i + 1 < lines.length ? lines[i + 1].startMs : 0;
+      final duration = next > line.startMs ? next - line.startMs : 5000;
+      lines[i] = KrcLine(
+        startMs: line.startMs,
+        durationMs: duration,
+        words: line.words,
+        text: line.text,
+        translation: line.translation,
+      );
+    }
+
+    // F4-21（审查②-B，P2）：视图对 lines 做二分查找，必须保证按 startMs 升序
+    // （第 13 条：外部数据不得假设有序）。排序后再统一叠加 offset。
+    lines.sort((a, b) => a.startMs.compareTo(b.startMs));
+
+    // F4-22（审查②-B，P2）：LRC/KRC 的 offset 正值语义是「歌词提前显示」，
+    // 因此 startMs 减去 offset（旧实现只保存不用，逐字高亮与音频整体错位）。
+    if (offset != 0) {
+      for (var i = 0; i < lines.length; i++) {
+        final line = lines[i];
+        lines[i] = KrcLine(
+          startMs: line.startMs - offset,
+          durationMs: line.durationMs,
+          words: <KrcWord>[
+            for (final w in line.words)
+              KrcWord(
+                startMs: w.startMs - offset,
+                durationMs: w.durationMs,
+                text: w.text,
+              ),
+          ],
+          text: line.text,
+          translation: line.translation,
+        );
+      }
+    }
+
+    if (lines.isEmpty && leadingText.isNotEmpty) {
+      lines.add(KrcLine(
+        startMs: 0,
+        durationMs: 0,
+        words: const [],
+        text: leadingText.toString(),
+      ));
+    }
+
+    if (embeddedTranslations != null && embeddedTranslations.length == lines.length) {
+      // F4-23（审查②-B，P2）：翻译只能在下标一一对应时套用。
+      // 旧实现无论长度都按下标硬对齐，多语种/合并行时译文整体错行。
+      for (var i = 0; i < lines.length; i++) {
         if (embeddedTranslations[i].isNotEmpty) {
           lines[i].translation = embeddedTranslations[i];
         }
       }
+    } else if (embeddedTranslations != null) {
+      // 条数不一致时宁可不贴（错译比无译更糟），留痕便于定位（第 9 条）
+      debugPrint('[krc] 内嵌翻译条数与歌词行数不一致：'
+          '${embeddedTranslations.length} vs ${lines.length}，已跳过对齐');
     }
     return KrcLyric(
       title: title, artist: artist, album: album, offsetMs: offset, lines: lines,
@@ -166,9 +252,11 @@ class KrcParser {
       if (jsonValue is Map) {
         final list = jsonValue['languageList'];
         if (list is List) {
-          final out = <String>[];
+          // F4-23：多条目 = 多语种（或分段），拼接会把各段首尾相连导致
+          // 译文与歌词行整体错位。只取第一个条目的内容。
           for (final entry in list) {
             if (entry is! Map) continue;
+            final out = <String>[];
             final content = entry['lyricContent'];
             if (content is List) {
               for (final pair in content) {
@@ -181,8 +269,8 @@ class KrcParser {
             } else if (content is String) {
               out.add(content);
             }
+            if (out.isNotEmpty) return out;
           }
-          if (out.isNotEmpty) return out;
         }
         // Map 里的其它形态
         final direct = jsonValue['content'] ?? jsonValue['text'];

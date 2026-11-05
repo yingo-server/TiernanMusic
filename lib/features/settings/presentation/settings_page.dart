@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/cache/cache_manager.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/image/app_image_cache.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../core/theme/settings_provider.dart';
 import '../../../core/utils/error_logger.dart';
@@ -97,10 +100,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ];
       for (final dir in dirs) {
         if (await dir.exists()) {
-          await for (final entity
-              in dir.list(recursive: true, followLinks: false)) {
-            if (entity is File) total += await entity.length();
-          }
+          // F4-47（审查③-B，P3）：递归遍历 + 每文件一次 await length() 会阻塞主 isolate
+          // （缓存目录文件多时进设置页明显掉帧）。改为在后台 isolate 里同步统计，
+          // 只回传一个 int（第 24 条按需计算、第 26 条热路径零分配）。
+          total += await compute(_dirSizeBytes, dir.path);
         }
       }
       if (mounted) setState(() => _cacheSize = _formatBytes(total));
@@ -109,8 +112,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
-  static String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
+  static String _formatBytes(int bytes) {    if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
@@ -154,8 +156,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
       _loadCacheSize();
     } catch (e) {
+      // F4-38（审查③-B，P2）：失败不得把 FileSystemException 原文（含绝对路径/errno）
+      // 弹给用户——技术细节外泄且无法据此行动（第 3 条契约 / 第 9 条反馈）。
+      debugPrint('[settings] 清缓存失败: $e');
       if (mounted) {
-        Toast.show(context, context.l10n.clearCacheFailed('$e'));
+        Toast.show(context, context.l10n.clearCacheFailed(''));
       }
     }
   }
@@ -234,8 +239,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ListTile(
           leading: CircleAvatar(
             radius: 22,
-            backgroundImage:
-                avatar != null && avatar.isNotEmpty ? NetworkImage(avatar) : null,
+            // F4-42（审查③-B，P3）：头像走全项目统一的 AppImageCache（磁盘缓存 +
+            // 解码尺寸上限），裸 NetworkImage 每次进入都重新下载（第 23/25 条）。
+            backgroundImage: avatar != null && avatar.isNotEmpty
+                ? CachedNetworkImageProvider(avatar,
+                    cacheManager: AppImageCache.instance,
+                    maxWidth: 132)
+                : null,
             child: avatar == null || avatar.isEmpty
                 ? const Icon(Icons.person_outline)
                 : null,
@@ -259,9 +269,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           leading: Icons.switch_account_outlined,
           title: context.l10n.accountManage,
           subtitle: context.l10n.switchAccountSubtitle,
+          // F4-40（审查③-B，P2）：该入口此前与上面的「账号」条目同义（都跳 /login），
+          // 与 subtitle 承诺的「切换账号」不符。改为打开账号切换弹层，
+          // 无其他账号时再回落到登录页（第 30 条命名即文档）。
           onTap: () async {
-            await context.push<void>('/login');
-            _loadAccount();
+            if (loggedIn && otherAccounts.isNotEmpty) {
+              await _showSwitchAccountDialog();
+            } else {
+              await context.push<void>('/login');
+              _loadAccount();
+            }
           },
         ),
         // 切换账号：仅已登录且存在其他账号时显示（F3）
@@ -329,7 +346,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 leading: CircleAvatar(
                   radius: 18,
                   backgroundImage: a.avatar.isNotEmpty
-                      ? NetworkImage(a.avatar)
+                      ? CachedNetworkImageProvider(a.avatar,
+                          cacheManager: AppImageCache.instance, maxWidth: 108)
                       : null,
                   child: a.avatar.isEmpty
                       ? const Icon(Icons.person_outline)
@@ -354,8 +372,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         _loadAccount();
       }
     } on StateError {
-      // 该账号 token 已失效/被清理，需要重新登录
-      if (mounted) Toast.show(context, context.l10n.accountNeedRelogin);
+      // F4-41（审查③-B，P3）：token 失效的账号会永远留在选择列表里、每次点都失败。
+      // 失效即从本地账号表移除并提示重登（第 5 条状态单一来源 / 第 11 条降级退出条件）。
+      await AccountManager.instance.remove(selected.userid);
+      if (mounted) {
+        Toast.show(context, context.l10n.accountNeedRelogin);
+        _loadAccount();
+      }
     } catch (e) {
       if (mounted) Toast.show(context, context.l10n.switchAccountFailed(friendlyError(e)));
     }
@@ -387,22 +410,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
+                // F4-39（审查③-B，P2）：三段 SegmentedButton 在 360dp + 中文/大字号下
+                // 必然溢出——去掉与文案重复的 18px 图标并压缩内边距，
+                // 把段宽的余量还给文字（第 24 条布局健壮性/热路径零分配）。
                 child: SegmentedButton<ThemeMode>(
+                  style: SegmentedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
                   segments: [
                     ButtonSegment(
                       value: ThemeMode.light,
                       label: Text(context.l10n.themeLight),
-                      icon: const Icon(Icons.light_mode_outlined, size: 18),
                     ),
                     ButtonSegment(
                       value: ThemeMode.dark,
                       label: Text(context.l10n.themeDark),
-                      icon: const Icon(Icons.dark_mode_outlined, size: 18),
                     ),
                     ButtonSegment(
                       value: ThemeMode.system,
                       label: Text(context.l10n.themeSystem),
-                      icon: const Icon(Icons.brightness_auto_outlined, size: 18),
                     ),
                   ],
                   selected: {themeMode},
@@ -507,6 +534,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               SizedBox(
                 width: double.infinity,
                 child: SegmentedButton<LyricDisplayMode>(
+                  // F4-39 同源：窄屏 + 长语言（Bilingual/Übersetzung）下三段仍会溢出，
+                  // 统一压缩密度与内边距。
+                  style: SegmentedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
                   segments: [
                     ButtonSegment(
                       value: LyricDisplayMode.original,
@@ -654,9 +687,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             future: _logDirPath,
             builder: (context, snap) {
               final path = snap.data;
+              // F4-46（审查③-B，P3）：设备内部绝对路径（/data/user/0/...）对用户无意义、
+              // 且暴露目录结构；界面只显示末级目录名，完整路径仍可复制给开发者（第 3 条）。
+              final short = (path == null || path.isEmpty)
+                  ? context.l10n.unknown
+                  : '…/${path.split('/').where((s) => s.isNotEmpty).last}';
               return Text(
-                path ?? context.l10n.unknown,
-                maxLines: 2,
+                short,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               );
             },
@@ -691,21 +729,32 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   : context.l10n.permissionDenied);
             },
           ),
-          trailing: TextButton(
-            onPressed: () async {
-              final ok = await PermissionGate.instance.ensureStorageWrite();
-              if (!mounted) return;
-              // 重新查询状态并刷新展示
-              final future = PermissionGate.instance.hasStorageWriteAccess();
-              setState(() => _storageGranted = future);
-              Toast.show(
-                context,
-                ok
-                    ? context.l10n.permissionGranted
-                    : context.l10n.permissionDenied,
+          trailing: FutureBuilder<bool>(
+            future: _storageGranted,
+            builder: (context, snap) {
+              // F4-45（审查③-B，P3）：已授权时不再给出「申请权限」按钮
+              // （点了会重复触发系统授权流程，属无效入口，第 30 条名称与行为一致）。
+              if (snap.data == true) {
+                return Text(context.l10n.permissionGranted,
+                    style: Theme.of(context).textTheme.labelMedium);
+              }
+              return TextButton(
+                onPressed: () async {
+                  final ok = await PermissionGate.instance.ensureStorageWrite();
+                  if (!context.mounted) return;
+                  // 重新查询状态并刷新展示
+                  final future = PermissionGate.instance.hasStorageWriteAccess();
+                  setState(() => _storageGranted = future);
+                  Toast.show(
+                    context,
+                    ok
+                        ? context.l10n.permissionGranted
+                        : context.l10n.permissionDenied,
+                  );
+                },
+                child: Text(context.l10n.requestPermission),
               );
             },
-            child: Text(context.l10n.requestPermission),
           ),
         ),
         ListTile(
@@ -746,10 +795,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         itemCount: entries.length,
                         itemBuilder: (_, i) => ListTile(
                           dense: true,
+                          // F4-43（审查③-B，P2）：不再把原始异常文本（含类名/绝对路径/堆栈）
+                          // 直接渲染给用户——列表只显示序号，完整内容仍可点击复制上报
+                          // （第 9 条可观测 / 第 3 条契约：技术细节不进用户界面）。
                           title: Text(
-                            entries[i].split('\n').take(3).join('\n'),
-                            style: Theme.of(ctx).textTheme.labelSmall,
+                            '${context.l10n.techDetail} ${i + 1}',
+                            style: Theme.of(ctx).textTheme.labelLarge,
                           ),
+                          trailing: const Icon(Icons.copy_all_outlined, size: 18),
                           onTap: () => Toast.copy(ctx, entries[i]),
                         ),
                       ),
@@ -769,8 +822,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         SectionHeader(title: context.l10n.about),
         ListTile(
           leading: const Icon(Icons.music_note_outlined),
-          title: const Text(AppConfig.appNameCn),
-          subtitle: Text('${context.l10n.version} $_version'),
+          // F4-44（审查③-B，P3）：非中文语言下不再固定显示中文应用名；
+          // 版本号未取回前显示占位符，不出现「版本：」空白（第 4 条/第 30 条）。
+          title: Text(context.l10n.appName),
+          subtitle: Text(
+              '${context.l10n.version} ${_version.isEmpty ? '-' : _version}'),
         ),
         _navTile(
           leading: Icons.description_outlined,
@@ -913,6 +969,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
     );
   }
+}
+
+/// 递归统计目录占用字节数（在后台 isolate 执行，见 F4-47）。
+int _dirSizeBytes(String path) {
+  var total = 0;
+  try {
+    for (final entity in Directory(path).listSync(recursive: true, followLinks: false)) {
+      if (entity is File) {
+        try {
+          total += entity.lengthSync();
+        } catch (_) {
+          // 单个文件读取失败（权限/已删除）不影响整体统计
+        }
+      }
+    }
+  } catch (_) {
+    // 目录不可读 → 返回已累计值（第 11 条降级退出条件）
+  }
+  return total;
 }
 
 /// 读取当前账号信息。

@@ -103,6 +103,21 @@ class KgEndpointMedia {
       albumIds: albums,
       qualities: KgSharedParams.parseQualities(q['qualities']),
     );
+    // F4-10（审查①-B，P1）：空 hash 前置拦截，对齐 Node privilege_lite.js
+    // `if (!hashList.length) return Promise.reject({status:502, error_code:-1,
+    // error:'缺少歌曲 hash'})`。此前照发 `resource: []`，上游回 20010 →
+    // _wrap 判失败 → 回退 kapi（同样失败），白白多打两次请求且错误文案失真。
+    // 实测：空 resource 时上游返回 error_code=20010（不返回数据）。
+    if ((body['resource'] as List).isEmpty) {
+      return Future.value(const KgResponse(
+        status: 502,
+        body: <String, dynamic>{
+          'status': 0,
+          'error_code': -1,
+          'error': '缺少歌曲 hash',
+        },
+      ));
+    }
     return kg.request('/v2/get_res_privilege/lite',
         method: 'POST',
         // 实测 media.store.kugou.com 为三标签域名，*.kugou.com 单层通配证书

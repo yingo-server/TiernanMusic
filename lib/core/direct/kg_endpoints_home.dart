@@ -59,7 +59,9 @@ class KgEndpointHome {
         baseUrl: 'https://musicadservice.kugou.com',
         data: {
           'rank_id': q['type'] ?? q['rank_id'] ?? 21608,
-          'userid': q['userid'] ?? kg.userid,
+          // F4-13（审查①-B，P2）：Node `params.userid || cookie.userid || 0`；
+          // 匿名态 kg.userid 为 '0'，空串时落数值 0（空串上行会触发参数校验失败）。
+          'userid': int.tryParse('${q['userid'] ?? kg.userid}') ?? 0,
           'page': q['page'] ?? 1,
           'pagesize': q['pagesize'] ?? 30,
           'tags': const <String>[],
@@ -84,10 +86,12 @@ class KgEndpointHome {
     final dateTime = '${DateTime.now().millisecondsSinceEpoch ~/ 1000}';
     return kg.request('/v2/special_recommend',
         method: 'POST',
-        // 【实测】special_recommend 直连恒 ec=200101（匿名/VIP、多组参数均
-        // 复现，Node 上游同样如此），该端点疑似上游已收紧 → 保留 kapi 回退。
+        // 【实测 2026-11-06】gateway + x-router 直连**可用**：补齐 Node 的
+        // special_recommend 内层字段后返回 status=1 / error_code=0，
+        // special_list 35 条（旧实现的 4 字段版本只剩 30 条且 alg_id 不同）。
+        // 此前注释「恒 200101」已不成立 —— 见 docs/batch4_fix_1_network.md F4-11。
         // 实测 specialrec.service.kugou.com 为三标签域名，*.kugou.com 证书不覆盖
-        // （SAN 仅 *.kugou.com），Dart/Dio TLS 拒绝 → 保持 gateway + x-router。
+        // （SAN 仅 *.kugou.com），Dart/Dio TLS 拒绕 → 保持 gateway + x-router。
         headers: {'x-router': 'specialrec.service.kugou.com'},
         data: {
           'appid': kg.lite ? KgConfig.liteAppid : KgConfig.appid,
@@ -96,16 +100,26 @@ class KgEndpointHome {
               kg.lite ? KgConfig.liteClientver : KgConfig.clientver,
           'platform': 'android',
           'clienttime': dateTime,
-          'userid': kg.userid,
+          // F4-13（审查①-B，P2）：Node 是 `params.userid || cookie.userid || 0`，
+          // 空串会顶掉服务端默认 → 统一落数值 0。
+          'userid': int.tryParse(kg.userid) ?? 0,
           'module_id': q['module_id'] ?? 1,
           'page': q['page'] ?? 1,
           'pagesize': q['pagesize'] ?? 30,
           'key': KgSignature.paramsKey(dateTime, lite: kg.lite),
+          // F4-11（审查①-B，P1）：补 Node top_playlist.js 的
+          // sort/ugc/is_selected/withrecommend/area_code 五个字段，
+          // 并删掉 Node 没有的 tagids（实测：带 tagids 走的是另一套推荐，
+          // 补齐后与 Node 参数逐字段一致）。
           'special_recommend': {
             'withtag': q['withtag'] ?? 1,
             'withsong': q['withsong'] ?? 1,
+            'sort': q['sort'] ?? 1,
+            'ugc': 1,
+            'is_selected': 0,
+            'withrecommend': 1,
+            'area_code': 1,
             'categoryid': q['category_id'] ?? 0,
-            'tagids': q['tagids'] ?? '',
           },
           'req_multi': 1,
           'retrun_min': 5,
@@ -129,8 +143,8 @@ class KgEndpointHome {
 
   /// 乐库 banner（yueku_banner.js）。
   /// 源码无 x-router/baseURL → gateway 的 /ads.gateway/v3/listen_banner。
-  /// 【实测】匿名态恒返回 error_code=31136（无数据）——Node 版同样如此
-  /// （依赖登录态/风控态），属上游行为非实现差异；失败由 _wrap 抛出 →
+  /// 【实测 2026-11-06】匿名态恒返回 error_code=31136（vip_type=0 与 1 均复现，
+  /// 上游按登录/风控态决定），属上游行为非实现差异；失败由 _wrap 抛出 →
   /// _directOrFallback 回退 kapi（同样 31136）→ fetchBanners 容错置空。
   Future<KgResponse> yuekuBanner(Map<String, dynamic> q) {
     return kg.request('/ads.gateway/v3/listen_banner',
@@ -141,7 +155,10 @@ class KgEndpointHome {
           'operator': 7,
           'networktype': 2,
           'userid': q['userid'] ?? kg.userid,
-          'vip_type': 0,
+          // F4-12（审查①-B，P1）：Node 硬编码 0 只覆盖匿名态；VIP 账号会被
+          // 判成非会员而拿不到会员专属 banner（口径三态兼容）。改取登录时
+          // 落库的真实 vip_type（KgClient.vipType，匿名/非 VIP 为 0）。
+          'vip_type': int.tryParse(kg.vipType) ?? 0,
           'm_type': 0,
           'tags': const <String>[],
           'apiver': 5,

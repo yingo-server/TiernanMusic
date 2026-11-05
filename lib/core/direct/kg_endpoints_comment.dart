@@ -19,12 +19,16 @@ class KgEndpointComment {
 
 
   Future<KgResponse> commentMusic(Map<String, dynamic> q) {
-    // 源码（comment_music.js）无 x-router/baseURL → 上游即打 gateway.kugou.com
-    // 的 /mcomment/v1/cmtlist（mcomment 服务本身挂在 gateway 根路径下，两标签）。
-    // 实测匿名/VIP 均 200 status=1；与 kapi 差异仅运行时字段（like.count ±1、
-    // config.input_hint、canUploadImg 等 A/B 文案），Repository 无感知。
-    return kg.request('/mcomment/v1/cmtlist',
+    // 【实测 2026-11-06】三种形态 curl 对比（mixsongid=32100650）：
+    //   A  gateway + /mcomment/v1/cmtlist（无 x-router）      → 200 status=1
+    //   B  gateway + /v1/cmtlist + x-router m.comment.service → 200 status=1（同数据）
+    //   C  gateway + /mcomment/v1/cmtlist + x-router          → "Access Deny !!!"
+    //   D  https://m.comment.service.kugou.com/v1/cmtlist     → TLS 证书不匹配（三标签域）
+    // F4-04（审查①-B，P1）：改走 B —— 裸路径 + x-router，符合口径「评论走
+    // x-router: m.comment.service.kugou.com」，且不会与服务前缀叠加（C 会 403）。
+    return kg.request('/v1/cmtlist',
         method: 'POST',
+        headers: {'x-router': 'm.comment.service.kugou.com'},
         params: {
           'ver': 6,
           'mixsongid': q['mixsongid'],
@@ -50,8 +54,12 @@ class KgEndpointComment {
         params: {
           'r': 'comments/getcommentsnum',
           'code': 'fc4be23b4e972707f36b8a828a93ba8a',
-          if (q['hash'] != null) 'hash': q['hash'],
-          if (q['hash'] == null && q['special_id'] != null)
+          // F4-16（审查①-B，P2）：Node 用**真值**判定（`if (params.hash) …
+          // else if (params.special_id)`）。此前只判 != null，传 hash='' 时
+          // 会既发空 hash 又不发 childrenid，评论数恒 0。
+          if (_nonEmpty(q['hash']))
+            'hash': q['hash']
+          else if (_nonEmpty(q['special_id']))
             'childrenid': q['special_id'],
         });
   }
@@ -64,11 +72,19 @@ class KgEndpointComment {
   /// - x-router m.comment.service.kugou.com
   Future<KgResponse> commentSend(Map<String, dynamic> q) {
     final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final images = q['images'];
     final contentData = <String, dynamic>{
       'content': '${q['content'] ?? ''}',
-      if (q['mixsongid'] != null) 'album_audio_id': '${q['mixsongid']}',
+      if (q['mixsongid'] != null)
+        'album_audio_id': '${q['mixsongid']}'
+      else if (_nonEmpty(q['album_audio_id']))
+        'album_audio_id': '${q['album_audio_id']}',
       if (q['title'] != null) 'title': '${q['title']}',
-      'images': const <String>[],
+      // F4-17（审查①-B，P2）：Node compact({..., extdata: params.content_extdata,
+      // images})；缺 extdata 时上游可能判为不完整请求（带歌词/来源上下文的
+      // 评论会丢字段）。
+      if (_nonEmpty(q['content_extdata'])) 'extdata': '${q['content_extdata']}',
+      'images': images is List ? images : const <String>[],
     };
     final data = jsonEncode({'data': contentData});
     return kg.request('/index.php',
@@ -83,7 +99,9 @@ class KgEndpointComment {
           'r': 'commentsv3/add',
           'code': _commentCodeOf('${q['resource_type'] ?? 'song'}'),
           'childrenid': '${q['special_id'] ?? q['childrenid'] ?? q['id'] ?? ''}',
-          if (q['name'] != null) 'childrenname': '${q['name']}',
+          // F4-17（审查①-B，P2）：Node 的 childrenname 兼容
+          // name/song_name/album_name/playlist_name 四个别名。
+          if (_childName(q) != null) 'childrenname': _childName(q),
           'kugouid': kg.userid,
           'ver': 6,
           'clienttoken': kg.token,
@@ -95,6 +113,8 @@ class KgEndpointComment {
           'key': KgSignature.paramsKey('$clienttime${kg.device.mid}$data'),
           'uuid': '-',
           'dfid': kg.device.dfid.isEmpty ? '-' : kg.device.dfid,
+          // F4-17（审查①-B，P2）：Node 透传 source（来源标识），此前被丢弃。
+          if (_nonEmpty(q['source'])) 'source': q['source'],
         },
         data: data);
   }
@@ -104,7 +124,22 @@ class KgEndpointComment {
   /// key = signParamsKey(clienttime + mid)（**不含 data**）
   Future<KgResponse> commentFloorSend(Map<String, dynamic> q) {
     final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final content = '${q['content'] ?? ''}';
+    // F4-05（审查①-B，P1）：对齐 Node：
+    //   pid = firstValue(params.pid, 0)
+    //   is_t = firstValue(params.is_t, params.isT, pid == '0' ? 1 : 0)
+    // 缺 is_t 时服务端分不清「主楼回复」与「楼中楼回复」，回复会挂错层级/被丢弃。
+    final pid = _nonEmpty(q['pid']) ? '${q['pid']}' : '0';
+    final isTopLevel = q['is_t'] ?? q['isT'] ?? (pid == '0' ? 1 : 0);
+    final replyUserName = q['reply_user_name'] ?? q['puser'];
+    final replyContent = q['reply_content'] ?? q['pcontent'];
+    var content = '${q['content'] ?? ''}';
+    // F4-05：Node 仅在「有被回复人 + 有被回复内容 + 正文尚未含 //@」时拼接
+    // `content//@user:原评论`；不拼则对方收不到回复提醒。
+    if (_nonEmpty(replyUserName) &&
+        _nonEmpty(replyContent) &&
+        !content.contains('//@')) {
+      content = '$content//@$replyUserName:$replyContent';
+    }
     return kg.request('/index.php',
         method: 'POST',
         clearDefaultParams: true,
@@ -114,7 +149,7 @@ class KgEndpointComment {
           'r': 'commentsv2/reply',
           'code': _commentCodeOf('${q['resource_type'] ?? 'song'}'),
           'childrenid': '${q['special_id'] ?? q['childrenid'] ?? q['id'] ?? ''}',
-          if (q['name'] != null) 'childrenname': '${q['name']}',
+          if (_childName(q) != null) 'childrenname': _childName(q),
           'kugouid': kg.userid,
           'ver': 6,
           'clienttoken': kg.token,
@@ -125,18 +160,26 @@ class KgEndpointComment {
           'key': KgSignature.paramsKey('$clienttime${kg.device.mid}'),
           'uuid': '-',
           'dfid': kg.device.dfid.isEmpty ? '-' : kg.device.dfid,
+          // F4-05：extdata（Node 透传 params.extdata）+ is_t + pid 默认 0。
+          if (_nonEmpty(q['extdata'])) 'extdata': '${q['extdata']}',
           'content': content,
           'tid': '${q['tid'] ?? ''}',
-          if (q['pid'] != null) 'pid': '${q['pid']}',
+          'is_t': isTopLevel,
+          'pid': pid,
+          if (_nonEmpty(q['source'])) 'source': q['source'],
         });
   }
 
   /// 删除评论（module/_comment.js buildCommentDelConfig，需登录）
-  /// POST /index.php?r=commentsv2/delcomment
+  /// GET /index.php?r=commentsv2/delcomment（Node 未传 method → 默认 GET、无 body）
   Future<KgResponse> commentDel(Map<String, dynamic> q) {
     final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    // F4-06（审查①-B，P1）：method 由 POST 改 **GET**（Node commentRequestConfig
+    // 默认 method='GET'，buildCommentDelConfig 未覆写；注释亦写明「GET 无 body」）。
+    // 另外 F4-18（P2）：cid 兼容 comment_id 别名，空值不下发（Node 走 compact()）。
+    final cid = q['cid'] ?? q['comment_id'];
     return kg.request('/index.php',
-        method: 'POST',
+        method: 'GET',
         clearDefaultParams: true,
         notSignature: true,
         headers: {'x-router': 'm.comment.service.kugou.com'},
@@ -144,8 +187,8 @@ class KgEndpointComment {
           'r': 'commentsv2/delcomment',
           'code': _commentCodeOf('${q['resource_type'] ?? 'song'}'),
           'childrenid': '${q['special_id'] ?? q['childrenid'] ?? q['id'] ?? ''}',
-          'cid': '${q['cid'] ?? ''}',
-          if (q['tid'] != null) 'tid': '${q['tid']}',
+          if (_nonEmpty(cid)) 'cid': '$cid',
+          if (_nonEmpty(q['tid'])) 'tid': '${q['tid']}',
           'kugouid': kg.userid,
           'ver': 6,
           'clienttoken': kg.token,
@@ -166,10 +209,27 @@ class KgEndpointComment {
         _ => 'fc4be23b4e972707f36b8a828a93ba8a',
       };
 
-  /// 删除/取消收藏歌单（module/playlist_del.js，需登录）
-  ///
-  /// 协议：body = playlistAesEncrypt({listid, total_ver:0, type:1}) 的 Base64，
-  /// query `p` = RSA({aes:seed, uid, token}) 大写 hex，响应是 AES 加密二进制。
+  /// 与 Node `_comment.js` 的 `firstValue` 同语义：null/undefined/空串都算缺失。
+  static bool _nonEmpty(Object? v) {
+    if (v == null) return false;
+    final s = '$v'.trim();
+    return s.isNotEmpty && s != 'null' && s != 'undefined';
+  }
+
+  /// childrenname 的别名收敛（Node firstValue(name, song_name, album_name,
+  /// playlist_name, childrenname)）——调用方只传 song_name 时也能下发。
+  static String? _childName(Map<String, dynamic> q) {
+    for (final key in const [
+      'name',
+      'song_name',
+      'album_name',
+      'playlist_name',
+      'childrenname',
+    ]) {
+      if (_nonEmpty(q[key])) return '${q[key]}';
+    }
+    return null;
+  }
 
   Future<KgResponse> commentPlaylist(Map<String, dynamic> q) {
     return kg.request('/m.comment.service/v1/cmtlist',

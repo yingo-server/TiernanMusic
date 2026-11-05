@@ -17,6 +17,7 @@ import '../../features/mv/presentation/mv_player_page.dart';
 import '../../features/library/presentation/library_page.dart';
 import '../../features/player/presentation/mini_player.dart';
 import '../../features/download/presentation/download_page.dart';
+import '../../l10n/l10n.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -106,11 +107,23 @@ class MainShell extends StatelessWidget {
             selectedIndex: shell.currentIndex,
             onDestinationSelected: (i) =>
                 shell.goBranch(i, initialLocation: i == shell.currentIndex),
-            destinations: const [
-              NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: '首页'),
-              NavigationDestination(icon: Icon(Icons.search), label: '搜索'),
-              NavigationDestination(icon: Icon(Icons.library_music_outlined), selectedIcon: Icon(Icons.library_music), label: '音乐库'),
-              NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: '设置'),
+            destinations: [
+              // F4-31（审查③-B，P2）：底部导航文案硬编码中文 → 走 l10n（原则 4/30：
+              // 用户可见文案不得在路由层写死单一语言）。
+              NavigationDestination(
+                  icon: const Icon(Icons.home_outlined),
+                  selectedIcon: const Icon(Icons.home),
+                  label: context.l10n.home),
+              NavigationDestination(
+                  icon: const Icon(Icons.search), label: context.l10n.search),
+              NavigationDestination(
+                  icon: const Icon(Icons.library_music_outlined),
+                  selectedIcon: const Icon(Icons.library_music),
+                  label: context.l10n.library),
+              NavigationDestination(
+                  icon: const Icon(Icons.settings_outlined),
+                  selectedIcon: const Icon(Icons.settings),
+                  label: context.l10n.settings),
             ],
           ),
         ],

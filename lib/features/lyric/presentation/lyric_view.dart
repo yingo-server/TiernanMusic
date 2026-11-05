@@ -63,12 +63,27 @@ class _LyricViewState extends State<LyricView> {
     super.dispose();
   }
 
-  int get _posMs => widget.position.inMilliseconds + widget.lyric.offsetMs;
+  int get _posMs => widget.position.inMilliseconds;
 
+  /// F4-33（审查②-B，P2）：offset 已在 [KrcParser.parse] 内统一叠加到
+  /// startMs/wordStartMs（正值=歌词提前）。这里若再加一次会双重平移，
+  /// 带 offset 的歌词整首与音频错开。
   void _scrollTo(int index, {bool jump = false}) {
-    if (!_scroll.hasClients) return;
-    final target = (index * _itemExtentApprox)
-        .clamp(0.0, _scroll.position.maxScrollExtent);
+    if (!_scroll.hasClients || index < 0) return;
+    // F4-34（审查②-B，P1）：旧实现用固定 64px × 行号，忽略 120px 垂直 padding
+    // 与行高浮动（双语行更高），偏差随行号线性累积，唱到后半段当前行跑到屏外。
+    // 改为「按行估算高度 + 扣除顶部 padding + 让当前行居中」。
+    final lines = widget.lyric.lines;
+    final viewport = _scroll.position.viewportDimension;
+    var offset = 0.0;
+    final upper = index < lines.length ? index : lines.length;
+    for (var i = 0; i < upper; i++) {
+      offset += _estimateLineHeight(lines[i]);
+    }
+    offset += _estimateLineHeight(
+            index < lines.length ? lines[index] : lines.last) /
+        2;
+    final target = (offset - viewport / 2).clamp(0.0, _scroll.position.maxScrollExtent);
     if (jump) {
       _scroll.jumpTo(target);
     } else {
@@ -78,17 +93,45 @@ class _LyricViewState extends State<LyricView> {
     }
   }
 
+  /// 单行高度估算：基础行高 + 译文行（双语模式且该行有译文时）。
+  ///
+  /// 估算是刻意的（第 24 条：不得在每帧路径做真实布局测量），
+  /// 但必须把「是否有译文」这一最显著的变量纳入，否则双语模式整体偏移。
+  double _estimateLineHeight(KrcLine line) {
+    final hasTranslation = widget.mode == LyricDisplayMode.bilingual &&
+        (line.translation ?? '').isNotEmpty;
+    return hasTranslation ? 76 : _itemExtentApprox;
+  }
+
   @override
   Widget build(BuildContext context) {
     final posMs = _posMs;
+    final lines = widget.lyric.lines;
+    if (lines.isEmpty) {
+      // F4-35（审查②-B，P2）：无歌词时旧实现渲染 0 项列表，用户只看到一片空白，
+      // 无法区分「纯音乐/解密失败/加载中」。
+      return Center(
+        child: Text(
+          '暂无歌词',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+      );
+    }
+
     final index = _findCurrentLine(posMs);
 
-    // 行号变化时才重建（逐字高亮由行内组件自己处理）
-    if (index != _currentIndex) {
-      _currentIndex = index;
+    // F4-36（审查②-B，P2）：旧实现在 build 中直接改 `_currentIndex` 并靠
+    // postFrame setState 触发重建——状态在构建期间被改写，快速 seek 时会
+    // 叠加多个回调。改为「只在行号真正变化时排一次回调」，
+    // 并用 _pendingBuild 保证同一帧只排入一个（第 24 条：build 必须是纯的）。
+    if (index != _currentIndex && !_pendingRebuild) {
+      _pendingRebuild = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        _pendingRebuild = false;
         if (!mounted) return;
-        setState(() {});
+        setState(() => _currentIndex = index);
         // 首帧直接定位，之后平滑跟随；用户手动滚动后 5 秒内暂停自动跟随
         final first = !_didInitialScroll;
         if (first) _didInitialScroll = true;
@@ -109,9 +152,9 @@ class _LyricViewState extends State<LyricView> {
       child: ListView.builder(
         controller: _scroll,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 120),
-        itemCount: widget.lyric.lines.length,
+        itemCount: lines.length,
         itemBuilder: (context, i) {
-          final line = widget.lyric.lines[i];
+          final line = lines[i];
           return _LyricLineTile(
             line: line,
             isCurrent: i == index,
@@ -126,10 +169,13 @@ class _LyricViewState extends State<LyricView> {
     );
   }
 
+  /// 本次 build 是否已排入「行号变化」回调（防止快速 seek 叠加 setState）
+  bool _pendingRebuild = false;
+
   int _findCurrentLine(int posMs) {
     final lines = widget.lyric.lines;
-    if (lines.isEmpty) return 0;
-    var lo = 0, hi = lines.length - 1, result = 0;
+    if (lines.isEmpty) return -1;
+    var lo = 0, hi = lines.length - 1, result = -1;
     while (lo <= hi) {
       final mid = (lo + hi) >> 1;
       if (lines[mid].startMs <= posMs) {

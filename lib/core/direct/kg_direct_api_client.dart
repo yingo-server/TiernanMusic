@@ -121,8 +121,12 @@ class KgDirectApiClient extends KugouApiClient {
     return true;
   }
 
-  /// 直连失败时是否自动回退 kapi 中转（真机网络/风控差异的兜底）
-  static bool fallbackToKapi = true;
+  /// 是否允许回退 kapi 中转。
+  ///
+  /// PLY-13（2026-11-06 用户口径，QUALITY_STANDARD 第 27 条）：**kapi 仅作为原生
+  /// 接口的参考，不得实际调用**。因此该开关永久为 false；kapi 只保留在
+  /// 文档与 Node 参考源码里用于对照，运行期绝不发起请求。
+  static const bool fallbackToKapi = false;
 
   /// 记录最近一次错误（供"网络诊断"页展示）
   static final List<String> lastErrors = <String>[];
@@ -310,7 +314,12 @@ class KgDirectApiClient extends KugouApiClient {
       case 'album/songs':
         return _directOrFallback(() => _albumSongs(q), kapi, '/album/songs');
     }
-    return super.get(path, query: query);
+    // PLY-14（QUALITY_STANDARD 第 27 条）：未移植路径**不得**回退 kapi 中转。
+    // 明确报错，让缺失的功能暴露出来，而不是悄悄依赖第三方网关。
+    throw ApiException(
+      -404,
+      '接口 /$n 尚未移植到原生网关（kapi 仅作参考，运行期不调用）',
+    );
   }
 
   @override
@@ -359,7 +368,11 @@ class KgDirectApiClient extends KugouApiClient {
         return _directOrFallback(
             () => _albumSongs({...q, ...d}), kapi, '/album/songs');
     }
-    return super.post(path, data, query: query);
+    // PLY-14（QUALITY_STANDARD 第 27 条）：同上，未移植路径不回退 kapi。
+    throw ApiException(
+      -404,
+      '接口 /$n 尚未移植到原生网关（kapi 仅作参考，运行期不调用）',
+    );
   }
 
   static String _norm(String p) =>
@@ -413,7 +426,9 @@ class KgDirectApiClient extends KugouApiClient {
 
   /// 删除/取消收藏歌单（module/playlist_del.js，需登录）
   ///
-  /// 协议：body = playlistAesEncrypt({listid, total_ver:0, type:1}) 的 Base64， => _epComment.commentCodeOf(q);
+  /// 协议：body = playlistAesEncrypt({listid, total_ver:0, type:1}) 的 Base64，
+  /// query `p` = RSA 加密串，响应为 AES 二进制。实现见
+  /// `kg_endpoints_playlist.dart:playlistDel`。
 
   /// 收藏/新建歌单（module/playlist_add.js，需登录）
   /// POST /cloudlist.service/v5/add_list
