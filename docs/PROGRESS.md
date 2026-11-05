@@ -87,3 +87,18 @@
 - [ ] 5 批审查（3×5）按 QUALITY_STANDARD 32 条
 - [ ] CI 全绿
 - [ ] 打 tag v3.0.0 发布
+
+## 2026-11-06 v3.2 迭代（进行中）
+
+### CI 修复
+- v3.0.0 构建失败：KgClient 缺 dfid setter、switch 非穷尽（transformTimeout）→ 已修
+- 已推 5e050a3 + 打 tag v3.2.0（版本 3.2.0+32，commit f6f9531），run 42123692258 构建中
+
+### 第5批复核（v3_review_b1_*）
+- ②功能链路：P1 2（stop/pause 不作废世代、fetchDetail 空捕获）已修 V3-01~05
+- ②补充：音质阈值两处统一 V3-06、_proxyHttp 死代码删除 V3-07
+- ①直连层 / ③UI合规：代理运行中，报告未完
+
+### 待办
+- [ ] 等 3 份复核报告齐 → 修复
+- [ ] CI v3.2.0 绿 → release 确认
