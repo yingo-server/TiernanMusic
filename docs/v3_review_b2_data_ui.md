@@ -441,7 +441,7 @@
 | # | 位置 | 问题 | 条款 | 用户后果 |
 |---|---|---|---|---|
 | 1 | `kg_direct_api_client.post()` | 评论 send/reply/del 三个 case 只在 get switch 中，Repository 用 post → 全部 -404 | 28 / 3 / 27 | 发评论、回复、删评论全部弹出「接口尚未移植」，评论功能只剩只读 |
-| 2 | `download_provider._run()` + `download_task.id` | tempPath 与任务 id 均不含音质，同曲重下共用临时文件 | 21 / 23 / 18 | 同曲换音质重下时文件被并发交错写坏，显示成功但播放爆音/截断 |
+| 2 | `download_provider._run()` + `download_task.id` | tempPath 与任务 id 均不含音质，同曲重下共用临时文件 | 21 / 23 / 18 | 同曲换音质重下时文件被并发写坏或被取消清理删除，显示成功但 0 字节/截断 |
 | 3 | `download_provider._run()` + `public_media_store._publishDirect` | 发布前先删旧文件，且直接覆盖写无原子性 | 21 / 5 | 重新下载失败后旧的好文件已被删，音乐库里只剩半截文件 |
 | 4 | `kg_endpoints_auth.captchaSent` | 手机号经 `http://` 明文提交，且无原因记录 | 31（安全类） | 公共 Wi-Fi 下手机号可被嗅探，短信登录用户 PII 泄露 |
 
@@ -451,7 +451,7 @@
 |---|---|---|---|
 | 1 | `download_provider.onProgress` | 每次进度整表复制 + Hive 写盘，无节流 | 25 / 26 |
 | 2 | `download_repository.downloadFile` | 无 Range/续传，重试从 0 开始 | 21 / 5 |
-| 3 | `download_provider._strategy` | 策略切换无日志无提示，同批任务落两处 | 11 / 9 |
+| 3 | `download_provider._strategy` | 策略切换无日志、旧文件不迁移，且下载中弹权限框 | 11 / 9 / 2 |
 | 4 | `download_provider.remove` / 完成清理 | `catch (_) {}` 空捕获 | 6 / 7 |
 | 5 | `public_media_store.publish` | `finalize` 返回值不校验 | 9 / 14 / 29 |
 | 6 | `public_media_store.mimeOf` | MIME 恒 audio/mpeg，与真实扩展名不符 | 23 / 1 / 15 |
@@ -517,13 +517,13 @@
 | P3 | 16 | 下载 6、认证 4、榜单 2、MV 3、音乐库 1 |
 | 合计 | 54 | 14 个任务书文件（`mv_page.dart` 不存在，实审 `mv_player_page.dart`）+ 19 个上下文文件 |
 
-按条款分布（同一问题多条款时重复计数，共 114 次引用）：
+按条款分布（同一问题多条款时重复计数，共 115 次引用）：
 
 | 条款 | 次数 | 条款 | 次数 |
 |---|---|---|---|
 | 第 9 条 失败可观测 | 12 | 第 5 条 状态单一来源 | 8 |
 | 第 3 条 契约先行 | 8 | 第 16 条 空集合语义分离 | 8 |
-| 第 6 条 禁止吞异常 | 7 | 第 2 条 显式优于隐式 | 5 |
+| 第 6 条 禁止吞异常 | 7 | 第 2 条 显式优于隐式 | 6 |
 | 第 25 条 资源上限 | 6 | 第 1 条 单一职责 | 5 |
 | 第 8 条 异常契约 | 5 | 第 11 条 降级条件 | 5 |
 | 第 21 条 写操作防重 | 5 | 第 20 条 生命周期对称 | 4 |
