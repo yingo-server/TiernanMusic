@@ -39,9 +39,15 @@ class KgPlayApi {
     final res = await client.requestWithVerify(
       '/v5/url',
       method: 'GET',
+      // F4-02（审查①-B，P1）：播放主路径落原生域 trackercdn.kugou.com，
+      // 不再用 gateway + x-router（口径「trackercdn.kugou.com 用于 /v5/url」）。
+      baseUrl: 'https://trackercdn.kugou.com',
       params: params,
       encryptType: 'android',
-      headers: {'x-router': 'trackercdn.kugou.com'},
+      // F4-01（审查①-B，P1）：Node song_url.js 为 `notSign: true` —— 只带 key、
+      // 不带 signature。kg.request 会自动补 android signature（上游按签名与
+      // encryptKey 端点不匹配返回 20006/20028），故此处显式关掉。
+      notSignature: true,
     );
 
     return PlayUrlResult.fromResponse(res);
@@ -164,13 +170,6 @@ class KgSharedParams {
         'album_id': i < albumIds.length ? albumIds[i] : '0',
       });
     }
-
-    final useQualities = qualities.isEmpty
-        ? const <String>[
-            '128', '320', 'flac', 'high',
-            'viper_atmos', 'viper_tape', 'viper_clear', 'super', 'multitrack',
-          ]
-        : qualities;
 
     return <String, dynamic>{
       'appid': client.lite ? KgConfig.liteAppid : KgConfig.appid,

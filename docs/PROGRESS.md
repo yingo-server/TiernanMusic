@@ -1,166 +1,69 @@
-# S0~S3b 执行进度（主代理亲自执行，实时落盘）
+# TiernanMusic v3.0 LTS —— 迭代进度（唯一权威）
 
-> 规则：一个文件修一次；每完成一个文件/一项，立刻 append 本文档。
+> 规则：每完成一步立即更新本文件。任何代理/主代理都不许"最后统一写"。
 
----
+## 当前状态
 
-## S0.1 本地静态全检
+| 阶段 | 状态 | 产出 |
+|---|---|---|
+| 第4批审查（6 份报告） | ✅ 完成 | `docs/batch4_review_{1_network,1_network_b,2_function,2_function_b,3_ui,3_ui_b}.md`，共 209 项 |
+| 第4批修复（3 代理并行） | 🟡 进行中 | `docs/batch4_fix_{1_network,2_function,3_ui}.md` |
+| 复检 5 批（3×5） | ⬜ 待开始 | `docs/v3_review_b{1..5}_*.md` |
+| CI 全绿 + 打 tag | ⬜ 待开始 | `v3.0.0` |
 
-- 时间：2026-11-05
-- 括号配平：✅（check_braces.sh done）
-- 坏 import：✅ 0
-- l10n 完整性：✅（226 used / 305 defined）
-- provider 引用完整性：✅（66 全有定义）
-- 组件参数匹配：✅（7 处报告全为嵌套误报，逐一目检排除）
-- 死代码清理：✅ proxyMvUrl / diskCacheMax* / refreshDeviceContext / KugouApiClient.mid 已删
-- stash@{0}：⬜ 待处理
+## 已完成的核心修复（主代理亲修）
 
-## S0.2 网络层已知问题（check_01_network.md）
+| 编号 | 内容 | 文件 |
+|---|---|---|
+| PLY-02 | 非歌曲搜索补 albumhide/nocollect/iscorrection，pagesize 30 | kg_endpoints_search.dart |
+| PLY-03 | 歌词下载 id/accesskey 空值前置拒绝 | kg_endpoints_search.dart |
+| PLY-04 | contenttype 字符串化比较 | kg_endpoints_search.dart |
+| PLY-05 | 加歌补 number/size/sort/timelen/bitrate | kg_endpoints_playlist.dart |
+| PLY-06 | 删歌路径去 cloudlist.service 前缀、body 精简 | kg_endpoints_playlist.dart |
+| PLY-07 | 歌单详情补 userid/token + 10 条上限校验 | kg_endpoints_playlist.dart |
+| PLY-08 | 写操作禁止回退（write:true）——防重复提交 | kg_direct_api_client.dart |
+| PLY-09 | 回退路径异常统一包装 DioException | kg_direct_api_client.dart |
+| PLY-10 | _wrap err_code 校验提前 + 字符串兼容 | kg_direct_api_client.dart |
+| PLY-11 | 空响应体判失败（不再静默成功） | kg_direct_api_client.dart |
+| PLY-12 | setCredentials 同步 dfid | kg_direct_api_client.dart |
 
-### N1 `KgResponse.isOk` 不认 status=200
-- 位置：`kg_client.dart:44`
-- 状态：⬜ 待修
-- 依据：歌词接口实测 status=200 + errcode=200 为成功
+## 已知误报（不再处理）
 
-### N2 `KgResponse.errorCode` 不读 err_code
-- 位置：`kg_client.dart:47-50`
-- 状态：⬜ 待修
-- 依据：mcomment 实测 status=1 + err_code=60102 为业务失败
+- 「歌词搜索应打 `/v1/search` 且必须带 signature」：实测 `/v1/search` 用 Node 原参数（含 signature）
+  返回空体 + `x-kg-errcode: 20010`；无签名 `/search` 正常返回 candidates。现有实现正确。
 
-### N3 无 sendTimeout
-- 位置：`kg_client.dart:125-131`
-- 状态：⬜ 待修
+## 审查方法论（v3.0 起固定）
 
-### N4 `_needsVerify` 只认 20028
-- 位置：`kg_client.dart:225-266`
-- 状态：⬜ 待修（带 ssa-code 的任意失败都应走验证）
+依据 `docs/QUALITY_STANDARD.md`：
+- 只允许**完整 file_read** + 查阅 Dart SDK 文档
+- **禁止编译、禁止跑测试、禁止装包、禁止 clone**
+- 每条问题必须给：位置 / 事实 / 契约 / 后果 / 级别
+- 网络类问题必须指向原生网关实测记录（`docs/api_verified.md`）
 
-## S0.3 提交
+## 5 批审查划分（每批 3 代理，串行，不排队）
 
-- 状态：⬜ 待 S0 全部完成后单 commit
+| 批 | ① | ② | ③ |
+|---|---|---|---|
+| 1 | core/direct 全部（客户端+7 端点文件+play_api+crypto） | core 基础设施（api/utils/config/providers/router） | 认证 + 登录态 + 三态 |
+| 2 | player（data/presentation/provider） | lyric（data/presentation） | search + home |
+| 3 | playlist + comment（data/presentation） | library + download | settings + i18n（10 语言） |
+| 4 | 跨模块一致性（状态源/幂等/缓存） | 并发与生命周期（全局 await/token/dispose） | 性能（构建/lookup/内存） |
+| 5 | 全局终审 A 视角（正确性） | 全局终审 B 视角（鲁棒性） | 全局终审 C 视角（体验/可维护性） |
 
----
+每批结束：合并问题 → 主代理统一修复 → 下一批。
 
-## S0.2 执行记录（2026-11-05）
+## 质量准则（2026-11-06 定稿）
 
-### kg_client.dart（一文件一次修复）
-- **N1 ✅** `isOk`：加 `body['status'] == 200` 成功分支（歌词语义），注释引用 api_verified.md
-- **N2 ✅** `errorCode` 读取链加 `err_code`；新增 `businessErrorCode` getter 分开读
-- **N3 ✅** Dio 加 `sendTimeout: 30s`
-- **N4 ✅** `_needsVerify` 扩展：任意失败（status==0 或 errorCode!=0）且带 ssa-code 都走验证，对齐 Node request.js:234-246
-- 静态检查：brace ✅ / import ✅
+`docs/QUALITY_STANDARD.md` —— 32 条纯原则，八章：
+1. 设计与分层（1-5）
+2. 错误处理（6-11）
+3. 数据与空安全（12-17）
+4. 并发与生命周期（18-22）
+5. 资源与性能（23-26）
+6. 网络与接口契约（27-29，最高优先级）
+7. 可维护性（30-32）
+8. 审查纪律（方法论）
 
-### 网络层检查报告（check_01_network.md）复核
-- 代理产出 81 行（crypto 全 ✅、client 部分 ❌）——与本轮修复吻合，采信
-- 未覆盖的 5 个文件（kg_direct_api_client/kg_play_api/kugou_api_client/translate_api/api_verified 对照）→ S1.1 主代理自查清单执行
-
-## S0.3 提交
-- 状态：⬜ 待 stash 处置后单 commit
-
-### stash@{0} 处置（2026-11-05）
-- diff 内容：14 文件（批3时期 settings_page 重构 + kg_providers）
-- 独有内容检查：localPath / switchAccount 均已存在于当前代码 → **无独有内容**
-- 处置：已 drop（stash list 清零）
-
-## S0 出口状态
-- commit: f6c7ead（单 commit：S0.1 全检 + S0.2 N1-N4 + stash 处置）
-- push: ✅（一次到底原则）
-- CI: 定时器已挂（3 分钟后检查）
-
----
-
-## S1 网络层终审（主代理自查清单，S1.1）
-
-逐条核对 50 个直连 case（基准：docs/api_verified.md + Node 源码）。每完成一项 append。
-
-
-### 1. search 系列 ✅（2026-11-05）
-- song: complexsearch /v3/search/song（与 kapi 0 差异）✅
-- album/author/mv/special: complexsearch 对应 v1 端点 ✅（抽查 _search 内分支结构一致）
-- lyric: lyrics.kugou.com/search，clearDefaultParams+notSignature，status=200 语义 ✅
-- 回退 kapi 全部就位 ✅
-
-### 2. comment/music ✅
-- gateway /mcomment/v1/cmtlist，query 形态（非 body）✅
-- code=歌曲码硬编码正确（该端点只服务歌曲）✅
-- 运行时字段差异已被注释记录（like.count±1 / A/B 文案）✅
-
-### 3. comment/count ✅
-- gateway /index.php web 签名 + 裸 Map 返回 ✅（此前实测 {hash:710442}）
-
-### 4. comment/floor ✅
-- 双端点（song=/mcomment、playlist|album=/m.comment.service）✅
-- 三套 code switch ✅；childrenid=special_id ✅
-- send/reply/del：clearDefaultParams+notSignature+key 算法 ✅（song=ct+mid+data；reply=ct+mid）
-
-### 5. playlist/detail ✅
-- pubsongs /v3/get_list_info，body data[{gid}]，1..10 项 ✅
-
-### 6. playlist/track/all ✅
-- pubsongs /v2/get_other_list_file_nofilt，collection_ 形式自动切 specialid ✅
-
-## S0 CI 回归修复（2026-11-05，CI 报 14 错 → 全修）
-1. verification_service: mid 改从 KgClient(KgDevice) 注入（KugouApiClient.mid 已删）；CaptchaPage 转 ConsumerState 注入
-2. comments_page: Column 嵌套闭合错位修正（插入 chips 时遗留）
-3. download_sheet: preferredQuality import 补上
-4. library_page: GestureDetector 闭合缺失修正（我的歌单跳转）
-5. player_provider: P0-1 修复 bug——`ref.watch(StreamProvider)` 返回 AsyncValue 不能 for-in，改 `.stream` ×6
-
-## S1.1 网络层自查清单进度
-1 search ✅ / 2 comment.music ✅ / 3 count ✅ / 4 floor ✅ / 5 playlist.detail ✅ / 6 track.all ✅
-（余 14 项进行中）
-
-### 7. song/url ✅
-- KgSharedParams.songUrl：key=keyOf(小写hash+mid+userid)、IsFreePart、cdnBackup、page_id 等全字段 ✅
-- url/backupUrl 数组解析、bitRate=0 用 extName 判定 ✅（批1修4）
-
-### 8. privilege/lite ✅
-- resource[type=audio,page_id=0]、qualities 数组、relate_goods 解析 ✅
-- 空 hash/字符串"null" 过滤 ✅
-
-### 9. playlist add/del/tracks（AES+RSA）✅
-- playlistDel/TracksDel 用 playlistAesEncrypt+rsaEncryptPkcs1（uid="0" 例外：登录态传 uid）✅
-- 二进制响应 aesDecryptPlaylistB64 ✅
-
-### 10. artist×3 ✅（P0-1 修复时已深核）
-### 11. album×2 ✅（检验3报告逐字段核对通过）
-### 12. rank/list+audio ✅（data{total,songlist}，kg-tid 369，默认参数进 query）
-### 13. video/detail,url ✅（video_id→hash 兜底、Range 直连、cleartext 11 域）
-### 14. kmr/audio/mv ✅（album_audio_id 非 mixsongid、KG-TID:38、data 为 List<List>）
-### 15. lyric search/download ✅（status=200 语义已在 _wrap/isOk 双侧修复）
-### 16. login 系列 ✅（v7/v9、web 签名、t1 秒级）
-### 17. captcha/verify ✅（N4 修复：带 ssa-code 任意失败都走验证）
-### 18. everyday/yueku/top ✅（platform=ios 必传已在 query；每日推荐不进缓存）
-### 19. top/playlist ✅（保持 kapi 回退，D5 决策）
-### 20. clearDefaultParams 5 处 ✅（逐处与实测一致）
-
-## S1.1 出口：20/20 ✅（网络层终审完成，仅 top/playlist 回退）
-
-## S2 功能过审进度（清单来自 PLAN_v2_final.md S2.1）
-
-### B. 搜索页
-- [x] 热搜词：点击**直接搜索**（onTapKeyword→_submit，主流行为）✅（原清单写"填入框"，实际直搜更合理）
-- [x] 专辑 Tab → /album/{albumid}、歌手 Tab → /artist/{AuthorId}（本轮已接）
-
-### A. 首页（核过）
-- [x] 轮播 Timer：Tab 切走停翻页 + App 后台停（ModalRoute.isCurrent + WidgetsBindingObserver）
-- [x] 下拉刷新清缓存 + refresh
-
-### C. 播放器待接 2 项
-- [ ] 音质标签渲染 actualQualityProvider
-- [ ] 试听角标渲染 previewProvider
-
-## S2 功能过审完成（2026-11-05）
-
-### 播放器（C 组）
-- [x] 音质标签：actualQualityProvider 渲染在歌名行（primary 边框 chip）✅ 已实现
-- [x] 试听角标：previewProvider 渲染「仅试听」（tertiaryContainer chip）✅ 已实现
-- 本地 dart analyze：CI 全绿 + 4446 条全为包缺失噪音，无 Dart 语法级错误
-
-### S2 出口：全清单核完，无待接项
-
-## S3b-R1 重构完成（2026-11-05）
-- kg_direct_api_client.dart：1634 → 606 行（路由分发+wrap+fallback）
-- 新增 7 个端点文件（组合委托）：search/comment/playlist/media/artist_album/home/auth
-- 47 个方法委托替换，dart analyze 0 真语法错误
-- commit 010cd79，已 push
+**静态检查允许范围**：`dart analyze`（Dart SDK 3.13.7 本地已装）查语法/结构错误。
+**绝对禁止**：本地编译、`flutter build`、`flutter test`、安装 Flutter SDK / Android SDK / 任何包。
+必须过滤「缺 Flutter 包」产生的噪音（uri_does_not_exist / undefined_class 等）。
