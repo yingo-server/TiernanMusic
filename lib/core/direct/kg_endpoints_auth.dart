@@ -398,6 +398,13 @@ class KgEndpointAuth {
     if (userid.isNotEmpty && userid != '0') kg.userid = userid;
     final t1 = data['t1']?.toString();
     if (t1 != null && t1.isNotEmpty) kg.t1 = t1;
+    // D-P1-1（第5批①，P1）：接线 vipType/vipToken（F4-12 加了字段没接线）——
+    // 登录响应的 data.vip_type / vip_token 必须落到 kgClient，否则
+    // VIP 用户被当非会员（banner 专属位、音质权益判定全部失真）。
+    final vipType = data['vip_type']?.toString();
+    if (vipType != null && vipType.isNotEmpty) kg.vipType = vipType;
+    final vipToken = data['vip_token']?.toString();
+    if (vipToken != null && vipToken.isNotEmpty) kg.vipToken = vipToken;
   }
   /// QR URL → PNG base64（qr_flutter 渲染）
   Future<String> qrPngBase64(String data) async {

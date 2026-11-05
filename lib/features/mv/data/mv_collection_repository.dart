@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/direct/kg_client.dart';
@@ -97,6 +98,11 @@ class MvCollectionRepository {
 
     final clienttime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
+    // D-P0-2（第5批①，P0）：`collect` 形参此前从未参与请求——
+    // 取消收藏仍发 `/v1/collect`，收藏数只增不减。对齐 Node
+    // mv_collect_del.js：取消走 **/v1/cancel_collect**。
+    final path = collect ? '/v1/collect' : '/v1/cancel_collect';
+
     // AES 加密载荷
     final payload = jsonEncode({
       'ctype': 2,
@@ -105,14 +111,13 @@ class MvCollectionRepository {
       ],
     });
     final aes = KgCrypto.aesEncryptHex(payload);
-    final bodyStr = aes.str;
 
     // RSA 加密 {aes: seed, uid, token}
     final p = KgCrypto.rsaEncryptRawHex(
       jsonEncode({'aes': aes.key, 'uid': userid, 'token': token}),
     ).toUpperCase();
 
-    final res = await api.request('/v1/collect',
+    final res = await api.request(path,
         method: 'POST',
         baseUrl: 'https://collectservice.kugou.com',
         params: {
@@ -124,21 +129,27 @@ class MvCollectionRepository {
           'appid': KgConfig.appid,
           'p': p,
         },
-        data: bodyStr,
+        // Node 发 **二进制**（Buffer.from(str,'base64')），不是 Base64 文本
+        data: base64Decode(aes.str),
         headers: {
-          'User-Agent': 'Android9-1070-${KgConfig.clientver}-18-0-MV/Care-wifi',
+          'User-Agent': 'Android9-1070-${KgConfig.clientver}-18-0-'
+              '${collect ? 'MV/Care' : 'MV/UnCare'}-wifi',
           'Content-Type': 'application/json',
         },
         notSignature: true);
 
-    // 响应是 AES 加密二进制，用同一 seed 解密
+    // 响应是 AES 加密二进制，用同一 seed 解密；解出 status 才算真成功
     try {
       final bytes = res.rawBytes;
       if (bytes != null && bytes.isNotEmpty) {
-        KgCrypto.aesDecryptPlaylistB64(base64Encode(bytes), aes.key);
+        final decrypted =
+            KgCrypto.aesDecryptPlaylistB64(base64Encode(bytes), aes.key);
+        // 丢弃解密结果但至少校验存在（此前 HTTP 200 即算成功，
+        // 风控空包也被当成功，收藏态判定失真）
+        return decrypted != null;
       }
-    } catch (_) {
-      // 解密失败不改变结果判定（HTTP 200 即视为成功）
+    } catch (e) {
+      debugPrint('[mv_collect] decrypt failed: $e');
     }
     return res.status == 200;
   }

@@ -341,6 +341,20 @@ class KgDirectApiClient extends KugouApiClient {
     final n = _norm(path);
     final kapi = () => super.post(path, data, query: query);
     switch (n) {
+      // D-P0-1（第5批①，P0）：评论写三件套此前只在 get 分派表里，
+      // 而 CommentRepository 走 post → 恒抛 -404「未移植」，发评论/
+      // 回复/删评论 100% 失效。补齐 post 分派（write: true 禁回退）。
+      case 'comment/music/send':
+      case 'comment/playlist/send':
+      case 'comment/album/send':
+        return _directOrFallback(() => _commentSend(q), kapi, '/comment/$n/send',
+            write: true);
+      case 'comment/floor/send':
+        return _directOrFallback(() => _commentFloorSend(q), kapi,
+            '/comment/floor/send', write: true);
+      case 'comment/music/del':
+        return _directOrFallback(
+            () => _commentDel(q), kapi, '/comment/music/del', write: true);
       case 'rank/audio':
         return _directOrFallback(() => _rankAudio(q), kapi, '/rank/audio');
       case 'comment/music':
