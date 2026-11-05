@@ -14,11 +14,11 @@
 - 违反：QUALITY_STANDARD 第 32 条（不可达分支/死代码零容忍）；第 31 条（注释仍称「先直连，失败则回退 kapi」与实现相反）
 - 后果：读者按注释以为 kapi 仍是有效兜底，排障时去查 kapi 侧日志/网络，方向错误；每处 case 无谓分配闭包。
 
-### kg_direct_api_client.dart:283-302 / 373-381 未移植路径抛 `ApiException` 而非 `DioException`，异常契约与主路径不一致
-- 级别：P1
-- 事实：`get`/`post` 落到 switch 末尾时 `throw ApiException(-404, '接口 /$n 尚未移植…')`；而同文件 `_directOrFallback` 对一切失败统一 `throw _asDioException(label, e)`，注释明确写「上层（AuthRepository/verification_guard）只捕获 DioException 并从 .error 取 ApiException。直连若裸抛会被上层泛 catch 吞掉」。
-- 违反：QUALITY_STANDARD 第 8 条（异常契约必须单一稳定，回退路径与主路径形态一致）；第 9 条（失败必须可观测）
-- 后果：凡调用未移植路径（如 `/user/playlist` 之外的新接口、`/search/complex` 等），Repository 的 `on DioException` 捕不到，走到泛 catch 后被当作未知错误吞掉或显示通用「网络错误」，`-404` 语义（功能未移植）永远无法呈现给用户，也无法进入 lastErrors 诊断列表。
+### kg_direct_api_client.dart:283-302 / 373-392 未移植路径抛 `ApiException`（**V3-08 已修，复核对齐，不再作为问题**）
+- 级别：—（撤回，不计入统计）
+- 事实：当前代码 `get`/`post` 末尾均为 `throw _asDioException('/$n', ApiException(-404, '接口 /$n 尚未移植…'))`，正文注释标 V3-08。异常契约与 `_directOrFallback` 一致（DioException + `error=ApiException`）。
+- 违反：—
+- 后果：无。复核初期看到的裸抛版本已在 `5ec5c71` 前的提交中修复；保留此条作为「已验证」记录。
 
 ### kg_direct_api_client.dart:104-107 `err_code` 统一提前校验会误杀「err_code 存在但为成功码」的裸 Map 响应（需按端点核实）
 - 级别：P2
@@ -38,12 +38,11 @@
 - 违反：QUALITY_STANDARD 第 1 条（单一职责：本类应只做路由/委托）；第 30 条（文件内两种组织方式并存，命名与结构不符）
 - 后果：维护者按「端点实现在 kg_endpoints_*」的约定去改 video/detail 会改错文件，改动丢失或重复实现（P3，仅维护成本）。
 
-### kg_direct_api_client.dart:32-42 `setCredentials` 与 `clearCredentials` 不对称：dfid 只写不清
-- 级别：P2
-- 事实：`setCredentials` 中 `if (dfid != null && dfid.isNotEmpty) kg.dfid = dfid;`；`clearCredentials` 仅重置 `kg.token / kg.userid / kg.t1`，未处理 `kg.dfid`（也无 `kg.auth` 的清理，而 `setCredentials` 形参含 `auth`）。
-- 违反：QUALITY_STANDARD 第 20 条（生命周期双向对称）；第 5 条（同一事实多份存储、仅一处更新）
-- 后果：切换账号/退出登录后旧账号 dfid 残留并继续参与 `uuid=md5(dfid+mid)` 计算与签名，直连请求携带上一账号设备标识；酷狗侧风控按 dfid 归并，可能把新账号与旧账号关联或直接触发风控拒绝，表现为登录后部分接口 20010/空包。
-- 补充：dfid 属设备级标识，保留本身合理，但代码与注释均未声明「dfid 故意不随账号清理」，属隐式约定。
+### kg_direct_api_client.dart:32-42 `setCredentials` 与 `clearCredentials` 不对称（**与 kg_client.dart 同名条目合并计数**）
+- 级别：—（合并，不重复计数）
+- 事实：`setCredentials` 中 `if (dfid != null && dfid.isNotEmpty) { kg.dfid = dfid; kg.device.dfid = dfid; }`（V3-09）；`clearCredentials` 仅重置 `kg.token / kg.userid / kg.t1`，不还原 `device.dfid`，也不清 `kg.dfid`；`auth` 形参只透传给父类。
+- 违反：QUALITY_STANDARD 第 20 条（对称性）— 详见 kg_client 条目
+- 后果：见 `kg_client.dart:166-186` 条目（跨账号 dfid 残留、内存与 Hive 分叉）。
 
 ### kg_direct_api_client.dart:669-681 `_qrPngBase64` / `_maskMobile` / `_qrSrcappid` / `_commentCodeOf` / `_afterLogin` 为委托层残留
 - 级别：P3
@@ -67,17 +66,17 @@
 
 ## 2. lib/core/direct/kg_client.dart（542 行，已完整阅读）
 
-### kg_client.dart:166-171 / 176-186 `KgClient.dfid` 只写不读：登录 dfid 永远进不了签名与请求头
+### kg_client.dart:166-171 / 176-186 `KgClient.dfid` 仍无读点；V3-09 改为直接改 `device.dfid`，却未落盘、登出也不还原
 - 级别：P2
-- 事实：`String dfid = '';`（注释称「登录态 dfid（与 token/userid 同步…直连层签名取 kg.device.dfid，登录刷新后需保持一致）」）。全类所有签名/头构造均取 `device.dfid`：`request()` 的 `defaultParams['dfid']`、`reqHeaders['dfid']`、`submitFingerprintVerification` 的 `dfid: device.dfid.isEmpty ? '0' : device.dfid`、`_registerDeviceOnce` 的 `params['dfid']`。类内无任何 `dfid`（非 device）的读点。而 `KgDirectApiClient.setCredentials` 写入的正是 `kg.dfid`。
-- 违反：QUALITY_STANDARD 第 5 条（同一事实两处存储、只在一处被修改，另一处权威不生效）；第 32 条（无人读取的状态）；第 31 条（注释与实际取值来源相反）
-- 后果：`setCredentials(dfid: …)` 是空操作，`kg.dfid` 永远不会出现在请求里。目前设备 dfid 由 `device.dfid` 提供、功能可用，因此无直接故障；但「PLY-12 登录 dfid 同步」这一修复实际未生效，若某天账号体系要求「登录 dfid ≠ 设备 dfid」（酷狗登录响应确实可能刷新 dfid），评论/云歌单等风控敏感接口会开始返回 20010，而代码与注释都声称已同步，排障方向被彻底带偏。
+- 事实：`String dfid = '';` 全类仍无读点（所有签名/头取 `device.dfid`）。`KgDirectApiClient.setCredentials` 现为 `kg.dfid = dfid; kg.device.dfid = dfid;`（注释标 V3-09，说「只写 kg.dfid 会让同步变成空操作」）。该赋值**不调用** `onDfidRegistered`/`KgDeviceStore.saveDfidSync`，即内存改了、Hive 没改；`clearCredentials` 只清 token/userid/t1，不还原 `device.dfid`。
+- 违反：QUALITY_STANDARD 第 5 条（同一事实三处存储：Hive `device` box、`device.dfid` 内存、`kg.dfid`，只在内存改一处）；第 20 条（生命周期不对称：登出不还原）；第 32 条（`kg.dfid` 仍是无人读取的状态）
+- 后果：登录态 dfid 与设备 dfid 不同时（酷狗登录可能下发新 dfid），本次进程内所有请求改用账号 dfid，冷启动后 Hive 里还是旧值 → 同一账号在「本次会话」和「下次启动」使用不同 dfid，风控把两者当两台设备，表现为「重启后评论/云歌单偶发 20010」；退出登录后 device.dfid 仍是上一账号的，属跨账号残留。
 
-### kg_client.dart:268-312 `requestWithVerify` 内重试会重放**同一请求**，对写操作等同重复提交（当前无写路径调用，属潜在风险）
-- 级别：P2
-- 事实：`request()` 发出 → 命中 `_needsVerify` → `submitFingerprintVerification` → 再次 `request(...)` 原样重发。方法本身不区分读写，签名 `Future<KgResponse> requestWithVerify(path, {… int retries = 1})` 无 `write` 保护。当前调用点只有 `KgPlayApi.songUrl` / `KgPlayApi.privilege`（均为读）。
-- 违反：QUALITY_STANDARD 第 21 条（写操作必须具备防重机制——此处无任何机制，契约也未声明「不得用于写」）；第 3 条（契约缺「幂等」声明）
-- 后果：目前无用户可见后果；一旦有写端点改用该方法（最可能是有验证要求的评论/收藏），首次请求在服务端已成功但响应带 ssa-code 时会被原样重发 → 重复评论、歌单两条同名。`_directOrFallback` 的「写不回退」防重**覆盖不到**这一层（重试发生在 `KgClient` 内部，对外仍是一次调用）。
+### kg_client.dart:268-312 `requestWithVerify` 仅以注释禁止写操作，无代码级保护（V3-10 已补注释）
+- 级别：P3
+- 事实：方法头注释新增「V3-10：**写操作禁止使用本方法**（第 21 条）…写端点必须直接调 [request]」。但签名 `Future<KgResponse> requestWithVerify(path, {… int retries = 1})` 无 `write` 形参、无 assert、无运行期拦截；重试仍是 `request(path, …)` 原样重放。当前调用点仅 `KgPlayApi.songUrl`/`privilege`（读）。
+- 违反：QUALITY_STANDARD 第 22 条（并发/幂等假设必须写明**并**在能保护它的地方保护）；第 32 条（注释约束不等于机制）
+- 后果：约束只存在于文字，`retries` 默认就是 1，任何新写的写端点在 IDE 补全下都能直接调用并通过 review；一旦误用，重复评论/重复加歌不会被任何断言或测试拦住。
 
 ### kg_client.dart:213-226 DI 回流：core 层 import features 层实现
 - 级别：P2

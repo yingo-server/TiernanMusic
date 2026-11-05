@@ -158,14 +158,18 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               ),
             ),
             Expanded(
-              child: _submittedKeyword != null
-                  ? _SearchResults(
-                      key: ValueKey(_submittedKeyword),
-                      keyword: _submittedKeyword!,
-                    )
-                  : _showSuggest
+              child: // R-28（第6批②，P2）：联想词优先级高于已提交结果——
+                  // 输入框有新输入（_showSuggest）时展示联想，否则回落已提交
+                  // 结果/落地页。此前 _submittedKeyword 优先使联想词在
+                  // 「首次搜索后继续输入」这一最常见状态下永久不可达。
+                  _showSuggest
                       ? _SuggestList(suggestions: _suggestions, onTap: _submit)
-                      : _SearchLanding(onTapKeyword: _submit),
+                      : _submittedKeyword != null
+                          ? _SearchResults(
+                              key: ValueKey(_submittedKeyword),
+                              keyword: _submittedKeyword!,
+                            )
+                          : _SearchLanding(onTapKeyword: _submit),
             ),
           ],
         ),
@@ -426,6 +430,10 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
   bool _initialLoading = true;
   Object? _error;
 
+  /// R-29（第6批②）：分页（加载更多）失败态——区别于首次加载失败
+  ///（_error），footer 据此渲染「重试」而非转圈。
+  Object? _pageError;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -437,6 +445,8 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
     _loadMore();
     _scroll.addListener(() {
       // 失败态不自动重试（避免每次微滚都发请求+Toast 刷屏），只走 footer「重试」按钮。
+      // R-29（第6批②，P2）：只有「首次加载失败」（_error）才阻断；
+      // 分页失败（_pageError）已由 footer 重试按钮接管，滚动不应再被阻断。
       if (_error != null) return;
       if (_scroll.position.pixels >=
               _scroll.position.maxScrollExtent - 200 &&
@@ -475,6 +485,10 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
         _loading = false;
         _initialLoading = false;
         _error = e;
+        // R-29（第6批②，P2）：分页失败进入可重试态——
+        // footer 改为「重试」入口而非无条件转圈，滚动监听不再被
+        // _error 阻断，网络抖动后可继续加载（第 9/16 条）。
+        _pageError = e;
       });
       // 列表已有内容时静默降级：仅弹一条去重 Toast，不打断浏览
       if (_items.isNotEmpty) {
@@ -523,6 +537,23 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
                 const Divider(height: 1, indent: 88),
             itemBuilder: (context, i) {
               if (i >= _items.length) {
+                // R-29（第6批②，P2）：失败显示可点重试，成功后才转圈
+                if (_pageError != null) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                      child: TextButton.icon(
+                        onPressed: () {
+                          if (!mounted) return;
+                          setState(() => _pageError = null);
+                          _loadMore();
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: Text(context.l10n.retry),
+                      ),
+                    ),
+                  );
+                }
                 return const Padding(
                   padding: EdgeInsets.all(16),
                   child: Center(child: CircularProgressIndicator()),
