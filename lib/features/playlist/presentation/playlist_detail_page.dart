@@ -44,6 +44,10 @@ final userPlaylistTracksProvider = FutureProvider.family
 /// 加载更多后手动触发 UI 重建的计数器
 final _tracksReloadProvider = StateProvider<int>((ref) => 0);
 
+/// 收藏操作飞行锁（V3-14，第 21 条）：页面是 ConsumerWidget（不可变），
+/// 防重状态必须放 Provider 而不是实例字段。
+final _collectingProvider = StateProvider<bool>((ref) => false);
+
 class PlaylistDetailPage extends ConsumerWidget {
   const PlaylistDetailPage({super.key, required this.id, this.userListId});
   final String id;
@@ -299,15 +303,14 @@ class PlaylistDetailPage extends ConsumerWidget {
 
   /// 收藏歌单（非破坏性操作，无需确认：直接执行，成功后 toast）
   ///
-  /// V3-14（第5批复核②，P1）：收藏按钮防重（第 21 条）——飞行中禁用，
-  /// 连点不再产生多条同名歌单。catch 区分 PlaylistWriteException 的
-  /// maybeSucceeded 语义（第 8/9 条），不再把原始异常文本拼给用户。
-  bool _collecting = false;
+  /// V3-14（第5批复核②，P1）：收藏按钮防重（第 21 条）——飞行中拒绝
+  /// 新提交，连点不再产生多条同名歌单。catch 区分 PlaylistWriteException
+  /// 的 maybeSucceeded 语义（第 8/9 条），不把原始异常文本拼给用户。
   Future<void> _collectPlaylist(
       BuildContext context, WidgetRef ref, PlaylistDetail detail) async {
     if (!ensureLoggedIn(context, ref, action: context.l10n.favorite)) return;
-    if (_collecting) return;
-    _collecting = true;
+    if (ref.read(_collectingProvider)) return;
+    ref.read(_collectingProvider.notifier).state = true;
     try {
       await ref.read(_playlistRepoProvider).collectPlaylist(
             name: detail.name,
@@ -328,7 +331,7 @@ class PlaylistDetailPage extends ConsumerWidget {
         Toast.show(context, context.l10n.operateFailed('$e'));
       }
     } finally {
-      _collecting = false;
+      ref.read(_collectingProvider.notifier).state = false;
     }
   }
 }

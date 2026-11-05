@@ -906,7 +906,7 @@ app_zh_TW 305 缺0 多0 0
 | P2-32 | `search_page.dart:415–470` | 5 个结果 Tab 全 `AutomaticKeepAliveClientMixin`，`_items` 只增不减 | 第 25 条、第 24 条 | 深翻页后数百条歌曲常驻，切 Tab 也不释放 |
 | P2-33 | `app_en/de/es/fr/ko/pt/ru.arb` | `previewOnly`/`loginRequiredTitle`/`loginRequiredHint`/`loginRequiredAction` 4 条仍为中文 | **第 30 条**、第 23 条 | 播放页「试听」徽标、登录拦截弹层在 8 种语言下显示中文 |
 | P2-34 | `app_localizations.dart:3417–3430`、`:3444` | `supportedLocales` 首项为 `de`；`isSupported => true`；`_t` 回落中文模板 | 第 11 条、第 14 条、第 23 条 | 未支持语言（th/hi/ar/vi）设备整体显示德语或中文 |
-| P2-35 | `main.dart:215–224` | 登录态监听：`ref.invalidate(homeDataProvider)` 在 client 更新前执行 | 第 18 条 | 首页可能在 token 写入前重建并拉到未登录内容（与 P2-1 同源，需统一时序） |
+| P2-35 | `main.dart:262–290` | 登录态监听内直接对 `kugouApiClientProvider` 单例就地写 `token/userid/t1` 三个可变字段，同时 `ref.invalidate(homeDataProvider)`；authState 与该客户端的可变字段构成**两个可写源**，且字段分三次赋值（存在 token 已换、userid 未换的中间窗口） | 第 5 条（状态单一来源）、第 2 条（依赖应注入而非就地改写） | 后台/并发路径读到半更新的客户端身份 → 以 A 账号 token 配 B 账号 userid 请求；「退出后仍个性化」类现象的另一半成因 |
 
 ### P3（整洁度 / 命名 / 注释 / 轻微体验）— 共 75 条
 分类计数：未使用 import 与悬空注释 12、命名与语义（第 30 条）11、注释与实现不符（第 31 条）7、魔法值与单位（第 2/15 条）14、可访问性与 48dp 对比度 10、生命周期与防御性缺口 8、异常处理留痕（第 6/9 条）12、analyze 佐证的死类 1。明细见各文件小节（§1–§17、§14b）。

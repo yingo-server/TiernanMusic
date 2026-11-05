@@ -232,6 +232,7 @@ class PlayerRepository {
       if (b >= 192000) return AudioQuality.q320;
       return AudioQuality.q128;
     }
+    return AudioQuality.q128;
   }
 
   /// 获取可播放 URL。从期望音质起逐级降级（super→high→flac→320→128）。

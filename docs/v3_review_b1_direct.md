@@ -68,16 +68,16 @@
 ## 2. lib/core/direct/kg_client.dart（542 行，已完整阅读）
 
 ### kg_client.dart:166-171 / 176-186 `KgClient.dfid` 只写不读：登录 dfid 永远进不了签名与请求头
-- 级别：P1
-- 事实：`String dfid = '';`（注释称「登录态 dfid（与 token/userid 同步…直连层签名取 kg.device.dfid，登录刷新后需保持一致）」）。全类所有签名/头构造均取 `device.dfid`：`request()` 的 `defaultParams['dfid'] = device.dfid.isEmpty ? '-' : device.dfid`、`reqHeaders['dfid']`、`submitFingerprintVerification` 的 `dfid: device.dfid.isEmpty ? '0' : device.dfid`、`_registerDeviceOnce` 的 `params['dfid']`。类内无任何 `dfid`（非 device）的读点。而 `KgDirectApiClient.setCredentials` 写入的正是 `kg.dfid`。
+- 级别：P2
+- 事实：`String dfid = '';`（注释称「登录态 dfid（与 token/userid 同步…直连层签名取 kg.device.dfid，登录刷新后需保持一致）」）。全类所有签名/头构造均取 `device.dfid`：`request()` 的 `defaultParams['dfid']`、`reqHeaders['dfid']`、`submitFingerprintVerification` 的 `dfid: device.dfid.isEmpty ? '0' : device.dfid`、`_registerDeviceOnce` 的 `params['dfid']`。类内无任何 `dfid`（非 device）的读点。而 `KgDirectApiClient.setCredentials` 写入的正是 `kg.dfid`。
 - 违反：QUALITY_STANDARD 第 5 条（同一事实两处存储、只在一处被修改，另一处权威不生效）；第 32 条（无人读取的状态）；第 31 条（注释与实际取值来源相反）
-- 后果：`setCredentials(dfid: …)` 变成空操作。登录后若上游下发了新 dfid（酷狗登录响应会刷新设备标识），直连请求继续携带旧设备 dfid → 签名/风控维度与账号不匹配，脆弱接口（评论写、云歌单、验证接口）出现 20010/20006 或空包；且同类注释让维护者认为同步已完成，问题无法通过读代码发现。
+- 后果：`setCredentials(dfid: …)` 是空操作，`kg.dfid` 永远不会出现在请求里。目前设备 dfid 由 `device.dfid` 提供、功能可用，因此无直接故障；但「PLY-12 登录 dfid 同步」这一修复实际未生效，若某天账号体系要求「登录 dfid ≠ 设备 dfid」（酷狗登录响应确实可能刷新 dfid），评论/云歌单等风控敏感接口会开始返回 20010，而代码与注释都声称已同步，排障方向被彻底带偏。
 
-### kg_client.dart:268-312 `requestWithVerify` 内重试会重放**同一请求**，对写操作等同重复提交
-- 级别：P1
-- 事实：`request()` 发出 → 命中 `_needsVerify` → `submitFingerprintVerification` → 再次 `request(...)` 原样重发。方法本身不区分读写，签名 `Future<KgResponse> requestWithVerify(path, {… int retries = 1})` 无 `write` 保护。
-- 违反：QUALITY_STANDARD 第 21 条（写操作必须幂等或有防重）；第 3 条（契约未声明「不得用于写操作」）
-- 后果：若被评论发送/歌单增删等写端点复用，首次请求在服务端已成功但响应带 ssa-code 时会被原样重发 → 重复评论、歌单同名两条。当前 `_directOrFallback` 层的「写不回退」防重**不能**覆盖这一层重试（重试发生在 `KgClient` 内部，对外仍是一次调用）。
+### kg_client.dart:268-312 `requestWithVerify` 内重试会重放**同一请求**，对写操作等同重复提交（当前无写路径调用，属潜在风险）
+- 级别：P2
+- 事实：`request()` 发出 → 命中 `_needsVerify` → `submitFingerprintVerification` → 再次 `request(...)` 原样重发。方法本身不区分读写，签名 `Future<KgResponse> requestWithVerify(path, {… int retries = 1})` 无 `write` 保护。当前调用点只有 `KgPlayApi.songUrl` / `KgPlayApi.privilege`（均为读）。
+- 违反：QUALITY_STANDARD 第 21 条（写操作必须具备防重机制——此处无任何机制，契约也未声明「不得用于写」）；第 3 条（契约缺「幂等」声明）
+- 后果：目前无用户可见后果；一旦有写端点改用该方法（最可能是有验证要求的评论/收藏），首次请求在服务端已成功但响应带 ssa-code 时会被原样重发 → 重复评论、歌单两条同名。`_directOrFallback` 的「写不回退」防重**覆盖不到**这一层（重试发生在 `KgClient` 内部，对外仍是一次调用）。
 
 ### kg_client.dart:213-226 DI 回流：core 层 import features 层实现
 - 级别：P2
@@ -163,11 +163,11 @@
 
 对照 `module/search.js`（83 行）与 `module/lyric.js`（35 行）：song/album/else 三分支的参数集合、`platform=AndroidFilter`、lite 时 `clientver=201`、`sorttype/searchsong` 归一化均一致；差异在于 song 分支改打 `complexsearch.kugou.com/v3/search/song`（Node 为 gateway `/v2/search/song` + `x-router`），代码注释与 `api_verified.md` 均有实测记录，可接受。
 
-### kg_endpoints_search.dart:120-140 `lyric` 的 decode 分支漏掉 KRC 解密，且 contenttype 缺失时的判定与 Node 相反
-- 级别：P2
-- 事实：`if (fmt == 'lrc' || (ct.isNotEmpty && ct != '0')) { body['decodeContent'] = utf8.decode(base64.decode(content), allowMalformed: true); }` —— **没有 else 分支**。Node `module/lyric.js:22` 为 `params?.fmt == 'lrc' || Number(contenttype) !== 0 ? Buffer.from(content,'base64').toString() : decodeLyrics(res.body.content)`：当 `fmt=krc` 且 `contenttype == 0` 时调用 `decodeLyrics`（KRC 专有解密）并写入 `decodeContent`。此外 `contenttype` 缺失时 Node 走 base64 分支（`NaN !== 0`），Dart 走「不解码」。
-- 违反：QUALITY_STANDARD 第 28 条（参数/分支形态必须与实测一致）；第 16 条（「无数据」与「未解码」语义混同）；第 6 条（`catch (_) {}` 空体吞掉 base64 失败）
-- 后果：KRC 歌词（`contenttype=0`）时响应体里没有 `decodeContent`，上层若只看 `decodeContent` 会得到 null → 歌词页空白或回落到「暂无歌词」；若上层读 `content` 又拿到的是 base64 密文，则显示乱码。两种失败都在正常网络下发生，用户可见但无错误提示。
+### kg_endpoints_search.dart:120-140 `lyric` 的 decode 分支无 else（KRC 交给 Repository 兜底，影响收窄）
+- 级别：P3
+- 事实：`if (fmt == 'lrc' || (ct.isNotEmpty && ct != '0')) { body['decodeContent'] = utf8.decode(base64.decode(content), allowMalformed: true); }` —— **没有 else 分支**。Node `module/lyric.js:22` 为 `… ? Buffer.from(content,'base64').toString() : decodeLyrics(content)`：`fmt=krc && contenttype==0` 时 Node 会解出明文写进 `decodeContent`。Dart 该分支不写 `decodeContent`。但 `LyricRepository._fetchLyricByFormat` 在 `decodeContent` 缺失时会对 `content` 调 `KrcDecoder.decodeDetailed`（KRC XOR+zip 已在客户端实现），故功能可自愈；`catch (_) {}` 空捕获仍存在。
+- 违反：QUALITY_STANDARD 第 28 条（分支与 Node 不一致）；第 6 条（空捕获）
+- 后果：`contenttype` 缺失且 `fmt=krc` 时，Node 会走 base64 分支、Dart 不写 `decodeContent`；客户端随后按 KRC 解密 `content`，若上游该次返回的是 base64 明文则解密失败 → 回落 LRC（F4-28 已兜底），用户看到的是 LRC 而非逐字 KRC 歌词（丢逐字与翻译行）。
 
 ### kg_endpoints_search.dart:19-33 song 搜索改打 `/v3`，但 `q` 里 Node 支持的 `iscorrection/privilegefilter/area_code` 直接用 `??` 透传未经类型归一
 - 级别：P3
@@ -207,11 +207,17 @@
 
 逐端点对照 `module/playlist_del.js`（52 行）、`playlist_add.js`（33）、`playlist_tracks_add.js`（42）、`playlist_tracks_del.js`（26）、`user_playlist.js`（25）、`playlist_track_all_new.js`（25）、`playlist_detail.js`（21）、`playlist_track_all.js`（20）：URL / method / x-router / `p` 大写 hex / `signParamsKey(clienttime)` / `scene='false;null'` / `total_ver=979` / `extend_fields` 均一致；P0-4（RSA 改 PKCS1）、P0-5（resource 对象数组）、PLY-05（补 number/size/sort/timelen/bitrate）、PLY-06（去路径前缀）、PLY-07（gid 上限 10）四处修复**复核通过**，与 Node 逐字段吻合。
 
-### kg_endpoints_playlist.dart:62-96 `playlistAdd` 三处与 Node 分叉：`source` 硬编码、`is_pri` 恒发、`type` 缺省语义相反
+### kg_endpoints_playlist.dart:62-96 `playlistAdd` 两处与 Node 分叉：`source` 硬编码、`type` 缺省时走了「新建」的 params 分支
 - 级别：P2
-- 事实：Dart `'source': 1, 'is_pri': 0,` 为常量，且 `final type = int.tryParse('${q['type'] ?? 0}') ?? 0;` 缺省即 0。Node `playlist_add.js`：`source: params.source === 0 ? 0 : params.source || 1`、`if (params.type === 0) dataMap['is_pri'] = params.is_pri || 0;`、`params: params.type === 0 ? {…} : {}`（`type` 未传时 `undefined === 0` 为 false，走空 params）。
-- 违反：QUALITY_STANDARD 第 28 条（参数形态必须与实测/Node 一致）；第 2 条（魔法值应具名）
-- 后果：调用方传 `source=0`（本地新建歌单场景）时实际按 `source=1` 提交，服务端把自建歌单当作「收藏」处理；`type` 缺省时 Dart 走「新建」分支并附 `last_time/last_area`，Node 走「收藏」空 params 分支 —— 两者在服务端是不同事务，新建歌单可能返回 20010 或建出空壳歌单。
+- 事实：Dart `'source': 1,` 为常量，且 `final type = int.tryParse('${q['type'] ?? 0}') ?? 0;` 缺省即 0，于是 `params` 走 `type == 0` 分支（带 `last_time/last_area/userid/token`）。Node `playlist_add.js`：`source: params.source === 0 ? 0 : params.source || 1`、`params: params.type === 0 ? {…} : {}`（`type` 未传时 `undefined === 0` 为 false，走空 params），另外 `if (params.type === 0) dataMap['is_pri'] = params.is_pri || 0;` 会带上调用方 `is_pri`（Dart 恒为 0）。
+- 违反：QUALITY_STANDARD 第 28 条（参数形态必须与实测/Node 一致）；第 2 条（可用入参被硬编码吞掉）
+- 后果：调用方传 `source=0`（本地新建/导入场景）时实际按 `source=1` 提交，服务端把自建歌单当作「收藏」处理；`type` 缺省时 Dart 附带的 `last_time/last_area` 与 Node 的「空 params」是两条不同事务，新建歌单可能 20010 或建出非私密歌单；私密歌单（`is_pri=1`）永远建不出来。
+
+### kg_endpoints_playlist.dart:62-96 `playlistAdd` 的 `list_create_userid/list_create_listid` 用 `!= null` 判空，空串会照发
+- 级别：P3
+- 事实：`if (q['list_create_userid'] != null) 'list_create_userid': '${q['list_create_userid']}'`；Node 用 `compact()`（过滤 `''`）。
+- 违反：QUALITY_STANDARD 第 16 条（空值与缺失未分离）
+- 后果：调用方从深链拿到 `list_create_gid=` 空串时，Dart 下发 `list_create_gid: ''`，服务端按「收藏指定歌单」处理却找不到目标，返回 20010，用户点收藏无反应。
 
 ### kg_endpoints_playlist.dart:151-158 / 118-123 / 128-137 `listid` 在三个写端点传字符串，而 `playlistDel` 传数字
 - 级别：P3
@@ -249,11 +255,11 @@
 
 对照 `module/_comment.js`（258 行）、`comment_music.js`、`comment_count.js`、`comment_floor.js`、`comment_playlist.js`、`comment_album.js`、`comment_music_del.js`。F4-04（`/v1/cmtlist` + x-router）、F4-05（`is_t`/`pid`/`//@` 拼接）、F4-06（del 改 GET）、F4-16（hash 真值判定）、F4-17（extdata/source/childrenname）、F4-18（cid 别名）**复核通过**，`/index.php` 三处 `clearDefaultParams + notSignature` 与规范白名单一致；`key` 算法 send=`clienttime+mid+data`、reply/del=`clienttime+mid` 与 Node 一致。
 
-### kg_endpoints_comment.dart:109-113 发评论 body 的 `album_audio_id` 被转成字符串，Node 保持数值
-- 级别：P2
-- 事实：`if (q['mixsongid'] != null) 'album_audio_id': '${q['mixsongid']}'`。Node `_comment.js:118`：`album_audio_id: firstValue(params.mixsongid, params.album_audio_id)`，`JSON.stringify({data: contentData})` 中该字段为**数字**。而 `key = signParamsKey(clienttime+mid+data)` 直接对 body 字符串取 md5，两侧 body 文本因此不同（`"album_audio_id":"32100650"` vs `"album_audio_id":32100650`）。
-- 违反：QUALITY_STANDARD 第 28 条（参数形态必须与实测一致，形态错误只会静默失败）；第 17 条（标识符跨层精度/形态显式）
-- 后果：服务端按 Node 形态校验 key 时签名必然不匹配（20006/err_code≠0），**发评论恒失败**；若服务端不校验 body 类型，则评论会挂到资源上但 `album_audio_id` 解析异常。这是本轮唯一一处写操作 body 类型分叉，影响「发评论」整个功能。
+### kg_endpoints_comment.dart:109-113 发评论 body 的 `album_audio_id` 被转成字符串（**复核后撤回，非缺陷**）
+- 级别：—（撤回，不计入统计）
+- 事实：Dart `'album_audio_id': '${q['mixsongid']}'`。Node `_comment.js:118` 的 `firstValue(params.mixsongid, params.album_audio_id)` 取的是 **HTTP query 传入的参数**（express 下 `params` 全为字符串），`JSON.stringify` 后同样是 `"album_audio_id":"32100650"`。两侧 body 文本一致，`key` 也一致。
+- 违反：—
+- 后果：无。此前按「Node 保持数值」判断属误读（Node 的 `params` 来自 query 而非 JSON body）。
 
 ### kg_endpoints_comment.dart:236-247 `commentDel` 未实现 Node 的 `cid` 必填校验与 `mixsongid → special_id` 回查
 - 级别：P2
@@ -291,11 +297,11 @@
 
 对照 `module/song_url.js`、`module/privilege_lite.js`、`module/kmr_audio_mv.js`：`/v5/url` 的 `page_id/pid/ppage_id/version=11430/clientver=11430/quality=magic_*`、`/v2/get_res_privilege/lite` 的 `page_id=0`/`qualities` 数组、MV 的 `data:[{album_audio_id}]` 均与 Node 一致；`videoUrl` 的 `keyOf` 与 `trackermv` 原生域一致。
 
-### kg_endpoints_media.dart:47-62 `videoUrl` 未把 hash 转小写即参与 `keyOf` 签名
-- 级别：P2
-- 事实：`final hash = '${q['hash'] ?? ''}';` 之后直接 `'hash': hash` 与 `key: KgSignature.keyOf(hash: hash, …)`。同文件 `songUrl` 走的 `KgSharedParams.songUrl` 明确 `final lowerHash = hash.toLowerCase();`，`privilege` 也 `trim().toLowerCase()`（api_verified.md：「hash **必须小写**」）。
-- 违反：QUALITY_STANDARD 第 28 条（签名输入形态必须实测一致）；第 5 条（同一事实三种归一化策略）
-- 后果：MV hash 若来自用户粘贴/深链大写形式，`key` 与服务端计算不一致 → MV 播放地址请求 20006/空 downurl，用户点 MV 只看到「加载失败」，而歌曲播放正常，问题极难归因。
+### kg_endpoints_media.dart:47-62 `videoUrl` 不 lowerCase hash（**复核后撤回，非缺陷**）
+- 级别：—（撤回，不计入统计）
+- 事实：`'hash': hash` 与 `key: KgSignature.keyOf(hash: hash, …)` 均用原串。Node `module/video_url.js` 用 `encryptKey: true`，由 `util/request.js:134-136` 调 `signKey(params['hash'], …)`，`util/helper.js:135-139` 的 `signKey` **不对 hash 做小写归一**。Dart 与 Node 行为一致。
+- 违反：—
+- 后果：无。保留此条仅为记录「已核对、勿在下一批重复上报」。
 
 ### kg_endpoints_media.dart:96-131 `privilege` 前置拦截返回 502 假响应而非抛异常，与同层其他前置校验（直接 throw ApiException）不一致
 - 级别：P3
