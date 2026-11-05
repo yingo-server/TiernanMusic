@@ -122,3 +122,10 @@
 
 ### 定时任务
 - dea41ffd：15 分钟后查构建 + 推进第 6 批审查
+
+## ✅ v3.2.0 发布确认（2026-11-06）
+
+- release published 2026-11-05T22:56:13Z，draft=False
+- 资产：arm64-v8a 25.1MB / armeabi-v7a 22.9MB / x86_64 26.6MB / screenshots-181.zip
+- tag 已移动到 7da9d5d（含 V3-08~11 修复），重建 CI 触发中
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.2.0/app-arm64-v8a-release.apk
