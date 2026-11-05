@@ -29,6 +29,14 @@ class AppConfig {
   static const int lyricTranslateMaxTokens = 4096;
 
   // 10 种界面语言
+  //
+  // V3-12（第5批复核③，P2）：语言单一事实源说明（第 5 条）。
+  // 运行期 UI 解析用 `AppLocalizations.supportedLocales`（由 l10n 工具从
+  // lib/l10n/*.arb 生成，含裸 zh 兜底）；本表**只供设置页语言选择器排序
+  // 与显示名**，二者必须保持一致——新增 arb 文件时同步更新本表，
+  // 否则会出现「可选语言与实际解析集合不一致」。
+  // app_zh.arb（裸 zh）是 l10n 工具的模板文件，对应表中 zh_CN 的兜底，
+  // 不作为独立选项暴露。
   static const List<String> supportedLocales = [
     'zh_CN', 'zh_TW', 'en', 'ja', 'ko', 'es', 'fr', 'de', 'pt', 'ru',
   ];

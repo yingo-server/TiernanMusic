@@ -356,3 +356,99 @@
 - 事实：`final res = await client.requestWithVerify('/v5/url', method: 'GET', …)`。
 - 违反：QUALITY_STANDARD 第 21 条（幂等性：GET 播放地址幂等，重发安全，本项**不构成**问题）
 - 后果：无；仅记录「读操作重试安全」的判定依据，避免下一批误判为重复提交。
+
+---
+
+## 9. lib/core/direct/kg_endpoints_artist_album.dart（166 行，已完整阅读）
+
+对照 `module/artist_detail.js`、`artist_audios.js`、`artist_albums.js`、`album_detail.js`、`album_songs.js`、`rank_audio.js`：URL、`kg-tid`（36/220/255/369）、`area_code='all'`、`sort` 映射（audios hot→1 否则 2；albums hot→3 否则 1）、`fields` 串、`is_buy` 空串语义、`rank_id` 缺省丢键 均与 Node 一致；F4-03（openapi 原生域）、F4-24、F4-25 复核通过。
+
+### kg_endpoints_artist_album.dart:42-44 歌手单曲 `pagesize` 被静默截断到 100
+- 级别：P3
+- 事实：`var ps = int.tryParse('${q['pagesize'] ?? 30}') ?? 30; if (ps > 100) ps = 100;`。Node `artist_audios.js` 原样透传 `params?.pagesize || 30`（超限时由上游回 20010）。
+- 违反：QUALITY_STANDARD 第 16 条（「请求 200 条得到 100 条」与「请求 100 条」语义混同，未告知调用方）；第 11 条（降级未声明触发条件）
+- 后果：调用方按 pagesize=200 计算分页总页数，实际每页只有 100 条 → 后一半歌曲永远加载不到，用户看到歌手页曲目「少了」且无提示。
+
+### kg_endpoints_artist_album.dart:44-60 `artistAudios` 已 `baseUrl: openapi`，同时还带 `x-router: openapi.kugou.com`
+- 级别：P3
+- 事实：`baseUrl: 'https://openapi.kugou.com'` 与 `headers: {'x-router': 'openapi.kugou.com', 'kg-tid': '220'}` 并存；Node 两者都有（原样移植）。
+- 违反：—（与 Node 一致，记录项）
+- 后果：无；仅记录「非缺陷」，避免下一批把冗余头当问题重复上报。
+
+### kg_endpoints_artist_album.dart:137-170 `rankAudio` 忽略调用方 `rank_cid`，恒发 0
+- 级别：P3
+- 事实：`'rank_cid': 0,` 常量。Node `rank_audio.js`：`rank_cid: params.rank_cid || 0`。
+- 违反：QUALITY_STANDARD 第 28 条（可配置参数被硬编码，与 Node 不一致）
+- 后果：按分类筛选榜单（`rank_cid≠0`）时始终返回全部分类，用户选「华语」仍看到混合榜（P3，功能面窄）。
+
+### kg_endpoints_artist_album.dart:19-32 `artistDetail` 未带 `F4-03` 的 `data.author_id` 数值化，且无空 id 校验
+- 级别：P3
+- 事实：`data: {'author_id': '${q['id'] ?? q['author_id'] ?? ''}'}`，缺失时发 `author_id: ''`；Node 为 `params.id`（缺失则 JSON 丢弃该键）。
+- 违反：QUALITY_STANDARD 第 14 条（边界参数未校验）
+- 后果：歌手页参数异常（深链缺 id）时会向 openapi 发空 author_id，返回 `data:{}` 并被 `_wrap` 判成功 → 页面渲染空歌手，用户以为歌手不存在。
+
+---
+
+## 10. lib/core/direct/kg_endpoints_home.dart（198 行，已完整阅读）
+
+`rank/list`（ocean 原生域 `/v6/rank/list`）、`top/song`（musicadservice `/container/v1/newsong_publish`）、`everyday/recommend`（`platform` 走 query）、`search/hot`（msearch `/api/v3/search/hot_tab`）、`top/playlist`（F4-11 补齐 `special_recommend` 内层 5 字段）、`yuekuBanner`（F4-12 `vip_type`）均已与 `api_verified.md` 记录对齐；`clienttime` 秒级 ✓；`paramsKey` 参与 `top/playlist`/`videoDetail` ✓。
+
+### kg_endpoints_home.dart:186-198 `videoDetail` 与 `kg_direct_api_client._videoDetail`、`kg_media_direct.videoDetail` 三份实现并存（本份无人调用）
+- 级别：P3
+- 事实：本文件 `videoDetail(q)` 与 `kg_direct_api_client.dart:470-500 _videoDetail(q)` **逐字段相同**（含 `uuid: md5(dfid+mid)`、`key: paramsKey(clienttime)`、`clearDefaultParams: true`）；`kg_media_direct.dart:63-89 KgMediaDirect.videoDetail(videoId)` 是第三份（`data` 只收单个 id，不 split）。分派在 `get('video/detail')` → `_videoDetail`，本份与 media_direct 那份无调用点。
+- 违反：QUALITY_STANDARD 第 5 条（同一请求三份权威，必然分叉）；第 32 条（死代码）
+- 后果：任何对 `/v1/video` 的修正（如 `show_resolution` 换字段、`uuid` 换算法）只改一处就会留下两份旧实现；将来若有人改用 `KgMediaDirect.videoDetail`（参数是单 id），批量 MV 只会返回第一条，其余静默丢失。
+
+### kg_endpoints_home.dart:57-76 `topSong` 的 `rank_id` 用 `q['type'] ?? q['rank_id'] ?? 21608` 三元兜底，未校验数值
+- 级别：P3
+- 事实：`'rank_id': q['type'] ?? q['rank_id'] ?? 21608`（可能是字符串 `'36'`）；Node `top_song.js` 用 `params.type || 21608`（`'0'` 之类会落到默认）。`'userid': int.tryParse(...) ?? 0` 与 Node 数值一致 ✓。
+- 违反：QUALITY_STANDARD 第 13 条（外部参数未归一为数值）
+- 后果：深链传 `type=` 空串时 Dart 发出 `rank_id: ''`（`??` 不拦空串），上游回 20010，新歌页空白；Node 会落到 21608 正常返回。
+
+### kg_endpoints_home.dart:82-86 `everydayRecommend` 只下发 `platform`，丢弃 Node 的其它可选参数
+- 级别：P3
+- 事实：`params: {'platform': '${q['platform'] ?? 'ios'}'}`，未透传 `q['page']/q['pagesize']` 等（Node `everyday_recommend.js` 亦主要依赖 platform，但 `api_verified.md` 未记录该端点参数全集）。
+- 违反：QUALITY_STANDARD 第 29 条（参数集合未留样）
+- 后果：若上游对每日推荐支持分页/去重参数，本实现无法使用；现状无用户可见影响（P3）。
+
+### kg_endpoints_home.dart:24-37 残留错位注释「/// 歌手详情（module/artist_detail.js）」位于 `rankList` 上方
+- 级别：P3
+- 事实：`/// 歌手详情（module/artist_detail.js）` 之后是空行 + `Future<KgResponse> rankList(...)`。
+- 违反：QUALITY_STANDARD 第 31 条（注释与代码不符）；第 30 条
+- 后果：读者按注释去 rankList 里找歌手详情逻辑，误导排查方向。
+
+---
+
+## 11. lib/core/direct/kg_endpoints_auth.dart（413 行，已完整阅读）
+
+签名/加密细节复核**通过**：`loginCellphone`/`login` 的 `pk` 大写、`userDetail` 大写、`loginToken` 与 `verifyUserInfo` 小写，与 Node `login_cellphone.js:27`/`login.js:16`/`user_detail.js:6`（大写）与 `login_token.js:21`/`verify_user_info.js`（小写）逐一吻合；`t1/t2` 固定 key/iv、`params` 走 `aesEncryptCbcAuto`、`clienttime_ms` 毫秒、`key=paramsKey(clienttime)` 亦一致。
+
+### kg_endpoints_auth.dart:404-412 `_afterLogin` 从未写入 `vipType`/`vipToken`，与 `kg_client.dart` 注释（F4-12）相反
+- 级别：P1
+- 事实：`_afterLogin` 只写 `kg.token / kg.userid / kg.t1`。`kg_client.dart:172-175` 声明：「由 KgEndpointAuth._afterLogin 从登录响应的 data.vip_type / vip_token 写入」。直连层 12 个文件内再无任何对 `kg.vipType`/`vipToken` 的写点。
+- 违反：QUALITY_STANDARD 第 5 条（声明了单一来源却无人写入）；第 32 条（无人写入的状态）；第 31 条（注释描述不存在的行为）
+- 后果：`yuekuBanner` 的 `vip_type` 恒为 0（`int.tryParse(kg.vipType) ?? 0`），登录的 VIP 用户被上游当作非会员 → 会员专属 banner 拿不到；F4-12 声称修好的「三态兼容」实际未生效，属于「修了字段但没接线」。
+
+### kg_endpoints_auth.dart:244-258 `loginQrCheck` 在端点层直接改写 `kg.token/kg.userid`，绕过 `_afterLogin` 与 `setCredentials`
+- 级别：P2
+- 事实：`if ('${data['status']}' == '4') { ... kg.token = token; kg.userid = userid; }`，未写 `t1`、未写 `vipType`、未同步 `kg.dfid`，也未走父类 `setCredentials`（CookieJar 不更新）。
+- 违反：QUALITY_STANDARD 第 5 条（登录态有两个写入点且字段集不同）；第 1 条（端点职责混入状态管理）
+- 后果：扫码登录后内存登录态有 token 却无 t1，`/login/token` 刷新走 `|dateNow` 分支；同时 CookieJar 里仍是旧 cookie，任何走 `super.get` 残路（如 404 未移植路径以外的 kapi 调用）会携带旧身份，出现「已登录但部分接口 401/匿名」的裂脑。
+
+### kg_endpoints_auth.dart:60-70 `captchaSent` 与 `loginToken` 使用明文 HTTP 域名
+- 级别：P1
+- 事实：`baseUrl: 'http://login.user.kugou.com'`（`captchaSent`、`loginToken`）。`loginCellphone` 用 `https://loginserviceretry.kugou.com`、`login` 走 gateway，只有这两处是 http。
+- 违反：QUALITY_STANDARD 第 27 条（接口只走原生网关，且原生网关均为 https）；第 3 条（安全契约未声明）；属安全类缺陷
+- 后果：短信验证码请求（含手机号）与 token 刷新请求（body 内 `p3` 密文、`pk`）在公共 WiFi 下可被旁路观察与篡改；攻击者回一个伪造的 `status=1` + 自造 token 即可诱导客户端把会话指向自己控制的身份（会话劫持），用户无任何感知。Node 同样使用 http，但 Node 是本地服务、本 App 是移动端直连公网，风险等级不同。
+
+### kg_endpoints_auth.dart:316-330 `userDetail` 直接向响应体注入 `userid` 字段
+- 级别：P3
+- 事实：`if (inner is Map<String, dynamic>) { inner['userid'] = userid.toString(); }`（注释说明上游无该字段、上层依赖它）。
+- 违反：QUALITY_STANDARD 第 1 条（端点层改写业务数据）；第 3 条（契约靠运行时补字段维持）
+- 后果：响应体被就地改写后，`_wrap` 返回的 body 与上游真实返回不一致；任何「打印原始响应排障」的日志都会看到不存在的字段，掩盖上游缺字段这一事实（P3）。
+
+### kg_endpoints_auth.dart:335-353 `getVerifyInfo` 与 `KgClient.submitFingerprintVerification` 对同一端点两套实现（sid/edt 一个为空、一个为真实值）
+- 级别：P3
+- 事实：本文件发 `'sid': '', 'edt': ''`；`kg_client.dart:320-340` 发 `sid: edt.sid, edt: edt.edt` 且带 `i:''`、`wasm:1`。两处 `baseUrl` 也不同（一处 gateway 默认、一处 `verifyservice.kugou.com`）。
+- 违反：QUALITY_STANDARD 第 5 条（同一端点两套权威）；第 8 条（异常/请求形态不一致）
+- 后果：验证页取事件信息与自动重试取事件信息可能来自不同行为的上游路径，出现「验证页能过、自动重试仍 20028」；排障时无法判断是哪一份实现失败。

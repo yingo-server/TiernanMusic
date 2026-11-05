@@ -628,3 +628,172 @@ FadeTransition(
 
 ---
 
+## 15. 发布合规：`lib/l10n/` 全量键比对 + `app_localizations.dart` + `l10n.dart`
+
+### 15.1 方法说明
+通读 `app_zh_CN.arb`（**模板**，见 `l10n.yaml: template-arb-file: app_zh_CN.arb`）、`app_zh.arb` 全文，并对 11 个 arb 做**键集 / 占位符集**逐一比对（对 JSON 数据文件做结构化比对，非源码模式匹配；结果可复算）。
+`l10n.yaml`：`arb-dir: lib/l10n`、`template-arb-file: app_zh_CN.arb`、`nullable-getter: false`、`output-localization-file: app_localizations.dart`。
+
+### 15.2 键完整性结论（**无缺失 → 不构成第 17 项 P1**）
+```
+template(app_zh_CN) keys: 305
+app_de  305  缺0 多0 占位符不一致0
+app_en  305  缺0 多0 0
+app_es  305  缺0 多0 0
+app_fr  305  缺0 多0 0
+app_ja  305  缺0 多0 0
+app_ko  305  缺0 多0 0
+app_pt  305  缺0 多0 0
+app_ru  305  缺0 多0 0
+app_zh  306  缺0 多1  ← 多出 albumPageComingSoon
+app_zh_TW 305 缺0 多0 0
+```
+结论：**10 种目标语言的键与占位符 100% 齐全，l10n 生成不会因缺键失败。** 这是本批少数「通过」的发布项。
+
+### 【P2】8 个非中文语言里 4 条文案仍是中文原文（未翻译）
+| key | 现值（en/de/ru/fr/es/pt/ko/ja 全部相同） | 出现位置 |
+|---|---|---|
+| `previewOnly` | 试听 | **播放页**试听徽标（`full_player_page.dart` 正在使用） |
+| `loginRequiredTitle` | 需要登录 | 需登录弹层标题 |
+| `loginRequiredHint` | 该功能需要登录酷狗账号后使用。 | 需登录弹层正文 |
+| `loginRequiredAction` | 「{action}」需要登录后才能使用。 | 需登录弹层正文 |
+- 事实：程序化比对显示这 4 个键在 de/en/es/fr/ko/pt/ru 中与中文模板**逐字相同**，且含 CJK 字符（ja 因共用汉字不判定）。
+- 违反：**第 30 条**（用户可见文案必须本地化）；**第 23 条**（语言维度不完整会让「已本地化」的假象传播）。
+- 后果：英文用户在播放页看到中文「试听」徽标、在触发登录拦截时看到整段中文说明——这是**播放主路径 + 登录拦截路径**上的可见中文。P2。
+
+### 【P1】提交入库的 `app_localizations.dart` 与 flutter `gen-l10n` 产物 **API 不兼容**，构建结果取决于是否触发重新生成
+- 事实：
+  1. 该文件首行自述 `// GENERATED CODE - DO NOT MODIFY BY HAND (offline gen-l10n equivalent) // See tool/gen_l10n_min.py — regenerates from lib/l10n/app_*.arb.`，即由自研脚本生成。
+  2. 其中：`static const localizationsDelegates = _Delegate();` —— **单个 delegate 对象**。
+  3. 而 `main.dart` 的用法是 `localizationsDelegates: AppLocalizations.localizationsDelegates`，`MaterialApp.router` 的参数类型是 `Iterable<LocalizationsDelegate<dynamic>>`。
+  4. 同时 `pubspec.yaml` 有 `flutter: generate: true`，`l10n.yaml` 的 `output-dir: lib/l10n` 会**覆盖同一个文件**；官方 gen-l10n 产出的 `localizationsDelegates` 是 `List<LocalizationsDelegate<dynamic>>`（含 `GlobalMaterialLocalizations` 等）。
+- 违反：**第 3 条**（契约先行：生成物与消费方的契约未定义）；**第 5 条**（同一份「本地化表」有两个权威生成源）；**第 2 条**（隐式依赖构建流程的时序）。
+- 后果：
+  - 若构建触发 `gen-l10n`（`flutter pub get`/`build` 默认行为）→ 覆盖为官方版本，`main.dart` 可编译，但仓库内这份自研产物是**死代码**，且任何人基于它修改都会在下次构建时被静默丢弃；
+  - 若不触发（离线构建 / `--no-pub` / CI 缓存命中）→ `AppLocalizations.localizationsDelegates` 类型不匹配，**编译期失败**，直接阻断出包。
+  - 两种路径产出不同 API，**构建不可重复**，属发布合规硬伤。P1（阻塞发版）。
+
+### 【P2】`supportedLocales` 首元素是 `de`，无匹配语言的设备会整体显示德语
+- 事实：自研产物 `supportedLocales = [de, en, es, fr, ja, ko, pt, ru, zh, zh_CN, zh_TW]`；`_Delegate.isSupported(_) => true`（接受任意 locale），`_t()` 在两级 map 都未命中时回落到 `_template`（中文）。
+- 违反：**第 11 条**（降级必须有明确触发条件与既定次优行为——「找不到就退第一个」不是设计决策）；**第 14 条**（外部输入 locale 未校验）；**第 23 条**。
+- 后果：系统语言为 `th`/`hi`/`ar`/`vi` 等未支持语言的设备，Flutter 的 locale 解析会退到 `supportedLocales.first` = **德语**；若走了 `_t` 回落则显示**中文**。同一台设备可能出现「设置页德语、部分文案中文」的混排。P2。
+
+### 【P2】`AppConfig.supportedLocales`（10）与 `AppLocalizations.supportedLocales`（11）双源，且顺序不同
+- 事实：见 §5；两份列表不仅数量不同（多 `zh`），排列顺序也不同（前者 `zh_CN` 开头，后者 `de` 开头）。设置页语言列表来自前者，`MaterialApp` 匹配来自后者。
+- 违反：**第 5 条**（状态单一来源）；**第 23 条**。
+- 后果：系统语言为 `zh-HK`（无 country 命中）时，`MaterialApp` 解析到 `zh`（第 9 个候选），而设置页查 `AppConfig.localeNames['zh']` 得 `null` → 回落到 `locale.toString()`，界面副标题直接显示导航栏语言码 `zh`。用户看到「界面语言  zh」。P2。
+
+### 【P3】`app_zh.arb` 多出一个只有它能解析的键
+- 事实：`albumPageComingSoon` 只存在于 `app_zh.arb`，模板与其它 10 个 arb 都没有。
+- 违反：**第 32 条**（无人可调用的键：getter 由模板生成，代码拿不到该键）。
+- 后果：该键永远不会显示，且给「zh 与 zh_CN 一致」的维护假设埋雷。P3。
+
+### 【P3】未提供 `GlobalMaterialLocalizations` / `GlobalWidgetsLocalizations`
+- 事实：自研 `localizationsDelegates` 只有 `_Delegate`；`main.dart` 亦未追加全局 delegates。
+- 违反：**第 30 条**（Material 内建文案——如 `Slider` 语义值、日期选择器、`TextField` 长按菜单「剪切/复制/粘贴」——仍是英文）。
+- 后果：俄语用户长按输入框看到英文 Copy/Paste。P3（若官方 gen-l10n 覆盖则自动带上，属构建双轨的连带风险）。
+
+### 【P3】`AppLocalizations.of(context)` 使用非空断言
+- 事实：`Localizations.of<AppLocalizations>(context, AppLocalizations)!`；`l10n.dart` 的扩展直接转发。
+- 违反：**第 12 条**（跨函数边界的非空断言）。此处由 `Localizations` 契约保证，但 `StartupErrorPage` 的两条渲染路径都在 `MaterialApp` 之外（见 §2），一旦有人在该页使用 `context.l10n` 立即崩溃。
+- 后果：崩溃页再崩（黑屏）。P3。
+
+---
+
+## 16. `lib/features/comment/presentation/comments_page.dart`（656 行，通读）
+
+正面评价：`load()`/`loadMore()` 都实现了 `_generation` 代次丢弃（第 18 条达标，注释写明「防串页」）；`ScrollController`/`FocusNode`/`TextEditingController` 成对释放；风控 20028 显式「不自动重试」（符合第 21 条红线）。
+
+### 【P2】`StateNotifierProvider.family` 未加 `autoDispose`，且 `_CommentArgs` 未实现 `==`/`hashCode` —— 每进一个评论页就永久驻留一个 controller
+- 事实：
+  - `_commentsProvider` 声明为 `StateNotifierProvider.family<…, _CommentArgs>`（**无 `autoDispose`**）；
+  - `_CommentArgs` 只有构造函数，无 `operator ==`/`hashCode`，family 缓存键退化为**对象身份**；
+  - `_args` 在 State 里 `late final` 创建，每次进入页面都是新对象。
+- 违反：**第 20 条**（申请的订阅/状态必须有释放点）；**第 25 条**（内存条目数无上限）；**第 5 条**（同一资源对应多份 controller，状态不再单一）。
+- 后果：用户浏览 50 首歌的评论页 → 50 份 `CommentPage` 列表（含全部评论文本与头像 URL）常驻内存，且各自保留 `CommentRepository` 引用；低端机上表现为内存持续上涨、GC 频繁。P2。
+
+### 【P2】列表底部「加载更多」指示器只看 `hasMore`，失败后永久转圈
+- 事实：`itemCount = comments.length + 1`，最后一项 `if (hasMore) return Center(child: CircularProgressIndicator())` —— 该分支**不区分「正在加载」与「静止但有下一页」**；而 `loadMore()` 的 `catch (_) {}` 失败不记日志、不改状态、不提示，`_hasMore` 仍为 true。
+- 违反：**第 16 条**（「加载中」与「还有更多」是两种状态，被合并）；**第 6 条 / 第 9 条**（失败被吞、不可观测）；**第 11 条**（失败后无退出条件）。
+- 后果：弱网下翻页失败后，用户看到底部**永久转圈**却什么都没发生，只能下拉刷新整页重来。P2。
+
+### 【P2】发送失败后已清空的输入框不回填
+- 事实：`_inputCtrl.clear(); setState(() => _replyTo = null);` 在 `try` 之前执行；catch 分支只弹 Toast。
+- 违反：**第 9 条**（失败必须可恢复）；**第 21 条**（写操作失败后不具备重试的幂等前提——用户必须重新输入）。
+- 后果：一段几十字的评论因风控/断网失败后全部丢失，用户需重写。P2（用户内容丢失，但非持久数据）。
+
+### 【P3】下拉刷新失败被静默吞掉
+- 事实：`load(refresh: true)` 的 catch 只在 `state.value == null` 时置 error；已有数据时刷新失败既不提示也不留痕。
+- 违反：**第 9 条**（静默降级必须留痕）。
+- 后果：用户下拉后无任何反应，以为「没有新评论」。P3。
+
+### 【P3】`_isLoggedIn` 用 `ref.read` 参与 build
+- 事实：`bool get _isLoggedIn => ref.read(authStateProvider).valueOrNull != null;` 被 `build` 调用（决定输入框 hint、回复/删除入口）。
+- 违反：**第 18 条 / 第 5 条**（build 期读取非响应式状态，登录态变化不会重建）。
+- 后果：用户在评论页内完成登录返回后，输入框仍显示「登录后可评论」、评论无法点回复，直到退出重进。P3。
+
+### 【P3】分页口径 `30` 硬编码两处
+- 事实：`if (result.comments.isEmpty || _page * 30 >= result.total)` 出现两次，页面大小未与仓库层共享常量。
+- 违反：**第 2 条**（魔法值）；**第 3 条**（分页契约未集中定义）。
+- 后果：上游若改 page size，`hasMore` 判断错误 → 少加载或多请求一整页空数据。P3。
+
+### 【P3】`comment.specialChildId!` 跨闭包非空断言
+- 事实：`onOpenFloor` 的构建条件里判过 `specialChildId != null`，但断言写在 `_openFloor`/`_deleteComment` 的另一层闭包中。
+- 违反：**第 12 条**（非空断言只允许在同一函数体内已被证明）。
+- 后果：当前数据不可变所以安全；一旦评论模型改为可变或被复用，会 NPE。P3。
+
+### 【P3】`createTime` 直接渲染上游字符串；分类/热词用无可点行为的 `Chip`
+- 事实：`Text(comment.createTime)` 未做本地化日期格式；`_CommentTags` 用 `Chip` + `materialTapTargetSize: shrinkWrap` 表现**纯展示**信息。
+- 违反：**第 15 条**（时间表示未显式化）；**第 30 条**（Chip 在 M3 语义中代表可交互/可删除的实体）；任务书 G 项（shrinkWrap 使触控区 < 48dp）。
+- 后果：不同语言用户看到同一串上游时间格式；读屏会把标签播报为「按钮」但点了没反应。P3。
+
+---
+
+## 17. `lib/features/search/presentation/search_page.dart`（724 行，通读）
+
+正面评价：`_debounce` 在 `dispose` 取消、`_controller.removeListener` 显式解绑、`_submittedKeyword` 变化用 `ValueKey` 重建结果区、失败态不自动重试（避免 Toast 刷屏）。防抖与生命周期处理正确。
+
+### 【P2】`_SongResultTab` 的 footer 只有转圈，没有注释所称的「重试」按钮
+- 事实：
+  - 注释：「失败态不自动重试……只走 footer「重试」按钮」；
+  - 实际 `itemBuilder`：`if (i >= _items.length) return Padding(child: Center(child: CircularProgressIndicator()))` —— footer **没有任何按钮**，且只要 `_hasMore` 为真就渲染，与 `_loading` 无关。
+- 违反：**第 31 条**（注释描述的机制不存在，误导后来者）；**第 16 条**（「加载中」与「还有更多」未分离）；**第 11 条**（失败后无恢复入口）；**第 9 条**（失败只弹一条通用 Toast，且随后不再重试）。
+- 后果：搜索结果第二页请求失败后，列表底部**永久转圈**，用户既不能点重试也不能滚出新内容；注释还可能让维护者以为重试已实现而不再修。P2。
+
+### 【P2】两个搜索 family provider 没有 `autoDispose`，每次搜索关键词都会常驻一份结果
+- 事实：`_playlistSearchProvider = FutureProvider.family<…, String>`、`_genericSearchProvider = FutureProvider.family<…, (String,String)>` 均为**非 autoDispose**；`_hotSearchProvider` 同样常驻。
+- 违反：**第 20 条**（申请的状态无释放点）；**第 25 条**（条目数无上限）。
+- 后果：用户搜索 30 个关键词（每次切换都会创建新的 family 实例）→ 30 × 3 个结果列表 + 全部封面 URL 常驻内存；搜索是高频操作，泄漏随会话时长线性增长。P2。
+
+### 【P2】`_SongResultTab` 5 个 Tab 全 `AutomaticKeepAliveClientMixin`，且 `_items` 无上限
+- 事实：`wantKeepAlive => true` + `_items` 只增不减（分页追加），Tab 切换不释放。
+- 违反：**第 25 条**（列表缓存无上限）；**第 24 条**（惰性构建只保护了渲染，未保护数据）。
+- 后果：连续翻 20 页后，即使切到其它 Tab，几百条 `HomeSong` 及其封面路径全部驻留；内存随搜索深度增长。P2（与上一条同源，可合并整改）。
+
+### 【P3】`fetchSuggest` / `addHistory` / `getHistory` 均无 try
+- 事实：`_onChanged` 的 `Timer(400ms, () async { final list = await ref.read(...).fetchSuggest(...); ... })` 无 catch；`_submit` 中 `await addHistory(k)` 无 catch；`_loadHistory()` 中 `await getHistory()` 无 catch。
+- 违反：**第 6 条**（异常必须转译/记录/降级）；**第 9 条**（失败必须可观测）。
+- 后果：断网时每输入一个字就抛一次未捕获异步异常（进 `ErrorLogger`，但 UI 无任何提示）；`_submit` 时若写历史失败，**整个搜索不会执行**——用户按回车后界面毫无反应，最典型的「点了没反应」。P3（若 `addHistory` 内部已吞异常则可降级）。
+
+### 【P3】`_SongResultTab.onTap` 不等待、不处理播放失败
+- 事实：`ref.read(playHelperProvider).playHomeQueue(_items, i); context.push('/player');` —— 未 `await`，`playHomeQueue` 的 Future 错误无人接管。
+- 违反：**第 6 条 / 第 9 条**。
+- 后果：音源解析失败时仍跳进播放页，显示「未在播放」；用户以为是播放页 bug。P3。
+
+### 【P3】`s.hash ?? s.id` 把两种标识符混用
+- 事实：`hash: s.hash ?? s.id`（下载任务）——`hash` 是音频 hash，`id` 是歌曲数字 id，语义不同。
+- 违反：**第 16 条**（缺失与替代值混用）；**第 17 条**（标识符精度/种类必须单一）。
+- 后果：搜索结果缺 hash 时创建出的下载任务带错误 hash，下载必然失败且报错指向「网络」。P3。
+
+### 【P3】`GridView` 固定 `crossAxisCount: 2`
+- 事实：横屏/平板上每格宽度超过 400dp，封面被放大到失真，仍只显示 2 列。
+- 违反：**第 24 条**（布局应随约束自适应）。
+- 后果：平板上信息密度极低，与手机端体验割裂。P3。
+
+### 【P3】`Badge` 包裹 `GradientChip` 的徽标在 `Wrap` 中可能被裁切
+- 事实：`Badge(offset: Offset(8, -4), child: GradientChip(...))` —— 徽标相对 child 右上偏移，`Wrap` 的行间距 `runSpacing: 8` 不足以容纳 `-4` 的负偏移 + 徽标高度。
+- 违反：任务书 D 项（布局）。
+- 后果：热搜标签上方的「热」角标与上一行标签重叠或贴边。P3。
+
+---
+

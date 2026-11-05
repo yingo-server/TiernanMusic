@@ -866,3 +866,234 @@
 - 结论：无裸强转，`trans_param` 有 `is Map` 前置。
 
 ---
+
+## 16. `lib/features/mv/data/mv_repository.dart`（304 行，全读）
+
+### mv_repository.dart:6 `import '../../../core/config/app_config.dart'` 未使用
+- 级别：P3
+- 事实：全文件 304 行内无任何 `AppConfig.` 引用（`_api.get` 的基址来自 `KugouApiClient`）
+- 违反：第 32 条（未使用的导入）
+- 后果：`dart analyze` 会报 `unused_import`，属编译期可见的整洁度缺口；也误导读者以为 MV 模块会自行拼基址。定 P3。
+
+### mv_repository.dart:176-179 / 288-295 两个 `bestHash` 的画质优先级相反
+- 级别：P3
+- 事实：`MvInfo.bestHash` → `[sq, qhd, hd, sd]`（sq 最高）；`MvDetail.bestHash` → `['fhd','sq','qhd','hd','sd','ld']`（fhd 最高）
+- 违反：第 5 条（同一「最高画质」事实两套排序）、第 2 条（排序依据无注释、无具名常量）
+- 后果：同一个 MV 从「歌曲关联 MV」入口播和从「MV 详情」入口播可能选到不同清晰度（2K vs 1080p），用户感知为「同一个视频清晰度不一样」。定 P3。
+
+### mv_repository.dart:196-198 `sqHash` 为死字段
+- 级别：P3
+- 事实：`sqHash: pick('sq_hash')`，而同一文件的注释写明「sq（Super Quality）实测不存在」，`MvInfo` 中 `sq_hash` 永远不会来自 h264/h265/mkv
+- 违反：第 32 条（无人写入的状态）
+- 后果：`bestHash` 的 `[sqHash, …]` 首个元素恒为 null，多一次判断；读者会以为存在 SQ 档。定 P3。
+
+### mv_repository.dart:240-262 `MvDetail.fromJson` 的 `hashes` 键序与兜底
+- 级别：通过
+- 事实：`put()` 以「已存在则不覆盖」语义先写顶层平铺 hash，再写 `*_hash_265` 变体，最后写 `mkv_*` 兜底；`put` 内部先判空串
+- 违反：无（满足第 14 条：逐层判 `is Map`/`is List`；第 11 条：兜底顺序明确）
+- 结论：清晰度枚举不会互相覆盖，mkv 只在缺失时补位，逻辑正确。
+
+### mv_repository.dart:262-266 `hashes` 以可变 Map 暴露
+- 级别：P3
+- 事实：`final Map<String, String> hashes;`，构造时直接把内部 `hashes` 传入
+- 违反：第 24 条（对外暴露可变集合，调用方可改写模型状态）
+- 后果：UI 若就地 `hashes.removeWhere` 过滤画质，模型实例被污染（同一 `MvDetail` 可能来自缓存复用）。定 P3。
+
+### mv_repository.dart:82-124 `resolvePlayUrl` 的 URL 取值与 hash 映射
+- 级别：P3
+- 事实：`d[hash.toLowerCase()] ?? d[hash.toUpperCase()] ?? (d.isEmpty ? null : d.values.first)`；`downurl` 优先，其次 `backupdownurl`（List 或 String）；返回**原始 http**（注释解释 Range 与 cleartext 原因）
+- 违反：第 14 条（`d.values.first` 在多键响应下可能取到别的 MV 的地址）、第 30 条（方法名 `resolvePlayUrl` 但不再做任何代理/转换，注释已解释）
+- 后果：`/video/url` 若一次返回多个 hash（批量场景）且大小写匹配失败，会拿到第一条（可能是另一清晰度或另一视频）的 `downurl`，表现为「点了这个 MV 播了别的」。当前请求只传一个 hash，风险低。定 P3。
+
+### mv_repository.dart:126-128 `_looksLikeHash` 每次调用新建 `RegExp`
+- 级别：P3
+- 事实：`RegExp(r'^[0-9a-fA-F]{32}$')` 写在 getter 体内
+- 违反：第 26 条（高频/重复路径分配）
+- 后果：MV 播放是低频操作，代价可忽略；但同类写法在项目里人人可抄，建议提级为 `static final`。定 P3。
+
+### mv_repository.dart:36-52 `findBySong` 的嵌套数组遍历
+- 级别：通过
+- 事实：`data` 为 `List<List<Mv>>` 与 `List<Mv>` 两种形态都处理，`Map<String, dynamic>.from(item)` 前有 `is Map` 判断
+- 违反：无（满足第 13/14 条）
+- 结论：与注释「实测嵌套数组」一致，不会因形态差异丢数据。
+
+### mv_repository.dart:70-74 `fetchDetail` 缓存键
+- 级别：通过
+- 事实：`MemoryCache.keyOf('/video/detail', {'id': videoId})`
+- 违反：无（满足第 23 条：视频 id 是唯一影响结果的输入，无登录态依赖）
+- 结论：缓存维度完整，TTL 走全局默认。
+
+### mv_repository.dart:232-238 `thumb` 的 http/https 与占位符
+- 级别：P3
+- 事实：`thumb.replaceAll('{size}', '480')`，但未像 `home/data/models.dart` 的 `kugouImageUrl()` 那样把 `http://` 升级为 `https://`
+- 违反：第 5 条（图片 URL 规范化两套实现：home 模块收口到 `kugouImageUrl`，mv 模块内联）
+- 后果：MV 缩略图走明文 http（依赖 network_security_config 放行），一旦安全策略收紧即全部裂图；且 `{size}` 只替换一次，若上游把占位符换成别的写法同样失效。定 P3。
+
+---
+
+---
+
+# 附：审查期间工作树被并发修改后的现值复判
+
+> 现象：`file_read` 首轮读到的是 `bc4a521` 基线内容（audio_handler 544 行 / player_repository 353 行），
+> 但磁盘现值分别为 **569 行**（mtime 06:45）与 **369 行**（mtime 06:40），
+> 且新增代码自带 `V3-01`…`V3-07`（"第5批复核②"）注释。为给出「当前代码是否真的对」的结论，
+> 本节对这两个文件按**磁盘现值**重新完整通读，前文 1、2 节中与现值不符的条目在此**以本节为准**。
+
+## 1′. `audio_handler.dart` 现值（569 行）复判
+
+### audio_handler.dart:550-568 `stop()` / `onNotificationDeleted()` 已作废世代
+- 级别：**通过（原 P1 已关闭）**
+- 事实：两处均为 `_playToken++; _loading = false; _pendingIndex = null; _pendingSongIndex = null;` 后再 `stop()`
+- 结论：世代作废覆盖到「停止/划掉通知」，在途 `_playAt` 恢复后在每个 await 后都会 `token != _playToken` 而退出，不再出现「停了又响」。**但**这两处的 `_loading = false` 引入了新问题，见下条。
+
+### audio_handler.dart:527-536 / 550-568 / 492-504 三处**无条件关闸**（V3-01/V3-02 引入的回归）
+- 级别：**P1**
+- 事实：`pause()`、`stop()`、`onNotificationDeleted()` 各自 `_playToken++; _loading = false;`；而 `_playAt` 的 `finally` 仍是**无条件** `_loading = false`（不判断自己是否仍是闸门持有者）
+- 违反：第 19 条（关闸必须判断「我是否仍是当前持有者」；这正是 F4-14 注释里写明的约束）、第 18 条、第 22 条（并发假设未写明）
+- 后果（可复现路径）：A 在 `await resolveUrl`（最长 20-30s）→ 用户按暂停（`_loading=false`，token+1）→ 立刻点歌 B（`_playAt` 判定闸门空闲，开始装载，token+2，`_loading=true`）→ A 的 await 返回，token 过期 → 直接 `return` → **A 的 finally 把 `_loading` 清成 false**（B 仍在飞行）→ 用户再点歌 C，或自动跳歌 → C 与 B **并发**执行 `setAudioSource`。若 B 的装载后完成而 C 已 `play()`，引擎里是 B 的音源、`_index`/封面/歌词却是 C —— 这正是 F4-14 判定为 P0 的「看到这首歌、听到上一首」。修复只需把「作废」与「开闸」分离：三处停止类入口应作废世代但**不得**替在途请求关闸；`finally` 应带持有者判断（`if (token == _playToken) _loading = false`）。
+
+### audio_handler.dart:353-362 `play()` 之后的世代/越界双检
+- 级别：**通过（原 P2 已关闭）**
+- 事实：`if (token != _playToken) return; if (index < _songs.length && _index == index) { _playedController.add(_songs[index]); }`
+- 结论：V3-03 正确——既校验世代又校验越界与「仍是当前曲」，不会再把 `RangeError` 送进下面的 `catch (e)` 变成假播放失败。
+
+### audio_handler.dart:246-249 `playQueue` 重置 `_failureStreak`
+- 级别：**通过（原 P2 已关闭）**
+- 事实：换队列处 `_failureStreak = 0;`
+- 结论：V3-04 正确，新队列不会继承旧队列的连续失败计数。
+
+### audio_handler.dart:268-284 `playSong` 命中队列已有歌时仍不自增 `_playToken`
+- 级别：**P2（未修，原条目维持）**
+- 事实：`if (existing >= 0) { … await _playAt(existing); return; }`；`_playAt` 在 `_loading == true` 时只写 `_pendingIndex` 就返回，token 不变
+- 违反：第 18/19 条
+- 后果：加载中点击同队列另一首，在途请求继续走完 `play()` 与 `onSongStarted`，先响旧歌再切走；最近播放被写错。
+
+### audio_handler.dart:531-536 `pause()` 清 `_pendingIndex` 但不清 `_pendingSongIndex`
+- 级别：P3
+- 事实：`pause()` 里 `_pendingIndex = null;` 而没有动 `_pendingSongIndex`（`stop()` 两者都清）
+- 违反：第 5 条（同类「挂起状态」两条生命周期规则不一致）、第 20 条
+- 后果：播放命中 20028 → 用户暂停 → 之后 `retryPendingPlayback()` 仍会拉起那首触发验证的旧歌，与「暂停」意图相反。定 P3。
+
+### audio_handler.dart:57-80 `ensureEngineReady` 仍未捕获 `ensureReady()` 自身异常
+- 级别：P2（未修，原条目维持）
+- 后果：插件未注册/Service 被拒时异常冒泡到 UI，而 UI 只按「返回 false」设计，`engineError` 仍为 null → 点击无反应或无提示崩溃。
+
+### 其余（原 P3 条目在当前版本逐字复核后仍成立，不做改动）
+`_configureSession` 空捕获、七大 StreamController 无 `close()`、`_engineReadyController` 注释与实现不符、`_randomIndex` 全量 shuffle、`播放失败：$e` 原始异常文本、`_playAt` 早退不复位 `_index`。
+
+## 2′. `player_repository.dart` 现值（369 行）复判
+
+### player_repository.dart:135-146 `fetchDetail` 失败已留痕
+- 级别：P2（原 P1 降级）——**部分修复**
+- 事实：`catch (e)` 内按 `TypeError/NoSuchMethodError/FormatException` 与其余分流 `debugPrint`，随后仍然 `return song`
+- 违反：第 7 条（捕获一切）、第 10 条（编程错误仍进入业务降级：仍返回「未补全的 song」）
+- 后果：可观测性达标（第 6/9 条已满足），但上游字段类型一变，用户依旧拿到无时长/无封面的歌，且不会重试也不会提示。定 P2。
+
+### player_repository.dart:344-357 `_actualQuality` 与 `_qualityFromBitrate` 已统一阈值
+- 级别：**P2（修复方向错误：统一到了错的一档）**
+- 事实：两处现在都是 `>=500000 → flac`、`>=192000 → high`、`>=96000 → q320`、否则 `q128`；而 `AudioQuality` 的序位与标签是 `q128(标准) < q320(高品) < flac(无损) < high(Hi-Res) < super(臻品母带)`
+- 违反：第 15 条（码率档位与音质枚举不是一一对应，靠阈值猜）、第 17 条（同一「码率→音质」映射错一档）
+- 后果：**整条阶梯错一档**——128 kbps（128000）落入 `>=96000` → 显示「高品 320」；320 kbps（320000）落入 `>=192000` → 显示「**Hi-Res**」；只有 ≥500k 才正确判 flac。用户看到普通 320k 歌被打上 Hi-Res 标、128k 被打上 320 标；若该值被下载链路复用会选错档位。V3-06 只消除了两条路径的**漂移**，没有修正**映射本身**。正确梯子应为 `<192000 → q128`、`<500000 → q320`、`≥500000 → flac`（或按 extName 采信）。
+
+### player_repository.dart:318-332 删除 `_proxyHttp` 后遗留的悬空注释
+- 级别：P3
+- 事实：两个段落（`播放地址**不再**走前缀代理…` 与 `播放地址直连…V3-07：删除恒等包装`）留在 `static AudioQuality _actualQuality` 之前，中间只有空行，函数与「代理」毫无关系
+- 违反：第 31 条（注释与被注释对象不符）、第 32 条（删除实现未删注释）
+- 后果：读者会以为音质判定与代理有关；`dart analyze` 也可能报 dangling doc comment。定 P3。
+
+### player_repository.dart:184-194 `_resolveViaDirect` 直接返回原始 http 地址
+- 级别：通过
+- 事实：`url: result.bestUrl!`（不再经恒等包装），注释解释了 Range/cleartext 理由
+- 结论：与 MV 模块口径一致，恒等函数已删除，原 P3（命名与行为不符）关闭。
+
+### 其余（原 P2/P3 条目在当前版本逐字复核后仍成立）
+`ensureDfid` 递归轮询与失败后重复注册、`resolveUrl` 对非 20028 错误一律回退 kapi、`_songFailureMessage` 传 `data` 给 `canPlay` 的形态含糊、`priv_status`/`hash_offset` 魔法判据、`_directPlay` 依托 `_ref` 可空、`_firstUrl` 不校验 scheme。
+
+---
+
+# 复核重点 A–F 结论（现值）
+
+| 重点 | 结论 | 依据 |
+|---|---|---|
+| A1 `_playToken` 是否覆盖所有 await 后写入点 | **基本覆盖，但闸门侧有回归** | `fetchDetail` / `resolveUrl` / `setAudioSource` 后均有校验；`play()` 后由 V3-03 补上校验；`playSong(existing)` 未自增 token（P2）；`pause`/`stop` 关闸越权（P1） |
+| A2 `_loading` 是否单点释放（F4-14/15/16） | **已破坏** | `_playAt.finally` 是唯一释放点，但 V3-01/V3-02 在 `pause`/`stop`/`onNotificationDeleted` 里额外写 `_loading = false`，等于非持有者开闸（P1） |
+| A3 `setAudioSource` 竞态：旧请求后完成是否覆盖新源 | **单闸门时安全，多闸门时失效** | `_applySource` 前后双检正确；一旦闸门被第三方打开出现两个装载并行，后完成者覆盖引擎音源（P1） |
+| A4 离线→在线回退 / 试听判定 / 失败跳歌 | 回退分支正确；试听标记刷新正确；跳歌期间 `_failureStreak` 换队列已重置（V3-04） | 见 1′ 节 |
+| B1 `_inFlight` 防重锁时序 | **正确** | 同步 `add` + 拒绝路径不进 finally + `finally` 释放，单 isolate 无竞态 |
+| B2 `maybeSucceeded` 分类 | **有一处过宽** | `connectionError` 被判「一定没执行」，Dio 会把「已发出后被 RST」归到该类（P2）；`unknown/badResponse/transformTimeout` 判 true 正确 |
+| B3 `_safeName`/`_safeId`（第 14 条） | `_safeName` 正确；`_safeId` 删除式清洗会造出「看似合法」的错 id（P3） | — |
+| B4 `collectPlaylist` GET 分派注释 vs 实际 | 注释与代码自洽（都用 `_api.get`），但该断言跨文件不可验证（P3） | — |
+| C KRC 解析（逐字基准 / 三种翻译结构 / `copyWith(localPath:null)`） | **全部正确** | 行首时间相加 ✓；`languageList` / 顶层 Map / 顶层数组 三结构 + 1:1 对齐 ✓；`clearLocalPath` 显式清除且已被 audio_handler 使用 ✓ |
+| D 数据模型（毫秒/秒显式、裸强转、空集合语义） | 单位显式化落实；无裸强转残留（`search/home/comment/mv` 均先 `is Map`）；空集合与缺失基本分离 | 遗留：`player` 音质阈值错档（P2）、`HomeSong.id` 混装（P3） |
+| E 缓存（键维度 / TTL / 可变对象泄露） | 键维度基本完整（`/search`、`/playlist/*`、`/lyric`、`/kmr/audio/mv` 均含全部入参）；`dailyRecommend` 已明确不缓存；TTL 走全局默认 | 遗留：缓存存/取同一可变 Map（P3）、`fetchDetail` 键缺登录态（P3） |
+| F 分页状态机（刷新 vs 加载更多竞态） | **无竞态** | 歌单页 `allPages:true` 一次取全量，无「加载更多」状态；仓库分页全用局部变量，`unknownTotal` 处理正确 |
+
+---
+
+# 问题清单（按级别）
+
+## P1（2 条）
+
+1. **`audio_handler.dart:527-536 / 550-568` `pause()`/`stop()`/`onNotificationDeleted()` 无条件 `_loading = false`**，配合 `finally` 的无条件开闸，出现「非持有者开闸」→ 两个 `_playAt` 并发 `setAudioSource`，可能引擎播 B、UI 显示 C。违反第 19/18/22 条。（V3-01/V3-02 修复引入的回归）
+2. **`playlist_detail_page.dart:145-186` 收藏按钮无幂等、无「已收藏」态**：图标恒为 `favorite_border`，成功后仅 toast，连点两次即产生两条同名收藏歌单；失败时 `maybeSucceeded` 未被处置，页面也没有刷新入口，文案却让用户「刷新确认」。违反第 21/5/9 条。
+
+## P2（15 条）
+
+| # | 位置 | 一句话 | 违反 |
+|---|---|---|---|
+| 1 | audio_handler:268-284 | `playSong` 命中已有歌不自增 token，加载中点击先响旧歌 | 18/19 |
+| 2 | audio_handler:57-80 | `ensureEngineReady` 未捕获 `ensureReady()` 异常，UI 只按 false 设计 | 8/11 |
+| 3 | player_repository:344-357 | 音质阈值阶梯整体错一档：128k→「高品 320」、320k→「Hi-Res」 | 15/17 |
+| 4 | player_repository:135-146 | `fetchDetail` 仍把 `TypeError` 当业务失败，返回未补全的 song | 7/10 |
+| 5 | player_repository:37-64 | `ensureDfid` 递归轮询无上限，注册失败后第二个调用者会重复注册 | 21/22/25 |
+| 6 | player_repository:168-186 | 非 20028 错误（无版权/需会员）也回退 kapi，白打 5~10 次请求 | 11/8 |
+| 7 | lyric_repository:150-176 | 翻译缓存命中即整体返回，先前失败的行永久无译文 | 11/16 |
+| 8 | lyric_repository:132-140 | `fetchLyric` 用 null 同时表示「无词」与「全部失败」 | 16/9 |
+| 9 | lyric_view:71-89 | `_scrollTo` 未计入 120px 顶部 padding，当前行恒定偏高（注释谎称已修） | 31/17 |
+| 10 | playlist_repository:299-312 | `connectionError` 一律判「一定没执行」，已发出后被 RST 时诱导重试 | 21/3 |
+| 11 | playlist_repository:77-112 | `newestFirst=false` 与 `true` 结果完全相同，参数无效果 | 30/32 |
+| 12 | playlist_detail_page:171-186 | 写失败只 toast，不刷新不禁用重试 | 9/21 |
+| 13 | search_repository:222-241 | 历史 `clear()+addAll()` 非原子，中途被杀则历史全丢 | 5/17 |
+| 14 | search_repository:222-232 | 历史写入无互斥，并发写互相覆盖 | 22/21 |
+| 15 | search_repository:209-216 | 热搜项裸 `as Map` + 整函数 catch，一条坏数据导致整榜为空且无日志 | 13/7/9 |
+
+## P3（85 条，按文件计数）
+
+| 文件 | 条数 | 主要内容 |
+|---|---|---|
+| player/data/audio_handler.dart | 10 | 早退不复位 `_index`、`playQueue` 的 token 自增位置、控制器/订阅无释放、`_configureSession` 空捕获、同步 `existsSync`、错误文案带原始异常、`indexOf` 同 hash、`_randomIndex` 全量 shuffle、`engineReady` 注释不符、`pause` 不清 `_pendingSongIndex` |
+| player/data/player_repository.dart | 6 | `Map.from` 键型、free_part 段空捕获、`priv_status`/`hash_offset` 魔法判据、`canPlay(data)` 形态含糊、`_directPlay` 依托可空 Ref、V3-07 遗留悬空注释 |
+| player/data/models.dart | 3 | 未知音质一律 q128、`setDuration` 单位靠字段名白名单、`Song==` 只比 hash |
+| player/player_provider.dart | 7 | `audioPlayerProvider` 的 yield/订阅窗口（P0-1 复发路径）、`playerRepositoryProvider` 用 watch 做副作用（重建 handler）、`audioEngineReadyProvider` 非响应式、队列不改写不广播、最近播放 fire-and-forget、跨 feature import、空队列 `togglePlay` |
+| player/play_helper.dart | 3 | 四处 Song 构造重复、队列入口不校验 index、`hash ?? id` |
+| lyric/data/krc_parser.dart | 8 | 行首无标签文本丢失、时长回填在排序前、非稳定排序、`offsetMs` 双重应用风险、翻译解不开时回退 base64、`LineSplitter` 同名、`translation` 可变、行首 `int.parse` 重复 |
+| lyric/data/krc_decoder.dart | 2 | `on Object` 捕获、`decode()` 兼容壳（空串语义） |
+| lyric/data/lyric_repository.dart | 5 | 缓存存可变 Map、`decodeContent` 对 LRC 的形态假设、LRC base64 失败静默、版本哈希 31 位、`ArgumentError` 与 null 混用 |
+| lyric/presentation/lyric_view.dart | 6 | 每 tick 全列表重建（注释称不会）、`KrcLyric` 身份比较、空歌词只显示「暂无歌词」、用户滚动判据依赖 Flutter 通知细节、`_buildOriginal` 未格式化、`_LyricLineTile` 未使用 `key`（analyze 确认） |
+| playlist/data/playlist_repository.dart | 7 | 重复提交被拒时 `maybeSucceeded:true`、GET 分派跨文件断言、`_safeId` 删除式清洗、dedupeKey 用整批数据、`fetchDetail` 键缺登录态、缓存前缀匹配、`Map.from` 键型 |
+| playlist/presentation/playlist_detail_page.dart | 7 | provider 注释与仓库矛盾、`_tracksReloadProvider` 死状态、「加载更多」注释残留、播放全部用 `.value` 静默、下载 Song 缺 albumId/时长、Repo provider 别名、`_buildTracksSlivers` 死参数 |
+| comment/data/comment_repository.dart | 4 | 预取 specialChildId 空捕获、评论数「缺失=0」、total 回退当前页、`createTime` 单位不明 |
+| search/data/search_repository.dart | 4 | 历史读取失败当空、`json['data']?['list']` 形态假设、三实体塞 `HomeSong`、Provider 用 `read` |
+| home/data/home_repository.dart | 4 | `data?['info']` 形态假设、两处静默回落、每日推荐三义合并、Provider 用 `read` |
+| home/data/models.dart | 2 | `HomeSong.id` 混装三种语义、时长两段式对「254ms」类字段的风险 |
+| mv/data/mv_repository.dart | 7 | 未使用 `AppConfig` 导入（analyze 确认）、两个 `bestHash` 优先级相反、`sqHash` 死字段、`hashes` 可变暴露、`d.values.first` 取值、`_looksLikeHash` 每次建 RegExp、`thumb` 不升级 https |
+
+## 统计表
+
+| 级别 | 条数 | 占比 |
+|---|---|---|
+| P0 | 0 | 0% |
+| P1 | 2 | 2.0% |
+| P2 | 15 | 14.7% |
+| P3 | 85 | 83.3% |
+| **合计** | **102** | 100% |
+
+## 修复验证小结（复核结论）
+
+- **确认修好（通过）**：F4-14 的「单点释放」设计（但被 V3-01/02 破坏，见 P1-1）、F4-15 `clearLocalPath`、F4-16 试听标记重置、F4-17 LRC 多时间戳、F4-18/19/20/21/22/23 KRC 全套、F4-24/25 KRC 解密四分类与长度前缀兜底、F4-26/27 歌词候选校验、F4-28/29 KRC→LRC 降级、F4-31/32 翻译缓存键与批次截断、F4-13 歌单排序、PLY-01/02/06/07/08、V3-03/04/05/07。
+- **修复方向错误（需重做）**：V3-06 把两条音质映射「统一到同一套阈值」，但阈值本身错一档（320k→Hi-Res）；应统一到正确阶梯而不是统一到错误实现。
+- **修复引入回归**：V3-01/V3-02 在 `pause`/`stop`/`onNotificationDeleted` 中无条件 `_loading = false`，破坏 F4-14 的「只有闸门持有者能开闸」不变量（P1-1）。
+- **仍未修**：`playSong(existing)` 世代失效（P2-1）、`ensureEngineReady` 异常旁路（P2-2）、`_scrollTo` 的 120px（P2-9）等 15 条 P2。
+
+> 说明：本次审查只读不写，未编译、未跑测试；`dart analyze` 仅在缺 Flutter 包的环境下用于交叉验证，已过滤 `uri_does_not_exist` / `undefined_*` 等噪音，仅采纳 `unused_import`、`unused_element_parameter` 两类可信结果。
