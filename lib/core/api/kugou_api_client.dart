@@ -125,8 +125,11 @@ class KugouApiClient {
     if (path != null && path.isNotEmpty) {
       try {
         return PersistCookieJar(storage: FileStorage(path));
-      } catch (_) {
+      } catch (e) {
         // 目录异常时退化为内存，不能让登录因存储问题而失败
+        // B-07（第6批①，P1）：静默降级必须留痕（第 9 条）
+        debugPrint('[cookie] PersistCookieJar creation failed (path=$path): $e'
+            ' — falling back to in-memory jar');
       }
     }
     return CookieJar();
@@ -141,7 +144,29 @@ class KugouApiClient {
   static CookieJar? _sharedJar;
 
   /// 共享 cookie 存储（首次调用时按全局路径创建）。
-  static CookieJar get sharedCookieJar => _sharedJar ??= _createCookieJar(null);
+  ///
+  /// B-07（第6批①，P1）：持久化与否取决于「谁先构造客户端」的时序——
+  /// main() 在 runApp 前设置 [cookieStoragePath]，但若任何 Provider 在
+  /// 该设置之前构造了客户端（冷启动/低端机），整个进程会静默使用内存
+  /// jar → 用户下次冷启动被登出。两道防线：
+  /// 1. 路径未设置时**不缓存** jar（每次重查，路径就绪后自然切到持久化）；
+  /// 2. 降级到内存 jar 时必须留日志（第 9 条），否则线上无线索。
+  static CookieJar get sharedCookieJar {
+    if (_sharedJar != null) return _sharedJar!;
+    final path = cookieStoragePath;
+    if (path == null || path.isEmpty) {
+      // 路径未就绪：返回内存 jar 但不缓存，等路径就绪后重建
+      debugPrint('[cookie] storage path not ready, using in-memory jar '
+          '(will switch to persistent once path is set)');
+      return CookieJar();
+    }
+    final jar = _createCookieJar(path);
+    if (jar is! PersistCookieJar) {
+      debugPrint('[cookie] WARNING: falling back to in-memory jar '
+          '(path=$path) — logins will NOT survive restart');
+    }
+    return _sharedJar = jar;
+  }
 
   /// 全局 cookie 存储路径（main() 启动时用 getApplicationDocumentsDirectory 设置一次）
   static String? cookieStoragePath;

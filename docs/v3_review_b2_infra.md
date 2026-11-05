@@ -33,8 +33,9 @@
 
 基础设施层**没有新增崩溃点，但存在两类系统性缺陷**：
 (1) **设备身份 dfid 有 4 份权威存储、5 个写入点**，互相覆盖；
-(2) **错误日志落公共 Documents 目录，但脱敏正则漏掉 JSON 引号形态与手机号**，
-敏感凭据会以明文留在用户可见、可分享的文件里。
+(2) **日志落公共 Documents 目录，而脱敏正则对 JSON 引号形态与手机号可证明失效**，
+同时业务侧唯一的接口错误入口 `logApi()` 无人调用——「有脱敏的管道没输入、
+有输入的场景没脱敏」。
 
 ---
 
@@ -268,8 +269,8 @@
 
 ## 三、失败可观测与日志安全（第 9 / 6 / 14 条）
 
-### B-17 `lib/core/utils/error_logger.dart`:189 脱敏正则漏掉 JSON 引号形态，token 明文落公共目录
-- 级别：P0（凭据泄露）
+### B-17 `lib/core/utils/error_logger.dart`:189 脱敏正则对 JSON 引号形态完全失效，落盘目录是公共可分享区
+- 级别：P1（凭据泄露风险；当前入口收窄，未见已被触发的调用点，故不判 P0）
 - 事实：
   ```dart
   static String _redact(String s) {
@@ -289,11 +290,19 @@
   日志落点：Android 10+ 写 **MediaStore Downloads**、≤9 写 **公共 Documents**
   （:41–49 注释明示「文件管理器可见，且用户可能分享」）。
   `logApi()` 的 `body` 也被同一正则处理（:217），而登录/刷新 token 的响应体正是 JSON。
-- 违反：第 9 条（失败可观测不得以泄露凭据为代价）；连带第 14 条（边界数据未按敏感级别处理）。
-- 后果：任何一次登录/刷新失败（`DioException` 的 `toString` 会带响应体）都会把
-  **明文 token / access_token 写进用户可见、可一键分享的日志文件**；手机号
-  （`mobile=` 查询参数、短信登录错误上下文）同样明文留在公共目录。
-  日志被用户分享给客服/贴到 Issue 即等于凭据外泄。P0。
+- 违反：第 9 条（可观测性不得以泄露凭据为代价；「脱敏」这一承诺在 JSON 形态上不成立）
+  + 第 14 条（落盘属于数据边界，未按敏感级别处理）。
+- 触发路径（诚实界定）：`ErrorLogger.log()` 目前只有两个入口——
+  `FlutterError.onError`（main.dart:44）与 `runZonedGuarded`（main.dart:169），
+  二者传入的是未捕获异常的 `toString`/`context`；`logApi()`（:207）本来正是
+  「把接口响应体交给脱敏函数」的现成入口，**只因当前无人调用**（见 B-41）才没有立刻被触发。
+  一旦有调用点把响应体、或带查询串的 `DioException` 文本交给 `log()`/`logApi()`，
+  凭据即以明文进入日志。
+- 后果：日志的落点是 MediaStore Downloads / 公共 Documents（文件管理器可见、
+  用户会用来「把日志发给客服」）。脱敏函数在 JSON 形态上可证明失效（上方实测），
+  等于**这条通往公开目录的管道没有任何有效的凭据过滤**；
+  一旦任何异常文本里带出 `"token":"…"` 或 `mobile=…`，就是明文凭据/手机号被用户转发出去。
+  风险等级取决于「是否有人调用」，故定 P1 并要求与 B-41 一并修复。
 
 ### B-18 `lib/core/utils/error_logger.dart`:189 脱敏不覆盖手机号，与「日志脱敏」目标不符
 - 级别：P2
@@ -358,7 +367,7 @@
   MediaStore `appendText` 必然失败 → 日志静默降级；且 `_apiLevel` 被缓存，
   一次误判影响整个进程。用户侧表现为「这台老机器永远没有日志」。
 
-### B-22 `lib/core/utils/error_logger.dart`:71 并发写入无串行/锁
+### B-22 `lib/core/utils/error_logger.dart`:66 并发写入无串行/锁
 - 级别：P2
 - 事实：`log()` 是 `async`，多处 `unawaited(log(...))`（:243、:252），每次独立执行
   「读长度 → 可能轮转 rename → append」。Android 10+ 分支把「读旧内容 + 轮转 + 整份重写」
@@ -367,7 +376,7 @@
 - 后果：首页并发拉图时 `SQLITE_BUSY` 一次刷几十条错误日志（见 B-28），
   并发读改写会丢条目甚至互相覆盖；用户/开发者看到的日志残缺，排障结论被误导。
 
-### B-23 `lib/core/utils/toast.dart`:22–28 同类提示 3 秒内静默丢弃
+### B-23 `lib/core/utils/toast.dart`:24–27 同类提示 3 秒内静默丢弃
 - 级别：P2
 - 事实：
   ```dart
@@ -379,7 +388,7 @@
   **完全没有提示**；用户会认为「点了没反应」，尤其在只有一条 toast 的情况下。
   去重本身合理，但应对「关键级别消息」豁免或至少计数。
 
-### B-24 `lib/core/utils/toast.dart`:32–35 去重表上限形同虚设
+### B-24 `lib/core/utils/toast.dart`:29–33 去重表上限形同虚设
 - 级别：P3
 - 事实：
   ```dart
@@ -432,7 +441,7 @@
   被全局错误处理写进日志并刷屏（每次几十条，正好撞上 B-22 的并发写日志问题）；
   用户侧表现为封面加载慢、个别封面空白重试。作者以为已修复，后续不会再有人来查这条链路。
 
-### B-27 `lib/core/image/app_image_cache.dart`:4–6 用 `package:file` 的 `File` 覆写 `dart:io` 的 `File`
+### B-27 `lib/core/image/app_image_cache.dart`:3–4 用 `package:file` 的 `File` 覆写 `dart:io` 的 `File`
 - 级别：P2
 - 事实：
   ```dart
@@ -451,24 +460,29 @@
   `package:file` 抽象层（进而写出与 `CacheManager` 不兼容的代码）。图片缓存是首页首屏路径，
   任何构建问题都直接表现为「App 装不上/首屏无图」。
 
-### B-28 `lib/core/image/app_image_cache.dart`:27–31 只有条目数上限，没有体积上限，也没有清理入口
+### B-28 `lib/core/image/app_image_cache.dart`:27–31 只有条目数上限，没有体积上限；清理绕开 CacheManager API
 - 级别：P2
 - 事实：
   ```dart
   AppImageCache._() : super(Config('tiernanImageCache',
       stalePeriod: const Duration(days: 30), maxNrOfCacheObjects: 600));
   ```
-  - 600 条 × 30 天留存，无字节上限、无解码尺寸约束（`CachedNetworkImage` 的
-    `memCacheWidth` 由调用方各自决定）；
-  - 应用内唯一的「清除缓存」（`settings_page.dart`:124–147）只清
-    `MemoryCache`、`LyricTranslationCache` 与 Hive 的 `api_cache/image_cache` 盒、
-    临时目录，**从未调用 `AppImageCache.instance.emptyCache()` 或 `deleteFromCache`**。
-- 违反：第 25 条（所有资源必须有上限，上限要有据可依）。
-- 后果：重度浏览用户（每天翻几十个歌单/歌手页）图片缓存可累积到数百 MB；
-  用户点「清除缓存」后**显示的占用不变、封面照样立刻出现**，会认为按钮失效。
-  低端设备上「存储不足」提示随之出现，且用户无法在 App 内自救。
+  - 600 条 × 30 天留存，**无字节上限**、无解码尺寸约束
+    （`CachedNetworkImage` 的 `memCacheWidth` 由各调用方自行决定）；
+  - 应用内唯一的「清除缓存」（`settings_page.dart`:124–154）清 `MemoryCache`、
+    `LyricTranslationCache`、Hive 的 `api_cache/image_cache` 盒，然后
+    **直接删除临时目录下除 `downloads_tmp` 外的所有实体**（`recursive: true`），
+    其中就包含 `flutter_cache_manager` 的缓存目录与它的 sqflite 数据库；
+    全程未调用 `AppImageCache.instance.emptyCache()` / `deleteFromCache()`。
+- 违反：第 25 条（资源必须有上限，上限要有据可依）
+  + 第 3 条（清理路径绕开组件公开契约，直接删其底层存储）。
+- 后果：重度浏览用户（每天翻几十个歌单/歌手页）图片缓存可累积到数百 MB 且**永远不会被
+  自身机制回收**（600 条只按条目数淘汰，单张原图可达数 MB）；而「清除缓存」是删除
+  CacheManager 正在使用的数据库文件，组件持有的连接与磁盘状态脱节，
+  表现为清缓存后个别封面反复加载失败/日志出现 sqflite 异常，通常要重启才恢复。
+  低端设备上「存储不足」提示随之出现，用户在 App 内无法自助收敛体积。
 
-### B-29 `lib/core/cache/cache_manager.dart`:84 翻译缓存键缺「翻译模型/服务版本」维度
+### B-29 `lib/core/cache/cache_manager.dart`:81 翻译缓存键缺「翻译模型/服务版本」维度
 - 级别：P2
 - 事实：
   ```dart
@@ -481,7 +495,7 @@
 - 后果：项目升级翻译模型/改提示词后，所有老歌**永久返回旧译文**（没有 TTL，见 B-30），
   线上表现为「翻译质量没变、某些句子一直翻错」，且清缓存是唯一的修复手段。
 
-### B-30 `lib/core/cache/cache_manager.dart`:78–110 翻译缓存无条数/体积上限、无过期
+### B-30 `lib/core/cache/cache_manager.dart`:71–110 翻译缓存无条数/体积上限、无过期
 - 级别：P2
 - 事实：`LyricTranslationCache` 直接 `Hive.openBox<String>('lyric_translations')`，
   `set()` 只 `put`，`clear()` 只有手动调用；无 LRU、无 TTL、无容量统计。
@@ -534,7 +548,7 @@
   本次进程内**所有播放尝试都失败**，用户必须杀进程重启；界面提示「播放失败」但再点也没用。
   且没有任何重试入口。
 
-### B-34 `lib/core/direct/kg_providers.dart`:18–21 / :45 `KgDeviceStore` 单例与 `save()` 从未被使用
+### B-34 `lib/core/direct/kg_providers.dart`:19 / :42 `KgDeviceStore` 单例与 `save()` 从未被使用
 - 级别：P3
 - 事实：
   ```dart
@@ -591,7 +605,7 @@
 - 后果：`TypeError` 属编程错误（`kg_direct_api_client` 对 TypeError 明确 rethrow），
   会被当作实现缺陷上抛，表现同 B-36：歌词加载中断。
 
-### B-38 `lib/core/audio/preferred_quality.dart`:11–17 读设置吞掉所有异常并静默回落到 320
+### B-38 `lib/core/audio/preferred_quality.dart`:11–17 读设置吞掉所有异常，且两个失败分支落到相反档位
 - 级别：P2
 - 事实：
   ```dart
@@ -603,14 +617,15 @@
   } catch (_) { /* box 未打开或读取异常 → 用默认 */ }
   return AudioQuality.q320;
   ```
-  `AudioQuality.fromString(v)` 遇到未知字符串时的行为未在本函数内校验（依赖枚举实现），
-  box 未打开时**直接按最高档 320 处理**。
-- 违反：第 6 条（空体捕获）+ 第 9 条（读到失败与「未设置」不可区分，且不留痕）。
-- 后果：用户在设置里选 128k（省流量/会员限速），若首次读取发生在 settings box 打开前，
-  播放与下载按 320 请求 → **流量翻倍、弱网缓冲更久**；用户会认为「音质设置没用」。
-  同时异常被彻底吞掉，诊断页看不到任何线索。
+  两处失败语义相反：box 未打开/异常 → `q320`（最高档）；
+  而值存在但不是字符串、或字符串不被 `fromString` 识别 → `q128`
+  （models.dart:32–49，未知值兜底 q128）。
+- 违反：第 6 条（空体捕获）+ 第 9 条（同一设置的「读取失败」有两个方向相反的静默结果，且不留痕）。
+- 后果：冷启动恢复播放队列时若 settings box 尚未打开，用户选过的 128k 会被按 **320k**
+  请求 → 流量翻倍、弱网更容易卡；反之若设置值被写坏（旧版本别名未覆盖），
+  用户花钱选的 Hi-Res 会**静默降到 128k**（听感忽然变糊），两种情况诊断页都查不到原因。
 
-### B-39 `lib/core/router/app_router.dart`:80 榜单 id 解析失败静默变成 0
+### B-39 `lib/core/router/app_router.dart`:76 榜单 id 解析失败静默变成 0
 - 级别：P2
 - 事实：
   ```dart
@@ -620,7 +635,7 @@
 - 后果：深链/历史路由里出现非法 id 时，页面照常打开并请求 `rankId=0`，
   显示空白榜单且无错误提示（用户只看到「什么都没有」）。
 
-### B-40 `lib/core/router/app_router.dart`:56 / :70 / :79 路由参数直接非空断言
+### B-40 `lib/core/router/app_router.dart`:48 / :57 / :67 / :71 / :83 路由参数直接非空断言
 - 级别：P3
 - 事实：`id: state.pathParameters['id']!`、`hash: state.pathParameters['hash']!`。
   路径段理论上必存在，但这些值来自外部深链（第 14 条列出的边界之一）。
@@ -636,11 +651,13 @@
   ```
   全仓检索 `logApi(` 只有该声明，没有调用点。
 - 违反：第 32 条（死代码零容忍）。
-- 后果：项目**实际没有结构化的接口错误日志**（接口名/错误码/响应体截断），
-  真实运行中 API 失败只落到 `debugPrint` 与 B-19 那个无人读的内存表。用户反馈
-  「某接口一直失败」时，开发者拿不到错误码与端点，排障只能靠猜。
+- 后果：`ErrorLogger` 实际只有两个输入源——`FlutterError.onError` 与
+  `runZonedGuarded`（main.dart:44、:169），即**只记「未捕获异常」**；
+  所有被业务捕获并降级的 API 失败根本不入盘（只剩 `debugPrint` 与 B-19 那个无人读的内存表）。
+  用户在设置页看到「已记录 N 条错误」时，N 里不会有任何一条「某接口一直失败」；
+  开发者拿不到错误码与端点，排障只能靠猜。
 
-### B-42 `lib/core/theme/app_theme.dart`:182 / :44–47 主题中的尺寸魔法值未纳入 token 体系
+### B-42 `lib/core/theme/app_theme.dart`:171 / :100 / :111 / :28–30 主题中的尺寸魔法值未纳入 token 体系
 - 级别：P3
 - 事实：文件顶部定义了 `radiusCard/radiusButton/radiusInput/radiusSmall` 与
   `motionShort/motionMedium/motionCurve`，但 `navigationBarTheme.height: 68`、
@@ -651,3 +668,145 @@
   同一行两个按钮不等高（视觉抖动）。
 
 ---
+
+## 七、问题清单（按级别排序）
+
+### P0（0 条）
+
+本批未发现「已可触发」的崩溃、数据损坏或凭据外泄。原先判 P0 的 B-17 因
+「当前唯一入口只喂未捕获异常、尚无调用点把响应体交给脱敏函数」而降为 P1（见该条「触发路径」）。
+
+### P1（7 条）
+
+| 编号 | 位置 | 问题 | 条款 | 用户可见后果 |
+|---|---|---|---|---|
+| B-17 | `core/utils/error_logger.dart:189` | 脱敏正则对 `"token":"…"` / `mobile=…` 可证明失效，而日志落公共 Documents/MediaStore；与 B-41 合并构成「该记的没记、记的可能带明文」 | 第 9 条（兼第 14 条） | 任一调用点把响应体交给日志，即把明文 token/手机号写进用户会转发给客服的文件 |
+| B-10 | `core/storage/secure_storage.dart:16` + `core/direct/kg_providers.dart:54` | dfid 四份权威存储（SecureStorage / Hive device / KgClient 字段 / cookie）五个写入点，两条注册路径产出不同 dfid 且互相覆盖 | 第 5 条 | 设备标识每次冷启动来回跳变 → 被判新设备：播放降权/试听、反复触发人机验证 |
+| B-11 | `core/storage/secure_storage.dart:58` | `clearCredentials` 不删 dfid、不删 `acct_token_*`；普通退出登录不调 `deleteAccountToken` | 第 5 条（兼第 20 条） | 「退出登录」后 token 仍在设备上，账号切换可无密码恢复该账号 |
+| B-19 | `core/direct/kg_direct_api_client.dart:138` | `lastErrors` 只写不读（诊断页无实现），内容未脱敏 | 第 9 条（兼第 32 条） | 「网络诊断」看不到任何直连失败，排障零线索 |
+| B-07 | `core/api/kugou_api_client.dart:144–147` | cookie 持久化与否取决于「谁先构造客户端」这一时序，晚设置即静默退化为内存 jar | 第 2 条（兼第 9 条） | 冷启动偶发掉登录，必须重新扫码/短信登录，且日志无痕 |
+| B-35 | `core/api/translate_api.dart:45` | `content == null` 时返回原文，调用方把原文当译文写入持久缓存 | 第 16 条（兼第 9 条） | 翻译服务一出问题，该歌双语歌词永久显示「原文=译文」，服务恢复也不重试 |
+| B-36 | `core/api/translate_api.dart:44` | `choices[0]` 对空列表抛 RangeError，不属任何业务异常 | 第 14 条 | 上游返回空 choices 时歌词页异常/崩溃，且被记为未捕获错误 |
+
+### P2（29 条）
+
+| 编号 | 位置 | 问题 | 条款 |
+|---|---|---|---|
+| B-01 | `core/providers.dart:3` | core 公共 provider 引 features/lyric（core↔features 双向依赖） | 第 4 条 |
+| B-02 | `core/router/app_router.dart:5–19` | 路由层静态 import 16 个 features 页面 | 第 4 条 |
+| B-03 | `core/audio/preferred_quality.dart:4` | core/audio 引 features/player 的 `AudioQuality` | 第 4 条 |
+| B-04 | `core/utils/error_logger.dart:8` | 全局日志器依赖 features/download 的存储权限服务 | 第 4 条 |
+| B-08 | `core/api/kugou_api_client.dart:40–45` | 基类默认 baseUrl 是 kapi 中转域，且 `AuthRepository(api: null)` 会自建该客户端 | 第 2 条（兼第 27 条） |
+| B-09 | `core/providers.dart:11–12` | `TranslateApi` 无注入点，第三方域名/模型硬编码且无开关 | 第 2 条 |
+| B-12 | `core/direct/kg_providers.dart:74–78` | 设备身份兜底 `KgDevice.generate()` 每次启动新建、无日志 | 第 5 条（兼第 9 条） |
+| B-13 | `core/direct/kg_providers.dart:35` | 首次设备落盘 `box.put` 未 await | 第 9 条（兼第 5 条） |
+| B-14 | `core/direct/kg_providers.dart:54–71` | `saveDfidSync` 失败（false）无人检查、无日志 | 第 6 条（兼第 9 条） |
+| B-15 | `core/cache/cache_manager.dart:64` | 内存缓存键不含用户身份，跨账号正确性靠人工清缓存 | 第 23 条 |
+| B-16 | `core/api/kugou_api_client.dart:185–204` | 凭证散落 CookieJar/实例字段/KgClient 字段/SecureStorage，清理路径须成对调用 | 第 5 条 |
+| B-18 | `core/utils/error_logger.dart:189` | 脱敏键白名单无 mobile/phone/userid/dfid | 第 9 条 |
+| B-20 | `core/utils/error_logger.dart:101` | 私有目录不可用时日志被丢弃，只剩 200 条内存副本 | 第 9 条 |
+| B-21 | `core/utils/error_logger.dart:264` | API 级别兜底恒为 29；`_apiLevelFromOsVersion` 把 Android 9 映射成 9 | 第 6 条（兼第 15 条） |
+| B-22 | `core/utils/error_logger.dart:66` | 并发写日志无串行/锁（含原生读改写） | 第 22 条 |
+| B-23 | `core/utils/toast.dart:24–27` | 同类消息 3 秒内静默丢弃，不留痕 | 第 9 条 |
+| B-25 | `core/utils/friendly_error.dart:20` | 非 ApiException 一律塌缩为「操作失败」，`api.message` 可能为空 | 第 8 条（兼第 16 条） |
+| B-26 | `core/image/app_image_cache.dart:68–72` | `getFileStream` 只串行「开始」，并未串行 sqflite 写入；注释宣称已彻底消除 BUSY | 第 31 条（兼第 1 条） |
+| B-27 | `core/image/app_image_cache.dart:3–4` | 用 `package:file` 的 `File` 覆写 `dart:io.File` 返回值（invalid_override 或死导入） | 第 3 条（兼第 32 条） |
+| B-28 | `core/image/app_image_cache.dart:27–31` | 图片缓存仅 600 条上限、无字节上限、无清理入口（「清除缓存」不含它） | 第 25 条 |
+| B-29 | `core/cache/cache_manager.dart:81` | 翻译缓存键缺模型/提示词/服务版本维度 | 第 23 条 |
+| B-30 | `core/cache/cache_manager.dart:71–110` | 翻译缓存无条数/体积上限、无 TTL、无淘汰 | 第 25 条 |
+| B-31 | `core/providers.dart:7–25`、`kg_providers.dart:81–98` | 三个 `Dio` 与客户端均无 `ref.onDispose` | 第 20 条 |
+| B-32 | `core/router/app_router.dart:22` | `GoRouter` 未 dispose | 第 20 条 |
+| B-33 | `core/audio/audio_service_bootstrap.dart:42` | 初始化失败被 `_future` 永久缓存，无重试/恢复条件 | 第 11 条 |
+| B-37 | `core/api/translate_api.dart:44` | `['content'] as String?` 外部数据裸强转 | 第 13 条 |
+| B-38 | `core/audio/preferred_quality.dart:11–17` | 读取失败两个分支落到相反档位（320 / 128），异常全吞 | 第 6 条（兼第 9 条） |
+| B-39 | `core/router/app_router.dart:76` | 榜单 id 解析失败静默变 0，空白页无提示 | 第 16 条 |
+| B-41 | `core/utils/error_logger.dart:207` | `logApi()` 无任何调用方 → 无结构化接口错误日志 | 第 32 条 |
+
+### P3（6 条）
+
+| 编号 | 位置 | 问题 | 条款 |
+|---|---|---|---|
+| B-05 | `core/utils/permission_gate.dart:8` | core 权限门卫依赖 features/download | 第 4 条 |
+| B-06 | `core/utils/toast.dart:6` | Toast 兼做剪贴板复制并依赖 l10n 生成层 | 第 1 条 |
+| B-24 | `core/utils/toast.dart:29–33` | 去重表上限只在「恰有过期项」时生效 | 第 25 条 |
+| B-34 | `core/direct/kg_providers.dart:19`、`:42` | `KgDeviceStore.instance` / `save()` 全仓零引用 | 第 32 条 |
+| B-40 | `core/router/app_router.dart:48/57/67/71/83` | 深链参数直接 `!` 非空断言 | 第 12 条 |
+| B-42 | `core/theme/app_theme.dart:171/100/111/28–30` | 导航/按钮尺寸魔法值未入 token；`motion*` 常量未使用 | 第 2 条（兼第 32 条） |
+
+---
+
+## 八、统计
+
+### 按级别
+
+| 级别 | 数量 | 占比 | 编号 |
+|---|---|---|---|
+| P0 | 0 | 0% | —（本批无「已可触发的」崩溃/数据损坏/凭据外泄） |
+| P1 | 7 | 16.7% | B-07、B-10、B-11、B-17、B-19、B-35、B-36 |
+| P2 | 29 | 69.0% | B-01~04、B-08/09、B-12~16、B-18、B-20~23、B-25~33、B-37~39、B-41 |
+| P3 | 6 | 14.3% | B-05、B-06、B-24、B-34、B-40、B-42 |
+| **合计** | **42** | 100% | |
+
+### 按条款（一条问题只计主条款）
+
+| 条款 | 次数 | 涉及编号 |
+|---|---|---|
+| 第 1 条 单一职责 | 1 | B-06（第 26 条另作兼注） |
+| 第 2 条 显式优于隐式 | 4 | B-07、B-08、B-09、B-42 |
+| 第 3 条 契约先行 | 1 | B-27 |
+| 第 4 条 分层单向 | 5 | B-01、B-02、B-03、B-04、B-05 |
+| 第 5 条 状态单一来源 | 4 | B-10、B-11、B-12、B-16 |
+| 第 6 条 禁止吞异常 | 3 | B-14、B-21、B-38 |
+| 第 8 条 异常契约稳定 | 1 | B-25 |
+| 第 9 条 失败可观测 | 7 | B-17、B-18、B-19、B-20、B-23、B-13、B-35（B-07 兼） |
+| 第 11 条 降级条件 | 1 | B-33 |
+| 第 12 条 非空断言 | 1 | B-40 |
+| 第 13 条 裸类型强转 | 1 | B-37 |
+| 第 14 条 边界校验 | 1 | B-36 |
+| 第 16 条 空集合/缺失分离 | 1 | B-39 |
+| 第 20 条 生命周期对称 | 2 | B-31、B-32 |
+| 第 22 条 并发假设 | 1 | B-22 |
+| 第 23 条 缓存键维度 | 2 | B-15、B-29 |
+| 第 25 条 资源上限 | 3 | B-24、B-28、B-30 |
+| 第 31 条 注释解释为什么 | 1 | B-26 |
+| 第 32 条 死代码 | 2 | B-34、B-41 |
+
+> 口径：每条问题只按「主条款」计入上表，兼注条款（如 B-11 兼第 20 条、B-26 兼第 1 条）
+> 不重复计数。上表合计 = 1+4+1+5+4+3+1+7+1+1+1+1+1+2+1+2+3+1+2 = **42**，与按级别的合计一致。
+> 逐条核对：B-01~05、B-06、B-07~09、B-10~12、B-13~20、B-21~24、B-25~27、B-28~30、B-31~42 已全部落表。
+
+### 条款覆盖（本轮明确检查但未发现问题的项）
+
+| 条款 | 结论 |
+|---|---|
+| 第 7 条 精确捕获 | 除 B-21（`catch (_)`）外，`ErrorLogger` 其余捕获均按可处理类型分层；`KgDeviceStore` 的 `catch (_)` 已在 B-13/B-14 记录 |
+| 第 10 条 编程错误不进降级 | `kg_direct_api_client` 对 `TypeError/NoSuchMethodError` 显式 rethrow，方向正确（B-37 的问题在于产生 TypeError 的源头） |
+| 第 24 条 惰性构建 | `AppTheme._base` 只在 `dark()/light()` 调用时构建，非每帧；主题对象无 I/O，符合 |
+| 第 26 条 热路径零分配 | 本轮 infra 文件均不在滚动/每帧路径（图片缓存、日志、路由、主题构建），无命中 |
+| 第 30 条 命名即文档 | `_kDfid`/`_kAcctTokenPrefix`/`maxBytes`/`_dedupeWindow` 命名准确；`kg_providers` 的 `saveSync/saveDfidSync` 区分清晰 |
+
+---
+
+## 九、三条最严重
+
+1. **B-10（P1）dfid 四源五写**：SecureStorage、Hive `device`、`KgClient.dfid`、cookie
+   各持一份，两条注册路径（kapi `register/dev` 与原生 `r_register_dev`）产出不同值并互相覆盖
+   → 设备标识每次冷启动跳变，直接造成播放降权、试听片段与反复人机验证。
+   这是「状态单一来源」在基础设施层的核心破口。
+2. **B-11（P1）登出不清账号 token**：普通退出登录只清 4 个键，`acct_token_<userid>`
+   与 dfid 永久保留；「账号切换」无需密码即可恢复已登出账号 —— 共享/转手设备上等于账号仍在线。
+3. **B-17 + B-41（P1 / P2）日志链路的两个反向缺口**：脱敏正则对 `"token":"…"` 与手机号
+   可证明失效（已用等价实现逐条实测），而日志目标是**公共 Documents / MediaStore Downloads**
+   （用户会把它发给客服）；同时唯一负责写接口错误的 `logApi()` 没有任何调用方。
+   结果是「该记的失败没记，记下来的又可能带明文凭据」。
+
+---
+
+## 十、附：本次审查的判定边界（供复核）
+
+- 直连层（`kg_client.dart` / `kg_endpoints_*.dart` / `kg_play_api.dart`）按任务书不重复评审；
+  本报告引用它们仅为**证明 core 侧事实**（dfid 读取点、`lastErrors` 无读方、`setCredentials` 同步），
+  未对其端点语义、签名、`fallbackToKapi` 语义另作结论。
+- 「用户可见后果」均按调用链推导（`main()` → Provider → Repository → 页面），
+  未实际运行 App；凡涉及运行时序（如 B-07 的「先构造后设置」）均已在条目内写明前提。
+- 未给出修复代码与修改建议（按 REVIEW_SPEC 一、三节口径）。

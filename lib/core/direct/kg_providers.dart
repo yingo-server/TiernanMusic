@@ -1,8 +1,10 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
+import '../storage/secure_storage.dart';
 import 'kg_client.dart';
 import 'kg_direct_api_client.dart';
 import 'kg_play_api.dart';
@@ -84,6 +86,15 @@ final kgClientProvider = Provider<KgClient>((ref) {
   // 注册成功后把 dfid 落盘到 Hive 'device' box
   client.onDfidRegistered = (dfid) {
     KgDeviceStore.saveDfidSync(dfid);
+    // B-10（第6批①，P1）：dfid 的**唯一权威源**是 Hive device box（第 5 条）。
+    // 原生注册（userservice risk/v3/r_register_dev）拿到新 dfid 时必须同步
+    // 到 SecureStorage——否则 restoreSession 会用 SecureStorage 里的旧值
+    // 反向覆盖 Hive 的新值，设备标识每次冷启动来回跳变，
+    // 触发风控验证/播放降权/试听。
+    // （写入走 fire-and-forget：SecureStorage 是 flutter_secure_storage 异步接口）
+    SecureStorage.instance.saveDfid(dfid).catchError((e) {
+      debugPrint('[device] sync dfid to SecureStorage failed: $e');
+    });
   };
   return client;
 });
