@@ -55,12 +55,21 @@ class SecureStorage {
     );
   }
 
-  Future<void> clearCredentials() async {
+  /// B-11（第6批①，P1）：登出必须清干净当前会话凭证 + dfid + 账号 token
+  ///（第 5 条对称性；第 20 条写入/清除对称）。
+  /// 此前只删 4 个键：dfid 残留（下次登录签名维度错乱）、
+  /// acct_token_<userid> 残留（退出后仍可无密码切回该账号，
+  /// 共享设备/转手设备场景等于账号仍处于登录态）。
+  /// [userid] 提供时同时删除该账号的切换 token。
+  Future<void> clearCredentials({String? userid}) async {
     await Future.wait([
       _storage.delete(key: _kToken),
       _storage.delete(key: _kUserId),
       _storage.delete(key: _kT1),
       _storage.delete(key: _kAuth),
+      _storage.delete(key: _kDfid),
+      if (userid != null && userid.isNotEmpty)
+        _storage.delete(key: '$_kAcctTokenPrefix$userid'),
     ]);
   }
 

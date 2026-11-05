@@ -294,7 +294,10 @@ class AuthRepository {
       // 保留账号列表，但清掉当前账号指针，避免「已退出」仍可静默切回旧账号
       await AccountManager.instance.clearCurrent();
     }
-    await _storage.clearCredentials();
+    // B-11（第6批①，P1）：普通登出也必须删除该账号的切换 token——
+    // 此前只在 removeAccount 时删，共享设备上「退出登录」后仍可
+    // 无密码切回旧账号（安全残留）。dfid 一并清除（写入/清除对称）。
+    await _storage.clearCredentials(userid: cred?.userId);
     await _api.clearCredentials();
   }
 
