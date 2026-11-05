@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/direct/kg_crypto.dart';
 import '../../core/direct/kg_providers.dart';
 import '../../core/providers.dart';
 import '../../core/utils/friendly_error.dart';
@@ -177,11 +178,15 @@ class DownloadManager extends StateNotifier<DownloadState> {
         ),
       );
       // DL-05（审查③）：连临时文件一起清（下载中/失败的任务不会有已发布文件）
+      // D-01 配套：文件名规则与 _run 的 tempPath（dimKey）保持一致
       try {
         final tmpDir = await PublicMediaStore.tempDir();
-        final f = File(
-            '${tmpDir.path}/${task.hash}_${task.type.name}${task.type.fileExtension}');
-        // （文件名规则与 _run 的 tempPath 一致；删除失败静默）
+        final raw = '${task.hash}_${task.type.name}_${task.quality ?? ''}'
+            '_${task.albumAudioId ?? ''}';
+        final h = KgCrypto.md5(raw).substring(0, 12);
+        final f = File('${tmpDir.path}/'
+            '${task.hash}_${task.type.name}_$h${task.type.fileExtension}');
+        // （删除失败静默：临时目录会由系统回收）
         if (f.existsSync()) f.deleteSync();
       } catch (_) {}
     }
@@ -280,8 +285,18 @@ class DownloadManager extends StateNotifier<DownloadState> {
       }
 
       final tempDir = await PublicMediaStore.tempDir();
-      final tempPath = '${tempDir.path}/${task.hash}_${task.type.name}'
-          '${task.type.fileExtension}';
+      // D-01（第6批③，P1）：临时文件名必须包含**全部影响内容的维度**
+      //（QUALITY_STANDARD 第 23 条）——此前只含 hash+type，同一首歌
+      // 先下 128k 再下 320k（或换 MV 清晰度）时两个流写同一个文件，
+      // 交错写坏 →「下载成功但中途爆音/截断」。quality/albumAudioId
+      // 都会影响产物内容，必须进键；文件名超长时用短 hash。
+      final dimKey = () {
+        final raw = '${task.hash}_${task.type.name}_${task.quality ?? ''}'
+            '_${task.albumAudioId ?? ''}';
+        final h = KgCrypto.md5(raw).substring(0, 12);
+        return '${task.hash}_${task.type.name}_$h';
+      }();
+      final tempPath = '${tempDir.path}/$dimKey${task.type.fileExtension}';
 
       void onProgress(int received, int total) {
         final cur = _find(task.id);

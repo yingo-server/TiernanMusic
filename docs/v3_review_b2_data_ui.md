@@ -27,8 +27,13 @@
 上下文补读（为验证第 27/28/29 条所需的最小事实源，非本批报告文件）：
 `download/download_provider.dart`、`download/data/download_task.dart`、`download/data/download_store.dart`、
 `download/data/public_media_store.dart`、`download/data/storage_permission_service.dart`、
-`auth/data/auth_providers.dart`、`auth/data/account_manager.dart`、`core/providers.dart`、
-`core/api/kugou_api_client.dart`、`core/direct/kg_direct_api_client.dart`。
+`auth/data/auth_providers.dart`、`auth/data/account_manager.dart`、`auth/data/captcha_types.dart`、
+`core/providers.dart`、`core/config/app_config.dart`、`core/storage/secure_storage.dart`、
+`core/api/kugou_api_client.dart`、`core/cache/cache_manager.dart`、`core/direct/kg_direct_api_client.dart`、
+`core/direct/kg_providers.dart`、`core/direct/kg_endpoints_auth.dart`、`core/direct/kg_endpoints_comment.dart`、
+`features/mv/mv_provider.dart`、`features/player/data/models.dart`、`lib/main.dart`。
+（共 14 个任务书文件 + 19 个上下文文件；其中 `main.dart` 用于核实下载生命周期与登录态同步，避免对
+`onAppLifecycle` 的调用点作出错误结论。）
 
 ---
 
@@ -54,11 +59,11 @@
 
 ### download_provider.dart `_strategy` 全局共享，与具体任务写入路径无绑定
 - 级别：P2
-- 事实：`_strategy` 是 manager 级单值，`onAppLifecycle` 在 `resumed` 时把 `_strategyResolved` 置 false，**下一次** `_run` 重新 resolve；而 `_strategyResolved` 只在 `!_strategyResolved` 时才置 true，也就是说两次下载之间用户改了权限，前一次已开始的任务仍用旧策略，后一次用新策略，`remove()`/`clearAll()` 删除文件时按任务里存的 `mediaUri`/`filePath` 判断，二者混存（MediaStore uri 与绝对路径）没有问题，但**策略切换本身没有日志、没有提示**：同一批「下载全部」的三个子任务可能一个进 MediaStore、两个进 Android/data。
-- 违反：第 11 条（降级必须有触发/退出条件，且必须可观测：何时降级、为何降级无记录）、第 9 条（静默降级必须留痕）
-- 后果：用户点「全部下载」后，歌曲在「音乐」App 可见，封面/歌词却在 `Android/data` 里且文件管理器看不到，用户以为下载丢了；不同机型上表现不一致，客服无法复现。
+- 事实：`_strategy` 是 manager 级单值；`DownloadTask` **没有**记录发布策略的字段，只有 `displayPath`/`filePath` 字符串。`onAppLifecycle` 在 resumed 时把 `_strategyResolved` 置 false，下一次 `_run` 会再调 `StoragePermissionService.resolveStrategy()`——而该函数在 API<29 时会**直接发起运行时权限申请**（`Permission.storage.request()` / `openAppSettings()`），即下载任务在后台调度路径里弹系统对话框。策略变化后，已发布到旧位置的**文件不会被迁移或清理**，也没有任何日志记录「本次用了哪种策略、为什么切换」。
+- 违反：第 11 条（降级必须有触发/退出条件，且必须可观测）、第 9 条（静默降级必须留痕）、第 2 条（副作用必须显式：下载过程触发权限弹窗）
+- 后果：① 用户去设置授权后回到 App，之前下到 `Android/data` 的歌不会迁移，列表里出现「新歌在系统音乐 App、旧歌在私有目录并挂红字降级提示」的混合状态，用户以为两批下载行为不一致；② 下载排队时突然弹出存储权限框（此时用户可能正在播放页/评论页），不知为何弹、拒绝后整批任务落到私有目录且无提示；③ 线上排查只能靠路径字符串猜当时用的策略，无法从任务记录得知。
 
-### download_provider.dart remove() / :405 完成清理 空捕获
+### download_provider.dart remove() / 完成清理 空捕获
 - 级别：P2
 - 事实：`remove()` 里 `try { ... f.deleteSync(); } catch (_) {}`，注释写「删除失败静默」；`_run` 完成分支同样 `try { f.deleteSync(); } catch (_) {}`；`public_media_store.dart` `delete()` 整体 `catch (_) {}` 返回 false（调用方 `remove()` 不检查返回值）、`queryExisting` 的 `catch (_) {}`、`open/viewFolder` 的 `catch (_) { return false; }`。
 - 违反：第 6 条（禁止吞掉异常：既未转译、未记录、也无明确降级语义）、第 7 条（`catch (_)` 捕获一切对象）
@@ -70,7 +75,7 @@
 - 违反：第 2 条（依赖必须由注入传入，不得内部自行构造；魔法超时值应具名）
 - 后果：下载 MV 用的 client 与 MV 页面用的 client 不是同一实例（cookie/userid 靠静态共享 jar 兜底），一旦共享 jar 路径变化就串号；单元测试无法替换 Dio。
 
-### download_repository.dart resolveAudioExt() 与 :63 resolveAudioUrl() 已被 :134 取代
+### download_repository.dart resolveAudioExt() 与 resolveAudioUrl() 已被4 取代
 - 级别：P3
 - 事实：`resolveAudioExt`、`resolveAudioUrl` 两份实现与 `resolveAudioUrlWithExt`（V3-11 引入）是同一段逻辑的三份拷贝；`_run` 只调用 `resolveAudioUrlWithExt`。`resolveAudioExt` 在 `api == null` 时还静默返回 `'.mp3'`（不抛错），与 `resolveAudioUrl` 的 `throw StateError` 语义相反。
 - 违反：第 32 条（死代码零容忍）、第 1 条（同一职责三处实现）、第 8 条（回退路径与主路径的异常形态不一致）
@@ -106,7 +111,7 @@
 - 违反：第 21 条（写操作必须幂等或有防重/原子提交）、第 5 条（旧文件是唯一副本，删除与写入不是同一事务）
 - 后果：用户对一首已下好的歌「重新下载」以修复爆音，结果中途失败/断网，旧的好文件已被删、新的半截文件留在音乐库——净结果是「越修越坏，且原文件不可恢复」。
 
-### public_media_store.dart queryExisting / :249 delete / :262 open 空捕获
+### public_media_store.dart queryExisting / delete / open 空捕获
 - 级别：P2
 - 事实：`queryExisting` 的 `try { ... } catch (_) {}` 后 `return null`；`delete` 的 `catch (_) {}` 后 `return false`（调用方 `remove()`、`clearAll()` 均不看返回值）；`open()` `catch (_) { return false; }` 无日志。
 - 违反：第 6 条、第 7 条、第 9 条（失败静默）
@@ -348,7 +353,7 @@
 - 级别：P2
 - 事实：`try { return await fetchDetail(hash); } catch (_) { return null; }`，UI 只拿到 `null`，无法区分「该视频只有一个清晰度」「hash 不是 video_id」「网络失败」三种情况。
 - 违反：第 6 条（空捕获）、第 9 条（失败静默）、第 16 条（三种语义压成同一种）
-- 后果：清晰度按钮凭空消失，用户不知道是不能切还是加载失败；只有 hash（无 videoId）进入播放页时 `fetchDetail(hash)` 按仓库注释必然 `invalid param` → 所有从「收藏 MV」进入的播放页都拿不到清晰度列表。
+- 后果：清晰度按钮凭空消失，用户不知道是不能切还是加载失败；凡只带 hash（无 videoId）进入播放页的入口，`fetchDetail(hash)` 按仓库自身注释会是 `invalid param`，一律拿不到清晰度列表——音乐库「我收藏的 MV」只 push `/mv/<hash>`，属于此类入口（路由是否补 videoId 需在 `app_router` 复核，见未验证观察）。
 
 ### mv_repository.dart `resolvePlayUrl()` 的两处无原则兜底
 - 级别：P3
@@ -425,6 +430,7 @@
 5. **`captcha/sent` 是否必须 http**：无 Node 源码对照结论，无法判定是上游硬约束还是实现失误。
 6. **`/comment/music/send` 等写接口的成功语义**：`_wrap` 对 `err_code` 有统一处理，但写接口返回体（是否只回 `err_code:0`、是否带 `data`）无留样；一旦写通（修掉路由后）仍需逐端点确认。
 7. **`library_page._playRecent` 传 `albumId: ''`**：`KgPlayApi.songUrl` 是否需要 album_id 才能取 VIP/付费曲地址未实测；若需要，「最近播放」点播付费曲会失败而下载入口正常。
+8. **`/mv/:hash` 路由是否补 videoId**：音乐库只 push `/mv/<hash>`，而 `fetchDetail` 只认 video_id。是否在 `app_router` 里补参数未核实（本批范围不含路由文件），因此「收藏 MV 无法切清晰度」只作为条件结论，不计入问题统计。
 
 ---
 
@@ -509,7 +515,7 @@
 | P1 | 4 | 评论写接口路由缺失 1、下载同名并发与先删后写 2、手机号明文传输 1 |
 | P2 | 34 | 下载 8、认证 16、评论 6、MV 2、音乐库 2 |
 | P3 | 16 | 下载 6、认证 4、榜单 2、MV 3、音乐库 1 |
-| 合计 | 54 | 覆盖 14 个源文件（+6 个为验证条款补读的上下文文件） |
+| 合计 | 54 | 14 个任务书文件（`mv_page.dart` 不存在，实审 `mv_player_page.dart`）+ 19 个上下文文件 |
 
 按条款分布（同一问题多条款时重复计数，共 114 次引用）：
 

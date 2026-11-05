@@ -145,17 +145,29 @@ class PublicMediaStore {
     }
 
     final target = File('$dirPath/$displayName');
-    // PB-01（审查③）：流式复制——readAsBytes 会把数百 MB 的 MV/无损整文件
-    // 读进内存，Android ≤9 降级场景下 OOM。
+    // D-02（第6批③，P1）：**先写临时文件，成功后再原子替换**（第 21 条）。
+    // 此前 openWrite(FileMode.write) 直接覆盖旧文件——中途异常（断网/
+    // 空间不足）会让旧的好文件被截断成残缺文件，净结果「越修越坏且
+    // 不可恢复」。改为：写 <target>.part → flush 校验 → rename 覆盖。
+    // rename 在同一文件系统上是原子操作。
+    final partFile = File('${target.path}.part');
     final inRaf = File(tempFilePath).openRead();
-    final outRaf = target.openWrite(mode: FileMode.write);
+    final outRaf = partFile.openWrite(mode: FileMode.write);
     try {
       await for (final chunk in inRaf) {
         outRaf.add(chunk);
       }
       await outRaf.flush();
-    } finally {
       await outRaf.close();
+      // 写完后才替换旧文件；此后任何异常都不会破坏旧副本
+      if (await target.exists()) await target.delete();
+      await partFile.rename(target.path);
+    } catch (e) {
+      // 失败时清理 .part，旧文件原封不动
+      try {
+        if (await partFile.exists()) await partFile.delete();
+      } catch (_) {}
+      rethrow;
     }
     return PublishedFile(path: target.path, displayPath: display);
   }
