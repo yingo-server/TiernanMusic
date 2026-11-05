@@ -129,3 +129,16 @@
 - 资产：arm64-v8a 25.1MB / armeabi-v7a 22.9MB / x86_64 26.6MB / screenshots-181.zip
 - tag 已移动到 7da9d5d（含 V3-08~11 修复），重建 CI 触发中
 - 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.2.0/app-arm64-v8a-release.apk
+
+## 第6批复核（进行中）
+
+### ②表现层报告（v3_review_b2_presentation.md）✅
+42 条：P0 0 / P1 0 / P2 16 / P3 26。主要领域：热路径（歌词页每 tick 逐字分配 TextSpan、封面子树随进度重建）、搜索页状态互斥（联想词不可达、分页失败永久转圈）、生命周期（CurvedAnimation 每 tick 新建）。
+
+已修（主代理）：
+- R-01：CurvedAnimation 提取到 State 一次创建，dispose 对称（8cc754e）
+- R-26/27：搜索提交 mounted 检查 + addHistory 容错（历史写盘失败不阻断搜索）
+
+待修 P2：R-02/03/04/14/15/16/20/28/29/30/31/38/39
+### 其余两份报告（infra / data_ui）：代理运行中
+### v3.2.0：tag=5ec5c71 第6次构建进行中
