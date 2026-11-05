@@ -158,3 +158,15 @@
 - [ ] 代理 push 故障恢复
 - [ ] 接收第6批①③报告 → 修 P0/P1
 - [ ] 第5批①直连层报告收尾（即将超时）
+
+## ✅ v3.2.0 发布最终确认
+
+- 根因：GitHub Release API 服务器 500（retry 耗尽），非代码问题（analyze/build 全绿）
+- 处置：API 直接补建 release（id 435879242）+ 手动上传 3 个 APK
+- 资产：arm64 25.1MB / v7a 22.9MB / x86_64 26.6MB，draft=False
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.2.0/app-arm64-v8a-release.apk
+
+## 第6批修复进度（主代理亲修）
+- B-11(P1)：登出清干净 dfid+账号切换 token（d8543af）
+- R-01/26/27/28/29：CurvedAnimation/搜索生命周期/联想词可达性/分页重试
+- 待修：B-07(CookieJar 时序)、B-10(dfid 多源)、B-12/13(设备兜底)、下载链路 D 系列 P1×2
