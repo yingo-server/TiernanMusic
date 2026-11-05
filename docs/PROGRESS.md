@@ -195,3 +195,20 @@
 - v3.2.0 已发布（release 435879242，3 APK 齐全）
 - 第7批终审代理运行中（ed156dd5，验证本轮修复无回归）
 - 全绿后封 v3.2.1
+
+## 第5批①直连层报告消化（66eb23b）
+
+### P0×2 已修
+- D-P0-1：post 分派表缺评论写三件套 → 恒 -404。已补齐（write:true）
+- D-P0-2：MV 取消收藏 collect 形参从未参与请求 → 收藏只增不减。已走 /v1/cancel_collect + 二进制 body（对齐 Node mv_collect_del.js）
+
+### P1 已修
+- D-P1-1：_afterLogin 接线 vipType/vipToken（VIP 被当非会员的根因）
+
+### 待修 P1
+- captchaSent/loginToken 明文 http（改 gateway+x-router，修复①代理实测直连 https 会 TLS 失败）
+- B-17/B-41 日志链路（脱敏失效 + logApi 无人调用）
+
+### 状态
+- main 66eb23b 构建中
+- 第7批终审代理运行中
