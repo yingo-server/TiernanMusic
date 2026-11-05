@@ -67,3 +67,23 @@
 **静态检查允许范围**：`dart analyze`（Dart SDK 3.13.7 本地已装）查语法/结构错误。
 **绝对禁止**：本地编译、`flutter build`、`flutter test`、安装 Flutter SDK / Android SDK / 任何包。
 必须过滤「缺 Flutter 包」产生的噪音（uri_does_not_exist / undefined_class 等）。
+
+## 2026-11-06 第4批修复完成（commit e7a6e00）
+
+### 三代理产出
+| 代理 | 报告 | 修复 |
+|---|---|---|
+| ①网络层 | batch4_fix_1_network.md | P1 15 + P2 10（含 3 条实测驳回：/v5/url 实际要签名、special_recommend 补字段后可用、评论裸路径+x-router 才通） |
+| ②功能层 | （报告未落盘，改动已核实） | 歌单写操作 _write 统一出口（防重锁+maybeSucceeded 语义）、audio_handler 世代校验+闸门单点释放、KRC 解析/翻译、播放地址 |
+| ③UI层 | batch4_fix_3_ui.md | 18 条（F4-31~48），版本 3.0.0+30 |
+
+### 主代理亲修
+- fallbackToKapi → const false（kapi 仅参考不调用，第 27 条）
+- 未移植路径抛 ApiException(-404)，不再静默走 kapi
+- _wrap 重构（err_code 提前、空体判失败）
+- 写操作 write:true 禁止回退 + 异常统一 DioException 包装
+
+### 下一步
+- [ ] 5 批审查（3×5）按 QUALITY_STANDARD 32 条
+- [ ] CI 全绿
+- [ ] 打 tag v3.0.0 发布
