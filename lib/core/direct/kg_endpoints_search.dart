@@ -4,6 +4,7 @@ import 'kg_client.dart';
 import 'kg_crypto.dart';
 
 import 'kg_direct_api_client.dart';
+import '../api/kugou_api_client.dart' show ApiException;
 
 /// 搜索端点（song/album/author/mv/special/lyric）
 ///
@@ -63,13 +64,18 @@ class KgEndpointSearch {
           });
     }
     // special / author / mv / lyric
+    // PLY-02（审查①-B，P1）：补齐 Node search.js else 分支必带的
+    // albumhide / nocollect / iscorrection 三字段，pagesize 默认 30（Node 口径）。
     return kg.request('/v1/search/$type',
         method: 'GET',
         baseUrl: 'https://complexsearch.kugou.com',
         params: {
+          'albumhide': 0,
+          'iscorrection': 1,
           'keyword': keyword,
+          'nocollect': 0,
           'page': q['page'] ?? 1,
-          'pagesize': q['pagesize'] ?? 20,
+          'pagesize': q['pagesize'] ?? 30,
           'platform': 'AndroidFilter',
           if (q['tag'] != null) 'tag': q['tag'],
           if (kg.lite) 'clientver': 201,
@@ -109,14 +115,20 @@ class KgEndpointSearch {
 
   Future<KgResponse> lyric(Map<String, dynamic> q) async {
     final fmt = '${q['fmt'] ?? 'krc'}';
+    // PLY-03（审查①-B，P2）：id/accesskey 为空直接拒绝，避免发出 id=null 的无效请求
+    final id = '${q['id'] ?? ''}';
+    final accesskey = '${q['accesskey'] ?? ''}';
+    if (id.isEmpty || id == 'null' || accesskey.isEmpty || accesskey == 'null') {
+      throw ApiException(-1, '歌词下载参数缺失（id/accesskey）');
+    }
     final r = await kg.request('/download',
         baseUrl: 'https://lyrics.kugou.com',
         method: 'GET',
         params: {
           'ver': 1,
           'client': q['client'] ?? 'android',
-          'id': q['id'],
-          'accesskey': q['accesskey'],
+          'id': id,
+          'accesskey': accesskey,
           'fmt': fmt,
           'charset': 'utf8',
         });
@@ -126,7 +138,9 @@ class KgEndpointSearch {
       final content = body['content'];
       if (content is String && content.isNotEmpty) {
         final contenttype = body['contenttype'];
-        if (fmt == 'lrc' || contenttype != 0) {
+        // PLY-04（审查①-B，P2）：contenttype 可能是字符串 "0"，统一按字符串比较
+        final ct = '${contenttype ?? ''}';
+        if (fmt == 'lrc' || (ct.isNotEmpty && ct != '0')) {
           try {
             body['decodeContent'] =
                 utf8.decode(base64.decode(content), allowMalformed: true);

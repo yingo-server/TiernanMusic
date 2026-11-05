@@ -4,6 +4,7 @@ import 'kg_client.dart';
 import 'kg_crypto.dart';
 
 import 'kg_direct_api_client.dart';
+import '../api/kugou_api_client.dart' show ApiException;
 
 /// 歌单端点（详情/歌曲/收藏/增删/用户歌单）
 ///
@@ -129,26 +130,25 @@ class KgEndpointPlaylist {
   }
 
   /// 歌单删歌（module/playlist_tracks_del.js，需登录）
-  /// POST /cloudlist.service/v4/delete_songs，x-router cloudlist.service.kugou.com
+  /// POST /v4/delete_songs，x-router cloudlist.service.kugou.com
   Future<KgResponse> playlistTracksDel(Map<String, dynamic> q) {
     final userid = kg.userid.isEmpty ? '0' : kg.userid;
-    return kg.request('/cloudlist.service/v4/delete_songs',
+    // PLY-06（审查①-B，P1）：路径去掉 cloudlist.service/ 前缀（与 x-router 叠加会 404），
+    // body 只保留 Node dataMap 的 6 个键，去掉自加的 area_code/allplatform。
+    return kg.request('/v4/delete_songs',
         method: 'POST',
         headers: {'x-router': 'cloudlist.service.kugou.com'},
-        // P0-6（审查①）：Node playlist_tracks_del.js 发 data:[{fileid}] + list_ver:0
         data: {
-          'userid': userid,
-          'token': kg.token,
           'listid': '${q['listid'] ?? ''}',
-          'type': 0,
+          'userid': userid,
           'data': '${q['fileids'] ?? q['data'] ?? ''}'
               .split(',')
               .where((e) => e.trim().isNotEmpty)
               .map((e) => {'fileid': int.tryParse(e.trim()) ?? 0})
               .toList(),
+          'type': 0,
+          'token': kg.token,
           'list_ver': 0,
-          'area_code': 1,
-          'allplatform': 1,
         });
   }
 
@@ -207,14 +207,25 @@ class KgEndpointPlaylist {
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
         .toList();
+    // PLY-07（审查①-B，P1）：Node playlist_detail.js 必带 userid/token；
+    // 超过 10 个 gid 时上游只接受 1..10，显式拒绝而非静默截断。
+    if (ids.isEmpty) {
+      throw ApiException(-2, '歌单详情缺少 global_collection_id');
+    }
+    if (ids.length > 10) {
+      throw ApiException(-2, '歌单详情一次最多 10 个 gid（收到 ${ids.length}）');
+    }
+    final userid = kg.userid.isEmpty ? '0' : kg.userid;
     return kg.request('/v3/get_list_info',
         method: 'POST',
         baseUrl: 'https://pubsongs.kugou.com',
         data: {
           // data 必须 1..10 项，每项用 global_collection_id 定位
           'data': [
-            for (final id in ids.take(10)) {'global_collection_id': id},
+            for (final id in ids) {'global_collection_id': id},
           ],
+          'userid': userid,
+          'token': kg.token,
         });
   }
 
@@ -260,8 +271,15 @@ List<Map<String, dynamic>> _parseTracksResource(String raw) {
         final f = e.split('|');
         String f0(int i) => i < f.length ? f[i].trim() : '';
         return {
+          // PLY-05（审查①-B，P1）：补齐 Node playlist_tracks_add.js 必带的
+          // number/size/sort/timelen/bitrate 五字段，缺字段会导致加歌失败。
+          'number': 1,
           'name': f0(0),
           'hash': f0(1),
+          'size': 0,
+          'sort': 0,
+          'timelen': 0,
+          'bitrate': 0,
           'album_id': int.tryParse(f0(2)) ?? 0,
           'mixsongid': int.tryParse(f0(3)) ?? 0,
         };
