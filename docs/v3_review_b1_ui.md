@@ -296,3 +296,102 @@ static const String proxyBase     = 'https://proxy.344977.xyz';
 
 ---
 
+## 7. `lib/features/auth/presentation/login_page.dart`（731 行，通读）
+
+结构评价：三种登录方式（短信/密码/二维码）分别独立 State，`TextEditingController`、`Timer`、`TabController` 均在 `dispose` 中释放；异步后 `mounted` 守卫齐备；登录成功统一 `context.go('/home')` 清栈。**生命周期主体合规（第 20 条）**。问题集中在轮询失败处理与布局。
+
+### 【P2】二维码轮询：空 catch + 无退避 + 无次数上限
+```dart
+} catch (_) {
+  // 轮询失败忽略，下次再试
+}
+```
+- 事实：`_checkOnce` 把**所有**异常（含 `TypeError` 等编程错误）一律吞掉，不写日志、不计数、不改状态；`_pollOnce` 随后无条件 `_scheduleNextPoll()`（固定 3 秒）。无失败上限、无指数退避、无「网络异常」提示。
+- 违反：**第 6 条**（禁止吞掉异常：至少转译/记录/降级其一）；**第 7 条**（捕获必须精确到可处理的类型）；**第 10 条**（编程错误不得进入业务降级）；**第 25 条**（重试次数必须有上限）；**第 9 条**（失败必须可观测）。
+- 后果：服务端 500 或证书问题时，页面停在「等待扫码」，每 3 秒静默发一次请求直到用户离开，用户既不知道失败也不知道原因；线上也无法统计二维码登录失败率。P2。
+
+### 【P2】短信登录页 `Row(TextField, FilledButton)` 在大字号下会溢出
+- 事实：
+```dart
+Row(children: [
+  Expanded(child: TextField(...)),
+  const SizedBox(width: 12),
+  FilledButton.tonal(child: Text(_countdown > 0 ? l.resendIn(_countdown) : l.sendSmsCode)),
+])
+```
+右侧按钮**没有** `Flexible`/`ConstrainedBox`，其固有宽度 = 文案宽度 + 内边距。`resendIn(60)` 的俄语/德语译文（如「Отправить повторно через 60 с」）在 `textScaleFactor 1.3` 以上即可能超过行内剩余空间，而 `Expanded` 的 TextField 最小宽度有限。
+- 违反：任务书 D 项（布局/字体放大适配）→ **第 24 条**（构建必须纯且可预期：此处隐含「文案一定短」的假设）；任务书 G 项（可访问性：系统字号放大必须可用）。
+- 后果：安卓「字体大小=最大」或「显示大小=大」时，短信登录页抛 `A RenderFlex overflowed by X pixels`，按钮文案被裁切，用户看不到「发送验证码」。P2。
+
+### 【P3】二维码失败文案把原始异常拼进用户可见文本
+- 事实：`_error = context.l10n.qrLoadFailed('$e')` → 直接把 `DioException [connection error]…` 塞进 UI；同文件 `_showError` 已实现 `unwrapApi`/`friendlyError` 的友好化路径，此处绕开。
+- 违反：**第 8 条**（同一层失败形态必须统一）；**第 30 条**（用户可见文案未经本地化/友好化）。
+- 后果：弱网用户看到英文技术串。P3。
+
+### 【P3】`_showError(BuildContext, Object e)` 同时接收 String 与异常
+- 事实：`_showError(context, context.l10n.phoneInvalid)` 传的是**已本地化的文案**，而其它调用点传的是异常对象；函数内 `unwrapApi(e)`/`friendlyError(e)` 对 String 只能落到兜底分支。
+- 违反：**第 3 条**（契约先行：参数取值范围未定义）；**第 2 条**（同一入口承载两种语义，隐式转换）。
+- 后果：某天 `friendlyError` 对 String 返回非空时，本地化文案会被覆盖成通用错误；行为依赖实现细节。P3。
+
+### 【P3】手机号校验硬编码中国大陆段 `^1\d{10}$`，且提示文案键名为 `phoneHintCn`
+- 事实：`RegExp(r'^1\d{10}$')`；hint 用 `context.l10n.phoneHintCn`。而 `AppConfig.supportedLocales` 声明支持 10 种语言/地区。
+- 违反：**第 14 条**（边界校验规则应与业务契约一致，而非按单一地区写死）；**第 30 条**（键名把地区绑进语义）。
+- 后果：非中国大陆号码用户在 10 语言界面下无法通过校验，且提示仍是中国号码格式。P3（产品定位为非官方酷狗客户端，可接受，但应有明确说明）。
+
+### 【P3】`_QrLoginTab` 状态码 0/1/2/4 为裸魔法数
+- 事实：`int _status = 1; // 0过期 1待扫 2待确认 4成功`，全文件用数字比较；无 enum。
+- 违反：**第 2 条**（魔法值必须有具名常量）。
+- 后果：新增状态（如 3=已取消）时遗漏分支不会被编译器发现，界面停留在旧文案。P3。
+
+### 【观察/合规】
+- `TabController` 监听匿名函数在 `dispose()` 前未 `removeListener`，但 `TabController.dispose()` 会清空监听器，**不构成泄漏**。
+- `_countdown` 的 `Timer.periodic` 在 `dispose` 中 `cancel`，回调内 `t.cancel()` 自带终止条件，双向对称。
+- 二维码 `_pollOnce` 采用「上次完成再排下一次」的自驱动链，避免慢网重叠请求——符合第 19 条精神。
+- `AutomaticKeepAliveClientMixin` 的 `wantKeepAlive` + `didUpdateWidget` 暂停非活动 Tab 轮询，设计正确。
+
+---
+
+## 8. `lib/features/auth/presentation/captcha_page.dart`（439 行，通读）
+
+### 【P2】整页用户可见文案硬编码中文（约 18 处），且验证码 WebView 内嵌中文 UI
+- 事实（逐处）：`'人机验证'`（AppBar）、`'重试'`、`'短信验证'`、`'请输入接收到的验证码完成验证'`、`'验证码'`/`'6 位数字'`（InputDecoration）、`'提交验证'`、`'该验证类型需要在酷狗官方 App 内完成。\n建议：…'`、`'关闭'`、`'未知验证类型（v_type=${s.vType}）'`、`'直接尝试提交指纹验证'`、`'验证未通过，请重试'`、`'验证已通过，但请求仍需重试'`、`'提交失败：$e'`、`'获取验证信息失败：$e'`、`'如验证码未自动弹出，请点击页面中的「开始验证」'`，以及 `_tencentHtml` 中的 `'开始验证'`、`'完成滑块后自动继续'`。
+- 违反：**第 30 条**（用户可见文案必须走 l10n；本页是全仓硬编码最密集的一页）。
+- 后果：10 语言用户在**登录**这一必经路径上看到整页中文；`_tencentHtml` 的按钮文案连 HTML 内也未参数化。功能可用但界面语言断裂，定 P2（任务书 E 项重点）。
+
+### 【P2】WebView 回调与 `onLoadStop` 中 `setState` 无 `mounted` 守卫
+- 事实：
+```dart
+onLoadStop: (_, __) => setState(() => _webViewReady = true),
+...
+callback: (args) { ... _submitWithCode(s, code); }
+```
+`_submitWithCode` 首行即 `setState(() => _submitting = true)`。
+- 违反：**第 20 条**（异步回调触及已销毁对象前必须确认存活）。
+- 后果：用户在腾讯验证码加载/滑块完成瞬间按返回键关闭页面 → `setState() called after dispose()` 抛异常（`_QrLoginTab` 等处都有 `mounted` 守卫，此处独缺），登录流程变成红屏或静默中断。P2。
+
+### 【P2】`_buildExternal` / `_buildUnknown` 的 `Column` 不可滚动
+- 事实：两者均为 `Padding(child: Column(mainAxisAlignment: center, …))`，无 `SingleChildScrollView`；`_buildSms` 反而有。外部分支文本含两行中文 + 24dp 间距 + 按钮 ≈ 260dp 内容高度。
+- 违反：任务书 D 项（字体放大适配）；**第 24 条**（构建结果应为约束内可预期）。
+- 后果：横屏或系统字号放大到 2.0 时 `RenderFlex overflowed`，`_buildUnknown` 的「直接尝试提交指纹验证」按钮被顶出屏幕且无法滚动到。P2。
+
+### 【P3】错误文案拼接原始异常
+- 事实：`_error = '获取验证信息失败：$e'`、`_snack('提交失败：$e')` —— 用户直接看到 `DioException [connection error]…`。
+- 违反：**第 9 条**（失败须可观测，但观测对象是日志而非用户）；本项目 `error_retry.dart` 已确立「不展示原始异常」的约定 → **第 8 条**（失败形态须统一）。
+- 后果：弱网用户看到英文技术串，无法据此行动。P3。
+
+### 【P3】`txappid` 缺失时静默退化为「未知验证类型」
+- 事实：`_extractTxAppId` 返回 null → `_buildUnknown`，无日志、无提示说明为何不是滑块验证。
+- 违反：**第 11 条**（降级必须有明确的触发条件与留痕）。
+- 后果：腾讯验证码接口若改参数名，用户只会看到「未知验证类型」页，开发者无从得知是解析失败。P3。
+
+### 【P3】`_buildUnknown` 的 `if (s.vType >= 0)` 作为「是否允许提交」条件
+- 事实：`vType` 是服务端整数，`>= 0` 恒真（除非 -1 表示缺失），且与「能否直接提交指纹」无因果关系。
+- 违反：**第 2 条**（魔法判断）；**第 3 条**（契约未定义）。
+- 后果：该按钮在几乎所有情况下都会出现，点击后提交 `null` verifycode 大概率失败，用户被引导做无意义操作。P3。
+
+### 观察（合规）
+- `InAppWebView` 由 widget 自身管理生命周期；`_smsCodeCtrl` 在 `dispose` 释放；`_submitWithCode` 用 `if (_submitting) return;` 做了防重（第 21 条）。
+- `switch (s.type)` 覆盖了枚举全部成员，无遗漏分支。
+
+---
+

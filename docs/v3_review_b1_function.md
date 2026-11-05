@@ -512,3 +512,167 @@
 - 结论：与 krc_parser 的 PLY-01 修复配套正确；若 parser 未加行首时间，此处会整首错位，反向印证修复必要。
 
 ---
+
+## 10. `lib/features/playlist/data/playlist_repository.dart`（551 行，全读）
+
+### playlist_repository.dart:349-372 `_write` 的 `_inFlight` 防重锁时序
+- 级别：通过（修复正确）
+- 事实：`if (!_inFlight.add(dedupeKey)) throw ...; try { await _api.get(...); ... } finally { _inFlight.remove(dedupeKey); }`；`add` 是同步且返回 bool，抛错在 `try` 之前
+- 违反：无（满足第 21 条「本地提交锁」、第 19 条「闸门成对且归属同一持有者」）
+- 结论：**Set 的 add/remove 时序是正确的**——同一 key 只可能有一次成功 add，其它调用在 add 处即被拒（且拒绝路径不进 try/finally，不会误删别人的锁）；失败/异常都经 finally 释放。单 isolate 下无竞态。唯一语义瑕疵见下条。
+
+### playlist_repository.dart:356-358 重复提交被拒时的 `maybeSucceeded: true`
+- 级别：P3
+- 事实：`throw PlaylistWriteException('相同操作正在提交中，请稍候', maybeSucceeded: true);`
+- 违反：第 3 条（契约把「本次未提交」说成「可能已生效」）
+- 后果：UI 据 `maybeSucceeded` 弹出「操作结果未知，可能已生效，请刷新确认」，而实际上本次请求根本没发出；用户被迫去刷新一个肯定没变化的列表。定 P3。
+
+### playlist_repository.dart:381-411 `_toWriteException` 的分类
+- 级别：P2
+- 事实：`connectionError | badCertificate | connectionTimeout | cancel → false`；`sendTimeout | receiveTimeout | unknown | transformTimeout | badResponse → true`
+- 违反：第 3 条（契约声明「一定没执行」的集合并不完全成立）、第 21 条（在错误分类上给了重复提交的机会）
+- 后果：Dio 把「已发出请求后对端 RST/连接被中途关闭」也归入 `connectionError`（`SocketException` 在 `IOHttpClientAdapter` 里统一映射），这类失败请求体**已经到达服务端**，按当前分类告 `maybeSucceeded=false`，UI 提示「可以重试」——用户一点就重复收藏/重复加歌。建议按「是否已写出 request body」而非异常枚举分类。定 P2（真实存在的重复提交面）。
+
+### playlist_repository.dart:245-250 `collectPlaylist` 的 GET 分派声明
+- 级别：P3（跨文件待核）
+- 事实：`_write` 的文档断言「`KgDirectApiClient` 把 `/playlist/add`、`/playlist/del`、`/playlist/tracks/*` 分派在 **get 分支**并标记 `write: true`」，本层因此用 `_api.get()`；该断言本批次无法验证（直连层不在本批范围）
+- 违反：第 31 条（在调用点写下对另一模块实现细节的断言，属于「为什么会这样」的正确写法，但**无编译期保障**）、第 3 条
+- 后果：若直连层将来把这些路径改到 post 分支，`_api.get()` 会静默落到 kapi 网关：写操作变成经中转、且 `write: true` 的不回退语义失效——一次网络抖动就可能重复收藏（第 21 条）。定 P3（注释已留痕，风险可控）。
+
+### playlist_repository.dart:294-306 `_safeId` / `_safeName` 的分隔符处理
+- 级别：通过（修复正确）+ P3（`_safeId` 的删除式清洗）
+- 事实：`_safeId` 用 `replaceAll(RegExp(r'[|,\s]'), '')` **删除**协议分隔符与空白；`_safeName` 用全角同形字替换 `|`/`,`，空名降级为「未知歌曲」，并 `debugPrint` 留痕
+- 违反：第 14 条本身满足；`_safeId` 的删除式处理触犯第 17 条（标识符精度：删字符后得到一个**看似合法但错误**的 id，而不是显式报错）
+- 后果：若上游 hash 里意外出现空格/逗号，`_safeId` 会拼出一个不存在的 hash，服务端把它当新歌加进歌单（列表里出现幽灵条目），而 `_safeName` 的处理是「保留可识别信息」的正确做法。歌名侧无问题。定 P3。
+
+### playlist_repository.dart:286-292 `addTracks` 缺 hash 即抛错
+- 级别：通过
+- 事实：`if (hash.isEmpty) throw PlaylistWriteException('歌曲「${t.name}」缺少 hash，本次未提交', maybeSucceeded: false);`，在 `_write` 之前
+- 违反：无（满足第 14 条边界校验、第 9 条失败可见、第 21 条「未提交」语义准确）
+- 结论：正确——整批拒绝而不是跳过坏条目，避免用户以为全加成功。
+
+### playlist_repository.dart:270-273 `addTracks` 的 dedupeKey 用整批数据拼接
+- 级别：P3
+- 事实：`dedupeKey: 'tracks-add:$id:${rows.join(',')}'`，与 `params['data']` 是同一份超长字符串（300 首 ≈ 20 KB）
+- 违反：第 25 条精神（内存占用无上限地随批量线性增长）、第 26 条（每次调用重复拼接同一大串）
+- 后果：批量加歌时同一份数据被拼两次并长期驻留 Set 一瞬；功能正确，只是白分配。定 P3。
+
+### playlist_repository.dart:377-397 `fetchTracks` 的分页与 `newestFirst`
+- 级别：P2
+- 事实：`if (!newestFirst || !allPages) return firstTracks;` —— `newestFirst=false` 时返回的分页结果与 `true` **完全相同**（都是从第 1 页按页号升序拼接）；参数对排序无任何影响
+- 违反：第 30 条（名称承诺一个方向，实现忽略）、第 32 条（无效果的可选参数）
+- 后果：任何按签名传 `newestFirst: false` 期待「旧→新」的调用方会拿到「新→旧」，列表整体倒序且难以察觉（分页数据看起来都正常）。定 P2。
+
+### playlist_repository.dart:77-112 `fetchTracks` 的分页状态机与未知 total
+- 级别：通过（修复正确）
+- 事实：`totalPages = ceil(total/pageSize)`；`unknownTotal = totalPages <= 1 && songs.length >= pageSize`；`while (p <= (unknownTotal ? maxPages : totalPages) && p <= maxPages)`，每页 `songs.isEmpty || length < pageSize` 即 break；`maxPages = 100` 有界
+- 违反：无（满足第 25 条「循环有界」、第 16 条「缺失 ≠ 已到底」、第 18 条「无共享状态，纯局部变量」）
+- 结论：分页无竞态（无跨请求共享字段），未知总数时按「满页继续翻」的判定正确；`total` 返回值在未知总数时回填为实际条数，避免 UI 显示「1 首」。唯一小瑕疵：`allPages=false` 时 `newestFirst` 完全被忽略，见上条。
+
+### playlist_repository.dart:52-56 `fetchDetail` 的缓存键与失败语义
+- 级别：P3
+- 事实：`MemoryCache.keyOf('/playlist/detail', {'ids': globalCollectionId})`；`PlaylistDetail.fromJson` 在 `data` 为空时抛 `ApiException`
+- 违反：第 23 条（缓存键缺「登录态」维度：同一 collection 在登录后可能返回 `is_favorite`/`heat` 等个性化字段，本模型未取，暂不构成串数据）、第 1 条（模型工厂承担校验+抛错两种职责）
+- 后果：匿名时缓存的详情在登录后被复用 90 秒，个性化字段（若将来加入模型）会滞后。当前模型字段全为公共信息，定 P3。
+
+### playlist_repository.dart:373-378 `_invalidatePlaylistCaches` 的前缀匹配
+- 级别：P3
+- 事实：`removeWhere((key) => key.startsWith('/playlist/') || key.startsWith('/user/playlist'))`
+- 违反：第 2 条（以字符串前缀当缓存命名空间，隐式约定）
+- 后果：任何以 `/playlist/` 开头但语义无关的新缓存（如 `/playlist/comment/...`）都会被写操作清掉——只是多打一次网络，无正确性问题。定 P3。
+
+### playlist_repository.dart:428-447 `PlaylistTracks.fromJson` 的 info/songs 兼容
+- 级别：通过
+- 事实：`info` 优先，其次 `songs`，`count`/`total` 取不到时 fallback 为当前页条数
+- 违反：无（第 14 条：逐一 `is List` 校验；第 16 条：缺失由上层 `unknownTotal` 区分）
+- 结论：与 `fetchTracks` 的未知总数处理配套，正确。
+
+### playlist_repository.dart:471-486 `PlaylistSong` 单位的显式性
+- 级别：通过
+- 事实：字段注释 `final int duration; // 秒`；`timelen`/`timelength` 按**毫秒** `~/ 1000`，`duration`/`Duration` 按**秒**直接取
+- 违反：无（满足第 15 条、第 17 条「截断显式且可追溯」）
+- 结论：与 `Song.fromJson` 的毫秒/秒分流一致，供 `PlayHelper` 的 `Duration(seconds: s.duration)` 使用，单位闭合。
+
+### playlist_repository.dart:494-497 `PlaylistSong.fromJson` 的 `Map<String, dynamic>.from(e)`
+- 级别：P3
+- 事实：`rawList.whereType<Map>().map((e) => PlaylistSong.fromJson(Map<String, dynamic>.from(e)))`，整条链路无 try/catch
+- 违反：第 13 条（`Map.from` 要求 String 键，未先校验）
+- 后果：上游若返回带非 String 键的 Map，`TypeError` 直接冒泡到歌单页 builder → 红屏（本仓库无异常包装）。定 P3（JSON 解码产物通常是 String 键）。
+
+---
+
+## 11. `lib/features/playlist/presentation/playlist_detail_page.dart`（348 行，全读）
+
+### playlist_detail_page.dart:145-166 `_collectPlaylist` 无幂等、图标不反映已收藏
+- 级别：P2
+- 事实：收藏按钮固定渲染 `Icons.favorite_border`（无状态），点击即 `collectPlaylist(name: detail.name, listCreateGid: detail.id)`；成功后只 toast，既不置「已收藏」态也不禁用按钮
+- 违反：第 21 条（写操作无幂等保障，仅靠 300ms 飞行窗口防重）、第 5 条（收藏这一事实只在服务端，UI 无任何本地/查询副本）、第 16 条（「未收藏」与「未知」同一图标）
+- 后果：用户连点两下（第一请求 ~300ms 内返回）会生成**两条同名收藏歌单**；即使只是忘记收藏过而再点一次，也会重复创建。歌单数量与歌单列表出现重复项，属数据污染。定 P2。
+
+### playlist_detail_page.dart:171-186 收藏失败只 toast，忽略 `maybeSucceeded`
+- 级别：P2
+- 事实：`catch (e) { Toast.show(context, context.l10n.operateFailed('$e')); }`；`PlaylistWriteException` 的 `maybeSucceeded` 除了拼进 toString 外未被使用——不 `ref.invalidate`、不提示刷新、不禁用重试
+- 违反：第 9 条（失败可观测但**不可处置**）、第 21 条（「结果未知」时未阻止用户立刻重试）
+- 后果：超时（`maybeSucceeded=true`）时 toast 文案会写「可能已生效」，但按钮依旧可点，用户重试即产生重复收藏——正是 `maybeSucceeded` 契约想要避免的场景。定 P2。
+
+### playlist_detail_page.dart:36-44 `playlistTracksProvider` 注释与仓库实现矛盾
+- 级别：P3
+- 事实：注释「仓库在 Repository 层**倒序取页并反序拼接**，保证列表整体从新到旧」；而 `fetchTracks` 实际是按页号**升序**拼接、**不反转任何一页**（该文件自身注释也写明「旧实现…F4-13 已修」）
+- 违反：第 31 条（注释描述的是已被删除的旧实现）
+- 后果：读者据注释以为仓库会倒序取页，排查「顺序不对」时按错误模型推理。定 P3。
+
+### playlist_detail_page.dart:45-47 / 74 `_tracksReloadProvider` 无人写入
+- 级别：P3
+- 事实：`final _tracksReloadProvider = StateProvider<int>((ref) => 0);`，页面 `ref.watch(_tracksReloadProvider);`，全文件**没有任何** `_tracksReloadProvider.notifier` 写入点；注释称「加载更多后手动触发 UI 重建」
+- 违反：第 32 条（无人写入的状态即为死代码）、第 31 条（注释描述了不存在的行为）
+- 后果：读者会去找根本不存在的「加载更多」逻辑；`watch` 恒为 0 但让页面依赖了一个隐式全局变量，将来任何人写入都会导致整页重建。定 P3。
+
+### playlist_detail_page.dart:230-234 注释承诺的「截断提示 / 加载更多」不存在
+- 级别：P3
+- 事实：方法文档「歌曲列表 + 截断提示/加载更多（>100 首的公共歌单不再静默截断）」，实现只有 `SliverMainAxisGroup(slivers: [SliverList(...)])`；`SliverMainAxisGroup` 包单个 sliver，且末尾留了一个空行
+- 违反：第 32 条（残留半成品）、第 31 条
+- 后果：实际不截断（`allPages: true` 已拉全量），但注释让后来者以为仍有分页逻辑；多余包装层增加一次 sliver 组合开销。定 P3。
+
+### playlist_detail_page.dart:196-205 「播放全部」用 `tracksAsync.value`
+- 级别：P3
+- 事实：`final tracks = tracksAsync.value; if (tracks != null && tracks.songs.isNotEmpty) { ... }` —— 加载中/失败时 `value` 为 null，按钮**静默无反应**
+- 违反：第 9 条（失败无反馈）、第 16 条（「还没加载」与「没有歌」同一表现）
+- 后果：慢网下用户点「播放全部」得不到任何提示，误以为按钮坏了；重复点击也不会有任何变化。定 P3。
+
+### playlist_detail_page.dart:296-303 下载入口构造的 `Song` 缺字段
+- 级别：P3
+- 事实：`Song(hash: song.hash, albumAudioId: song.albumAudioId, name:…, artist:…, cover:…)`——`albumId` 留默认空串、`duration` 为 `Duration.zero`
+- 违反：第 3 条（构造契约依赖默认值，调用方未声明哪些字段是必需）、第 14 条（下载链路拿到的 albumId 为空）
+- 后果：`/v5/url` 等装卸载参数若依赖 `album_id`，该曲下载会失败或拿到低质地址；进度/时长展示也缺失。定 P3。
+
+### playlist_detail_page.dart:77-140 详情/歌曲双数据源与错误重试
+- 级别：通过（修复正确）
+- 事实：`userListId` 非空时歌曲走 `userPlaylistTracksProvider`、否则 `playlistTracksProvider`；重试 `ref.invalidate((userListId != null && ...) ? user… : playlist…)`，与展示源**同一三元表达式**
+- 违反：无（满足第 5 条：数据源单一判定；第 9 条：错误可见可重试）
+- 结论：V3-06 修复成立——展示源与重试源不可能再分叉。
+
+### playlist_detail_page.dart:206-240 无刷新入口（下拉刷新）
+- 级别：P3
+- 事实：整页为 `CustomScrollView`，无 `RefreshIndicator`；缓存失效只能靠「返回再进」（写操作会 `_invalidatePlaylistCaches`）
+- 违反：第 11 条（恢复条件只能靠退出页面）、第 9 条
+- 后果：`maybeSucceeded` 场景下 toast 让用户「刷新确认」，而页面上没有刷新手段——文案指向一个不存在的操作。定 P3。
+
+### playlist_detail_page.dart:24 `_playlistRepoProvider` 别名
+- 级别：P3
+- 事实：`final _playlistRepoProvider = playlistRepositoryProvider;` 全文件只用该别名
+- 违反：第 32 条（无价值的间接层）、第 30 条（两个名字指同一物）
+- 后果：阅读时需多跳一次确认是否被覆盖。定 P3。
+
+### playlist_detail_page.dart:242-252 `_buildTracksSlivers` 的未使用 `theme` 参数
+- 级别：P3
+- 事实：`_buildTracksSlivers(context, ref, detail, tracks, theme)`，方法体内 `theme` 未出现
+- 违反：第 32 条（死参数）
+- 后果：无功能影响；`dart analyze` 不报未使用参数，会长期留存。定 P3。
+
+### 分页/刷新竞态（第 18 条专项）
+- 级别：通过
+- 事实：本页不存在「刷新 + 加载更多」两套状态机：一次性 `allPages: true` 取全量，`FutureProvider.autoDispose` 由 Riverpod 保证「新请求结果覆盖旧请求」且旧请求的 `AsyncValue` 不会回写
+- 违反：无
+- 结论：**没有分页竞态**。代价是 >100 页的巨型歌单要串行拉 100 次（每页 100 首），首屏等待「播放全部」按钮可点（因为 `tracksAsync.value` 为 null 时按钮无反应，见上面的 P3）。
+
+---

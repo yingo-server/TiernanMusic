@@ -198,3 +198,47 @@
 - 事实：`if (id.isEmpty || id == 'null' || accesskey.isEmpty || accesskey == 'null') throw ApiException(-1, ...)`；`fmt` 直接 `'${q['fmt'] ?? 'krc'}'` 拼进 query，未限制取值集合。
 - 违反：QUALITY_STANDARD 第 14 条（边界校验不完整）
 - 后果：`fmt=xxx` 会被原样发给 `/download`（Node 同样不校验），服务端返回空 content，客户端把空当「无歌词」；属边缘态，P3。
+
+> 基线说明：复核开始时 HEAD=`bc4a521`（v3.0.0），复核期间前进到 `f6f9531`（v3.2.0+32）/ `a668bbe`。直连层 12 个文件行数与字节数在两基线间**未变化**（kg_direct_api_client 666/30616、kg_client 542/17570、kg_crypto 402/15392、search 153/6043、playlist 288/11020），故以上结论对当前工作区代码仍然成立。5e050a3 的修复集中在播放世代/音质阈值/详情捕获，属 function 批次，与直连层无交集。
+
+---
+
+## 5. lib/core/direct/kg_endpoints_playlist.dart（288 行，已完整阅读）
+
+逐端点对照 `module/playlist_del.js`（52 行）、`playlist_add.js`（33）、`playlist_tracks_add.js`（42）、`playlist_tracks_del.js`（26）、`user_playlist.js`（25）、`playlist_track_all_new.js`（25）、`playlist_detail.js`（21）、`playlist_track_all.js`（20）：URL / method / x-router / `p` 大写 hex / `signParamsKey(clienttime)` / `scene='false;null'` / `total_ver=979` / `extend_fields` 均一致；P0-4（RSA 改 PKCS1）、P0-5（resource 对象数组）、PLY-05（补 number/size/sort/timelen/bitrate）、PLY-06（去路径前缀）、PLY-07（gid 上限 10）四处修复**复核通过**，与 Node 逐字段吻合。
+
+### kg_endpoints_playlist.dart:62-96 `playlistAdd` 三处与 Node 分叉：`source` 硬编码、`is_pri` 恒发、`type` 缺省语义相反
+- 级别：P2
+- 事实：Dart `'source': 1, 'is_pri': 0,` 为常量，且 `final type = int.tryParse('${q['type'] ?? 0}') ?? 0;` 缺省即 0。Node `playlist_add.js`：`source: params.source === 0 ? 0 : params.source || 1`、`if (params.type === 0) dataMap['is_pri'] = params.is_pri || 0;`、`params: params.type === 0 ? {…} : {}`（`type` 未传时 `undefined === 0` 为 false，走空 params）。
+- 违反：QUALITY_STANDARD 第 28 条（参数形态必须与实测/Node 一致）；第 2 条（魔法值应具名）
+- 后果：调用方传 `source=0`（本地新建歌单场景）时实际按 `source=1` 提交，服务端把自建歌单当作「收藏」处理；`type` 缺省时 Dart 走「新建」分支并附 `last_time/last_area`，Node 走「收藏」空 params 分支 —— 两者在服务端是不同事务，新建歌单可能返回 20010 或建出空壳歌单。
+
+### kg_endpoints_playlist.dart:151-158 / 118-123 / 128-137 `listid` 在三个写端点传字符串，而 `playlistDel` 传数字
+- 级别：P3
+- 事实：`playlistTracksAdd`：`'listid': '${q['listid'] ?? ''}'`；`playlistTracksDel`：`'listid': '${q['listid'] ?? ''}'`；`userPlaylistTracks`：`'listid': '${q['listid'] ?? q['id'] ?? ''}'`；而 `playlistDel`：`'listid': int.tryParse('${q['listid'] ?? 0}') ?? 0`。Node 四个模块一律透传 `params.listid`（一般为数字）。
+- 违反：QUALITY_STANDARD 第 17 条（标识符形态跨层必须一致且可追溯）；第 30 条（同文件同类字段两种类型）
+- 后果：云歌单接口对 `listid` 的字符串/数字宽容度未实测；若某一端点按严格类型校验，表现为「加歌成功提示但歌单里没有」或 20010，且四个端点里只有一个能复现，排查成本极高。
+
+### kg_endpoints_playlist.dart:40-59 `playlistDel` 解密失败静默返回原始响应，写操作无法区分「已删除」与「响应不可解析」
+- 级别：P2
+- 事实：`try { … if (decoded.containsKey('status')) return …; } catch (_) { /* 解密失败不影响判定 */ }` 之后 `return res;` —— `res.body` 由 `KgClient.request` 在 JSON 解析失败时置为 `{'status': 0, 'error': '响应解析失败', 'raw': base64…}`，`_wrap` 据此抛 `ApiException(0, '响应解析失败')`，`write:true` 使其不再重试。
+- 违反：QUALITY_STANDARD 第 6 条（空捕获无日志）、第 8 条（同一端点两种响应体形态，异常语义不稳）、第 16 条（「失败」与「结果未知」混同）
+- 后果：M1（AES 解密 key 派生与实际响应不一致、或上游回了明文 JSON）时删除其实已成功，UI 却提示「删除失败」，用户重复点删除 → 第二次 404/已删除；且日志里没有任何解密失败痕迹。
+
+### kg_endpoints_playlist.dart:158-166 `playlistTracksAdd` 空 data 会发出 `data: []`，与 Node 的空占位数组不同
+- 级别：P3
+- 事实：`_parseTracksResource` 首行 `if (raw.trim().isEmpty) return const [];`；Node `('' ).split(',')` 产出 `[{number:1,name:'',hash:'',…}]`。
+- 违反：QUALITY_STANDARD 第 16 条（空集合与缺失语义混同）；第 28 条（与 Node 形态不一致）
+- 后果：调用方漏传 data 时，Node 版会被服务端判为「无效行」返回明确错误，Dart 版发空数组，行为取决于上游对空数组的处理（可能直接 200 但什么都没加），用户看到「添加成功」而歌单未变。
+
+### kg_endpoints_playlist.dart:246-288 `_parseTracksResource` 以逗号切分，歌名含逗号时被拆成两条歌曲
+- 级别：P3
+- 事实：`raw.split(',')` 后再 `split('|')`；`f0(0)` 为歌名。歌名如「Hello, World」会被切成 `Hello` 与 ` World|hash|…` 两条资源。
+- 违反：QUALITY_STANDARD 第 14 条（外部数据边界未校验/未定义转义）
+- 后果：批量加歌时歌单多出错误条目（空 hash 行），用户看到歌单里出现无标题行且无法播放。注：Node 同缺陷，属移植继承，非本批回归。
+
+### kg_endpoints_playlist.dart:216-244 `playlistDetail` 用 `baseUrl: pubsongs.kugou.com` 且不带 `x-router`，`tags` 等可选词条缺失（与 Node 等价，确认无回归）
+- 级别：P3（记录项，非缺陷）
+- 事实：Node `playlist_detail.js` 用 gateway + `x-router: pubsongs.kugou.com`；Dart 直连原生域名等价。`data` 数组 1..10 校验与 `ids` 过滤一致。
+- 违反：—
+- 后果：无用户可见后果，仅记录「已核对一致」，避免下一批重复审查。

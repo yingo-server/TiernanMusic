@@ -357,7 +357,7 @@ class TiernanAudioHandler extends BaseAudioHandler
       // 世代校验 + 越界双检（第 18/12 条）；否则 RangeError 会被下面的
       // catch 当成播放失败，用户看到假错误并触发跳歌。
       if (token != _playToken) return;
-      if (index < _songs.length && identical(_songs[index], detailed)) {
+      if (index < _songs.length && _index == index) {
         _playedController.add(_songs[index]);
       }
     } catch (e) {
