@@ -284,14 +284,34 @@ class TiernanAudioHandler extends BaseAudioHandler
         // ---- 离线分支 ----
         _isPreview = false;
         _previewController.add(false);
-        await _player.setAudioSource(
-          AudioSource.uri(
-            local.startsWith('content://')
-                ? Uri.parse(local)
-                : Uri.file(local),
-            tag: mediaItem.value,
-          ),
-        );
+        try {
+          await _player.setAudioSource(
+            AudioSource.uri(
+              local.startsWith('content://')
+                  ? Uri.parse(local)
+                  : Uri.file(local),
+              tag: mediaItem.value,
+            ),
+          );
+        } on Exception {
+          // PL-01（审查③）：本地文件失效（被删/迁移/URI 失效）→
+          // **同曲回退在线解析**，而不是抛给外层 catch 跳下一首。
+          final detailed = await _repository.fetchDetail(song);
+          if (token != _playToken) return;
+          _songs[index] = detailed;
+          _emitMediaItem();
+          final result = await _repository.resolveUrl(detailed);
+          if (token != _playToken) return;
+          _actualQualityController.add(result.quality);
+          _isPreview = result.isPreview;
+          _previewController.add(_isPreview);
+          // 清掉失效的 localPath，防止下次再走坏源（PL-04 同源）
+          _songs[index] =
+              detailed.copyWith(quality: result.quality, localPath: null);
+          await _player.setAudioSource(
+            AudioSource.uri(Uri.parse(result.url), tag: mediaItem.value),
+          );
+        }
       } else {
         // ---- 在线分支：补全详情 + 解析 URL ----
         final detailed = await _repository.fetchDetail(song);
