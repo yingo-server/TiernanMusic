@@ -299,12 +299,12 @@ class PlaylistRepository {
       // 已发出但未拿到（或拿不全）响应：服务端可能已执行
       DioExceptionType.sendTimeout ||
       DioExceptionType.receiveTimeout ||
-      DioExceptionType.unknown =>
+      DioExceptionType.unknown ||
+      // CI 实测：dio 还会抛 transformTimeout（拦截器转换阶段失败），
+      // 请求体已发出，服务端可能已执行 → 按「结果未知」处理
+      DioExceptionType.transformTimeout ||
+      DioExceptionType.badResponse =>
         true,
-      // 有响应：按响应体判断（业务错误=确定失败；空响应/风控=结果未知）
-      DioExceptionType.badResponse => inner is ApiException && inner.errorCode > 0
-          ? false
-          : true,
       DioExceptionType.cancel => false,
     };
     final message = inner is ApiException

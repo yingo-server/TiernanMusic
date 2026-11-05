@@ -1,0 +1,200 @@
+# 第 5 批·审查①：直连层全量复核（v3.0 终审 A 视角）
+
+- 基线：commit `bc4a521`（tag v3.0.0）
+- 依据：`docs/QUALITY_STANDARD.md`（32 条）、`docs/REVIEW_SPEC.md`、`docs/api_verified.md`
+- 方式：逐文件完整 file_read；未编译、未跑测试、未安装依赖、未修改代码
+
+---
+
+## 1. lib/core/direct/kg_direct_api_client.dart（666 行，已完整阅读）
+
+### kg_direct_api_client.dart:214-249 `fallbackToKapi const false` 后 kapi 闭包与回退分支全为死代码
+- 级别：P3
+- 事实：`static const bool fallbackToKapi = false;`。`get`/`post` 每个 case 仍构造 `final kapi = () => super.get(path, query: query);` 并作为实参传入；`_directOrFallback` 内 `if (write || !fallbackToKapi || ...) throw ...` 恒真，`try { return await kapi(); }`（两处）永不可达；`_directOrFallback` 的 `kapi` 形参永不被调用。
+- 违反：QUALITY_STANDARD 第 32 条（不可达分支/死代码零容忍）；第 31 条（注释仍称「先直连，失败则回退 kapi」与实现相反）
+- 后果：读者按注释以为 kapi 仍是有效兜底，排障时去查 kapi 侧日志/网络，方向错误；每处 case 无谓分配闭包。
+
+### kg_direct_api_client.dart:283-302 / 373-381 未移植路径抛 `ApiException` 而非 `DioException`，异常契约与主路径不一致
+- 级别：P1
+- 事实：`get`/`post` 落到 switch 末尾时 `throw ApiException(-404, '接口 /$n 尚未移植…')`；而同文件 `_directOrFallback` 对一切失败统一 `throw _asDioException(label, e)`，注释明确写「上层（AuthRepository/verification_guard）只捕获 DioException 并从 .error 取 ApiException。直连若裸抛会被上层泛 catch 吞掉」。
+- 违反：QUALITY_STANDARD 第 8 条（异常契约必须单一稳定，回退路径与主路径形态一致）；第 9 条（失败必须可观测）
+- 后果：凡调用未移植路径（如 `/user/playlist` 之外的新接口、`/search/complex` 等），Repository 的 `on DioException` 捕不到，走到泛 catch 后被当作未知错误吞掉或显示通用「网络错误」，`-404` 语义（功能未移植）永远无法呈现给用户，也无法进入 lastErrors 诊断列表。
+
+### kg_direct_api_client.dart:104-107 `err_code` 统一提前校验会误杀「err_code 存在但为成功码」的裸 Map 响应（需按端点核实）
+- 级别：P2
+- 事实：`final errCode = body['err_code']; if (errCode != null && codeOf(errCode) != 0) throw ApiException(...)`。该判定先于 status 判定、先于 `_hasData` 警告码放行逻辑。
+- 违反：QUALITY_STANDARD 第 29 条（成功判定口径必须逐端点实测，不可一律）；第 16 条（「失败」与「确实为空」语义混同）
+- 后果：任何在成功响应里携带非 0 `err_code` 的端点（酷狗 mcomment 系列在同一响应中既给 `err_code` 又给有效 `list`）会被整包判失败并丢弃已返回的数据，用户看到空评论列表而非内容。api_verified.md 只记录了 comment/count 的裸 Map 形态，未记录成功响应中 err_code 的取值集合 → 属未实测即下结论。
+
+### kg_direct_api_client.dart:145-173 空响应体判定位置过晚，`status == 0` 且 `error_code == 0` 的空包仍以 code 0 抛错
+- 级别：P3
+- 事实：`if (status == 0 || status == 2 || errorCode != 0) throw ApiException(errorCode, msgOf(), ...)` 位于 `if (body.isEmpty)` 之前；当 `body == {'status': 0}` 时抛出的 ApiException.errorCode 为 0、message 取自不存在的字段，回落为「请求失败」。
+- 违反：QUALITY_STANDARD 第 31 条（注释与实现顺序不一致：PLY-11 声称空包单独判定，实际被前一支抢先）
+- 后果：诊断页只能看到 code 0 +「请求失败」，无法区分「风控空包」与「业务拒绝」，线上排障信息丢失（非用户可见，故 P3）。
+
+### kg_direct_api_client.dart:466-489 `_videoDetail` 绕过端点组、直接内联在客户端类里（R1 拆分遗漏）
+- 级别：P3
+- 事实：其余端点均 `=> _epXxx.yyy(q)` 委托到 `kg_endpoints_*.dart`，唯 `_videoDetail` 保留完整请求构造（60 余行）在本类内；且 `kg_endpoints_media.dart` 中有同域 `videoUrl`，`video/detail` 无对应端点类。
+- 违反：QUALITY_STANDARD 第 1 条（单一职责：本类应只做路由/委托）；第 30 条（文件内两种组织方式并存，命名与结构不符）
+- 后果：维护者按「端点实现在 kg_endpoints_*」的约定去改 video/detail 会改错文件，改动丢失或重复实现（P3，仅维护成本）。
+
+### kg_direct_api_client.dart:32-42 `setCredentials` 与 `clearCredentials` 不对称：dfid 只写不清
+- 级别：P2
+- 事实：`setCredentials` 中 `if (dfid != null && dfid.isNotEmpty) kg.dfid = dfid;`；`clearCredentials` 仅重置 `kg.token / kg.userid / kg.t1`，未处理 `kg.dfid`（也无 `kg.auth` 的清理，而 `setCredentials` 形参含 `auth`）。
+- 违反：QUALITY_STANDARD 第 20 条（生命周期双向对称）；第 5 条（同一事实多份存储、仅一处更新）
+- 后果：切换账号/退出登录后旧账号 dfid 残留并继续参与 `uuid=md5(dfid+mid)` 计算与签名，直连请求携带上一账号设备标识；酷狗侧风控按 dfid 归并，可能把新账号与旧账号关联或直接触发风控拒绝，表现为登录后部分接口 20010/空包。
+- 补充：dfid 属设备级标识，保留本身合理，但代码与注释均未声明「dfid 故意不随账号清理」，属隐式约定。
+
+### kg_direct_api_client.dart:669-681 `_qrPngBase64` / `_maskMobile` / `_qrSrcappid` / `_commentCodeOf` / `_afterLogin` 为委托层残留
+- 级别：P3
+- 事实：`_qrPngBase64`、`_maskMobile`、`_qrSrcappid`、`_commentCodeOf`、`_afterLogin` 在本文件中均无调用点（`get/post` 的 switch 全部直接委托 `_epAuth` / `_epComment`），端点组类各自持有实现。
+- 违反：QUALITY_STANDARD 第 32 条（未使用方法/字段/常量零容忍）
+- 后果：`_afterLogin` 与 `_epAuth` 内同名逻辑并存，若两者行为已分叉，后来者改错一处即造成「登录成功但 token 不落盘」类故障；提升误改概率。
+
+### kg_direct_api_client.dart:10-23 导入疑似冗余（`dart:convert`、`qr_flutter`）
+- 级别：P3
+- 事实：本文件正文未见 `json`/`base64` 使用，`QrPainter` 等 QR 绘制类型已随 `_epAuth.qrPngBase64` 迁出；`package:qr_flutter/qr_flutter.dart` 仅由注释/委托间接相关。
+- 违反：QUALITY_STANDARD 第 32 条（未使用导入）
+- 后果：拖慢冷启动编译、误导依赖方向（核心网络层看起来依赖 UI 二维码库）。注：以 `dart analyze` 的 unused_import 为准，本项待确认。
+
+### kg_direct_api_client.dart:189-190 `_directOrFallback` 的 `write` 语义在 fallbackToKapi=false 下已无区分度
+- 级别：P3
+- 事实：`if (write || !fallbackToKapi || e.needsVerification || e.errorCode == 20034)` —— `!fallbackToKapi` 恒真，`write` 与两个特判条件均为冗余；但 7 处 `write: true` 调用点仍保留。
+- 违反：QUALITY_STANDARD 第 32 条（冗余条件）；第 22 条（并发/防重前提失去显式表达）
+- 后果：读者误以为「写操作防重」仍由该参数保障，实际上防重完全依赖「永不回退」这一偶然属性；一旦将来恢复 kapi 回退，写操作会因 `write` 逻辑仍在而侥幸正确，但非写操作的重复提交风险无人评估。
+
+---
+
+## 2. lib/core/direct/kg_client.dart（542 行，已完整阅读）
+
+### kg_client.dart:166-171 / 176-186 `KgClient.dfid` 只写不读：登录 dfid 永远进不了签名与请求头
+- 级别：P1
+- 事实：`String dfid = '';`（注释称「登录态 dfid（与 token/userid 同步…直连层签名取 kg.device.dfid，登录刷新后需保持一致）」）。全类所有签名/头构造均取 `device.dfid`：`request()` 的 `defaultParams['dfid'] = device.dfid.isEmpty ? '-' : device.dfid`、`reqHeaders['dfid']`、`submitFingerprintVerification` 的 `dfid: device.dfid.isEmpty ? '0' : device.dfid`、`_registerDeviceOnce` 的 `params['dfid']`。类内无任何 `dfid`（非 device）的读点。而 `KgDirectApiClient.setCredentials` 写入的正是 `kg.dfid`。
+- 违反：QUALITY_STANDARD 第 5 条（同一事实两处存储、只在一处被修改，另一处权威不生效）；第 32 条（无人读取的状态）；第 31 条（注释与实际取值来源相反）
+- 后果：`setCredentials(dfid: …)` 变成空操作。登录后若上游下发了新 dfid（酷狗登录响应会刷新设备标识），直连请求继续携带旧设备 dfid → 签名/风控维度与账号不匹配，脆弱接口（评论写、云歌单、验证接口）出现 20010/20006 或空包；且同类注释让维护者认为同步已完成，问题无法通过读代码发现。
+
+### kg_client.dart:268-312 `requestWithVerify` 内重试会重放**同一请求**，对写操作等同重复提交
+- 级别：P1
+- 事实：`request()` 发出 → 命中 `_needsVerify` → `submitFingerprintVerification` → 再次 `request(...)` 原样重发。方法本身不区分读写，签名 `Future<KgResponse> requestWithVerify(path, {… int retries = 1})` 无 `write` 保护。
+- 违反：QUALITY_STANDARD 第 21 条（写操作必须幂等或有防重）；第 3 条（契约未声明「不得用于写操作」）
+- 后果：若被评论发送/歌单增删等写端点复用，首次请求在服务端已成功但响应带 ssa-code 时会被原样重发 → 重复评论、歌单同名两条。当前 `_directOrFallback` 层的「写不回退」防重**不能**覆盖这一层重试（重试发生在 `KgClient` 内部，对外仍是一次调用）。
+
+### kg_client.dart:213-226 DI 回流：core 层 import features 层实现
+- 级别：P2
+- 事实：`import '../../features/auth/data/edt_generator.dart';`，用于 `submitFingerprintVerification` 里的 `EdtGenerator.generate(...)`。
+- 违反：QUALITY_STANDARD 第 4 条（分层单向依赖，core 不得依赖业务模块）；REVIEW_SPEC 第五节（`core/` 禁止 import `features/**`）
+- 后果：直连层无法脱离 auth 业务单独测试/复用；`features/auth` 改名或重构会直接编译失败于 core 层（架构级回流）。
+
+### kg_client.dart:398-408 `_persistDfid` 空捕获且无日志
+- 级别：P3
+- 事实：`try { onDfidRegistered?.call(dfid); } catch (_) { /* 持久化失败不影响本次请求 */ }` —— 无日志、无返回值、无降级标记。
+- 违反：QUALITY_STANDARD 第 6 条（禁止吞掉异常：至少记录日志或返回明确语义）；第 9 条（失败不可观测）
+- 后果：dfid 落盘失败后每次冷启动都重新注册设备，用户表现为「偶尔又要重新登录/频繁风控」，日志里查不到任何线索。
+
+### kg_client.dart:196-206 网络异常被折叠为 `status: 502` 假响应，丢失异常类型
+- 级别：P2
+- 事实：`} on DioException catch (e) { return KgResponse(status: 502, body: {'status': 0, 'error': '${e.message}'}); }`，不保留 `e.type`（超时/DNS/证书），也不设 rawBytes。
+- 违反：QUALITY_STANDARD 第 6 条（异常应转译为有语义的领域异常，而非压缩成字符串）；第 15 条（错误分类信息丢失）
+- 后果：`_wrap` 只能抛出 `ApiException(0, '连接超时')` 之类文本；「无网络」「DNS 失败」「TLS 失败」在诊断页与用户提示里不可区分，离线场景被显示为通用请求失败。
+
+### kg_client.dart:52-56 / 62-66 `isOk` 与 `businessErrorCode` 疑似无调用点
+- 级别：P3
+- 事实：`bool get isOk => this.status == 200 && (body['status'] == 1 || body['status'] == 200);`、`int get businessErrorCode`。成功判定已统一由 `KgDirectApiClient._wrap` 实现（后者连 status==200 都单独分支），两套口径并存。
+- 违反：QUALITY_STANDARD 第 32 条（未使用成员）；第 5 条（成功判定两个权威，且 `isOk` 不含 `err_code` 校验、与 `_wrap` 不一致）
+- 后果：若将来有人改用 `isOk`，mcomment 的 `status=1 + err_code=60102` 会被判成功，评论失败被当成成功展示。
+
+### kg_client.dart:145-158 默认参数 `uuid` 恒为 `'-'`，与 `dfid` 语义绑定缺失（注释与实现范围不符）
+- 级别：P3
+- 事实：`'uuid': '-'` 有 5 行注释说明「Node 版虽注入 uuid=guid…维持既往实测结论」，但 `_videoDetail` 内又自行计算 `uuid: KgCrypto.md5('$dfid${kg.device.mid}')`，`_registerPayload` 里 `uuid: device.guid` —— 同一请求族存在三种 uuid 取值。
+- 违反：QUALITY_STANDARD 第 2 条（魔法值与隐式约定应集中）；第 31 条（三处取值无统一说明）
+- 后果：新增端点时无法判断该用哪种 uuid，选错即静默失败（酷狗对 uuid 不一致主要回 20010/空包），排查成本高。
+
+### kg_client.dart:84-92 `calculateMid` 逐位 BigInt 累加，且不校验 `guid` 长度
+- 级别：P3
+- 事实：`for (var i = 0; i < digest.length; i++) { … base.pow(digest.length - 1 - i) … }`；`KgDevice.fromJson` 用 `'${j['guid'] ?? ''}'` 兜底，guid 为空串时 `KgCrypto.md5('')` 仍能算出固定 mid。
+- 违反：QUALITY_STANDARD 第 14 条（边界数据未校验）
+- 后果：Hive 中 guid 损坏/缺失时全设备共用同一个空串派生的 mid，服务端把多台设备视为同一设备，风控命中率上升且表现为随机失败。非崩溃，故 P3。
+
+---
+
+## 3. lib/core/direct/kg_crypto.dart（402 行，已完整阅读）
+
+复核结论：三种盐（android `OIlwieks28dk2k092lksi2UIkp` / web `NVPh5oo715z5DIWAeQlhMDsWXXQV4hwt` / register `1014`）、`paramsKey = md5(appid+salt+clientver+data)`、`keyOf = md5(hash+salt+appid+mid+userid)` 均与 REVIEW_SPEC 第二节一致；`playlistAesEncrypt` 的 key=`md5(seed)[:16]`、iv=`md5(seed)[16:32]`、base64 输出一致；RSA-PKCS1 与裸 RSA 分离正确；`clienttime` 由调用方传秒级（本文件不涉及）。以下为遗留问题。
+
+### kg_crypto.dart:212-243 `aesEncryptHex` 名称与实现相反（输出 base64 而非 hex），且与同文件 `aesEncryptCbcHex` 仅一字之差
+- 级别：P3
+- 事实：`static AesResult aesEncryptHex(String data, {String? key, String? iv})` 结尾 `return AesResult(str: base64.encode(out), key: seed ?? '');`；文档亦写「AES-128-CBC + PKCS7，输出 Base64（对应 playlistAesEncrypt）」。同文件另有 `aesEncryptCbcHex`（真 hex、AES-256、key 为 32 位 hex 串）。
+- 违反：QUALITY_STANDARD 第 30 条（名称必须表达意图，名称与行为不符是最高频误导来源）
+- 后果：两个函数名仅差一个 `Cbc`，一个 hex 一个 base64、密钥长度也不同；新增歌单/MV 写接口时极易选错 → 服务端解密失败，表现为收藏/删歌恒失败且无明确错误码。
+
+### kg_crypto.dart:90-95 `register` 签名注释称「currently unused」，实际在 `KgClient.request` 的 `encryptType` 分支中可达
+- 级别：P3
+- 事实：注释「currently unused：注册实际走 [android]（含 body）…保留时勿在新代码中误用为注册路径」；而 `kg_client.dart:229-233` 有 `'register' => KgSignature.register(allParams)` 分支，任何调用方传 `encryptType: 'register'` 即会走该盐值。
+- 违反：QUALITY_STANDARD 第 31 条（注释与代码不符）；第 32 条（保留不可用实现）
+- 后果：注释制造「此路径不存在」的错觉；若未来按 `encryptType` 字面语义误用 register 签名打 `/risk/v3/r_register_dev`，注册恒失败（该接口实测要求 android 签名且包含 body），表现为「设备注册一直拿不到 dfid → 直连大面积风控失败」。
+
+### kg_crypto.dart:391-399 `randomString` 取整方式使字符表首字符概率≈0
+- 级别：P3
+- 事实：`final idx = ((chars.length - 1) * _rand.nextDouble()).ceil(); sb.write(chars[idx.clamp(0, chars.length - 1)]);` —— `nextDouble()` 取值 [0,1)，乘 35 后取 ceil，结果落在 0..35，但 `0` 仅在 `nextDouble()==0` 时出现（概率 2⁻⁵³），`chars[0]='1'` 实际不可用；`ceil` 还使各字符概率不均（中间字符被两次区间覆盖）。
+- 违反：QUALITY_STANDARD 第 17 条（数值分布需精确可控）；第 31 条（注释「randomString：字符表…」未说明偏差）
+- 后果：seed/临时 key 熵下降且分布可被预测，弱化了「随机 seed 防重放」的初衷；dfid 注册的 imei/临时 key 也取自该函数，长期运行可能提高风控命中率（P3，无直接崩溃）。
+
+### kg_crypto.dart:330-333 `aesDecryptCbcHex` 遇到奇数长度/非法 hex 时静默丢弃末位或抛 `FormatException`
+- 级别：P3
+- 事实：`for (var i = 0; i + 1 < data.length; i += 2) { cipherBytes.add(int.parse(...)); }` —— 奇数长度末位被丢弃；`int.parse` 对非 hex 字符抛 FormatException（未被本函数捕获）。
+- 违反：QUALITY_STANDARD 第 14 条（外部数据边界未校验）
+- 后果：上游返回畸形密文时，前者静默产出错误明文（`_afterLogin` 里 `dec is Map` 判空后不合并 token，表现为登录成功但未登录）；后者向上冒泡成未包装异常。二者都难定位。
+
+### kg_crypto.dart:145-149 / 205-207 每次 RSA 都要重新 base64 解码 + ASN.1 解析公钥
+- 级别：P3
+- 事实：`_rsaPublicKey(lite)` 内 `base64.decode(...)`、`ASN1Parser(...).nextObject()`，被 `rsaEncryptPkcs1` 与 `rsaEncryptRawHex` 每次调用（设备注册最多 3 次重试，登录每次一次）。
+- 违反：QUALITY_STANDARD 第 24 条（惰性构建/按需计算：不变量应缓存）
+- 后果：单次多出约 1KB 的 DER 解析，登录与注册路径的 CPU 抖动；非热路径，故 P3。
+
+### kg_crypto.dart:107-121 `KgSignature.android` 对 Map/List 值使用 `jsonEncode`，而 `web` 使用 `'$v'`（Dart toString）
+- 级别：P3
+- 事实：android：`v is Map || v is List ? jsonEncode(v) : v`；web：`.map((k) => '$k=${params[k]}')`，Map 值会渲染成 `{a: b}`（无引号、无花括号 JSON 形态）。
+- 违反：QUALITY_STANDARD 第 2 条（同一语义两种隐式编码方式）；第 8 条（签名契约不稳定）
+- 后果：一旦某 web 签名端点需要传 Map/List（评论写接口的 `data` 若改为嵌套结构），签名必然不匹配 → 服务端 20006/签名错误，评论发送静默失败。
+
+---
+
+## 4. lib/core/direct/kg_endpoints_search.dart（153 行，已完整阅读）
+
+对照 `module/search.js`（83 行）与 `module/lyric.js`（35 行）：song/album/else 三分支的参数集合、`platform=AndroidFilter`、lite 时 `clientver=201`、`sorttype/searchsong` 归一化均一致；差异在于 song 分支改打 `complexsearch.kugou.com/v3/search/song`（Node 为 gateway `/v2/search/song` + `x-router`），代码注释与 `api_verified.md` 均有实测记录，可接受。
+
+### kg_endpoints_search.dart:120-140 `lyric` 的 decode 分支漏掉 KRC 解密，且 contenttype 缺失时的判定与 Node 相反
+- 级别：P2
+- 事实：`if (fmt == 'lrc' || (ct.isNotEmpty && ct != '0')) { body['decodeContent'] = utf8.decode(base64.decode(content), allowMalformed: true); }` —— **没有 else 分支**。Node `module/lyric.js:22` 为 `params?.fmt == 'lrc' || Number(contenttype) !== 0 ? Buffer.from(content,'base64').toString() : decodeLyrics(res.body.content)`：当 `fmt=krc` 且 `contenttype == 0` 时调用 `decodeLyrics`（KRC 专有解密）并写入 `decodeContent`。此外 `contenttype` 缺失时 Node 走 base64 分支（`NaN !== 0`），Dart 走「不解码」。
+- 违反：QUALITY_STANDARD 第 28 条（参数/分支形态必须与实测一致）；第 16 条（「无数据」与「未解码」语义混同）；第 6 条（`catch (_) {}` 空体吞掉 base64 失败）
+- 后果：KRC 歌词（`contenttype=0`）时响应体里没有 `decodeContent`，上层若只看 `decodeContent` 会得到 null → 歌词页空白或回落到「暂无歌词」；若上层读 `content` 又拿到的是 base64 密文，则显示乱码。两种失败都在正常网络下发生，用户可见但无错误提示。
+
+### kg_endpoints_search.dart:19-33 song 搜索改打 `/v3`，但 `q` 里 Node 支持的 `iscorrection/privilegefilter/area_code` 直接用 `??` 透传未经类型归一
+- 级别：P3
+- 事实：`'iscorrection': q['iscorrection'] ?? 1, 'privilegefilter': q['privilegefilter'] ?? 0, 'area_code': q['area_code'] ?? 1` —— 若调用方从路由/深链传来字符串 `'0'`，会以字符串进入签名与 query；Node 侧 `iscorrection ?? 1` 同样不转，故与 Node 一致，但 album 分支却做了 `'${q['sorttype']}' == '1'` 归一，同文件两套风格。
+- 违反：QUALITY_STANDARD 第 13 条（外部参数未统一类型）、第 30 条（同文件风格不一致）
+- 后果：字符串参数进入签名串后与 Node 服务端期望的数值形态不同，酷狗对 `iscorrection="0"` 与 `0` 的响应未实测；若上游按数值处理会返回 20010，表现为搜索空白（低频，P3）。
+
+### kg_endpoints_search.dart:84-103 `searchLyric` 使用 `clearDefaultParams + notSignature`，与 REVIEW_SPEC「`/v1/search` 必须带 signature」冲突且未在 api_verified.md 留样
+- 级别：P2
+- 事实：`kg.request('/search', baseUrl: 'https://lyrics.kugou.com', method: 'GET', clearDefaultParams: true, notSignature: true, params: {...})`。REVIEW_SPEC 第二节「clearDefaultParams: true 只允许用于 5 处已验证端点：`/search`（歌词）…」，代码用的是无版本 `/search`（属白名单）✓；但同文件 `lyric()` 的 `/download` 走默认签名，而 REVIEW_SPEC 明文写「`lyrics.kugou.com` `/v1/search`（**必须带 signature**）」。
+- 违反：QUALITY_STANDARD 第 29 条（凡涉及上游行为的结论必须可追溯到实测记录，未实测须标注）；第 3 条（契约与规范文档不一致，未收敛）
+- 后果：后续任何按 REVIEW_SPEC 行事的人会给歌词搜索补上 signature，酷狗对带签名的 `/search` 是否返回同样结果未经实测——一旦上游对签名串更敏感，歌词搜索整条链路静默失败，歌词页无候选、只能显示空。
+
+### kg_endpoints_search.dart:41-49 / 86-96 `search` 与 `searchLyric` 无关键词空值校验
+- 级别：P3
+- 事实：`final keyword = '${q['keywords'] ?? q['keyword'] ?? ''}';` 后直接发请求；`searchLyric` 直接 `'keyword': '${q['keywords'] ?? ''}'`（`lyric()` 有 id/accesskey 校验，二者风格不一致）。
+- 违反：QUALITY_STANDARD 第 14 条（边界数据校验）、第 3 条（同组端点契约不一致）
+- 后果：空关键词搜索打到上游，返回 20010/空列表，UI 显示「无结果」而非「请输入关键词」，用户以为搜不到歌。
+
+### kg_endpoints_search.dart:1-7 `import 'kg_direct_api_client.dart';` 未被使用，形成 core 内部循环依赖
+- 级别：P3
+- 事实：该文件未引用 `KgDirectApiClient` 任何符号（仅用 `KgClient`、`KgConfig`、`ApiException`），而 `kg_direct_api_client.dart` 又 import 本文件。六个 `kg_endpoints_*.dart` 均如此。
+- 违反：QUALITY_STANDARD 第 32 条（未使用导入）、第 4 条（依赖应单向）
+- 后果：编译期循环导入使两端无法独立演化；`dart analyze` 报 unnecessary_import 噪音掩盖真实告警。
+
+### kg_endpoints_search.dart:105-112 `lyric` 的 id/accesskey 校验用字符串比较 `'null'`，未校验 `decode` 之外的其他外部输入
+- 级别：P3
+- 事实：`if (id.isEmpty || id == 'null' || accesskey.isEmpty || accesskey == 'null') throw ApiException(-1, ...)`；`fmt` 直接 `'${q['fmt'] ?? 'krc'}'` 拼进 query，未限制取值集合。
+- 违反：QUALITY_STANDARD 第 14 条（边界校验不完整）
+- 后果：`fmt=xxx` 会被原样发给 `/download`（Node 同样不校验），服务端返回空 content，客户端把空当「无歌词」；属边缘态，P3。

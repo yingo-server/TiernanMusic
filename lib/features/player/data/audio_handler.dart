@@ -216,6 +216,9 @@ class TiernanAudioHandler extends BaseAudioHandler
     // 这里只作废旧请求的世代标记并把新下标排队，闸门由旧请求的 finally 释放，
     // 释放后立即播放排队中的新下标。
     _playToken++;
+    // V3-04（第5批复核②，P2）：换队列必须重置连续失败计数（第 18 条）——
+    // 旧队列累积的 streak 若接近旧队列长度，新队列第一首失败就会触发「停止」。
+    _failureStreak = 0;
     _pendingIndex = null;
     _songs
       ..clear()
@@ -350,8 +353,13 @@ class TiernanAudioHandler extends BaseAudioHandler
       if (token != _playToken) return;
       _failureStreak = 0;
       await _player.play();
-      // 播放真正开始后再写最近播放（F2：自动切歌 / 上下一首同样覆盖）
-      _playedController.add(_songs[index]);
+      // V3-03（第5批复核②，P2）：play() 期间队列可能被整体替换，
+      // 世代校验 + 越界双检（第 18/12 条）；否则 RangeError 会被下面的
+      // catch 当成播放失败，用户看到假错误并触发跳歌。
+      if (token != _playToken) return;
+      if (index < _songs.length && identical(_songs[index], detailed)) {
+        _playedController.add(_songs[index]);
+      }
     } catch (e) {
       // 命中 20028：需要人机验证，不跳歌，交由 UI 弹验证页后重试
       final api = _extractApiException(e);
@@ -444,11 +452,23 @@ class TiernanAudioHandler extends BaseAudioHandler
   Future<void> pause() async {
     final p = _playerOrNull;
     if (p == null) return;
+    // V3-02（第5批复核②，P2）：暂停必须作废在途播放请求——
+    // 否则缓冲中的 _playAt 恢复后会自动 play()，出现「按了暂停却开始播放」
+    //（QUALITY_STANDARD 第 18 条：世代失效要体现在所有停止类入口上）。
+    _playToken++;
+    _loading = false;
+    _pendingIndex = null;
     await p.pause();
   }
 
   @override
   Future<void> stop() async {
+    // V3-01（第5批复核②，P1）：停止/划掉通知必须作废世代，
+    // 在途 _playAt 恢复后不得再调用 play()（第 18/19 条）。
+    _playToken++;
+    _loading = false;
+    _pendingIndex = null;
+    _pendingSongIndex = null;
     final p = _playerOrNull;
     if (p == null) return;
     await p.stop();
@@ -539,6 +559,11 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> onNotificationDeleted() async {
+    // V3-01（第5批复核②，P1）：与 stop() 对称，作废在途请求（第 18/19 条）。
+    _playToken++;
+    _loading = false;
+    _pendingIndex = null;
+    _pendingSongIndex = null;
     await _playerOrNull?.stop();
   }
 }

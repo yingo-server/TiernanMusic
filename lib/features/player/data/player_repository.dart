@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/kugou_api_client.dart';
@@ -111,14 +112,22 @@ class PlayerRepository {
           localPath: song.localPath,
         );
       }
-    } catch (_) {
+    } catch (e) {
+      // V3-05（第5批复核②，P1）：详情补全失败必须可观测且区分错误类型
+      //（第 6/7/9/10 条）。TypeError/FormatException 属上游契约变化，
+      // 不得与网络失败同等静默吞掉——否则用户永远拿到「未补全的 song」
+      // （无时长/无封面）且线上无日志可查。
+      if (e is TypeError || e is NoSuchMethodError || e is FormatException) {
+        debugPrint('[player] fetchDetail 解析失败（上游契约变化？）: $e');
+      } else {
+        debugPrint('[player] fetchDetail 网络失败: $e');
+      }
       // 详情查询失败不阻塞播放
     }
     return song;
   }
 
-  /// 读取用户设置的默认音质（Hive settings['defaultQuality']，缺省 320）
-  /// 用户默认音质（与下载链路共用同一事实源）
+  /// 读取用户设置的默认音质（事实源：core/audio/preferred_quality.dart）
   AudioQuality _preferredFromSettings() => preferredQuality();
 
   /// 获取可播放 URL：直连优先，失败回退 kapi。
@@ -163,7 +172,7 @@ class PlayerRepository {
       if (result.hasUrl) {
         return PlayableResult(
           // 直连拿到的是 http://fsandroid... ，走代理转 https
-          url: _proxyHttp(result.bestUrl!),
+          url: result.bestUrl!,
           quality: _qualityFromBitrate(result, q),
           isPreview: result.isPreview,
         );
@@ -187,7 +196,7 @@ class PlayerRepository {
         );
         if (preview.hasUrl) {
           return PlayableResult(
-            url: _proxyHttp(preview.bestUrl!),
+            url: preview.bestUrl!,
             quality: _qualityFromBitrate(preview, q),
             isPreview: true,
           );
@@ -259,7 +268,7 @@ class PlayerRepository {
       final url = _firstUrl(data['url']) ?? _firstUrl(data['backupUrl']);
       if (url != null) {
         return PlayableResult(
-          url: _proxyHttp(url),
+          url: url,
           quality: _actualQuality(data, q),
           isPreview: _int(data['priv_status']) == 0 ||
               data['hash_offset'] is Map,
@@ -282,7 +291,7 @@ class PlayerRepository {
         final url = _firstUrl(data['url']) ?? _firstUrl(data['backupUrl']);
         if (url != null) {
           return PlayableResult(
-            url: _proxyHttp(url),
+            url: url,
             quality: _actualQuality(data, q),
             isPreview: true,
           );
@@ -340,13 +349,20 @@ class PlayerRepository {
   /// - 酷狗 CDN 支持 Range 请求，直连才能边下边播、seek、断点续传；
   /// - 走前缀代理时不转发 Range，表现为「只能播开头 / 卡住 / 播放态滞留」，
   ///   且多一跳中转明显更慢。
-  static String _proxyHttp(String url) => url;
+  /// 播放地址直连（CDN 支持 Range，直连才能边下边播/seek/断点续传）。
+  /// 历史上的前缀代理方案已废弃：代理不转发 Range →「只能播开头」，
+  /// 且多一跳更慢（V3-07：删除恒等包装 _proxyHttp，第 32 条死代码）。
 
   static AudioQuality _actualQuality(Map data, AudioQuality requested) {
+    // V3-06（第5批复核②，P2）：与 _qualityFromBitrate 共用同一套阈值
+    //（第 5 条：同一判断必须单一来源）。此前 192000 在两处分别被判成
+    // q128 与 high，UI 音质角标在直连/kapi 两路径间漂移。
     final bitrate = _int(data['bitRate']);
     if (bitrate != null && bitrate > 0) {
-      if (bitrate <= 192000) return AudioQuality.q128;
-      if (bitrate <= 500000) return AudioQuality.q320;
+      if (bitrate >= 500000) return AudioQuality.flac;
+      if (bitrate >= 192000) return AudioQuality.high;
+      if (bitrate >= 96000) return AudioQuality.q320;
+      return AudioQuality.q128;
     }
     return AudioQuality.fromString('${data['extName'] ?? requested.value}');
   }

@@ -153,6 +153,10 @@ class KgClient {
   String userid = '0';
   String t1 = ''; // 登录态 t1 票据（login/token 刷新签名用）
 
+  /// PLY-12：登录态 dfid（与 token/userid 同步，QUALITY_STANDARD 第 5 条
+  /// 状态单一来源——直连层签名取 kg.device.dfid，登录刷新后需保持一致）。
+  String dfid = '';
+
   /// F4-12（审查①-B，P1）：登录态会员信息（三态判定：匿名/非 VIP/VIP）。
   /// 由 KgEndpointAuth._afterLogin 从登录响应的 data.vip_type / vip_token 写入；
   /// 匿名/非 VIP 为 '0' / ''。此前全仓无该字段，banner 等处只能硬编码 0。
