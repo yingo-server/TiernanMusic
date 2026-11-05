@@ -5,7 +5,13 @@ class AppConfig {
   static const String appNameCn = '汀澜音乐';
   static const String appId = 'com.tiernan.music';
 
-  // API
+  // API 基址
+  //
+  // P1（第5批复核③）：kapi（kapi.344977.xyz）**只是原生接口的参考实现，
+  // 运行期绝不调用**（QUALITY_STANDARD 第 27 条）。该常量仅供
+  // KugouApiClient 的 CookieJar 域名占位使用（Cookie 只存本地，不发包），
+  // 直连层 KgClient 全部使用酷狗原生域名。清理计划：待 Cookie 存储迁移到
+  // 原生域后删除本常量。
   static const String kugouApiBase = 'https://kapi.344977.xyz';
   static const String translateApiBase =
       'https://index-translate.bilibili.com/v1/chat/completions';

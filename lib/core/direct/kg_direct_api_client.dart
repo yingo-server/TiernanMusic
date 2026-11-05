@@ -41,7 +41,13 @@ class KgDirectApiClient extends KugouApiClient {
     kg.token = token;
     kg.userid = userid;
     if (t1 != null) kg.t1 = t1;
-    if (dfid != null && dfid.isNotEmpty) kg.dfid = dfid;
+    if (dfid != null && dfid.isNotEmpty) {
+      // V3-09（第5批复核①，P1）：登录下发的 dfid 必须同时落到 device.dfid
+      //（第 5 条：状态单一来源）。全类签名/头构造都取 device.dfid，
+      // 只写 kg.dfid 会让同步变成空操作，签名/风控维度与账号不匹配。
+      kg.dfid = dfid;
+      kg.device.dfid = dfid;
+    }
     await super.setCredentials(
         token: token, userid: userid, t1: t1, auth: auth, dfid: dfid);
   }
@@ -316,9 +322,14 @@ class KgDirectApiClient extends KugouApiClient {
     }
     // PLY-14（QUALITY_STANDARD 第 27 条）：未移植路径**不得**回退 kapi 中转。
     // 明确报错，让缺失的功能暴露出来，而不是悄悄依赖第三方网关。
-    throw ApiException(
-      -404,
-      '接口 /$n 尚未移植到原生网关（kapi 仅作参考，运行期不调用）',
+    // V3-08（第5批复核①，P1）：异常契约必须单一（第 8 条）——上层只捕获
+    // DioException 并从 .error 取 ApiException，裸抛会被泛 catch 吞掉。
+    throw _asDioException(
+      '/$n',
+      ApiException(
+        -404,
+        '接口 /$n 尚未移植到原生网关（kapi 仅作参考，运行期不调用）',
+      ),
     );
   }
 
@@ -369,9 +380,13 @@ class KgDirectApiClient extends KugouApiClient {
             () => _albumSongs({...q, ...d}), kapi, '/album/songs');
     }
     // PLY-14（QUALITY_STANDARD 第 27 条）：同上，未移植路径不回退 kapi。
-    throw ApiException(
-      -404,
-      '接口 /$n 尚未移植到原生网关（kapi 仅作参考，运行期不调用）',
+    // V3-08（第5批复核①，P1）：同上，异常统一包装为 DioException（第 8 条）。
+    throw _asDioException(
+      '/$n',
+      ApiException(
+        -404,
+        '接口 /$n 尚未移植到原生网关（kapi 仅作参考，运行期不调用）',
+      ),
     );
   }
 

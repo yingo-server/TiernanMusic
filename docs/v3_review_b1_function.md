@@ -292,10 +292,10 @@
 ## 5. `lib/features/player/play_helper.dart`（92 行，全读）
 
 ### play_helper.dart:20-33 `playHomeSong` 的 `duration: Duration(seconds: s.duration)`
-- 级别：待核（依 `home/data/models.dart` 的 `HomeSong.duration` 单位，见文件 15 结论；若上游是毫秒则升级为 P1）
-- 事实：`Duration(seconds: s.duration)`，`s.duration` 为 `int`（或 double）
-- 违反：第 15 条（单位仅靠调用点猜；`HomeSong.duration` 字段名不带单位）
-- 后果：见文件 15 判定。
+- 级别：通过（已按文件 15 交叉核实）
+- 事实：`Duration(seconds: s.duration)`；`HomeSong.duration` 声明为 `final int duration; // 秒`，毫秒字段（`timelength`/`timelen`）在模型层已 `~/ 1000`
+- 违反：无（满足第 15 条）
+- 结论：单位闭合，无 1000 倍偏差。
 
 ### play_helper.dart:18-21 / 50-53 四处 Song 构造逻辑重复
 - 级别：P3
@@ -674,5 +674,195 @@
 - 事实：本页不存在「刷新 + 加载更多」两套状态机：一次性 `allPages: true` 取全量，`FutureProvider.autoDispose` 由 Riverpod 保证「新请求结果覆盖旧请求」且旧请求的 `AsyncValue` 不会回写
 - 违反：无
 - 结论：**没有分页竞态**。代价是 >100 页的巨型歌单要串行拉 100 次（每页 100 首），首屏等待「播放全部」按钮可点（因为 `tracksAsync.value` 为 null 时按钮无反应，见上面的 P3）。
+
+---
+
+## 12. `lib/features/comment/data/comment_repository.dart`（264 行，全读）
+
+### comment_repository.dart:84-116 `sendComment` 无防重
+- 级别：P2
+- 事实：`await _api.post(path, {}, query: query);` —— 发评论是全仓库唯一没有 `dedupeKey`/飞行锁的写入口（对比 `playlist_repository._write`）
+- 违反：第 21 条（写操作必须幂等或有防重机制）、第 22 条（并发假设未写明「UI 不会连点」）
+- 后果：评论发送是用户最容易连点的按钮，双击即产生两条内容相同的评论（服务端不去重），自己删还要删两次。直连层的 `write: true` 只防「失败回退重复提交」，不防用户重复触发。定 P2。
+
+### comment_repository.dart:99-106 发送前预取 `specialChildId` 的空捕获
+- 级别：P3
+- 事实：`try { final page = await fetchComments(...); childrenId = ...; } catch (_) { // 查询失败不阻断发送 }`
+- 违反：第 6 条（空捕获无日志）、第 9 条（失败不可观测）
+- 后果：预取失败时静默用兜底 childrenid 发送，若服务端因此返回 400，用户看到的是「发送失败」而日志里查不到真正原因（预取失败）。定 P3。
+
+### comment_repository.dart:37-50 `fetchCount` 的返回值语义
+- 级别：P3
+- 事实：`final value = data[hash] ?? data[hash.toUpperCase()] ?? data[hash.toLowerCase()]; return value is num ? value.toInt() : int.tryParse('$value') ?? 0;`
+- 违反：第 16 条（「接口没返回这条 hash」与「0 条评论」都是 0）
+- 后果：风控/参数错误导致响应无该 key 时，UI 显示「0 条评论」，用户无法区分「真没人评论」与「请求失败」。定 P3。
+
+### comment_repository.dart:151-156 `CommentPage.total` 的 fallback
+- 级别：P3
+- 事实：`_asInt(data['count'] ?? data['total'] ?? data['comments_num'] ?? data['str_count'], fallback: comments.length)`
+- 违反：第 16 条（总数缺失时退化为当前页条数 = 宣称「已到底」）
+- 后果：楼中楼/评论列表在总数缺失时，UI 认为只有一页，不再提供加载更多；与 `playlist_repository` 已用 `unknownTotal` 修好的同类问题不一致。定 P3。
+
+### comment_repository.dart:222-260 `Comment.fromJson`
+- 级别：通过（修复正确）
+- 事实：`like` 为 Map 时取 `count`/`likenum`，否则取数字或 `likecount`；`reply_num`/`replycount`；`special_child_id` 判空转 null；`isMine` 由 `currentUserId` 与 `userid`/`user_id` 字符串比较
+- 违反：无（满足第 13 条「外部数据逐分支验证」、第 16 条「缺失保留 null」）
+- 结论：点赞恒 0 的旧缺陷已修；`isMine` 在匿名态（`currentUserId` 空）稳定为 false，不会误判。
+
+### comment_repository.dart:210-215 `createTime` 原样字符串外传
+- 级别：P3
+- 事实：`createTime: '${json['addtime'] ?? json['create_time'] ?? ''}'`
+- 违反：第 15 条（时间单位/时区未在类型上体现：`addtime` 实测是秒级 Unix 还是格式化串，模型层无从判断）
+- 后果：UI 只能对字符串做启发式解析（长度 10 当秒、含 `-` 当日期），换接口即显示 1970 年或原样数字。定 P3。
+
+---
+
+## 13. `lib/features/search/data/search_repository.dart`（328 行，全读）
+
+### search_repository.dart:222-241 `addHistory` 的 clear+addAll 非原子写
+- 级别：P2
+- 事实：`final list = box.values.toList()..remove(k); list.insert(0, k); … await box.clear(); await box.addAll(list);` —— 两次 await 之间历史为空
+- 违反：第 5 条（持久化事实被拆成两步可变状态）、第 17 条（写盘过程不可追溯/不可恢复）
+- 后果：清空与重写之间进程被杀（用户切后台被系统回收）→ **搜索历史全丢**，`getHistory` 返回空。定 P2。
+
+### search_repository.dart:222-232 历史写入无互斥
+- 级别：P2
+- 事实：`addHistory` 无锁；两个并发调用（快速连搜两个词/`addHistory` 与 `removeHistory` 同时）都会读到同一份 `box.values`，然后各自 `clear` + `addAll`
+- 违反：第 22 条（隐式单线程假设未声明未保护）、第 21 条（写操作无防重）
+- 后果：后完成的那次覆盖前一次，用户搜索历史随机少一条；表现为「搜过的词不在历史里」。定 P2。
+
+### search_repository.dart:197-201 `getHistory` 的失败当空
+- 级别：P3
+- 事实：`try { … } catch (_) { return const []; }`
+- 违反：第 16 条（「盒子打不开」与「没有历史」同一结果）、第 9 条（无日志）
+- 后果：Hive 盒子损坏时历史静默清空式呈现，用户以为被自己清了。定 P3。
+
+### search_repository.dart:209-216 `fetchHotSearch` 的裸 `as Map` + 全函数捕获
+- 级别：P2
+- 事实：`Map<String, dynamic>.from(e as Map)`（第 13 条裸强转）；整个函数体包在 `try … catch (_) { return const []; }`
+- 违反：第 13 条（外部数据裸强转）、第 7 条（捕获一切）、第 9 条（失败不可观测）
+- 后果：热搜列表里只要**一条**记录结构异常，`as Map` 抛 `TypeError`，被外层捕获 → 整块热搜榜变空（用户看到「热搜加载失败/空白」），且线上无日志无法定位是哪条数据坏了。定 P2。
+
+### search_repository.dart:201-203 `json['data']?['list']` 的形态假设
+- 级别：P3
+- 事实：若 `data` 是 List（部分版本返回数组），`List['list']` 会抛 `TypeError`，同样被上面的 catch 吞掉
+- 违反：第 13 条（未先判 `is Map`，与同文件 `_listsOf` 的正确写法不一致）
+- 后果：与上一条同源，表现为热搜整块为空。定 P3。
+
+### search_repository.dart:46-56 / 273-322 `_cachedGet` 的缓存键
+- 级别：通过
+- 事实：`MemoryCache.keyOf(path, query)`，query 含 `keywords`/`type`/`page`/`pagesize`
+- 违反：无（满足第 23 条：影响结果的输入全部进键）
+- 结论：不同关键词、不同类型、不同页码不会串数据。注意 `/search` 与 `/search/hot` 路径不同，不共享键。
+
+### search_repository.dart:117-127 `_totalOf` 用 `-1` 表示「总数未知」
+- 级别：通过（附 P3 备注）
+- 事实：`if (total <= 0 && returned >= pageSize) return -1;`
+- 违反：无（第 16 条：缺失与已到底分离，注释写明）；备注：`-1` 是哨兵值，未用类型/常量表达（第 2 条魔法值）
+- 结论：修好了「分页被截断成一页」的问题；但 `-1` 需要每个消费方都记得，一旦某处 `total > 0` 判断写反就再次截断。
+
+### search_repository.dart:246-266 `searchByType` 把专辑/歌手/MV 塞进 `HomeSong`
+- 级别：P3
+- 事实：`_albumItem`/`_authorItem` 明确「没有可播放 hash 与时长」，返回的 Map 仍交给 `HomeSong.fromJson`，与真实单曲同列
+- 违反：第 16 条（三种实体与「可播放单曲」共用同一模型，语义合并）、第 1 条（模型承担了三种职责）
+- 后果：UI 若按 `HomeSong.hash` 判空失效，点专辑条目会以空 hash 调 `playSong` → 播放失败错误条；歌手条目副标题被塞进 `singer` 字段（展示用），一旦被复用为「歌手名」会显示「12 专辑 · 88 歌曲」。定 P3。
+
+### search_repository.dart:1-13 `searchRepositoryProvider` 用 `ref.read`
+- 级别：P3
+- 事实：`SearchRepository(ref.read(kugouApiClientProvider))`
+- 违反：第 2 条（依赖读取方式不一致：项目其它 Provider 用 `watch`）、第 5 条（登录态切换后旧 client 实例不进回收）
+- 后果：若登录/登出导致 `kugouApiClientProvider` 重建，搜索仓库仍持有旧实例与旧 Cookie —— 换号后搜索结果仍是上一个账号的个性化/权限结果，直到重启 App。定 P3。
+
+### search_repository.dart:140-146 `_mvItem` 的封面拼接
+- 级别：通过（已交叉核实文件 15）
+- 事实：`cover = pic.startsWith('http') ? pic : 'http://imge.kugou.com/mvthumb/{size}/$pic'`，此处不替换 `{size}`；但该 Map 交给 `HomeSong.fromJson`，其 `cover` 一律过 `kugouImageUrl()`（替换 `{size}` → 240 并升级 https）
+- 违反：无（第 14 条：模板串集中在模型层收口）
+- 结论：初看像残留占位符，实际下游已替换，不产生 404。**唯一隐患**是若将来有调用方绕过 `HomeSong.fromJson` 直接用 `_mvItem` 的返回值，`{size}` 会漏到 URL 里（第 2 条：隐式依赖下游约定）。定级 P3 仅作提示，不计入问题总数。
+
+---
+
+## 14. `lib/features/home/data/home_repository.dart`（191 行，全读）
+
+### home_repository.dart:27-32 `json['data']?['info'] as Map?` 的形态假设
+- 级别：P3
+- 事实：`final info = (json['data']?['info'] as Map?) ?? {};`（`fetchYuekuSongs`/`fetchYuekuPlaylists` 同款）；`json['data']` 未先判 `is Map` 就下标
+- 违反：第 13 条（外部数据未逐分支验型；`data` 是 List 时下标抛 `TypeError`）、第 14 条
+- 后果：`/yueku` 一旦返回数组形态，`fetchYuekuSongs` 直接抛异常——首页能靠 `fetchHomeData` 的 try 兜住，但「竞品/降级路径」下用户看到的是「曲库为空」而不是真实原因。定 P3。
+
+### home_repository.dart:83-102 `fetchTopPlaylists` / `fetchNewSongs` 的静默回落
+- 级别：P3
+- 事实：`try { … if (raw.isNotEmpty) return …; } catch (_) { /* 回落 yueku */ }`，然后 `return fetchYuekuPlaylists();`
+- 违反：第 6 条（空捕获无日志）、第 9 条（回退成功但调用方不知情）、第 11 条（触发条件写了，退出条件=永不恢复，未说明）
+- 后果：`/top/playlist` 恒失败时首页长期显示「乐库推荐」，与「推荐歌单」标题不符，且线上无任何痕迹可查（这是本项目最典型的「直连静默落兜底」形态）。定 P3（用户看到的是同类内容，非功能失效）。
+
+### home_repository.dart:109-131 `fetchDailyRecommend` 三重语义合并为 null
+- 级别：P3
+- 事实：注释「需登录，未登录等错误返回 null 以隐藏入口」；实现里「未登录」「请求失败」「确实没有推荐」全部 `return null`
+- 违反：第 16 条（三种业务事实同一表现：入口被隐藏）
+- 后果：已登录用户在网络抖动时，首页「每日推荐」整块消失且不会重试（无错误态、无重试按钮），用户以为账号权限变了。定 P3（注释已声明取舍）。
+
+### home_repository.dart:133-148 `fetchDailyRecommend` 不进缓存
+- 级别：通过（修复正确）
+- 事实：直接用 `_api.get('/everyday/recommend')`，全文件唯一不走 `_cachedGet` 的 GET；注释写明「登录态强相关，绝不能进 MemoryCache」
+- 违反：无（满足第 23 条：登录态是影响结果的维度，无法进键就不缓存）
+- 结论：登录后 invalidate 仍命中旧缓存的问题已消除。
+
+### home_repository.dart:150-191 `fetchHomeData` 的并发聚合
+- 级别：通过（附 P3 备注）
+- 事实：五个 `Future<List<…>>` 各自 `try … catch (_) { return 空/ null; }` 并 `.timeout(12s)`，`Future.wait` 后按下标 `as List<HomeSong>` 取回；全部为空才 `throw Exception(...)`
+- 违反：无（满足第 18 条「无共享可变状态，结果只在本函数内使用」、第 11 条「单块失败降级为空」）；备注：5 处 `catch (_)` 均无日志（第 9 条）
+- 结论：并发聚合本身无竞态，超时不会污染其他块；`as` 强转作用在**本函数自己构造的** Future 上，不属外部数据裸转（第 13 条不成立）。唯一次要问题是五块全失败时抛 `Exception` 而非领域异常（第 8 条），UI 只能展示 `Exception: 首页数据加载失败…` 原文。
+
+### home_repository.dart:6-8 / 11-13 Provider 的 `ref.read`
+- 级别：P3
+- 事实：`HomeRepository(ref.read(kugouApiClientProvider))`；`homeDataProvider` 内 `ref.read(homeRepositoryProvider)`
+- 违反：第 2 条（依赖读取方式与项目其它模块的 `watch` 不一致）、第 5 条（登录态切换后旧 client 留存）
+- 后果：换号后首页数据仍按旧账号 Cookie 取，直到 App 重启（与文件 13 的同类问题同源）。定 P3。
+
+---
+
+## 15. `lib/features/home/data/models.dart`（271 行，全读）
+
+### models.dart:33-40 / 96-110 `HomeSong.duration` 的单位声明
+- 级别：通过（**据此关闭文件 5 的待核项**）
+- 事实：字段 `final int duration; // 秒`；解析时 `duration/Duration/time_length` 直接取秒，`timelength/timelen/timeLength` `~/ 1000` 转秒；注释逐端点列出实测单位
+- 违反：无（满足第 15 条：单位在字段注释、解析分支、消费点三处一致）
+- 结论：`play_helper` 的 `Duration(seconds: s.duration)` **单位正确**，不存在 1000 倍偏差。文件 5 的对应条目按通过处理。
+
+### models.dart:111-125 `HomeSong.id` 在 hash 缺失时改用 mixsongid/audio_id
+- 级别：P3
+- 事实：`id: hash.isNotEmpty ? hash : _toStr(json['mixsongid'] ?? json['audio_id'] ?? json['id'])`，同时 `hash: hash.isEmpty ? null : hash`（**区分得对**）
+- 违反：第 17 条（`id` 一字段混装三种语义：FileHash / mixsongid / audio_id；`play_helper` 又在 `hash ?? id` 时把后两者当 hash 用）
+- 后果：搜索「专辑」结果（`_albumItem`）的 `id` 是 albumid，`play_helper.playSong` 会把 albumid 当 hash 请求播放 → 「无可用播放地址」。定 P3（有独立 id/hash 字段，仅误用路径受影响）。
+
+### models.dart:1-8 `kugouImageUrl` 的占位符与 https 升级
+- 级别：通过（修复正确）
+- 事实：`replaceAll('{size}','$size')` + `http://` → `https://`
+- 违反：无（满足第 14 条「边界内可假设」：把上游模板串统一收口到一个函数）
+- 结论：搜索页 MV 封面拼出的 `http://imge.kugou.com/mvthumb/{size}/xxx` 经 `HomeSong.fromJson → kugouImageUrl` 后被替换为具体尺寸并升级为 https，**不存在残留 `{size}` 的 404 封面**——修正我在文件 13 的初判，该项按通过处理。
+
+### models.dart:170-186 `HomePlaylist` 的 id / globalCollectionId 双字段
+- 级别：通过
+- 事实：`globalId` 优先 `global_collection_id` → `global_specialid` → `gid`；`id` 取数字 specialid；`globalCollectionId` 回退为数字
+- 违反：无（满足第 17 条：全局 ID 与数字 ID 分开存放，注释写明「数字 specialid 不是全局 ID」）
+- 结论：与 `PlaylistDetail` 需要 `collection_` 形式的约束一致；回退到数字只是保持字段非空，跳转仍会 20010（上游限制，非本层缺陷）。
+
+### models.dart:96-110 时长解析的「先秒后毫秒」两段式
+- 级别：通过（附 P3）
+- 事实：第一轮按秒取「首个存在的键」并 `break`（即使值为 0），第二轮 `if (duration <= 0)` 才按毫秒取
+- 违反：无（满足第 15 条）；P3 备注：若某端点同时返回 `duration: 0` 与 `timelength: 254000`，会正确落到毫秒分支；但若返回 `duration: 254`（毫秒语义）则按 254 秒接受，与 `player/models.dart` 的 `setDuration` 同款风险
+- 结论：当前实测记录（注释里逐端点列明）支持该映射，判定通过。
+
+### models.dart:247-262 `HomeData.dailyRecommend` 可空
+- 级别：通过
+- 事实：`final List<HomeSong>? dailyRecommend;`，`const HomeData({this.dailyRecommend = const []})`
+- 违反：无（第 16 条：未登录/失败 → null，与「空列表」区分）
+- 结论：模型层语义正确；「失败」与「未登录」仍未分离（见文件 14 的 P3）。
+
+### models.dart:55-95 歌手/歌名的容错解析
+- 级别：通过
+- 事实：`singerinfo` 支持 List 与 Map 两种形态，Map 只取 `name`（注释解释为何不 `_toStr` 整个对象）；`FileName` 含 `-` 时才拆分，且仅在 `displayName` 为空时启用
+- 违反：无（满足第 13 条：逐分支判型；第 31 条：注释说明了「为什么排除另一个方案」）
+- 结论：无裸强转，`trans_param` 有 `is Map` 前置。
 
 ---

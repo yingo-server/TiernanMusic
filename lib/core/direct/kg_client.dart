@@ -269,6 +269,11 @@ class KgClient {
   }
 
   /// 带验证自动处理的请求：命中 20028 时提交 sid/edt 后重试一次
+  ///
+  /// V3-10（第5批复核①，P1）：**写操作禁止使用本方法**（第 21 条）——
+  /// 验证后重试会把同一请求原样重发；若首次请求服务端已执行
+  /// （响应在风控校验环节才失败），重试即重复提交（重复评论/重复加歌）。
+  /// 写端点必须直接调 [request]，把 20028 上抛交给 UI 验证流程处理。
   Future<KgResponse> requestWithVerify(
     String path, {
     String baseUrl = KgConfig.gateway,

@@ -395,3 +395,236 @@ callback: (args) { ... _submitWithCode(s, code); }
 
 ---
 
+## 9. `lib/features/settings/presentation/settings_providers.dart`（63 行，通读）
+
+### 【P2】从 Hive 读出的值用裸 `as String?` / `as bool?` 强转
+```dart
+super((_box()?.get('defaultQuality', defaultValue: '320') as String?) ?? '320');
+super((_box()?.get('wifiAutoHighQuality', defaultValue: true) as bool?) ?? true);
+```
+- 事实：Hive 返回 `dynamic`；历史版本若把 `defaultQuality` 存成 `int`（或 `wifiAutoHighQuality` 存成 `'true'` 字符串），`as` 会抛 `_TypeError`。该异常发生在 **Notifier 构造函数**内，即 `Provider` 创建期，`settings_page` 的 `ref.watch(defaultQualityProvider)` 直接抛出。
+- 违反：**第 13 条**（本地存储返回的数据禁止裸类型强转，必须逐一分支验证）；**第 14 条**（磁盘读取属数据边界，必须校验）。
+- 后果：升级安装（v2→v3 的同名 box）或写入过异常值的设备，进入设置页/播放页即崩，且用户无法通过界面恢复（只能清数据）。P2（装机量中的老用户都会命中）。
+
+### 【P3】`_box()` 的 `catch (_) {}` 为空捕获
+- 事实：注释说明「绝不抛异常」，但异常既未记录也未降级统计。
+- 违反：**第 6 条**（捕获必须至少记录/转译/降级之一）。这里的降级是「返回 null」，但失败原因永久丢失。
+- 后果：settings box 打不开时，所有设置静默回落默认值且每次启动都被重置，用户抱怨「设置不保存」，日志里什么都没有。P3。
+
+### 【P3】`state` 先改、磁盘后写，失败无回滚、无提示
+- 事实：`set()` 先 `state = quality` 再 `await _box()?.put(...)`；若 box 为 null（见上）或 put 抛错，UI 显示已保存、重启后丢失。
+- 违反：**第 5 条**（同一事实两处存且可各自变更）；**第 9 条**（失败必须可观测）。
+- 后果：「音质选 FLAC、重启变 320」。P3（对用户可感知但影响小）。
+
+### 【P3】两个「预留策略开关」的 provider 没有任何消费方
+- 事实：`wifiQualityProvider` / `cellularQualityProvider` 的文档注释自称「（预留策略开关）」；本批通读的 `settings_page.dart` 只负责写，读侧在 `player` 模块。本次通读范围内（settings/player UI、core）**未见任何读取方**。
+- 违反：**第 32 条**（「仅供以后可能」的状态零容忍）；**第 11 条**（降级开关必须真实生效）。
+- 后果：用户在设置里切换「WIFI 下自动最高音质」，播放行为毫无变化——这是**可见的假开关**。若 player 层确有读取，请以此条为「待确认」并降级为 P3。P2（若确认无消费方）。
+
+---
+
+## 10. `lib/features/settings/presentation/settings_page.dart`（1010 行，通读）
+
+正面评价：`_logDirPath` / `_storageGranted` 提为字段避免 FutureBuilder 无限重建（注释写明「为什么」，第 31 条范例）；`_dirSizeBytes` 移入 `compute` isolate；危险操作用 `showDestructiveConfirm`；错误文本不再直出。这些历史问题确已修复。
+
+### 【P2】语言选择列表读 `AppConfig.supportedLocales`（10 项），与实际 l10n 语言集（11 个 arb）不一致
+- 事实：`itemCount: AppConfig.supportedLocales.length + 1`，选项来自 `AppConfig.localeNames`。而 `MaterialApp` 的 `supportedLocales` 来自 `AppLocalizations.supportedLocales`（由 `l10n.yaml` 扫描 arb 得出，含裸 `zh` 共 11 项）。
+- 违反：**第 5 条**（同一事实两处权威源，已经不一致）；**第 23 条**。
+- 后果：`app_zh.arb` 对应的语言在设置里不可选（可接受），但「跟随系统」在系统语言为 `zh`（无地区）时，解析结果取决于 Flutter 的 locale 匹配顺序 → 界面可能落到 `zh` 资源而设置页显示「简体中文」，两者不一致；更危险的是新增语言只加 arb 忘了改 `AppConfig`，则该语言用户无法主动选择。P2。
+
+### 【P2】系统语言选项复用了 `themeSystem` 文案（「跟随系统」被用于两个不同维度）
+- 事实：`_showLocaleDialog` 中 `title: Text(context.l10n.themeSystem)` —— 语言列表的「系统默认」项显示的是**主题**的 system 文案。
+- 违反：**第 30 条**（名称必须表达意图；同一 key 承载两种语义）。
+- 后果：德语/俄语等语言里 `themeSystem` 可能是「Systemdesign」，出现在语言列表里语义错乱，用户不知道这是「跟随系统语言」。P2（i18n 语义错误）。
+
+### 【P2】三处 `SegmentedButton` 在字体放大时仍会溢出（缓解不彻底）
+- 事实：主题（浅色/深色/跟随系统）、歌词模式（原文/双语/翻译）均只做了 `visualDensity: compact` + `padding: horizontal 8`；`SegmentedButton` 内部是 `Row`，**不滚动、不折行**，段宽 = 文案宽度 + padding。中文在 `textScaleFactor 2.0` 下「跟随系统」四字 ≈ 4×32dp=128dp，三段 > 360dp；德语「Übersetzung」同理。
+- 违反：任务书 D 项（字体放大适配）；**第 24 条**（构建必须可预期）。
+- 后果：安卓「字体最大」+ 小屏（320–360dp）时设置页顶部直接出现黄黑溢出条，第三段被裁切，用户点不到「跟随系统」。P2。
+
+### 【P2】「检查更新」下载链接未校验即 `Uri.parse`，且优先使用「加速地址」
+- 事实：
+```dart
+final url = info.acceleratedUrl ?? info.downloadUrl;
+...
+final uri = Uri.parse(url);
+if (!await canLaunchUrl(uri)) ...
+```
+`url` 来自远端 JSON（`UpdateChecker`），属外部数据；`Uri.parse` 对畸形串抛 `FormatException`，此处无 try（外层 try 已结束，该回调在 Dialog 内）。
+- 违反：**第 13 条 / 第 14 条**（外部数据必须校验）：未校验 scheme 是否 https、未校验 host、未校验 `Uri.tryParse` 结果；**第 27 条**：「加速地址」若仍是第三方中转域名，更新包分发也脱离了发布方控制（更新链路被劫持 = 可下发任意 APK）。
+- 后果：更新描述 JSON 被污染或服务端配错时，点击「立即下载」抛未捕获异常（红屏/无响应）；更严重的是从非官方「加速」域名下载 APK 并引导安装。P2（建议升 P1，取决于加速域名的归属，列入待确认）。
+
+### 【P3】`_clearCache` 失败提示传空串占位
+- 事实：`Toast.show(context, context.l10n.clearCacheFailed(''))` —— 文案里的占位参数为空，用户看到「清除缓存失败：」后什么都没有。
+- 违反：**第 16 条**（缺失与空未分离）；**第 9 条**（失败不可行动）。
+- 后果：用户不知道失败原因（其实已 debugPrint 到日志，但界面无指引）。P3。
+
+### 【P3】清缓存过程非原子，中途异常导致「清了一半」
+- 事实：`MemoryCache.clear()` → `LyricTranslationCache.clear()` → 逐个 Hive box `clear()` → 递归删临时目录，全部串行且共用一个 try。任一环节抛错即跳到 catch，**前面的已生效、后面的未执行**。
+- 违反：**第 21 条**（写操作幂等/防重精神：此处应逐项隔离并汇总结果）。
+- 后果：用户看到「清除缓存失败」，但实际清掉了歌词翻译、没清图片缓存，缓存大小显示不变 → 反复点、反复半清。P3。
+
+### 【P3】`_dirSizeBytes` 用 `listSync(recursive: true)` 一次性物化整个目录
+- 事实：`Directory(path).listSync(recursive: true, followLinks: false)` 返回 `List<FileSystemEntity>`，先全部枚举再遍历。
+- 违反：**第 25 条**（无上限的枚举；缓存目录文件数可达数万）。
+- 后果：虽在 isolate 中不卡 UI，但会在低内存设备上瞬时占用数 MB 并可能 OOM（isolate 崩溃 → `_cacheSize` 停在「计算中」）。P3。
+
+### 【P3】`_loadVersion` / `_loadAccount` / `_checkUpdate` 的失败处理不同步
+- 事实：`_loadVersion` 无 try（`PackageInfo.fromPlatform()` 失败 → 未捕获异步异常，`_version` 永久为空，只显示 `-`）；`_loadAccount` 用 `catch (_)` 静默置 null；`_checkUpdate` 只 Toast 不记日志。
+- 违反：**第 8 条**（同层失败形态必须统一）；**第 6 条**（`catch(_)` 无留痕）；**第 9 条**（失败须可观测）。
+- 后果：版本号缺失时「关于」页永远显示「版本 -」，用户以为安装包损坏；更新检查失败无日志，线上无法统计。P3。
+
+### 【P3】`FlutterSecureStorageCompat` 直接 `Hive.box('settings')` 无 `isBoxOpen` 守卫
+- 事实：`final box = Hive.box('settings');` —— 而 `main.dart` 明确容忍 `openBox('settings')` 失败（`openSafe` 只打印日志）。二者契约不一致。
+- 违反：**第 8 条**（回退路径与主路径形态不一）；**第 12 条**（此处虽非 `!`，但等价于假定 box 必然存在）。
+- 后果：settings box 打开失败时，`readAccounts` 抛 `HiveError`，`_loadAccount` 捕获后账号区显示「未登录」——已登录用户被显示成未登录，且无任何解释。P3。
+
+### 【P3】细节整洁度
+- `static String _formatBytes(int bytes) {    if (bytes < 1024)` —— 大括号后同一行接代码，未格式化（`dart format` 未跑）。
+- `_qualityNames(context)` 每次 build 重建 Map（第 26 条，可忽略）。
+- `_navTile` 的 `subtitle` 无 `maxLines`，长译文在 `ListTile` 内换行导致行高跳变（可接受，P3 边缘）。
+
+---
+
+## 11. `lib/features/library/presentation/library_page.dart`（653 行，通读）
+
+正面评价：`_authSub` / `_recentSub` 均在 `dispose` 取消（第 20 条达标）；登录态变化时 `invalidate` 歌单与 MV 收藏（第 18 条世代意识）；`_loadRecent` 失败留痕并降级为空列表（第 6/9 条）；列表区块均 `take(20)` 有上限（第 25 条）。**生命周期与状态刷新是本批质量最好的文件。**
+
+### 【P2】`_currentAccount()` 用 `catch (_) { return null; }` 把「读取失败」伪装成「未登录」
+```dart
+AccountRecord? _currentAccount() {    try { return AccountManager.instance.currentAccount; }
+  catch (_) { return null; } }
+```
+- 事实：异常被完全吞掉（无日志），返回值 `null` 在 UI 上与「未登录」同义 → 渲染「未登录 + 登录按钮」。
+- 违反：**第 6 条**（捕获必须至少留痕/转译）；**第 16 条**（「未登录」与「账号数据损坏」被压成同一个空值）；**第 9 条**。
+- 后果：账号表解析失败时，已登录用户被显示成未登录，且「我的歌单」区块整块消失（`account != null` 分支才渲染），用户会反复重新登录。P2。
+
+### 【P3】`_playRecent` / `_playDownloaded` 未处理 `playSong` 抛错
+- 事实：`await ref.read(playHelperProvider).playSong(song); if (!mounted) return; context.push('/player');` 无 try/catch；若 `playSong` 抛错（如音源解析失败、引擎未就绪），`context.push` 不会执行也无提示。
+- 违反：**第 6 条 / 第 9 条**（失败必须有用户可见反馈或日志）。
+- 后果：点歌后「没反应」，停留在音乐库；用户只能反复点。P3（若 `playSong` 内部统一弹 Toast 则可降级）。
+
+### 【P3】区块条数上限 20 为散落魔法值（三处）
+- 事实：`_recent.take(20)`、`downloaded.take(20)`、`list.take(20)` 各写一次 `20`。
+- 违反：**第 2 条**（魔法值必须有具名常量）。
+- 后果：想改成「分页/更多」时容易漏改一处，出现各区块行为不一致。P3。
+
+### 【P3】歌单封面固定 170dp 容器 + `Flexible` 文本，字体放大后仍可能挤压
+- 事实：`SizedBox(height: 170)` 内为 `120 图 + 6 + Flexible(Text maxLines:2)`；`bodySmall` 在 `textScaleFactor 2.0` 下两行 ≈ 48dp，总高 174dp > 170dp。
+- 违反：任务书 D 项（字体放大适配）。
+- 后果：极值下文字被裁切（不会黄黑条，因为 `Flexible` 吸收），歌单名看不全。P3。
+
+### 【P3】歌单封面右下角「N 首」徽标在 `Positioned` 中无左侧约束
+- 事实：`Positioned(right: 6, bottom: 6, child: Container(child: Text(songCountSuffix(count))))` —— 宽度由文本决定，向右对齐；`songCountSuffix` 在德语（「128 Titel」）加 `labelSmall` 放大后宽于 120dp 封面，向左溢出的部分被 `Stack` 默认裁剪。
+- 违反：任务书 D 项（布局健壮性）。
+- 后果：徽标只显示后半截（如「…Titel」），数字丢失。P3。
+
+### 【P3】`_AccountCard` 的 `PopupMenuItem` 内嵌 `ListTile`
+- 事实：`PopupMenuItem(value:'manage', child: ListTile(contentPadding: EdgeInsets.zero, ...))` —— `PopupMenuItem` 自身有最小高度与内边距，`ListTile` 又叠加自身高度，菜单项高度远超 48dp 且左侧图标对齐与其他菜单不一致。
+- 违反：**第 30 条**（组件语义被误用：菜单项不是列表页）。
+- 后果：弹出菜单比同页其它菜单（`SongTile` 的）高一倍，视觉跳变；键盘/读屏焦点顺序仍可用。P3。
+
+### 【P3】登出失败文案传空占位并用 `debugPrint` 补日志
+- 事实：`Toast.show(context, context.l10n.logoutFailed(''))` → 用户看到「退出登录失败：」；日志走 `debugPrint`（release 下通常被丢弃）。
+- 违反：**第 9 条**（失败必须可观测——release 下 `debugPrint` 不保证落盘，项目已有 `ErrorLogger`）；**第 16 条**。
+- 后果：线上无法定位退出失败原因。P3。
+
+### 观察（合规）
+- `_userPlaylistsProvider` / `_collectedMvsProvider` 均为 `autoDispose.family`，随登录态参数变化自动释放，无泄漏。
+- `EmptyState` 的「未登录」与「无收藏」使用了不同 icon 与文案键，语义分离正确。
+
+---
+
+## 12. `lib/features/player/presentation/full_player_page.dart`（545 行，通读）
+
+### 【P2】`CurvedAnimation` 在 `build` 中内联创建且从不 dispose —— 每次重建都向父控制器新增监听器
+```dart
+FadeTransition(
+  opacity: CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOutCubic),
+  child: ClipRect(key: const ValueKey('lyric'), child: LyricView(...)))
+```
+- 事实：`CurvedAnimation` 是 `AnimationWithParentMixin` 实现，构造时即向 `_fadeCtrl` 注册 listener；`FadeTransition` 不会代为释放它。`_CoverOrLyricState.build` 里 `ref.watch(positionProvider)` 使该 widget **每 100ms 级**重建一次（播放中 position 流持续推送），每次重建都新建一个 `CurvedAnimation` 并挂到同一个 `_fadeCtrl` 上。
+- 违反：**第 20 条**（申请的资源必须有对称释放点）；**第 25 条**（监听器数量无上限）；**第 26 条**（热路径每帧/每 tick 分配）。
+- 后果：播放几分钟后 `_fadeCtrl` 上挂着数千个监听器，每次 tick 遍历回调 → 播放页滚动/切歌词卡顿、内存缓慢上涨；在所有屏幕尺寸上都发生。P2。
+
+### 【P2】歌词加载失败/无歌词时界面完全没有反馈（error 字段无消费者）
+- 事实：`currentLyricProvider` 明确返回 `(lyric: null, error: '暂无歌词')` 与 `(lyric: null, error: '歌词解析失败')`；而页面只在 `lyricAsync.value?.lyric != null` 时渲染歌词，**从不读取 `error`**（既不读 `lyricAsync.error`，也不读 record 的 `error` 字段）。切到歌词视图后是空白区。
+- 违反：**第 9 条**（失败必须有用户可见反馈）；**第 32 条**（无人读取的状态字段 = 死代码）；**第 30 条**（该字段中文硬编码，本就不该出现在数据层）。
+- 后果：用户点「显示歌词」后看到一片空白，无从判断是「这首歌没有歌词」还是「网络/解析失败」，只能反复点击。P2。
+
+### 【P2】`_MvEntry` 两个 `OutlinedButton` 无 `Flexible`，大字号/长译文下溢出
+- 事实：`Row(children: [OutlinedButton.icon(label: 评论), if (hasMv) ... OutlinedButton.icon(label: 播放MV)])`，两个按钮固有宽度相加，无 `Expanded`/`Flexible`/`Wrap`。
+- 违反：任务书 D 项（布局溢出 + 字体放大）；**第 24 条**（构建必须可预期）。
+- 后果：德语「Kommentare」+「MV abspielen」在 360dp、`textScale 1.3` 即出现 `RenderFlex overflowed`，MV 按钮被裁切到屏幕外（且此处无滚动）。P2。
+
+### 【P3】`_fmt(Duration)` 对 ≥1 小时时长丢弃小时位
+- 事实：`inMinutes.remainder(60)` + `inSeconds.remainder(60)` → 3725 秒显示 `02:05`（也是 62 分钟），实际应为 `1:02:05`；且进度条总时长与「durations」不一致。
+- 违反：**第 15 条**（时长表示必须显式且一致）。
+- 后果：有声书/长音频/现场版用户看到错误的曲目总长，进度条语义失真。P3。
+
+### 【P3】`targetLang` 在无 locale 时硬编码 `'zh_CN'`
+- 事实：`locale != null ? '…' : 'zh_CN'`；系统语言为 en 时若 `localeProvider` 为 null（跟随系统），翻译目标仍取 `zh_CN`。
+- 违反：**第 2 条**（魔法值）；**第 23 条**（缓存键维度：目标语言由硬编码默认决定，与界面语言不一致会导致翻译结果与显示语言不符）。
+- 后果：英文系统用户「跟随系统」时歌词译文仍是中文。P3（若 localeProvider 实际总能解析出 locale 则不触发，需跨模块确认）。
+
+### 【P3】`songMvProvider` 的失败被静默吞成「无 MV」
+- 事实：`final mv = mvAsync.value; final hasMv = mv != null && mv.videoId.isNotEmpty;` —— `mvAsync.hasError` 时与「这首歌没有 MV」表现完全一致。
+- 违反：**第 16 条**（失败与确实为空未分离）；**第 9 条**。
+- 后果：网络异常时用户以为该曲无 MV。P3。
+
+### 【P3】`Positioned` 切换按钮 `minimumSize: Size(48, 40)`
+- 事实：高 40dp < 48dp。
+- 违反：任务书 G 项（48dp 触控目标）。
+- 后果：边缘按钮点击命中率低。P3。
+
+### 【P3】`_MvEntry` 在 `albumAudioId` 为空时连评论入口一起隐藏
+- 事实：`if (albumAudioId.isEmpty) return const SizedBox.shrink();` —— 评论按钮在同一个 early return 之后。
+- 违反：**第 16 条**（缺少 ID 与「无次级入口」被压成同一表现）。
+- 后果：来自最近播放/下载兜底构造的 `Song`（`albumAudioId` 可能为空）没有评论入口，用户找不到评论。P3。
+
+---
+
+## 13. `lib/features/player/presentation/mini_player.dart`（180 行，通读）
+
+正面评价：进度条拆成独立 `_MiniProgressBar` 只订阅 position（注释写明原因，第 24/26 条达标），是本批的性能正面案例。
+
+### 【P2】固定 64dp 高度 + 两行文本，系统字号放大时纵向溢出
+- 事实：`Container(height: 64)` → `Column[ _MiniProgressBar(2dp), Expanded(Row[... Column[Text(bodyMedium), Text(bodySmall)]]) ]`。可用高度 ≈ 62dp；`bodyMedium`/`bodySmall` 在 `textScaleFactor 2.0` 下单行高度约 39 + 33 = 72dp。
+- 违反：任务书 D 项（字体放大适配）；**第 24 条**（构建依赖「字号不会放大」的隐式假设）。
+- 后果：**迷你播放器常驻**于四个 Tab 的底部，一旦字号放大就持续显示黄黑溢出条，且会挤压 `NavigationBar` 上方空间；这是用户最常看到的区域，影响面大于单页溢出。P2。
+
+### 【P3】`BackdropFilter(sigma 18)` 覆盖整条迷你播放器，且未加 `RepaintBoundary`
+- 事实：模糊条内部含每 tick 重绘的 `LinearProgressIndicator`；`BackdropFilter` 每次重绘都要重新采样背景像素。
+- 违反：**第 26 条**（热路径零分配/零重活）。
+- 后果：播放中每 200–500ms 触发一次全条模糊重算，中低端机上主界面滚动掉帧。P3（真机可感知程度需实测）。
+
+### 【P3】`onTap` 直接 `context.push('/player')`，无防重
+- 事实：快速双击/三次点击会 push 多个 FullPlayerPage 实例（`go_router` 的 `push` 不去重）。
+- 违反：**第 21 条**（重复执行未去重）；**第 18 条**（多实例各自 watch 同一 Provider，返回时栈深异常）。
+- 后果：用户连点两下后按返回要连按两次才回到列表，且顶层播放页与底层播放页同时存在。P3。
+
+### 【观察/合规】
+- `Hero(tag: 'album-art')` 与 `full_player_page.dart` 的 `Hero(tag: 'album-art')` 分属不同 Route，构成预期的共享元素过渡，**不触发 duplicate tag 断言**。
+- 无 Timer/订阅，无需释放资源（第 20 条不适用）。
+
+---
+
+## 14. `lib/features/player/presentation/queue_sheet.dart`（129 行，通读）
+
+### 【P2】队列弹层标题复用了「正在播放」文案
+- 事实：`Text(context.l10n.nowPlaying, …)` 作为弹层标题；右侧又显示 `songCountSuffix(queue.length)` 条数。文件头注释自述这是「播放队列底部弹层」，且 `queue_sheet` 的入口 tooltip 用的是 `context.l10n.playQueue`。
+- 违反：**第 30 条**（名称必须表达意图：标题说「正在播放」，内容却是整个队列）。
+- 后果：用户打开「播放队列」看到标题「正在播放」，误以为这里只显示当前曲；德语/俄语下更明显。P2（i18n 语义错误、可复现、零成本可修）。
+
+### 【P3】重复曲目（同 hash）全部被标记为「当前播放」，且无法点选
+- 事实：`final isCurrent = current?.hash == s.hash;` + `onTap: { pop(); if (isCurrent) return; ... }`。队列里同一首歌出现两次时，两行都高亮；点第二行直接 return，什么都不发生。
+- 违反：**第 16 条**（用 hash 代替「队列条目身份」，把「是这首歌」与「是这一条」混为一谈）；**第 17 条**（索引才是精确标识）。
+- 后果：用户「单曲循环加入队列」后无法切到重复项，以为点击失灵。P3。
+
+### 【P3】`playQueue` 失败无任何反馈
+- 事实：`await controller.playQueue(queue, i);` 在 `onTap` 中无 try/catch，且弹层已先 `pop()`。
+- 违反：**第 9 条**（失败必须可观测）。
+- 后果：选中一首无法播放的曲子（版权/风控），弹层关闭、播放器无变化，用户只看到「点了没反应」。P3。
+
+---
+

@@ -242,3 +242,117 @@
 - 事实：Node `playlist_detail.js` 用 gateway + `x-router: pubsongs.kugou.com`；Dart 直连原生域名等价。`data` 数组 1..10 校验与 `ids` 过滤一致。
 - 违反：—
 - 后果：无用户可见后果，仅记录「已核对一致」，避免下一批重复审查。
+
+---
+
+## 6. lib/core/direct/kg_endpoints_comment.dart（301 行，已完整阅读）
+
+对照 `module/_comment.js`（258 行）、`comment_music.js`、`comment_count.js`、`comment_floor.js`、`comment_playlist.js`、`comment_album.js`、`comment_music_del.js`。F4-04（`/v1/cmtlist` + x-router）、F4-05（`is_t`/`pid`/`//@` 拼接）、F4-06（del 改 GET）、F4-16（hash 真值判定）、F4-17（extdata/source/childrenname）、F4-18（cid 别名）**复核通过**，`/index.php` 三处 `clearDefaultParams + notSignature` 与规范白名单一致；`key` 算法 send=`clienttime+mid+data`、reply/del=`clienttime+mid` 与 Node 一致。
+
+### kg_endpoints_comment.dart:109-113 发评论 body 的 `album_audio_id` 被转成字符串，Node 保持数值
+- 级别：P2
+- 事实：`if (q['mixsongid'] != null) 'album_audio_id': '${q['mixsongid']}'`。Node `_comment.js:118`：`album_audio_id: firstValue(params.mixsongid, params.album_audio_id)`，`JSON.stringify({data: contentData})` 中该字段为**数字**。而 `key = signParamsKey(clienttime+mid+data)` 直接对 body 字符串取 md5，两侧 body 文本因此不同（`"album_audio_id":"32100650"` vs `"album_audio_id":32100650`）。
+- 违反：QUALITY_STANDARD 第 28 条（参数形态必须与实测一致，形态错误只会静默失败）；第 17 条（标识符跨层精度/形态显式）
+- 后果：服务端按 Node 形态校验 key 时签名必然不匹配（20006/err_code≠0），**发评论恒失败**；若服务端不校验 body 类型，则评论会挂到资源上但 `album_audio_id` 解析异常。这是本轮唯一一处写操作 body 类型分叉，影响「发评论」整个功能。
+
+### kg_endpoints_comment.dart:236-247 `commentDel` 未实现 Node 的 `cid` 必填校验与 `mixsongid → special_id` 回查
+- 级别：P2
+- 事实：Dart 直接用 `kg.request('/index.php', … 'cid': cid 仅在非空时下发, 'childrenid': '${q['special_id'] ?? q['childrenid'] ?? q['id'] ?? ''}')`。Node `comment_music_del.js`：`if (!cid) return badRequest(...)`；`if (!specialId && mixsongid) { 调 comment_music(pagesize:1) 取 list[0].special_child_id }`；`if (!specialId) return badRequest(...)`。
+- 违反：QUALITY_STANDARD 第 3 条（契约未声明必填项，失败语义模糊）；第 16 条（缺参数被当作空字符串发出去，服务端报「歌曲不存在」而非「缺少评论 ID」）
+- 后果：从「我的评论」或歌曲评论列表直接删除时，若调用方只带 `mixsongid + cid`（Node 支持的形态），Dart 会发出 `childrenid=` 空值，服务端返回 err_code=10002，UI 提示删除失败；用户只能去歌单/评论页手动定位后再删。
+
+### kg_endpoints_comment.dart:276-296 `commentFloor` 的 service 端点判定只看 `resource_type`，不看显式 `code`
+- 级别：P3
+- 事实：Dart `final isPlaylistOrAlbum = resourceType == 'playlist' || resourceType == 'album';`。Node `comment_floor.js`：`useServiceEndpoint = resourceType==='playlist' || resourceType==='album' || code===playlistCode || code===albumCode`，且 `code` 可由调用方显式传入覆盖。
+- 违反：QUALITY_STANDARD 第 28 条（分支条件与 Node 不一致）；第 3 条（契约未覆盖「显式传 code」这一输入）
+- 后果：调用方按 Node 习惯只传 `code=ca53b9…`（歌单码）而不传 resource_type 时，Dart 打到 `/mcomment/v1/hot_replylist` 并附歌曲 code → 楼中楼列表为空，用户看到「暂无回复」而实际有回复。
+
+### kg_endpoints_comment.dart:265-270 / 271 `commentFloor` 中 `childrenid`、`tid`、`mixsongid` 直接透传 null，`commentMusic` 的 `mixsongid` 同
+- 级别：P3
+- 事实：`'childrenid': q['special_id'], 'tid': q['tid'], if (q['mixsongid'] != null) 'mixsongid': q['mixsongid']`；`commentMusic` 的 `'mixsongid': q['mixsongid']` 无判空（Node `comment_music.js` 同样直接透传，但 Node 侧 undefined 会被 axios 丢弃）。
+- 违反：QUALITY_STANDARD 第 14 条（边界参数未归一，依赖框架对 null 的隐式处理）
+- 后果：依赖 Dio 对 null query 值的丢弃行为才能与 Node 等价；一旦升级 Dio 或改用手工拼 query，就会发出 `childrenid=null`，服务端报资源不存在，评论列表空白。
+
+### kg_endpoints_comment.dart:1-6 `import 'kg_direct_api_client.dart';` 未使用（且与主类循环依赖）；`_commentCodeOf` 与主类同名静态方法重复
+- 级别：P3
+- 事实：本文件未引用 `KgDirectApiClient`；主类 `kg_direct_api_client.dart:415-421` 另有一份 `_commentCodeOf`，全仓无调用（本文件用的是自己的私有版本）。
+- 违反：QUALITY_STANDARD 第 32 条（未使用导入 + 重复实现）；第 5 条（同一映射两个权威）
+- 后果：歌单/专辑评论码修正时只改一处，另一处注释与实现脱节；下一个改动者可能改到死代码那份。
+
+### kg_endpoints_comment.dart:178-186 `commentFloorSend` 的 `tid` 空串下发（Node 会 compact 掉）
+- 级别：P3
+- 事实：`'tid': '${q['tid'] ?? ''}'` 恒下发；Node 用 `compact()` 过滤 `''` 与 `undefined`。
+- 违反：QUALITY_STANDARD 第 16 条（空值与缺失未分离）；第 28 条（参数集合与 Node 不一致）
+- 后果：回复主楼时多发一个 `tid=`；服务端把空 tid 当作楼层标识时，回复可能被挂到楼层 0 而非主楼，表现为「回复成功但对方收不到提醒」。
+
+---
+
+## 7. lib/core/direct/kg_endpoints_media.dart（131 行，已完整阅读）
+
+对照 `module/song_url.js`、`module/privilege_lite.js`、`module/kmr_audio_mv.js`：`/v5/url` 的 `page_id/pid/ppage_id/version=11430/clientver=11430/quality=magic_*`、`/v2/get_res_privilege/lite` 的 `page_id=0`/`qualities` 数组、MV 的 `data:[{album_audio_id}]` 均与 Node 一致；`videoUrl` 的 `keyOf` 与 `trackermv` 原生域一致。
+
+### kg_endpoints_media.dart:47-62 `videoUrl` 未把 hash 转小写即参与 `keyOf` 签名
+- 级别：P2
+- 事实：`final hash = '${q['hash'] ?? ''}';` 之后直接 `'hash': hash` 与 `key: KgSignature.keyOf(hash: hash, …)`。同文件 `songUrl` 走的 `KgSharedParams.songUrl` 明确 `final lowerHash = hash.toLowerCase();`，`privilege` 也 `trim().toLowerCase()`（api_verified.md：「hash **必须小写**」）。
+- 违反：QUALITY_STANDARD 第 28 条（签名输入形态必须实测一致）；第 5 条（同一事实三种归一化策略）
+- 后果：MV hash 若来自用户粘贴/深链大写形式，`key` 与服务端计算不一致 → MV 播放地址请求 20006/空 downurl，用户点 MV 只看到「加载失败」，而歌曲播放正常，问题极难归因。
+
+### kg_endpoints_media.dart:96-131 `privilege` 前置拦截返回 502 假响应而非抛异常，与同层其他前置校验（直接 throw ApiException）不一致
+- 级别：P3
+- 事实：`return Future.value(const KgResponse(status: 502, body: {'status': 0, 'error_code': -1, 'error': '缺少歌曲 hash'}));`；而同文件外 `playlistDetail`/`lyric` 采用 `throw ApiException(...)`。
+- 违反：QUALITY_STANDARD 第 8 条（同一层异常契约应单一）；第 3 条（契约未声明前置校验用哪种形态）
+- 后果：依赖 `_wrap` 把 502 再翻译成 ApiException，链路多一跳；若将来有人直接调用 `KgEndpointMedia.privilege`（不经 `_directOrFallback`）拿到的是「HTTP 502 的成功对象」，会被当成网络错误而非参数错误。
+
+### kg_endpoints_media.dart:24-32 `kmrAudioMv` 的 `fields` 透传空串，且 `data` 元素 `album_audio_id` 为字符串
+- 级别：P3
+- 事实：`'fields': q['fields'] ?? '',`、`ids.map((s) => {'album_audio_id': s})`（源自 split 的字符串）。
+- 违反：QUALITY_STANDARD 第 13 条（外部标识符类型未归一）
+- 后果：与 Node 的 `String(...)` 形态一致时无影响；若上游对 `album_audio_id` 做数值校验，MV 列表为空，用户看不到歌曲关联 MV（P3）。
+
+### kg_endpoints_media.dart:75-78 / 96-99 注释仍以「回退 kapi」描述行为
+- 级别：P3
+- 事实：`// 直连仍可能遇 20028（与 IP/风控相关），_directOrFallback 已兜底回退 kapi。`、`// 上游回 20010 → _wrap 判失败 → 回退 kapi（同样失败），白白多打两次请求且错误文案失真。`
+- 违反：QUALITY_STANDARD 第 31 条（注释与实现相反，`fallbackToKapi` 恒 false）
+- 后果：误导后续维护者按「有兜底」评估影响面，实际 20028 直接抛给用户。
+
+---
+
+## 8. lib/core/direct/kg_play_api.dart（460 行，已完整阅读）
+
+`KgSharedParams.songUrl` 与 `module/song_url.js` 逐字段一致（`album_id/area_code/hash 小写/ssa_flag/version=11430/page_id/quality=magic_*/album_audio_id/behavior/pid/cmd/pidversion/IsFreePart/ppage_id/cdnBackup/module/clientver/key`），F4-07/F4-08/F4-09 三项修复复核通过；`PlayUrlResult` 的 `hash_offset` 全字段读取与 `isPreview` 双条件判定合理。
+
+### kg_play_api.dart:203-214 `privilege` 的 `album_id` 被转成数值，Node 实际下发查询串原文（字符串）
+- 级别：P2
+- 事实：Dart `final albumId = int.tryParse(i < albumIds.length ? albumIds[i].trim() : '') ?? 0; resource.add({'album_id': albumId})`，注释称「F4-10：album_id 缺失时下发**数值** 0（Node `|| 0`），而不是字符串 '0' —— 上游按字符串解析会返回 20010」。Node `privilege_lite.js:170`：`album_id: albumIdList[index] || 0`，即**有值时是字符串**（来自 `String(params.album_id).split(',')`），只有缺失时才落到数值 0。
+- 违反：QUALITY_STANDARD 第 28 条（参数形态必须与实测一致）；第 31 条（注释对 Node 行为的描述与源码相反，且据此改了实现）
+- 后果：把「字符串 → 数值」当作修复依据，等于在未实测的前提下改变了既有正确形态。若上游按字符串比较 `album_id`（Node 一直如此且工作正常），批量权益查询会整体 20010，VIP/免费档判定全失效 → 用户看到所有歌都「需要会员」。
+
+### kg_play_api.dart:112-127 `privilege()` 对每个 hash × 每个音质展开，同一 `hash` 的 `PrivilegeItem` 复制 N 份
+- 级别：P3
+- 事实：`for (final e in list.whereType<Map>()) for (final q in wanted) PrivilegeItem.fromJson(..., quality: q)`；`wanted` 缺省为 `defaultQualities`（7 档）。
+- 违反：QUALITY_STANDARD 第 24 条（惰性构建/按需计算）；第 25 条（未设条目上限）
+- 后果：一次 100 首的批量权益查询生成 700 个对象，全部构造 `Map.from`；列表页滚动时 GC 压力上升（P3）。
+
+### kg_play_api.dart:132-141 `upstreamQualities` 与 `defaultQualities` 两表并存且顺序不同，注释解释成本高
+- 级别：P3
+- 事实：`upstreamQualities = ['128','320','flac','high','viper_atmos','viper_tape','viper_clear','super','multitrack']`，`defaultQualities = ['128','320','flac','high','viper_tape','viper_clear','viper_atmos']`，注释仅说明「与上游表顺序不同：蝰蛇三档在后」。
+- 违反：QUALITY_STANDARD 第 2 条（魔法值/常量集中但语义未命名）；第 31 条（未说明为何顺序重要）
+- 后果：修改其中一张表（例如新增 `viper_*` 音质）时极易只改一处，导致「请求了但输出不显示」或反之，表现为某音质静默消失。
+
+### kg_play_api.dart:436-441 `isFree` 未覆盖概念版 freeListen 分支，与 Node `obtainable` 语义不同
+- 级别：P3
+- 事实：`bool get isFree => exists && privilege == 0 && status != 0;`。Node：`obtainable = freeListen || (exists && !neesuvip && relateItem.status !== 0)`，其中 `freeListen = isLite && quality == '128' && neesuvip`。
+- 违反：QUALITY_STANDARD 第 8 条（同一判定两套语义，回退路径与主路径不一致）；第 16 条（「可播」语义未覆盖全部登录态）
+- 后果：仅概念版（`kg.lite=true`）受影响：付费歌曲的 128 档被判为不可播，UI 显示「VIP 专享」，而客户端实际可以免费听标准音质。本 App 若只发布标准版，属潜在缺陷（P3）。
+
+### kg_play_api.dart:299-302 `hasUrl` 使用 `bestUrl!` 非空断言
+- 级别：P3
+- 事实：`bool get hasUrl => bestUrl != null && bestUrl!.isNotEmpty;`
+- 违反：QUALITY_STANDARD 第 12 条（非空断言应避免——此处可写成 `final u = bestUrl; return u != null && u.isNotEmpty;`）
+- 后果：逻辑上安全（getter 两次求值可能取到不同结果，但因 urls/backupUrls 为 final 列表，实际不会崩）；仅可读性/规范问题。
+
+### kg_play_api.dart:24-33 `/v5/url` 使用 `requestWithVerify`（会在 20028 时重发）
+- 级别：P3（记录项）
+- 事实：`final res = await client.requestWithVerify('/v5/url', method: 'GET', …)`。
+- 违反：QUALITY_STANDARD 第 21 条（幂等性：GET 播放地址幂等，重发安全，本项**不构成**问题）
+- 后果：无；仅记录「读操作重试安全」的判定依据，避免下一批误判为重复提交。
