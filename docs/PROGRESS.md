@@ -487,3 +487,14 @@ QUALITY_STANDARD.md 33 条；每条结论标违反条款+用户可见后果；�
 
 B 批已消化：B3 三条发布链 P1（finalize/扩展名/MIME）、B1 catch 世代守卫；B2 无 P2 以上。
 C 批完成后统一清点 → v3.6 LTS 封版。
+
+## v3.5 C2 消化（bae1090）
+
+已修两条 P1：
+- V35-C2-1: 新建歌单链式加歌被 _busy 闸门吞（bypassBusy 参数）
+- V35-C2-2: 「去登录」真跳转 /login
+
+### 待 C1/C3 报告后统一修
+- captcha_page 9 死键 0 替换（脱钩未收尾）
+- 同名旧歌单竞态（P2）
+- comments_page loadMore 永久转圈（复制 search_page _pageError 范式）
