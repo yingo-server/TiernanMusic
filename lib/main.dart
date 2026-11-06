@@ -8,6 +8,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'core/cache/cache_manager.dart';
+import 'features/library/presentation/library_page.dart'
+    show libraryUserPlaylistsProvider, libraryCollectedMvsProvider;
 import 'core/api/kugou_api_client.dart';
 import 'core/direct/kg_client.dart';
 import 'core/direct/kg_providers.dart';

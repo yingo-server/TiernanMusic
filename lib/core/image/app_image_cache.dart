@@ -30,8 +30,11 @@ class AppImageCache extends CacheManager {
           stalePeriod: const Duration(days: 30),
           maxNrOfCacheObjects: 600,
           // B-28（v3.3 修复①，第 25 条）：原无字节上限，低端机长期积累封面
-          // 撑爆内部存储。加 500MB 硬上限，CacheManager 按 LRU 自动淘汰最旧条目。
-          maxCacheSizeBytes: 500 * 1024 * 1024,
+          // 撑爆内部存储。加 500MB 上限。注意：flutter_cache_manager 4.x
+          // 的 Config 无字节上限参数（CI 实测 undefined_named_parameter），
+          // 条目上限 600 已由 maxNrOfCacheObjects 承担；字节维度由
+          // 「清缓存」入口（settings_page emptyCache）+ 用户手动兜底。
+          // （留 v3.4：自定义 CacheManager 覆写 getFileStream 做 LRU 字节淘汰）
         ));
 
   static final AppImageCache instance = AppImageCache._();
