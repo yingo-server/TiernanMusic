@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/direct/kg_providers.dart';
+import '../../../core/utils/toast.dart';
+import '../../../l10n/l10n.dart';
 import '../data/captcha_types.dart';
 import '../data/verification_service.dart';
 
@@ -105,7 +107,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('人机验证'),
+        title: Text(context.l10n.captchaTitle),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(false),
@@ -136,7 +138,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
             FilledButton.tonalIcon(
               onPressed: _load,
               icon: const Icon(Icons.refresh),
-              label: const Text('重试'),
+              label: Text(context.l10n.retry),
             ),
           ],
         ),
@@ -220,7 +222,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
           right: 16,
           bottom: 16,
           child: Text(
-            '如验证码未自动弹出，请点击页面中的「开始验证」',
+            context.l10n.captchaTencentHint,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -326,7 +328,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('提交验证'),
+                : Text(context.l10n.captchaSubmit),
           ),
         ],
       ),
@@ -358,7 +360,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
           OutlinedButton.icon(
             onPressed: () => Navigator.of(context).pop(false),
             icon: const Icon(Icons.close),
-            label: const Text('关闭'),
+            label: Text(context.l10n.captchaClose),
           ),
         ],
       ),
@@ -388,7 +390,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
           if (s.vType >= 0)
             FilledButton.tonal(
               onPressed: _submitting ? null : () => _submitWithCode(s, null),
-              child: const Text('直接尝试提交指纹验证'),
+              child: Text(context.l10n.captchaTryFingerprint),
             ),
         ],
       ),
@@ -408,7 +410,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
       if (!mounted) return;
       if (!ok) {
         setState(() => _submitting = false);
-        _snack('验证未通过，请重试');
+        _snack(context.l10n.captchaNotPassed);
         return;
       }
       // 验证通过 → 尝试重试原请求
@@ -420,7 +422,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
           return;
         }
         setState(() => _submitting = false);
-        _snack('验证已通过，但请求仍需重试');
+        _snack(context.l10n.captchaPassedButRetry);
         Navigator.of(context).pop(true);
         return;
       }
@@ -428,12 +430,16 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      _snack('提交失败：$e');
+      // V34-UI-02：'$e' 直出改友好文案
+      _snack(context.l10n.captchaSubmitFailed);
+      debugPrint('[captcha] submit failed: $e');
     }
   }
 
   void _snack(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    // V34-UI-02b（P3）：项目统一用 Toast（login_page _showError 注释明示），
+    // 避免验证页提示样式与全 app 不一致。
+    Toast.show(context, msg);
   }
 }
+

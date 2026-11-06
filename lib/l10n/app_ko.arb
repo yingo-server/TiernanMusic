@@ -216,7 +216,7 @@
   "noCopyright": "저작권 없음",
   "tryListen": "듣기 체험",
   "fullPlay": "전체 재생",
-  "captchaTitle": "인공지능 인증",
+  "captchaTitle": "보안 인증",
   "captchaHint": "슬라이더 인증을 완료해 주세요",
   "loginSuccess": "로그인 성공",
   "loginFailed": "로그인 실패",
@@ -497,11 +497,11 @@
     }
   },
   "accountNeedRelogin": "이 계정은 다시 로그인해야 합니다",
-  "previewOnly": "试听",
+  "previewOnly": "미리듣기",
   "playlistUnavailableSoon": "이 플레이리스트는 열 수 없습니다(전역 ID 없음)",
-  "loginRequiredTitle": "需要登录",
-  "loginRequiredHint": "该功能需要登录酷狗账号后使用。",
-  "loginRequiredAction": "「{action}」需要登录后才能使用。",
+  "loginRequiredTitle": "로그인이 필요합니다",
+  "loginRequiredHint": "이 기능은 KuGou 계정 로그인이 필요합니다.",
+  "loginRequiredAction": "\"{action}\"을(를) 사용하려면 로그인하세요.",
   "@loginRequiredAction": {
     "placeholders": {
       "action": {
@@ -521,8 +521,34 @@
   "sortHot": "인기",
   "loginToViewFavorites": "로그인하면 즐겨찾기를 볼 수 있습니다",
   "qualitySuper": "마스터 음질",
-  "previewOnly": "미리듣기",
-  "loginRequiredTitle": "로그인이 필요합니다",
-  "loginRequiredHint": "이 기능은 KuGou 계정 로그인이 필요합니다.",
-  "loginRequiredAction": "\"{action}\"을(를) 사용하려면 로그인하세요."
+  "addedToPlaylist": "플레이리스트에 추가됨",
+  "playlistNameEmpty": "플레이리스트 이름을 입력하세요",
+  "captchaLoadFailed": "인증 정보를 가져오지 못했습니다. 다시 시도하세요",
+  "captchaSmsTitle": "SMS 인증",
+  "captchaSmsHint": "받은 인증 코드를 입력하여 완료하세요",
+  "captchaSmsCodeLabel": "인증 코드",
+  "captchaSmsCodeHint": "숫자 6자리",
+  "captchaSubmit": "제출",
+  "captchaNotPassed": "인증에 실패했습니다. 다시 시도하세요",
+  "captchaPassedButRetry": "인증은 통과했지만 요청을 다시 시도해야 합니다",
+  "captchaSubmitFailed": "제출에 실패했습니다. 잠시 후 다시 시도하세요",
+  "captchaTencentHint": "인증이 자동으로 나타나지 않으면 페이지의 \"인증 시작\"을 누르세요",
+  "captchaExternalHint": "이 인증 유형은 KuGou 공식 앱에서 완료해야 합니다.\n공식 앱에서 한 번 수행한 뒤 이 앱으로 돌아와 다시 시도하세요.",
+  "captchaClose": "닫기",
+  "captchaUnknownType": "알 수 없는 인증 유형 (v_type={type})",
+  "@captchaUnknownType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "captchaNoVerifyUrl": "서버가 인증 URL을 반환하지 않았습니다",
+  "captchaTryFingerprint": "지문 인증을 바로 제출해 보기",
+  "lyricEmptyGuide": "가사가 없습니다. 연주곡이거나 아직 가사가 등록되지 않았을 수 있습니다. 다른 곡을 시도해 보세요.",
+  "downloadEmptyGuide": "아직 다운로드가 없습니다. 원하는 곡을 검색한 뒤 \"더보기 → 다운로드\"로 대기열에 추가하세요.",
+  "reloginGuide": "로그인 세션이 만료되었습니다. 다시 로그인하면 플레이리스트를 볼 수 있습니다.",
+  "mvCollectGuide": "즐겨찾는 MV가 아직 없습니다. 재생 페이지에서 \"MV\"를 눌러 시청하고 MV 페이지에서 즐겨찾기하면 여기에 표시됩니다.",
+  "mvUnavailable": "이 MV는 데이터가 불완전하여 지금 재생할 수 없습니다",
+  "downloadFolderFallback": "경로가 복사되었습니다. 파일 관리자에 붙여넣어 이동하세요"
 }

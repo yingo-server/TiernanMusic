@@ -216,7 +216,7 @@
   "quality128": "スムーズ 128K",
   "quality320": "高品質 320K",
   "qualityFlac": "ロスレス FLAC",
-  "captchaTitle": "CAPTCHA",
+  "captchaTitle": "認証",
   "captchaHint": "スライダー認証を完了してください",
   "loginSuccess": "ログインに成功しました",
   "loginFailed": "ログインに失敗しました",
@@ -497,11 +497,11 @@
     }
   },
   "accountNeedRelogin": "このアカウントは再ログインが必要です",
-  "previewOnly": "试听",
+  "previewOnly": "試聴",
   "playlistUnavailableSoon": "このプレイリストは開けません（グローバル ID がない）",
-  "loginRequiredTitle": "需要登录",
-  "loginRequiredHint": "该功能需要登录酷狗账号后使用。",
-  "loginRequiredAction": "「{action}」需要登录后才能使用。",
+  "loginRequiredTitle": "ログインが必要です",
+  "loginRequiredHint": "この機能は KuGou アカウントへのログインが必要です。",
+  "loginRequiredAction": "「{action}」を使用するにはログインしてください。",
   "@loginRequiredAction": {
     "placeholders": {
       "action": {
@@ -521,8 +521,34 @@
   "sortHot": "人気",
   "loginToViewFavorites": "ログインするとお気に入りが見られます",
   "qualitySuper": "マスター品質",
-  "previewOnly": "試聴",
-  "loginRequiredTitle": "ログインが必要です",
-  "loginRequiredHint": "この機能は KuGou アカウントへのログインが必要です。",
-  "loginRequiredAction": "「{action}」を使用するにはログインしてください。"
+  "addedToPlaylist": "プレイリストに追加しました",
+  "playlistNameEmpty": "プレイリスト名を入力してください",
+  "captchaLoadFailed": "認証情報の取得に失敗しました。再試行してください",
+  "captchaSmsTitle": "SMS認証",
+  "captchaSmsHint": "受信した認証コードを入力して完了してください",
+  "captchaSmsCodeLabel": "認証コード",
+  "captchaSmsCodeHint": "6桁の数字",
+  "captchaSubmit": "送信",
+  "captchaNotPassed": "認証に失敗しました。再試行してください",
+  "captchaPassedButRetry": "認証は完了しましたが、リクエストを再試行する必要があります",
+  "captchaSubmitFailed": "送信に失敗しました。しばらくしてから再試行してください",
+  "captchaTencentHint": "認証が自動的に表示されない場合は、ページの「認証を開始」をタップしてください",
+  "captchaExternalHint": "この認証タイプは KuGou 公式アプリで完了する必要があります。\n公式アプリで一度操作してから、本アプリに戻って再試行してください。",
+  "captchaClose": "閉じる",
+  "captchaUnknownType": "不明な認証タイプ（v_type={type}）",
+  "@captchaUnknownType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "captchaNoVerifyUrl": "サーバーが認証 URL を返しませんでした",
+  "captchaTryFingerprint": "指紋認証を直接送信してみる",
+  "lyricEmptyGuide": "歌詞がありません。インストゥルメンタルの可能性、またはまだ歌詞が収録されていません。別の曲を試してください。",
+  "downloadEmptyGuide": "ダウンロードはまだありません。好きな曲を検索し、「その他 → ダウンロード」でキューに追加できます。",
+  "reloginGuide": "ログインの有効期限が切れました。再ログインするとプレイリストを表示できます。",
+  "mvCollectGuide": "お気に入りの MV はまだありません。再生ページの「MV」から視聴し、MV ページでお気に入りに追加するとここに表示されます。",
+  "mvUnavailable": "この MV はデータが不完全で、現在再生できません",
+  "downloadFolderFallback": "パスをコピーしました。ファイルマネージャーに貼り付けて開いてください"
 }

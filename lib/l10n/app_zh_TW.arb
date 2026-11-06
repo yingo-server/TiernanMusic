@@ -497,11 +497,11 @@
     }
   },
   "accountNeedRelogin": "該帳號需要重新登入",
-  "previewOnly": "试听",
+  "previewOnly": "試聽",
   "playlistUnavailableSoon": "此歌單暫不支援開啟（缺少全域 ID）",
-  "loginRequiredTitle": "需要登录",
-  "loginRequiredHint": "该功能需要登录酷狗账号后使用。",
-  "loginRequiredAction": "「{action}」需要登录后才能使用。",
+  "loginRequiredTitle": "需要登入",
+  "loginRequiredHint": "此功能需要登入酷狗帳號後使用。",
+  "loginRequiredAction": "「{action}」需要登入後才能使用。",
   "@loginRequiredAction": {
     "placeholders": {
       "action": {
@@ -521,13 +521,8 @@
   "sortHot": "最熱",
   "loginToViewFavorites": "登入後檢視收藏",
   "qualitySuper": "臻品母帶",
-  "previewOnly": "試聽",
-  "loginRequiredTitle": "需要登入",
-  "loginRequiredHint": "此功能需要登入酷狗帳號後使用。",
-  "loginRequiredAction": "「{action}」需要登入後才能使用。",
   "addedToPlaylist": "已加入歌單",
   "playlistNameEmpty": "請輸入歌單名稱",
-  "captchaTitle": "人機驗證",
   "captchaLoadFailed": "取得驗證資訊失敗，請重試",
   "captchaSmsTitle": "簡訊驗證",
   "captchaSmsHint": "請輸入收到的驗證碼完成驗證",
@@ -549,5 +544,11 @@
     }
   },
   "captchaNoVerifyUrl": "伺服器未回傳驗證 url",
-  "captchaTryFingerprint": "直接嘗試提交指紋驗證"
+  "captchaTryFingerprint": "直接嘗試提交指紋驗證",
+  "lyricEmptyGuide": "暫無歌詞。可能是純音樂，或該歌曲的歌詞尚未收錄；可以換一首歌試試",
+  "downloadEmptyGuide": "還沒有下載任務。搜尋喜歡的歌曲，點「更多 → 下載」即可加入下載佇列",
+  "reloginGuide": "登入已過期，請重新登入後查看歌單",
+  "mvCollectGuide": "還沒有收藏的 MV。在歌曲播放頁點「MV」觀看，並在 MV 頁收藏，就會出現在這裡",
+  "mvUnavailable": "該 MV 資料不完整，暫時無法播放",
+  "downloadFolderFallback": "路徑已複製，請在檔案管理員中貼上導航"
 }

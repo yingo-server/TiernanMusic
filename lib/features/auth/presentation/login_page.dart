@@ -46,7 +46,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }
 
   void _onLoginSuccess() {
-    if (mounted) context.go('/home');
+    // V34-UI-05（P3）：登录成功返回来源页——登录页总经 push 进入，
+    // 直接 pop 回 push 来源（库页「去登录」→ 登录 → 回库页，任务流 3
+    // 不再被强制甩到首页）；pop 失败（理论不可达）时回落 /home。
+    if (mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else if (mounted) {
+      context.go('/home');
+    }
   }
 
   @override
@@ -538,9 +545,10 @@ class _QrLoginTabState extends ConsumerState<_QrLoginTab>
       _startPolling();
     } catch (e) {
       if (!mounted) return;
+      // P3 修复：与本页 _showError 口径统一——'$e' 技术串不得上屏（第 9 条）
       setState(() {
         _loading = false;
-        _error = context.l10n.qrLoadFailed('$e');
+        _error = context.l10n.qrLoadFailed(friendlyError(e));
       });
     }
   }

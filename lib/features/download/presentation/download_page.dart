@@ -64,9 +64,10 @@ class _DownloadPageState extends ConsumerState<DownloadPage>
         ],
       ),
       body: state.tasks.isEmpty
+          // V34-UI-07b（修复②，P3）：空下载页补「怎么做会有内容」引导（任务流 5）
           ? EmptyState(
               icon: Icons.download_for_offline_outlined,
-              message: context.l10n.noDownloads,
+              message: context.l10n.downloadEmptyGuide,
             )
           : ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -287,11 +288,25 @@ class _DownloadTile extends ConsumerWidget {
           ),
         ],
       ),
-      onTap: () {
+      onTap: () async {
         if (task.status == DownloadTaskStatus.completed) {
-          PublicMediaStore.instance.open(
+          final opened = await PublicMediaStore.instance.open(
             PublishedFile(
               uri: task.mediaUri.isEmpty ? null : task.mediaUri,
+              path: task.filePath.isEmpty ? null : task.filePath,
+            ),
+          );
+          // P3 修复：与菜单 'open' 分支同口径——打开失败必须可观测（第 9 条，
+          // 同动作两处处理不一致属一致性缺陷）
+          if (!opened && context.mounted) {
+            Toast.show(context, context.l10n.downloadOpenFileFailed);
+          }
+        }
+      },
+    );
+  }
+}
+i,
               path: task.filePath.isEmpty ? null : task.filePath,
             ),
           );

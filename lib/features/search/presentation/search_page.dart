@@ -15,6 +15,8 @@ import '../../player/play_helper.dart';
 import '../../download/presentation/download_sheet.dart';
 import '../../playlist/data/playlist_repository.dart';
 import '../../playlist/presentation/add_to_playlist_sheet.dart';
+// V34-UI-01（补验）：search_page 的 addToPlaylist 菜单项在代理 stash 回退
+// 后曾丢失，主代理复核补回（full_player_page 同款交互，SongTile menuItems）。
 import '../../../core/utils/toast.dart';
 import '../data/search_repository.dart';
 import '../../../l10n/l10n.dart';
@@ -581,9 +583,28 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
                     label: context.l10n.download,
                     icon: Icons.download_outlined,
                   ),
+                  // V34-UI-01（补验在位）：收藏到歌单入口——激活死键
+                  SongTileMenuItem(
+                    value: 'addToPlaylist',
+                    label: context.l10n.addToPlaylist,
+                    icon: Icons.playlist_add_outlined,
+                  ),
                 ],
                 onMenuSelected: (v) {
-                  if (v == 'download') {
+                  if (v == 'addToPlaylist') {
+                    showAddToPlaylistSheet(
+                      context,
+                      Song(
+                        hash: s.hash ?? s.id,
+                        albumId: s.albumId ?? '',
+                        albumAudioId: s.albumAudioId ?? '',
+                        name: s.name,
+                        artist: s.singer,
+                        cover: s.cover,
+                        duration: Duration(seconds: s.duration),
+                      ),
+                    );
+                  } else if (v == 'download') {
                     showDownloadSheet(
                       context,
                       Song(
@@ -795,25 +816,4 @@ final _genericSearchProvider =
             .read(searchRepositoryProvider)
             .searchByType(arg.$1, arg.$2));
 
-
-                  // 专辑：albumid 数字 ID → /album/:id
-                  context.push('/album/${s.id}');
-                } else if (type == 'author' && s.id.isNotEmpty) {
-                  // 歌手：AuthorId → /artist/:id
-                  context.push('/artist/${s.id}');
-                }
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-final _genericSearchProvider =
-    FutureProvider.family<SearchResult, (String, String)>(
-        (ref, arg) => ref
-            .read(searchRepositoryProvider)
-            .searchByType(arg.$1, arg.$2));
 

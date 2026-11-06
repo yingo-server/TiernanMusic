@@ -110,12 +110,18 @@ class _LyricViewState extends State<LyricView> {
     if (lines.isEmpty) {
       // F4-35（审查②-B，P2）：无歌词时旧实现渲染 0 项列表，用户只看到一片空白，
       // 无法区分「纯音乐/解密失败/加载中」。
+      // V34-UI-07a（修复②，P2）：硬编码中文「暂无歌词」改走 l10n，并补
+      // 「怎么会有内容」的引导（易用性：任务流 5；第 30 条）。
       return Center(
-        child: Text(
-          '暂无歌词',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            context.l10n.lyricEmptyGuide,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
         ),
       );
     }

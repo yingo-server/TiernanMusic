@@ -28,36 +28,10 @@ final defaultQualityProvider =
 /// 音质档位名称：运行时从 l10n 取（不得硬编码中文），
 /// 见 settings_page.dart 的 `_qualityNames(BuildContext)`。
 
-/// WIFI 下自动使用最高音质（预留策略开关）
-class WifiQualityNotifier extends StateNotifier<bool> {
-  WifiQualityNotifier()
-      : super((_box()?.get('wifiAutoHighQuality', defaultValue: true) as bool?) ??
-            true);
-
-  Future<void> set(bool value) async {
-    state = value;
-    await _box()?.put('wifiAutoHighQuality', value);
-  }
-}
-
-final wifiQualityProvider = StateNotifierProvider<WifiQualityNotifier, bool>(
-    (ref) => WifiQualityNotifier());
-
-/// 流量下降低音质（预留策略开关）
-class CellularQualityNotifier extends StateNotifier<bool> {
-  CellularQualityNotifier()
-      : super((_box()?.get('cellularLowerQuality', defaultValue: false)
-                as bool?) ??
-            false);
-
-  Future<void> set(bool value) async {
-    state = value;
-    await _box()?.put('cellularLowerQuality', value);
-  }
-}
-
-final cellularQualityProvider =
-    StateNotifierProvider<CellularQualityNotifier, bool>(
-        (ref) => CellularQualityNotifier());
+// V34-UI-04（修复②，P2）：删除 wifiQualityProvider / cellularQualityProvider
+// （「Wi-Fi 自动最高音质 / 流量省流」预留假开关）。全项目无消费方，用户切换后
+// 行为不变，属第 32 条死代码；设置页入口已同步移除。
+// Hive 中遗留的 'wifiAutoHighQuality' / 'cellularLowerQuality' 键不再读取，
+// 与其它已弃用设置项同口径（留在盒中不清理，避免额外迁移代码）。
 
 

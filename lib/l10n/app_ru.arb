@@ -216,7 +216,7 @@
   "quality128": "Плавное 128K",
   "quality320": "Высокое качество 320K",
   "qualityFlac": "Потерь нет FLAC",
-  "captchaTitle": "Проверка человека",
+  "captchaTitle": "Проверка",
   "captchaHint": "Пожалуйста, завершите проверку с помощью ползунка",
   "loginSuccess": "Вход выполнен успешно",
   "loginFailed": "Ошибка входа",
@@ -497,11 +497,11 @@
     }
   },
   "accountNeedRelogin": "Этот аккаунт требует повторного входа",
-  "previewOnly": "试听",
+  "previewOnly": "Предпрослушивание",
   "playlistUnavailableSoon": "Этот плейлист нельзя открыть (нет глобального ID)",
-  "loginRequiredTitle": "需要登录",
-  "loginRequiredHint": "该功能需要登录酷狗账号后使用。",
-  "loginRequiredAction": "「{action}」需要登录后才能使用。",
+  "loginRequiredTitle": "Требуется вход",
+  "loginRequiredHint": "Для этой функции нужно войти в аккаунт KuGou.",
+  "loginRequiredAction": "Войдите, чтобы использовать «{action}».",
   "@loginRequiredAction": {
     "placeholders": {
       "action": {
@@ -521,8 +521,34 @@
   "sortHot": "Популярные",
   "loginToViewFavorites": "Войдите, чтобы увидеть избранное",
   "qualitySuper": "Мастер-качество",
-  "previewOnly": "Предпрослушивание",
-  "loginRequiredTitle": "Требуется вход",
-  "loginRequiredHint": "Для этой функции нужно войти в аккаунт KuGou.",
-  "loginRequiredAction": "Войдите, чтобы использовать «{action}»."
+  "addedToPlaylist": "Добавлено в плейлист",
+  "playlistNameEmpty": "Введите название плейлиста",
+  "captchaLoadFailed": "Не удалось загрузить данные проверки, повторите попытку",
+  "captchaSmsTitle": "Проверка по SMS",
+  "captchaSmsHint": "Введите полученный код подтверждения",
+  "captchaSmsCodeLabel": "Код подтверждения",
+  "captchaSmsCodeHint": "6 цифр",
+  "captchaSubmit": "Отправить",
+  "captchaNotPassed": "Проверка не пройдена, попробуйте ещё раз",
+  "captchaPassedButRetry": "Проверка пройдена, но запрос нужно повторить",
+  "captchaSubmitFailed": "Ошибка отправки, попробуйте позже",
+  "captchaTencentHint": "Если капча не появилась автоматически, нажмите «Начать проверку» на странице",
+  "captchaExternalHint": "Этот тип проверки нужно пройти в официальном приложении KuGou.\nСовет: выполните действие в официальном приложении, затем вернитесь и повторите попытку.",
+  "captchaClose": "Закрыть",
+  "captchaUnknownType": "Неизвестный тип проверки (v_type={type})",
+  "@captchaUnknownType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "captchaNoVerifyUrl": "Сервер не вернул URL проверки",
+  "captchaTryFingerprint": "Попробовать сразу отправить проверку по отпечатку",
+  "lyricEmptyGuide": "Текст песни недоступен. Возможно, это инструментальная композиция, или текст ещё не опубликован. Попробуйте другую песню.",
+  "downloadEmptyGuide": "Загрузок пока нет. Найдите понравившуюся песню и нажмите «Ещё → Скачать», чтобы добавить в очередь.",
+  "reloginGuide": "Сессия истекла. Войдите снова, чтобы увидеть плейлисты.",
+  "mvCollectGuide": "Избранных клипов пока нет. Нажмите «MV» на странице плеера, посмотрите и добавьте в избранное на странице клипа.",
+  "mvUnavailable": "У этого клипа неполные данные, воспроизведение сейчас невозможно",
+  "downloadFolderFallback": "Путь скопирован — вставьте его в файловый менеджер для перехода"
 }

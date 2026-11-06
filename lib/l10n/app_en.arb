@@ -206,7 +206,7 @@
   "noCopyright": "No copyright available",
   "tryListen": "Preview",
   "fullPlay": "Play in full",
-  "captchaTitle": "Human-Machine Verification",
+  "captchaTitle": "Verification",
   "captchaHint": "Please complete the slider verification",
   "loginSuccess": "Login successful",
   "loginFailed": "Login failed",
@@ -497,11 +497,11 @@
     }
   },
   "accountNeedRelogin": "This account needs to sign in again",
-  "previewOnly": "试听",
+  "previewOnly": "Preview",
   "playlistUnavailableSoon": "This playlist cannot be opened (missing global ID)",
-  "loginRequiredTitle": "需要登录",
-  "loginRequiredHint": "该功能需要登录酷狗账号后使用。",
-  "loginRequiredAction": "「{action}」需要登录后才能使用。",
+  "loginRequiredTitle": "Sign in required",
+  "loginRequiredHint": "This feature requires signing in to a KuGou account.",
+  "loginRequiredAction": "Sign in to use \"{action}\".",
   "@loginRequiredAction": {
     "placeholders": {
       "action": {
@@ -521,8 +521,34 @@
   "sortHot": "Popular",
   "loginToViewFavorites": "Log in to view favorites",
   "qualitySuper": "Master Quality",
-  "previewOnly": "Preview",
-  "loginRequiredTitle": "Sign in required",
-  "loginRequiredHint": "This feature requires signing in to a KuGou account.",
-  "loginRequiredAction": "Sign in to use \"{action}\"."
+  "addedToPlaylist": "Added to playlist",
+  "playlistNameEmpty": "Please enter a playlist name",
+  "captchaLoadFailed": "Failed to load verification info, please retry",
+  "captchaSmsTitle": "SMS verification",
+  "captchaSmsHint": "Enter the verification code you received to continue",
+  "captchaSmsCodeLabel": "Verification code",
+  "captchaSmsCodeHint": "6 digits",
+  "captchaSubmit": "Submit",
+  "captchaNotPassed": "Verification failed, please try again",
+  "captchaPassedButRetry": "Verification passed, but the request still needs to be retried",
+  "captchaSubmitFailed": "Submit failed, please try again later",
+  "captchaTencentHint": "If the captcha does not appear automatically, tap \"Start verification\" on the page",
+  "captchaExternalHint": "This verification type must be completed in the official KuGou app.\nTip: complete the action once in the official app, then come back and retry.",
+  "captchaClose": "Close",
+  "captchaUnknownType": "Unknown verification type (v_type={type})",
+  "@captchaUnknownType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "captchaNoVerifyUrl": "Server did not return a verification URL",
+  "captchaTryFingerprint": "Try submitting fingerprint verification directly",
+  "lyricEmptyGuide": "No lyrics available. This may be an instrumental track, or lyrics are not published for this song yet. Try another song.",
+  "downloadEmptyGuide": "No downloads yet. Search for a song you like and tap \"More → Download\" to add it to the queue.",
+  "reloginGuide": "Your session has expired. Sign in again to view your playlists.",
+  "mvCollectGuide": "No favorite MVs yet. Tap \"MV\" on the player page to watch, and favorite it on the MV page — it will show up here.",
+  "mvUnavailable": "This MV has incomplete data and cannot be played right now",
+  "downloadFolderFallback": "Path copied — paste it in your file manager to navigate there"
 }

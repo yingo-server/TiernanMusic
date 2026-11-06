@@ -516,8 +516,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget _buildPlaybackSection() {
     final lyricMode = ref.watch(lyricModeProvider);
     final quality = ref.watch(defaultQualityProvider);
-    final wifiHigh = ref.watch(wifiQualityProvider);
-    final cellularLow = ref.watch(cellularQualityProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -570,21 +568,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           subtitle: _qualityNames(context)[quality] ?? quality,
           onTap: () => _showQualityDialog(quality),
         ),
-        // 状态切换用 SwitchListTile（label 在左，switch 在右）
-        SwitchListTile(
-          secondary: const Icon(Icons.wifi),
-          title: Text(context.l10n.wifiAutoHighQuality),
-          subtitle: Text(context.l10n.wifiAutoHighQualityDesc),
-          value: wifiHigh,
-          onChanged: (v) => ref.read(wifiQualityProvider.notifier).set(v),
-        ),
-        SwitchListTile(
-          secondary: const Icon(Icons.signal_cellular_alt),
-          title: Text(context.l10n.cellularLowQuality),
-          subtitle: Text(context.l10n.cellularLowQualityDesc),
-          value: cellularLow,
-          onChanged: (v) => ref.read(cellularQualityProvider.notifier).set(v),
-        ),
+        // V34-UI-04（修复②，P2）：删除「Wi-Fi 自动最高音质 / 流量省流」两个
+        // 预留假开关。二者无任何消费方（grep 证实 provider 仅设置页自身读写），
+        // 用户切换后行为不变（审查②：任务流 6）——第 32 条死代码零容忍。
+        // provider 已从 settings_providers.dart 同步移除。
       ],
     );
   }

@@ -108,6 +108,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             playlistsAsync.when(
               loading: () => const _PlaylistRowSkeleton(),
               error: (e, _) => _PlaylistRowError(
+                // V34-UI-06（修复②，P3）：error 对象传入 ErrorRetry，
+                // cookie 过期（401/登录失效）走「重新登录」出口而非无限重试
+                // （第 16 条：失败语义分离；易用性任务流 3）。
+                error: e,
                 onRetry: () => ref.invalidate(
                     libraryUserPlaylistsProvider(true)),
               ),
@@ -321,6 +325,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 onTap: () {
                   if (mv.hash.isNotEmpty) {
                     context.push('/mv/${mv.hash}');
+                  } else {
+                    // P3 修复（审查②）：hash 为空点击静默无反应 → 明确提示
+                    // 条目不可播放（第 9 条：失败必须可观测）
+                    Toast.show(context, context.l10n.mvUnavailable);
                   }
                 },
               ),
