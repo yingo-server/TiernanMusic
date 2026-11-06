@@ -196,7 +196,9 @@ class ErrorLogger {
       if (ok != null && ok.isNotEmpty) {
         _publicDirPath = ok;
       }
-      return ok != null;
+      // N-1（第7批复核③，一行修）：空串是原生层「没写成」的返回值，
+      // `ok != null` 会把空串当成功（第 14 条：边界返回值必须校验）。
+      return ok != null && ok.isNotEmpty;
     } catch (e) {
       debugPrint('[ErrorLogger] media store write failed: $e');
       return false;
@@ -228,10 +230,12 @@ class ErrorLogger {
       ),
       (m) => '${m.group(1)}***',
     );
-    // 仅对 11 位手机号做兜底（避免误伤普通数字），兼容带引号形态
+    // N-2（第7批复核③，B-18 残留）：无 key 前缀的裸手机号兜底——
+    // 上一条只匹配 `mobile="138..."` 键值形态，遗漏自由拼接的正文。
+    // 仅匹配 1[3-9] 开头的 11 位数字且前后无数字，避免误伤时间戳/ID。
     s = s.replaceAllMapped(
-      RegExp(r'("mobile"\s*:\s*")(1\d{10})(")'),
-      (m) => '${m.group(1)}***${m.group(3)}',
+      RegExp(r'(?<!\d)(1[3-9]\d{9})(?!\d)'),
+      (m) => '${m.group(1)!.substring(0, 3)}****${m.group(1)!.substring(7)}',
     );
     // Bearer / Basic 凭据
     s = s.replaceAllMapped(

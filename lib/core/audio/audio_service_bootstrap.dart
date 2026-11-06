@@ -38,7 +38,13 @@ class AudioServiceBootstrap {
   }
 
   static Future<bool> _ensureStarted() {
-    return _future ??= _init();
+    // B-33（第7批复核③）：init 失败的 Future 被 _future 永久缓存，
+    // 本进程内所有后续播放都撞同一个失败——只能杀进程重启。
+    // 改为失败时置 null 允许重试（第 11 条：降级须有恢复条件）。
+    final f = _future ??= _init();
+    return f.whenComplete(() {
+      if (_ready == false) _future = null;
+    });
   }
 
   static Future<bool> _init() async {

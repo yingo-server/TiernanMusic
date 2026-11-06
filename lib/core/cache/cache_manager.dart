@@ -78,7 +78,10 @@ class LyricTranslationCache {
     _box ??= await Hive.openBox<String>('lyric_translations');
   }
 
-  String _key(String lyricId, String targetLang) => '$lyricId:$targetLang';
+  /// B-29（第7批复核③）：键必须包含**全部影响结果的维度**（第 23 条）——
+  /// 换翻译模型后，旧键下的译文对新模型无效。拼入 translateModel。
+  String _key(String lyricId, String targetLang) =>
+      '$lyricId:$targetLang@${AppConfig.translateModel}';
 
   Future<Map<int, String>?> get(String lyricId, String targetLang) async {
     await init();

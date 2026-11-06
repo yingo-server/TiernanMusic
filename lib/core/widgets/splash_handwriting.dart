@@ -22,6 +22,8 @@ class SplashHandwriting extends StatefulWidget {
   const SplashHandwriting({
     super.key,
     this.logoSize = 132,
+    // U-1（第7批复核③）：默认用「汀澜音乐」，但外部可传——
+    // 调用方（main.dart）传 l10n 后即为本地化文案。
     this.label = '汀澜音乐',
   });
 
