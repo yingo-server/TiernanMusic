@@ -476,3 +476,14 @@ QUALITY_STANDARD.md 33 条；每条结论标违反条款+用户可见后果；�
 - 三条 P3 待 C 批后修（home 回落无日志/口径不一/maybeSucceeded 语义）
 
 ### B3 ✅（已消化，见 56e2c32）
+
+## v3.5 C 批启动（3 代理并行，60 分钟预算）
+
+| 代理 | 报告 | 范围 |
+|---|---|---|
+| C1（3e4f3175） | v35_review_C1.md | mv+library 数据层 + album/artist 首审 |
+| C2（b4697f09） | v35_review_C2.md | 表现层 UI 逻辑（add_to_playlist_sheet 首审/captcha 脱钩收尾） |
+| C3（d2ed95ed） | v35_review_C3.md | main+router+l10n+配置层（CI keystore 移除后构建链/Manifest cleartext 表） |
+
+B 批已消化：B3 三条发布链 P1（finalize/扩展名/MIME）、B1 catch 世代守卫；B2 无 P2 以上。
+C 批完成后统一清点 → v3.6 LTS 封版。
