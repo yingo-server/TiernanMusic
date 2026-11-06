@@ -665,11 +665,18 @@ class _PlaylistRowSkeleton extends StatelessWidget {
 }
 
 class _PlaylistRowError extends StatelessWidget {
-  const _PlaylistRowError({required this.onRetry});
+  // V34-UI-06 补全（CI 实测）：UI 代理在调用点传了 error: 形参，
+  // 却没给本类加字段——undefined_named_parameter。补齐：error 传给
+  // ErrorRetry 自动分类，cookie 过期走「重新登录」出口（第 16 条）。
+  const _PlaylistRowError({required this.onRetry, this.error});
   final VoidCallback onRetry;
+  final Object? error;
 
   @override
   Widget build(BuildContext context) {
-    return ErrorRetry(message: context.l10n.playlistLoadFailed, onRetry: onRetry);
+    return ErrorRetry(
+        message: context.l10n.playlistLoadFailed,
+        error: error,
+        onRetry: onRetry);
   }
 }
