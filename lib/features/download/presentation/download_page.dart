@@ -306,12 +306,3 @@ class _DownloadTile extends ConsumerWidget {
     );
   }
 }
-i,
-              path: task.filePath.isEmpty ? null : task.filePath,
-            ),
-          );
-        }
-      },
-    );
-  }
-}
