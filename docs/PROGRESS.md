@@ -301,3 +301,16 @@
 1. 日志串行链尾 catchError 兜底（一断不断）
 2. ensureDfid 轮询递归 → Completer 并发收敛 + 重试上限
 3. **直连前补 ensureDfid 前置**——kapi 路径有、直连路径漏。实测证据链：/v5/url 未注册 dfid 时报「err clientver or mid or dfid or clienttime」→ 首播直连必失败。这就是用户「全部播放有问题」的最可能根因
+
+## v3.3 复核②消化（91b0a5c）——播放 P0 根因链完全闭环
+
+复核②独立验证：MV 正常（trackermv 对 dfid 不敏感）而歌曲全败（trackercdn 需真实 dfid）——差异点即根因。
+
+- ②-2: ensureDfid 注册结果回写 kg.device.dfid（最后一环，PLY-12 同源机制）
+- ②-1: 直连前 ensureDfid 前置（复核①-16 已修，本条确认闭环）
+- ①-1: main 登录态监听补 invalidate 库页歌单/MV（provider 改公开名）
+
+### 用户三反馈状态
+- 歌单仅首次加载：无新缺陷（库页刷新不对称已修）
+- 播放问题：根因链闭环（dfid 未注册→回写缺失→首播直连必败）
+- 第一屏：复核通过，无回归
