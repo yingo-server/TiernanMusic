@@ -149,5 +149,64 @@
 
 **结论：无新缺陷。unwrapApi 双形态解包完整；friendlyError 分支枚举可穷尽。`errorCode==401` 归「登录过期」依赖上游口径（第 29 条），未立条。**
 
-（转到 features/auth/data/ captcha 改造复核）
+### lib/features/auth/data/（captcha gateway 改造复核）
+
+**结论：改造正确且有原生实测支撑（本次复核独立复现）。**
+
+26. captchaSent / loginToken 走 gateway + x-router（kg_endpoints_auth.dart captchaSent: `/v7/send_mobile_code` + x-router login.user.kugou.com；loginToken: `/v5/login_by_token` 同 router）——本复核用 probe_v33.py 直打原生域复测：
+  - `/v7/send_mobile_code`（nonvip）：`status:1, error_code:0, data.count:9`（证明 https gateway 通路可用，TLS 失败已消除）
+  - `/v5/login_by_token`（nonvip，缺 t1/p3 完整载荷）：`status:0 error_code:20010`——**端点可达**（非 TLS/502 形态），20010 为载荷不全的预期业务错，通路成立
+  - 匿名 get_all_list 无签名：20006（风控码，说明网关响应形态与修复①记录一致）
+- 无新缺陷。明文 http 已清零（grep captcha/sent 无 http 残留，巡检类）。
+
+27. VerificationService.submit 双通道（body+query）适配直连/kapi 两侧分派表，与 kg_direct_api_client post 分派 `verify/user/info → _verifyUserInfo(d)`（只传 body）一致，闭环成立。`sessionFromException` vType=-1 落到默认 23，OK。
+
+28. restoreSession 的 401 清凭证口径与 friendlyError 1011/30791/401 一致；A2-09 移除 20010 有注释依据，无回归。
+
+---
+
+## dart analyze 复核
+
+SDK 3.x（/opt/dart）全量 4636 条，过滤缺包噪音后剩余 error 全部为「Flutter 类未解析」的连锁（extends_non_class / TextStyle / Size 等），与缺包同源，非代码缺陷。唯一的非缺包 warning：`main.dart:318 override_on_non_overriding_member`——实为 `Widget build` 在 StatelessWidget 未解析时误报，同源噪音。**过滤后无新增真实静态缺陷**（error_logger/app_image_cache/public_media_store/splash_handwriting/mv_repository 0 条非噪音）。
+
+新增 Flutter 符号核对：splash_handwriting.dart（TweenSequence/FadeTransition/CustomPainter）、error_logger.dart（MethodChannel/path_provider）import 头均在（material/services/foundation），无缺 import。
+
+---
+
+## 实测记录（本复核独立完成，全部原生直连，第 33 条合规）
+
+| 编号 | 请求 | 结果 |
+|---|---|---|
+| P1 | nonvip POST /v7/get_all_list（str userid, JSON body+签名） | HTTP 200 status=1 data.info[] 正常 |
+| P2 | nonvip POST 同上（num userid） | 同上，正常 |
+| P3 | anon POST 同上（userid='0' 无 token） | status=0 20006（无登录态预期形态） |
+| P4 | nonvip POST /v7/send_mobile_code | status=1 count=9（通路成立） |
+| P5 | nonvip POST /v5/login_by_token（载荷不全） | 20010（端点可达，非网络层失败） |
+| P6 | nonvip GET trackercdnbj /v5/url（node-style） | 20006 err clientver/mid/dfid（与修复①「需真实 dfid」结论一致） |
+| P7 | 非签名环境直打 gateway | 偶发 502（kws），重试带签名后 200——网关对无签名/异常头返回 502，属环境形态记录 |
+
+**闭环判定**：修复①三态 200 结论可复现；/v5/url 签名失败形态（20006）可复现；captcha 改造通路可复现。
+
+---
+
+## 问题清单汇总
+
+| # | 文件:行 | 级别 | 摘要 |
+|---|---|---|---|
+| 1 | error_logger.dart:131（_writeQueue 链） | P1 | 串行链无异常兜底，一旦断链后续日志调用永久挂起（结构性，今日不触发） |
+| 2 | error_logger.dart:190（_rewriteMediaStore） | P2 | 原生返回空串判成功 → _everPersisted 误置、日志静默丢失 |
+| 3 | player_repository.dart:34（ensureDfid） | P1 | 300ms 轮询递归无界 + 注册 hang 时多请求永久转圈（修复①新引入） |
+| 4 | player_repository.dart:121（resolveUrl 直连） | P1 | 直连前未先 ensureDfid：已知签名维度缺失仍发必失败请求，修复只定位未消除（播放 P0 成因残留） |
+| 5 | audio_handler.dart（catch→skipToNext） | P2 | 自动跳歌期间用户 pause 后仍会装载播放（世代校验缺口） |
+| 6 | public_media_store.dart:159（D-02） | P2 | delete+rename 两步非原子，窗口内进程死双文件皆失 |
+| 7 | public_media_store.dart（queryExisting） | P2 | lyric 降级目录两侧不对称 → 已下载判定漂移 |
+| 8 | app_image_cache.dart:64（getFileStream） | P2 | 串行化声明与实现不符，SQLITE_BUSY 修复目标未达成（旧债） |
+| 9 | mv_repository.dart:64（_mvThumb pic） | P2 | pic 裸文件名图床域名无实测留样，可能 404（需原生复核） |
+| 10 | mv_repository.dart:100（resolvePlayUrl 键匹配） | P2 | 混合大小写 hash 键匹配失败落 values.first |
+| 11 | kg_endpoints_playlist.dart（_parseTracksResource） | P2 | 批量加歌 number 恒 1，需实测核对 |
+| 12 | playlist_repository.dart:160（fetchUserPlaylists） | P2 | info 结构变更时静默空列表（失败≠为空） |
+| 13 | splash_handwriting.dart:160 | P3 | 渐隐后 repeat 空转 repaint（用户不可感知） |
+
+统计：P0 0 / P1 3 / P2 9 / P3 1。
+修复①/②核心结论：歌单 P0 参数嫌疑排除闭环成立（本次独立复现三态 200）；播放 P0 定位闭环但代码承接不完整（#4）；存储外置双策略总体成立；手写动画生命周期合规；缩略图选档合规；captcha 改造通路实测成立。
 
