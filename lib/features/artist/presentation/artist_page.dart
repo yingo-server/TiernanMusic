@@ -34,6 +34,11 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
   int _total = 0;
   String _sort = 'new';
   bool _loadingSongs = false;
+
+  /// ART-R8（第 C 批，P1）：歌曲列表世代号——排序切换/refresh 会作废
+  /// 在途请求，await 返回后必须校验，否则旧排序数据混入新列表并污染
+  /// 分页计数（第 18 条）。
+  int _songsGen = 0;
   bool _loadingMore = false;
   Object? _songsError;
 
@@ -73,6 +78,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
 
   Future<void> _loadSongs({bool refresh = false}) async {
     if (refresh) {
+      _songsGen++;
       _page = 1;
       _total = 0;
       _songsError = null;
@@ -85,11 +91,13 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
       if (_total > 0 && _songs.length >= _total) return;
       setState(() => _loadingMore = true);
     }
+    final gen = _songsGen;
     try {
       final res = await ref
           .read(artistRepositoryProvider)
           .fetchSongs(widget.id, page: _page, sort: _sort);
       if (!mounted) return;
+      if (gen != _songsGen) return; // 已被新排序/新 refresh 作废
       setState(() {
         _songs.addAll(res.songs);
         _total = res.total;
