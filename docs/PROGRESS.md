@@ -405,3 +405,19 @@ QUALITY_STANDARD.md 33 条；每条结论标违反条款+用户可见后果；�
 - 跨模块 P0 keystore 移出 + 登录态同步重试 + 切号清缓存
 - 功能模块 P1×5（错歌详情污染/网络异常回退/翻译条数防御/零评论兜底/下载泄漏）
 - CI 试错 4 轮的教训：①代理自报 analyze 不可信（noise 误判真错误）②噪音过滤只适用于 Flutter SDK 符号，项目自有类报错即真错误 ③跨文件改动必须双向核对（调用方↔被调方）
+
+## ✅ v3.4.0 发布确认
+
+- release 436927165（draft=False），tag 8c095ee 构建成功
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.4.0/app-arm64-v8a-release.apk
+- CI 试错 4 轮教训：①代理自报 analyze 不可信（noise 误判真错误——_PlaylistRowError 是项目自有类）②噪音过滤只适用于 Flutter SDK 符号 ③跨文件改动必须双向核对（调用方↔被调方）
+
+## v3.5 A 批启动（3 代理并行，60 分钟）
+
+| 代理 | 报告 | 范围 |
+|---|---|---|
+| A1（0206c4ce） | v35_review_A1.md | core/direct 全量回归（write 语义/-404/ensureDfid 并发） |
+| A2（c1efb23f） | v35_review_A2.md | core 基础设施终验（缓存键/日志链/dfid 单源） |
+| A3（c40b54b3） | v35_review_A3.md | auth 全链（**首次深审**：滑块验证/20028 链/多账号生命周期） |
+
+新增任务书硬条款：噪音过滤只适用于 Flutter SDK 符号；跨文件改动双向核对。
