@@ -450,3 +450,14 @@ QUALITY_STANDARD.md 33 条；每条结论标违反条款+用户可见后果；�
 
 ### A 批总结
 三份报告 26 条：P0×1（keystore，已处置）/P1×0/P2×8（修 6 留 2）/P3×17。四重点回归全过，10 项历史修复验证无回归。
+
+## v3.5 B3（download 全链含 Kotlin）消化（56e2c32）
+
+已修（发布链三条 P1）：
+- P1-7: Kotlin finalize 返回真实行数判定 + Dart 校验（IS_PENDING 卡 7 天根因）
+- P1-4/5: realTempPath 真实扩展名接入 displayNameOf 与 MIME（.flac 正确入库）
+
+### 待 C 批后消化
+- P1-1 remove 竞态复活、P1-2/6 先删旧文件+rename 窗口、P2-14 viewFolder content:// 失败
+- B1 的 audio_handler catch 缺世代守卫、player_provider 生命周期三连
+- B2 的 home_repository 四处回落无日志
