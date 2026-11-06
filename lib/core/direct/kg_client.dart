@@ -205,9 +205,17 @@ class KgClient {
     };
 
     // 请求体序列化
+    // V35-C1（第 C 批，P1）：支持二进制 body——Node mv_collect_del.js 发
+    // `Buffer.from(aesEncrypt.str,'base64')`（原始字节），而 playlist_del.js
+    // 发 `aesEncrypt.str`（Base64 文本）。KgClient 此前只有 String/jsonEncode
+    // 两分支，List<int> 会被 jsonEncode 成整数数组文本——MV 收藏的
+    // base64Decode 传参实际发的是「[21,34,...]」文本而非二进制（V34 修复
+    // 的真实行为与 Node 不符）。加 Uint8List 分支直传字节。
     final bodyStr = data == null
         ? ''
-        : (data is String ? data : jsonEncode(data));
+        : data is Uint8List
+            ? null // 二进制直传，不走字符串编码
+            : (data is String ? data : jsonEncode(data));
 
     // 签名
     if (!allParams.containsKey('signature') && !notSignature) {
@@ -235,12 +243,16 @@ class KgClient {
       res = await _dio.request<List<int>>(
         '$baseUrl$path',
         queryParameters: allParams,
-        data: bodyStr.isEmpty ? null : bodyStr,
+        // V35-C1：二进制 body（Uint8List）直传；字符串按原逻辑
+        data: data is Uint8List
+            ? data
+            : (bodyStr.isEmpty ? null : bodyStr),
         options: Options(
           method: method,
           headers: reqHeaders,
-          contentType:
-              bodyStr.isEmpty ? null : 'application/json;charset=utf-8',
+          contentType: data is Uint8List
+              ? 'application/octet-stream'
+              : (bodyStr.isEmpty ? null : 'application/json;charset=utf-8'),
         ),
       );
     } on DioException catch (e) {
