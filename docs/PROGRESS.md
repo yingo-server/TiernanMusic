@@ -334,3 +334,21 @@
 ### 遗留待办
 - [ ] v34_review_2 的 P2 修复（UI 批）
 - [ ] 7 项 native_probe 待实测
+
+## v3.4 → v3.6 LTS 计划（用户 2026-11-07 定调）
+
+### 流程
+1. 先消化 v34_review_2 的 UI P2 批（修复完成出 v3.4.0）
+2. **v3.5：3 批 × 3 代理 = 9 个审查代理**，全面全模块深度审查
+3. 每批 3 份报告 → 33 制修复（报告齐 3 份即修，不攒批）
+4. v3.6 LTS 发布
+
+### v3.5 审查划分（全模块，含未覆盖区）
+| 批 | ① | ② | ③ |
+|---|---|---|---|
+| A | core/direct 全量（含 v3.3 改动后回归） | core/api+cache+storage+image+utils | auth 全链（含 slider_solver/verification） |
+| B | player+lyric 数据层深审 | playlist+comment+rank+home 数据层 | download 全链（含 store/permission） |
+| C | mv+library 数据层 | 表现层 UI 逻辑（非观感） | main+router+l10n+pubspec 配置层 |
+
+### 判定基准
+QUALITY_STANDARD.md 33 条；每条结论标违反条款+用户可见后果；只读不编译。
