@@ -512,3 +512,17 @@ C 批完成后统一清点 → v3.6 LTS 封版。
 - P2: ErrorWidget 兜底页加重启按钮（build 异常不再整页死锁）
 - 待修 P2: CI 加「gen_l10n 重跑 + git diff --exit-code」守卫（双轨根源）、keystore.b64.txt 工作区残留、pubspec.lock 缺失
 - 回归结论：main 启动编排/世代号/事件流全过；cleartext 域名表无缺口；keystore 移除后 CI 链自洽
+
+## v3.5 C1 消化（9295801）
+
+已修 2 条 P1：
+- V35-C1-MVC-R2: KgClient 加 Uint8List 二进制 body 直传分支（MV 收藏不再发整数数组文本；playlistDel 的 Base64 文本形态保持——两端点 Node 本就不同）
+- V35-C1-ART-R8: 歌手页排序切换加世代校验（旧响应不再污染新列表）
+
+### 待 v3.6 前决策
+- 「收藏 MV」全 app 无入口（setCollected 死代码）→ 接入口或删功能
+- ALB-R1/R2: album/artist `final dynamic _api` + 裸强转
+- 缩略图 {size} 三档同一物理文件（注释误导，P3）
+
+## v3.5 三批审查总结
+A/B/C 共 9 份报告、约 90 条；P0×1/P1×9/P2×15+ 已修大半；明细见各 v35_review_*.md
