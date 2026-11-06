@@ -261,6 +261,11 @@ class DownloadRepository {
   }
 
   /// 公共目录中的显示文件名
+  ///
+  /// V35-B3（第 B 批，P1）：audio 的真实扩展名由服务端 extName 决定
+  ///（.flac/.m4a），V34-05 只修了临时文件链，**发布名仍用默认 .mp3**
+  /// → .flac 内容以 .mp3 名入库（MIME 也错）。修复：realTempPath
+  /// 非空时从其提取扩展名覆盖默认值。
   static String displayNameOf(DownloadTask task) {
     final base = '${task.artist} - ${task.title}'.trim();
     var safe = (base.isEmpty ? task.hash : base)
@@ -269,7 +274,13 @@ class DownloadRepository {
     // 去尾部点/空格（Windows 同步到 NTFS/exFAT 时会报错）
     safe = safe.replaceAll(RegExp(r'[.\s]+$'), '');
     if (safe.isEmpty) safe = task.hash;
-    return '$safe${task.type.fileExtension}';
+    var ext = task.type.fileExtension;
+    if (task.type == DownloadTaskType.audio && task.realTempPath.isNotEmpty) {
+      final realExt = task.realTempPath.substring(
+          task.realTempPath.lastIndexOf('.'));
+      if (realExt.length > 1) ext = realExt;
+    }
+    return '$safe$ext';
   }
 
   /// KRC → 可读文本（原文 + 译文对照）

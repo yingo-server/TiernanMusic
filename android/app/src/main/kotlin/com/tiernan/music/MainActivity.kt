@@ -304,8 +304,15 @@ class MainActivity : FlutterActivity() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return true
         val values = ContentValues()
         values.put(MediaStore.MediaColumns.IS_PENDING, 0)
-        contentResolver.update(uri, values, null, null)
-        return true
+        // V35-B3（第 B 批，P1）：update 返回受影响行数——0 行说明条目
+        // 不存在/已被系统清理/Uri 无效，此前恒返回 true 让 Dart 层
+        // 误判「已发布成功」，实际 IS_PENDING=1 的条目 7 天后被系统
+        // 清理（V34 报告 P2 的更深层根因）。
+        return try {
+            contentResolver.update(uri, values, null, null) > 0
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun delete(uri: Uri): Boolean {

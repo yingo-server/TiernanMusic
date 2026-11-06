@@ -38,12 +38,27 @@ class PublicMediaStore {
         DownloadTaskType.mv => 'video',
       };
 
-  static String mimeOf(DownloadTaskType type) => switch (type) {
-        DownloadTaskType.audio => 'audio/mpeg',
-        DownloadTaskType.cover => 'image/jpeg',
-        DownloadTaskType.lyric => 'text/plain',
-        DownloadTaskType.mv => 'video/mp4',
-      };
+  static String mimeOf(DownloadTaskType type, {String? realTempPath}) {
+    // V35-B3（第 B 批，P1）：audio 真实扩展名（.flac/.m4a）对应正确
+    // MIME——此前恒 audio/mpeg，车机/第三方播放器按 MIME 选解码器
+    // 直接报「格式不支持」（第 15 条单位/形态显式）。
+    if (type == DownloadTaskType.audio &&
+        realTempPath != null &&
+        realTempPath.isNotEmpty) {
+      final ext = realTempPath.substring(realTempPath.lastIndexOf('.'));
+      if (ext == '.flac') return 'audio/flac';
+      if (ext == '.m4a') return 'audio/mp4';
+      if (ext == '.ogg') return 'audio/ogg';
+      if (ext == '.wav') return 'audio/wav';
+      if (ext == '.ape') return 'audio/x-ape';
+    }
+    return switch (type) {
+      DownloadTaskType.audio => 'audio/mpeg',
+      DownloadTaskType.cover => 'image/jpeg',
+      DownloadTaskType.lyric => 'text/plain',
+      DownloadTaskType.mv => 'video/mp4',
+    };
+  }
 
   /// 公共目录名（Android 9 及以下直接写路径时使用）
   static String publicDirNameOf(DownloadTaskType type) => switch (type) {
@@ -83,7 +98,7 @@ class PublicMediaStore {
         'collection': collectionOf(type),
         'displayName': displayName,
         'relativePath': relativePathOf(type),
-        'mimeType': mimeOf(type),
+        'mimeType': mimeOf(type, realTempPath: tempFilePath),
       });
       if (uri == null || uri.isEmpty) {
         // MediaStore 插入失败 → 退回直接路径
@@ -96,7 +111,16 @@ class PublicMediaStore {
           await _channel.invokeMethod<bool>('delete', {'uri': uri});
           return await _publishDirect(type, tempFilePath, displayName);
         }
-        await _channel.invokeMethod<bool>('finalize', {'uri': uri});
+        // V35-B3（第 B 批，P1）：finalize 返回值必须校验——Kotlin 层
+        // 现在真实返回 update 行数判定；false = 条目消失（被系统清理/
+        // Uri 无效），此时不能当发布成功，降级直写。
+        final finalized = await _channel.invokeMethod<bool>('finalize', {'uri': uri});
+        if (finalized != true) {
+          try {
+            await _channel.invokeMethod<bool>('delete', {'uri': uri});
+          } catch (_) {}
+          return await _publishDirect(type, tempFilePath, displayName);
+        }
         return PublishedFile(
           uri: uri,
           displayPath: '/sdcard/${relativePathOf(type)}',
