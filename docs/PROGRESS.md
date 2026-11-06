@@ -267,3 +267,19 @@
 ### 待办
 - [ ] 修复①（存储外置+歌单P0+播放排查）进行中
 - [ ] 第3批复核三代理（修复①完成后派）
+
+## v3.3 修复①完成（2638b34）
+
+### 已修（代码已入库）
+- B-17 日志脱敏重写（dfid/t1/userid/mobile + JSON 形态）
+- B-36 translate choices 空列表防护
+- captcha/login_by_token → gateway+x-router（明文 http 清除）
+- B-39 rankId 深链校验
+- B-21/22 日志 apiLevel + 并发锁
+
+### P0 定位结论（未盲改，证据在报告）
+- **歌单 P0**：原生实测字符串/数字/'0' userid 三种均 200——嫌疑参数排除；故障在 Dart 客户端状态（clearCredentials 复位路径），待复核批排查
+- **播放 P0**：原生直连 /v5/url 必失败（签名→err signature；未签名→dfid 错）；fetchDetail/privilege 正常；**需先走 register/dev 拿真实 dfid 重测**——播放故障根因大概率在 dfid 未注册/签名维度
+
+### 下一步
+- [ ] 第3批复核三代理（review1 修复验证 / review2 用户路径 / review3 遗留债清点）
