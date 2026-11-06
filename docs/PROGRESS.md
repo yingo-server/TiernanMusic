@@ -498,3 +498,10 @@ C 批完成后统一清点 → v3.6 LTS 封版。
 - captcha_page 9 死键 0 替换（脱钩未收尾）
 - 同名旧歌单竞态（P2）
 - comments_page loadMore 永久转圈（复制 search_page _pageError 范式）
+
+## v3.5 C3 消化（main+router+l10n+配置层）
+
+- **P1×1**：l10n 生成物落后 arb 23 键（addedToPlaylist/playlistNameEmpty 被 add_to_playlist_sheet:96/:118 引用 → 编译必败、CI 全红）+ 40 键值漂移。修法：重跑 `python3 tool/gen_l10n_min.py`
+- P2×4：ErrorWidget.builder 全局替换无退出路径 / gen-l10n 双轨无守卫 / pubspec.lock 缺失 / keystore.b64.txt 工作区残留
+- P3×6：isDark 死代码确认、albumPageComingSoon 孤立键、tryListen 死键等
+- 复核通过：V34-C-02/03 + V35-A3 回归到位；cleartext 域名表无缺口（fsandroid/fsmvpc/tx/kugouaudio 全覆盖）；keystore 移除后 tag 构建链自洽；权限表逐条匹配
