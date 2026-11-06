@@ -505,3 +505,10 @@ C 批完成后统一清点 → v3.6 LTS 封版。
 - P2×4：ErrorWidget.builder 全局替换无退出路径 / gen-l10n 双轨无守卫 / pubspec.lock 缺失 / keystore.b64.txt 工作区残留
 - P3×6：isDark 死代码确认、albumPageComingSoon 孤立键、tryListen 死键等
 - 复核通过：V34-C-02/03 + V35-A3 回归到位；cleartext 域名表无缺口（fsandroid/fsmvpc/tx/kugouaudio 全覆盖）；keystore 移除后 tag 构建链自洽；权限表逐条匹配
+
+## v3.5 C3 消化（f454e44）
+
+- P1: l10n 生成物重跑同步（23 键 getter 补齐——addedToPlaylist/playlistNameEmpty 编译必败根因）
+- P2: ErrorWidget 兜底页加重启按钮（build 异常不再整页死锁）
+- 待修 P2: CI 加「gen_l10n 重跑 + git diff --exit-code」守卫（双轨根源）、keystore.b64.txt 工作区残留、pubspec.lock 缺失
+- 回归结论：main 启动编排/世代号/事件流全过；cleartext 域名表无缺口；keystore 移除后 CI 链自洽
