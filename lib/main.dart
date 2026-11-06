@@ -254,6 +254,14 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
         // 登录态变化后，首页个性化区块（每日推荐）与"我的歌单"必须重新拉取，
         // 否则登录成功返回首页仍是登录前的内容（真机反馈：登录不刷新）。
         ref.invalidate(homeDataProvider);
+        // ①-1（第3批复核②，P2）：库页「我的歌单」与首页登录刷新不对称——
+        // main 只 invalidate home，库页的 _userPlaylistsProvider 依赖
+        // AccountManager.onCurrentAccountChanged（切号才触发），但
+        // 「首次登录成功」不走切号路径 → 库页保持登录前状态。
+        // 此处补 invalidate（provider 是 autoDispose.family，失效后
+        // 下次 watch 会以新 loggedIn 参数重建）。
+        ref.invalidate(libraryUserPlaylistsProvider);
+        ref.invalidate(libraryCollectedMvsProvider);
         // 退出登录时必须清空，否则会继续以旧账号身份请求
         client.token = user?.token ?? '';
         client.userid = user?.userid ?? '0';

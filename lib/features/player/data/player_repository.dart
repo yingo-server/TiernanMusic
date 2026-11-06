@@ -73,6 +73,15 @@ class PlayerRepository {
         throw ApiException(-1, '注册设备失败：未返回 dfid');
       }
       await SecureStorage.instance.saveDfid(dfid);
+      // 复核②-2（第3批，P1）：注册结果必须回写直连客户端的设备身份——
+      // 否则 /v5/url 的签名/请求头仍用旧（空）dfid，首播直连必失败
+      //（这是「全部播放有问题」根因链的最后一环）。kg.device.dfid 是
+      // 直连层唯一读点（PLY-12 同源）。
+      try {
+        _ref?.read(kgClientProvider).device.dfid = dfid;
+      } catch (_) {
+        debugPrint('[player] dfid sync to KgClient failed');
+      }
       _registerRetries = 0;
       return dfid;
     } catch (e) {

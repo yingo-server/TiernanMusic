@@ -45,10 +45,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     _authSub = AccountManager.instance.onCurrentAccountChanged.listen((_) {
       if (!mounted) return;
       setState(() {});
-      ref.invalidate(_userPlaylistsProvider);
+      ref.invalidate(libraryUserPlaylistsProvider);
       // F4-34（审查③-B，P3）：账号切换后「我收藏的 MV」也属于该账号的私有数据，
       // 必须一并失效，否则 A→B 切换后仍展示 A 的收藏（第 5 条状态单一来源 / 第 18 条世代）。
-      ref.invalidate(_collectedMvsProvider);
+      ref.invalidate(libraryCollectedMvsProvider);
     });
     // 播放记录写入后刷新最近播放。
     _recentSub = RecentPlayStore.changes.listen((_) {
@@ -81,7 +81,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final account = _currentAccount();
-    final playlistsAsync = ref.watch(_userPlaylistsProvider(account != null));
+    final playlistsAsync = ref.watch(libraryUserPlaylistsProvider(account != null));
     final downloaded = ref.watch(downloadedAudioProvider);
 
     return Scaffold(
@@ -109,7 +109,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               loading: () => const _PlaylistRowSkeleton(),
               error: (e, _) => _PlaylistRowError(
                 onRetry: () => ref.invalidate(
-                    _userPlaylistsProvider(true)),
+                    libraryUserPlaylistsProvider(true)),
               ),
               data: (list) => _MyPlaylistRow(playlists: list),
             ),
@@ -267,14 +267,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         message: context.l10n.loginToViewFavorites,
       );
     }
-    final async = ref.watch(_collectedMvsProvider(true));
+    final async = ref.watch(libraryCollectedMvsProvider(true));
     return async.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => ErrorRetry(error: e, onRetry: () {
-        ref.invalidate(_collectedMvsProvider(true));
+        ref.invalidate(libraryCollectedMvsProvider(true));
       }),
       data: (list) {
         if (list.isEmpty) {
@@ -495,7 +495,9 @@ class _LoginGuideCard extends StatelessWidget {
 
 // ---------- 我的歌单横排 ----------
 
-final _userPlaylistsProvider = FutureProvider.autoDispose
+/// ①-1（第3批复核②）：公开为全局名供 main.dart 登录态监听 invalidate
+/// （原私有名跨文件不可见）。
+final libraryUserPlaylistsProvider = FutureProvider.autoDispose
     .family<List<UserPlaylist>, bool>((ref, loggedIn) async {
   if (!loggedIn) return const [];
   final repo = ref.watch(playlistRepositoryProvider);
@@ -503,7 +505,7 @@ final _userPlaylistsProvider = FutureProvider.autoDispose
 });
 
 /// 我收藏的 MV（需登录）
-final _collectedMvsProvider = FutureProvider.autoDispose
+final libraryCollectedMvsProvider = FutureProvider.autoDispose
     .family<List<CollectedMv>, bool>((ref, loggedIn) async {
   if (!loggedIn) return const [];
   final repo = ref.watch(mvCollectionRepositoryProvider);
