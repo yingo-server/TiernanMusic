@@ -521,4 +521,9 @@
   "sortHot": "인기",
   "loginToViewFavorites": "로그인하면 즐겨찾기를 볼 수 있습니다",
   "qualitySuper": "마스터 음질"
+,\
+  "previewOnly": "미리듣기",\
+  "loginRequiredTitle": "로그인이 필요합니다",\
+  "loginRequiredHint": "이 기능은 KuGou 계정 로그인이 필요합니다.",\
+  "loginRequiredAction": "\"{action}\"을(를) 사용하려면 로그인하세요."
 }

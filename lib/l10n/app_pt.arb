@@ -521,4 +521,9 @@
   "sortHot": "Populares",
   "loginToViewFavorites": "Faça login para ver os favoritos",
   "qualitySuper": "Qualidade mestre"
+,\
+  "previewOnly": "Prévia",\
+  "loginRequiredTitle": "Login necessário",\
+  "loginRequiredHint": "Este recurso requer login com uma conta KuGou.",\
+  "loginRequiredAction": "Faça login para usar \"{action}\"."
 }

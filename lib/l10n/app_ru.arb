@@ -521,4 +521,9 @@
   "sortHot": "Популярные",
   "loginToViewFavorites": "Войдите, чтобы увидеть избранное",
   "qualitySuper": "Мастер-качество"
+,\
+  "previewOnly": "Предпрослушивание",\
+  "loginRequiredTitle": "Требуется вход",\
+  "loginRequiredHint": "Для этой функции нужно войти в аккаунт KuGou.",\
+  "loginRequiredAction": "Войдите, чтобы использовать «{action}»."
 }

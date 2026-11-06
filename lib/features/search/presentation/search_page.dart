@@ -13,6 +13,8 @@ import '../../../core/widgets/song_tile.dart'
 import '../../player/data/models.dart';
 import '../../player/play_helper.dart';
 import '../../download/presentation/download_sheet.dart';
+import '../../playlist/data/playlist_repository.dart';
+import '../../playlist/presentation/add_to_playlist_sheet.dart';
 import '../../../core/utils/toast.dart';
 import '../data/search_repository.dart';
 import '../../../l10n/l10n.dart';
@@ -772,6 +774,28 @@ class _GenericResultTab extends ConsumerWidget {
                 if (type == 'mv' && s.hash != null) {
                   context.push('/mv/${s.hash}');
                 } else if (type == 'album' && s.id.isNotEmpty) {
+                  // 专辑：albumid 数字 ID → /album/:id
+                  context.push('/album/${s.id}');
+                } else if (type == 'author' && s.id.isNotEmpty) {
+                  // 歌手：AuthorId → /artist/:id
+                  context.push('/artist/${s.id}');
+                }
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+final _genericSearchProvider =
+    FutureProvider.family<SearchResult, (String, String)>(
+        (ref, arg) => ref
+            .read(searchRepositoryProvider)
+            .searchByType(arg.$1, arg.$2));
+
+
                   // 专辑：albumid 数字 ID → /album/:id
                   context.push('/album/${s.id}');
                 } else if (type == 'author' && s.id.isNotEmpty) {

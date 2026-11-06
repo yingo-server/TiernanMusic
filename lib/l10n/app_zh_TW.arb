@@ -521,4 +521,9 @@
   "sortHot": "最熱",
   "loginToViewFavorites": "登入後檢視收藏",
   "qualitySuper": "臻品母帶"
+,\
+  "previewOnly": "試聽",\
+  "loginRequiredTitle": "需要登入",\
+  "loginRequiredHint": "此功能需要登入酷狗帳號後使用。",\
+  "loginRequiredAction": "「{action}」需要登入後才能使用。"
 }
