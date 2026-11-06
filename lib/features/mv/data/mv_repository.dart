@@ -47,7 +47,8 @@ class MvRepository {
   Future<MvDetail> fetchDetail(String videoId) async {
     final cacheKey = MemoryCache.keyOf('/video/detail', {'id': videoId});
     final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
-    final data = cached ?? await _api.get('/video/detail', query: {'id': videoId});
+    final data =
+        cached ?? await _api.get('/video/detail', query: {'id': videoId});
     if (cached == null) MemoryCache.instance.set(cacheKey, data);
     return MvDetail.fromJson(data);
   }
@@ -72,7 +73,8 @@ class MvRepository {
     final data = await _api.get('/video/url', query: {'hash': hash});
     final d = data['data'];
     if (d is! Map) throw ApiException(-1, 'MV 解析失败');
-    final entry = d[hash.toLowerCase()] ??
+    final entry =
+        d[hash.toLowerCase()] ??
         d[hash.toUpperCase()] ??
         (d.isEmpty ? null : d.values.first);
     if (entry is! Map) throw ApiException(-1, 'MV 解析失败');
@@ -97,6 +99,21 @@ class MvRepository {
   /// 32 位十六进制 hash（视频 hash 均为大写十六进制）。
   static bool _looksLikeHash(String s) =>
       s.length == 32 && RegExp(r'^[0-9a-fA-F]{32}$').hasMatch(s);
+
+  /// V33-10（修复②）：MV 缩略图地址补全。
+  ///
+  /// 酷狗 MV 缩略图支持尺寸档 `{size}` ∈ {240,320,480,720}，按控件实际需要的
+  /// 最小够用档请求（第 25 条：解码/带宽上限）。既能处理已带 `{size}` 的整 URL，
+  /// 也能把裸文件名 pic 拼成 `mvthumb/{size}/pic`；统一升级 https。
+  static String _mvThumb(String raw, {int size = 320}) {
+    if (raw.isEmpty) return '';
+    var u = raw.replaceAll('{size}', '$size');
+    if (!u.startsWith('http')) {
+      u = 'http://imge.kugou.com/mvthumb/$size/$u';
+    }
+    if (u.startsWith('http://')) u = 'https://${u.substring(7)}';
+    return u;
+  }
 }
 
 class MvInfo {
@@ -121,10 +138,12 @@ class MvInfo {
   final String? qhdHash;
   final String? sqHash;
 
-  String? get bestHash => [sqHash, qhdHash, hdHash, sdHash]
-      .whereType<String>()
-      .where((hash) => hash.isNotEmpty)
-      .firstOrNull;
+  String? get bestHash => [
+    sqHash,
+    qhdHash,
+    hdHash,
+    sdHash,
+  ].whereType<String>().where((hash) => hash.isNotEmpty).firstOrNull;
 
   /// 实测 `/kmr/audio/mv` 单项字段：
   /// `mv_name` / `authors[].author_name` / `singer` / `user_name` /
@@ -142,7 +161,8 @@ class MvInfo {
         : <String, dynamic>{};
 
     // 标题：mv_name 是实测字段（不是 name/songname）。
-    final name = '${json['mv_name'] ?? json['songname'] ?? json['name'] ?? json['filename'] ?? ''}';
+    final name =
+        '${json['mv_name'] ?? json['songname'] ?? json['name'] ?? json['filename'] ?? ''}';
 
     // 艺人：优先 authors[]，其次 singer / user_name（用户视频只有后者）。
     final authors = json['authors'];
@@ -155,11 +175,16 @@ class MvInfo {
           .join('、');
     }
     if (artist.isEmpty) {
-      artist = '${json['singer'] ?? json['singername'] ?? json['user_name'] ?? ''}';
+      artist =
+          '${json['singer'] ?? json['singername'] ?? json['user_name'] ?? ''}';
     }
 
-    var thumb = '${json['thumb'] ?? json['hdpic'] ?? json['imgurl'] ?? ''}';
-    thumb = thumb.replaceAll('{size}', '480');
+    // V33-10：MV 关联缩略图（列表/卡片用），列表项约 48px，320 档已足够，
+    // 等比取最小够用档（第 25 条），禁止拉伸。
+    var thumb = MvRepository._mvThumb(
+      '${json['thumb'] ?? json['hdpic'] ?? json['imgurl'] ?? ''}',
+      size: 320,
+    );
 
     // duration 实测为毫秒（317400），这里统一换算成秒。
     final durRaw = json['duration'] ?? json['timelength'] ?? mkv['timelength'];
@@ -239,16 +264,18 @@ class MvDetail {
       data = json;
     }
 
-    var cover = '${data['cover'] ?? data['hdpic'] ?? data['thumb'] ?? ''}';
+    // V33-10：详情页封面，720× 设备像素仍清晰，按 480 档取（第 25 条）。
+    // 复用 _mvThumb 统一处理 {size} 占位 / 裸 pic 文件名 / http 升级。
+    var cover = MvRepository._mvThumb(
+      '${data['cover'] ?? data['hdpic'] ?? data['thumb'] ?? ''}',
+      size: 480,
+    );
     if (cover.isEmpty) {
       final pic = '${data['pic'] ?? ''}';
       if (pic.isNotEmpty) {
-        cover = pic.startsWith('http')
-            ? pic
-            : 'http://imge.kugou.com/mvthumb/{size}/$pic';
+        cover = MvRepository._mvThumb(pic, size: 480);
       }
     }
-    cover = cover.replaceAll('{size}', '480');
 
     final hashes = <String, String>{};
     // 顶层平铺 hash 优先；mkv_* 是另一套（mkv 容器画质）。
@@ -294,7 +321,8 @@ class MvDetail {
 
     return MvDetail(
       videoId: '${data['video_id'] ?? data['id'] ?? ''}',
-      name: '${data['video_name'] ?? data['mv_name'] ?? data['songname'] ?? data['name'] ?? ''}',
+      name:
+          '${data['video_name'] ?? data['mv_name'] ?? data['songname'] ?? data['name'] ?? ''}',
       artist: artist,
       cover: cover,
       duration: duration,

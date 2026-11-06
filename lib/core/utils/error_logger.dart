@@ -40,6 +40,15 @@ class ErrorLogger {
 
   Directory? _fallbackDir;
 
+  /// B-22（v3.3 修复①，第 22 条）：并发写串行锁。全局未捕获异常 / FlutterError
+  /// 可能在同帧内多次触发 [log]，公共目录（MediaStore）与私有目录的
+  /// 追加/轮转若无互斥会互相截断或丢日志。用一条串行链保证同一时刻只有一个
+  /// 写事务在进行。
+  Future<void> _writeQueue = Future<void>.value();
+
+  /// 本次进程是否成功落盘过（公共或私有）；全失败时为 false。
+  bool _everPersisted = false;
+
   /// 原生返回的实际公共写入位置（公共目录写入成功后才有值）
   String? _publicDirPath;
 
@@ -93,24 +102,37 @@ class ErrorLogger {
     await init();
     final fileName = 'error_${_dateTag(now)}.log';
 
-    // 优先写公共目录（文件管理器可见）
-    if (await _appendPublic(fileName, text)) return;
-
-    // 降级：应用私有目录
-    final dir = _fallbackDir;
-    if (dir == null) return;
-    try {
-      final file = File('${dir.path}/$fileName');
-      if (await file.exists() && await file.length() > maxBytes) {
-        final rotated = File('${file.path}.1');
-        if (await rotated.exists()) await rotated.delete();
-        await file.rename(rotated.path);
+    // B-22（v3.3 修复①，第 22 条）：整段落盘（公共 + 降级）放进串行链，
+    // 避免并发 log 互相截断。同一时刻只有一个写事务。
+    final completer = Completer<void>();
+    _writeQueue = _writeQueue.then((_) async {
+      try {
+        // 优先写公共目录（文件管理器可见）
+        if (await _appendPublic(fileName, text)) {
+          _everPersisted = true;
+          return;
+        }
+        // 降级：应用私有目录
+        final dir = _fallbackDir;
+        if (dir == null) return;
+        try {
+          final file = File('${dir.path}/$fileName');
+          if (await file.exists() && await file.length() > maxBytes) {
+            final rotated = File('${file.path}.1');
+            if (await rotated.exists()) await rotated.delete();
+            await file.rename(rotated.path);
+          }
+          await file.writeAsString(text, mode: FileMode.append, flush: true);
+          _fallbackWrittenPath = dir.path;
+          _everPersisted = true;
+        } catch (e) {
+          debugPrint('[ErrorLogger] write failed: $e');
+        }
+      } finally {
+        if (!completer.isCompleted) completer.complete();
       }
-      await file.writeAsString(text, mode: FileMode.append, flush: true);
-      _fallbackWrittenPath = dir.path;
-    } catch (e) {
-      debugPrint('[ErrorLogger] write failed: $e');
-    }
+    });
+    await completer.future;
   }
 
   /// 写入公共目录：Android 10+ 用原生 MediaStore；≤9 直写公共 Documents。
@@ -186,14 +208,29 @@ class ErrorLogger {
   ///
   /// 日志落在公共 Documents 目录（文件管理器可见，且用户可能分享），
   /// 响应体/header 中的凭据必须先脱敏再落盘。
+  ///
+  /// V33-03（修复①，第 13/14 条）：B-17 旧正则只覆盖 `token/authorization/
+  /// sign/cookie` 等，漏掉 `dfid/t1/userid/mobile` 这类同属凭证的字段，
+  /// 导致 `"dfid":"xxxx"`、`"t1":"..."`、手机号在公共日志里明文残留。
+  /// 补 `dfid|t1|userid|mobile（仅 11 位数字）` 键，并兼容
+  /// `"key":`/`'key':`/key=value/key: value 四种形态。
   static String _redact(String s) {
-    // key=value / key: value / "key":"value" 形式（覆盖 header 与 JSON body）
+    // key=value / key: value / "key":"value" / 'key':'value' 形式
+    // （覆盖 header 与 JSON / YAML body）。
     s = s.replaceAllMapped(
       RegExp(
-        r'((?:authorization|token|access[_-]?token|refresh[_-]?token|api[_-]?key|secret|sign(ature)?|cookie|session(?:_id)?)\s*[=:]\s*)(?:"([^"]*)"|(\S+))',
+        // V33-03: 新增 dfid / t1 / userid / mobile 键
+        r'((?:authorization|token|access[_-]?token|refresh[_-]?token|api[_-]?key|'
+        r'secret|sign(ature)?|cookie|session(?:_id)?|dfid|t1|userid|mobile)\s*[=:]\s*)'
+        r'(?:"([^"]*)"|\'([^\']*)\'|(\S+))',
         caseSensitive: false,
       ),
       (m) => '${m.group(1)}***',
+    );
+    // 仅对 11 位手机号做兜底（避免误伤普通数字），兼容带引号形态
+    s = s.replaceAllMapped(
+      RegExp(r'("mobile"\s*:\s*")(1\d{10})(")'),
+      (m) => '${m.group(1)}***${m.group(3)}',
     );
     // Bearer / Basic 凭据
     s = s.replaceAllMapped(
@@ -246,6 +283,10 @@ class ErrorLogger {
   ///  - [_fallbackWrittenPath]：降级到 App 私有目录并成功落盘后的目录。
   ///
   /// 尚未真正写入过任何日志时返回 null —— 不能把「计划路径」当成「实际路径」误导用户。
+  ///
+  /// B-20（v3.3 修复①，第 9 条）：若本次进程从未成功落盘（公共与私有双双失败），
+  /// 返回哨兵串「（日志仅进程内）」而非 null/假路径——让用户明确知道日志
+  /// 此刻只在内存、重启即丢，而不是误以为写到了某个目录。
   Future<String?> currentDirPath() async {
     await init();
     final public = _publicDirPath;
@@ -254,17 +295,27 @@ class ErrorLogger {
           ? public.substring(0, public.length - 1)
           : public;
     }
-    return _fallbackWrittenPath;
+    if (_fallbackWrittenPath != null && _fallbackWrittenPath!.isNotEmpty) {
+      return _fallbackWrittenPath;
+    }
+    if (!_everPersisted) return '（日志仅进程内）';
+    return null;
   }
 
   /// Android API 级别
   ///
   /// 优先走原生通道（返回真实 Build.VERSION.SDK_INT）；
   /// 通道不可用时退回 [StoragePermissionService] 的版本名映射兜底。
+  ///
+  /// B-21（v3.3 修复①，第 13 条）：旧实现通道失败恒返回 29。原生通道偶发回
+  /// 单数字（如 Android 9 上报 `9` 而非真实 `28`），若直接用作 SDK 级别会
+  /// 让 ≤28 分支判定错乱。这里对「明显非法」的返回值（≤0 或低于最低支持
+  /// 版本 21）统一兜底到 29（走 MediaStore 现代路径，最保守、不会主动去碰
+  /// 需要 WRITE_EXTERNAL_STORAGE 的旧分支），避免误判。
   static Future<int> get apiLevel async {
     try {
       final level = await StoragePermissionService.instance.apiLevel();
-      if (level > 0) return level;
+      if (level >= 21) return level;
     } catch (_) {}
     return 29;
   }

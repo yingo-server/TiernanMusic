@@ -16,6 +16,7 @@ import 'core/router/app_router.dart';
 import 'features/home/data/home_repository.dart' show homeDataProvider;
 import 'core/theme/app_theme.dart';
 import 'core/theme/settings_provider.dart';
+import 'core/widgets/splash_handwriting.dart' show HandwritingCycle;
 import 'core/widgets/splash_screen.dart';
 import 'core/utils/toast.dart';
 import 'core/utils/error_logger.dart';
@@ -182,6 +183,16 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
   /// 启动准备是否完成（完成后才从 SplashScreen 切到主界面）
   bool _appReady = false;
 
+  /// V33-04（修复②）：启动屏最短展示是否已到。
+  ///
+  /// 原先 _appReady 在首帧的 post-frame 回调里立刻置 true，SplashScreen
+  /// 实际只活一帧——手写动画连起笔都看不到。这里加一个「下限」：
+  /// 只有 HandwritingCycle.minVisible（写完 + 停一拍）之后才允许切走。
+  /// 该计时发生在首帧渲染之后，不阻塞 main()、不阻塞首帧（第 20 条：
+  /// Timer 在本 State 的 dispose 内对称取消）。
+  bool _splashMinElapsed = false;
+  Timer? _splashTimer;
+
   @override
   void initState() {
     super.initState();
@@ -190,10 +201,14 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _appReady = true);
     });
+    _splashTimer = Timer(HandwritingCycle.minVisible, () {
+      if (mounted) setState(() => _splashMinElapsed = true);
+    });
   }
 
   @override
   void dispose() {
+    _splashTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -284,7 +299,8 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
       builder: (context, child) {
-        if (!_appReady) return const SplashScreen();
+        // V33-04：就绪 + 最短展示时长都满足才退出启动屏。
+        if (!_appReady || !_splashMinElapsed) return const SplashScreen();
         return child ?? const SizedBox.shrink();
       },
     );

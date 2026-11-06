@@ -651,16 +651,29 @@ class _PlaylistResultTab extends ConsumerWidget {
                       child: InkWell(
                         onTap: () =>
                             context.push('/playlist/${p.globalCollectionId}'),
-                        child: CachedNetworkImage(
-                    cacheManager: AppImageCache.instance,
-                          imageUrl: p.cover,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => Container(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            child: const Icon(Icons.queue_music),
-                          ),
-                        ),
+                        // V33-17（修复②）：空封面守卫（R-30 同类）。
+                        child: p.cover.isNotEmpty
+                            ? CachedNetworkImage(
+                                cacheManager: AppImageCache.instance,
+                                imageUrl: p.cover,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                // V33-11（修复②）：补解码上限。网格两列、padding 16、
+                                // 间距 12，单卡宽 ≈ (屏宽-44)/2，乘 dpr（第 25 条）。
+                                memCacheWidth: ((MediaQuery.sizeOf(context).width -
+                                            44) /
+                                        2 *
+                                        MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
+                                errorWidget: (_, __, ___) => Container(
+                                  color: theme.colorScheme.surfaceContainerHighest,
+                                  child: const Icon(Icons.queue_music),
+                                ),
+                              )
+                            : Container(
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                child: const Icon(Icons.queue_music),
+                              ),
                       ),
                     ),
                   ),
@@ -715,28 +728,41 @@ class _GenericResultTab extends ConsumerWidget {
             return ListTile(
               leading: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: CachedNetworkImage(
-                    cacheManager: AppImageCache.instance,
-                  imageUrl: s.cover,
-                  width: 48,
-                  height: 48,
-                  fit: BoxFit.cover,
-                  memCacheWidth:
-                      (48 * MediaQuery.devicePixelRatioOf(context)).round(),
-                  placeholder: (_, __) => Container(
-                    width: 48,
-                    height: 48,
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  ),
-                  errorWidget: (_, __, ___) => Container(
-                    width: 48,
-                    height: 48,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                    child: const Icon(Icons.album_outlined),
-                  ),
-                ),
+                // V33-19（修复②）：空封面守卫（R-30 同类）。
+                child: s.cover.isNotEmpty
+                    ? CachedNetworkImage(
+                        cacheManager: AppImageCache.instance,
+                        imageUrl: s.cover,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        memCacheWidth: (48 *
+                                MediaQuery.devicePixelRatioOf(context))
+                            .round(),
+                        placeholder: (_, __) => Container(
+                          width: 48,
+                          height: 48,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                        ),
+                        errorWidget: (_, __, ___) => Container(
+                          width: 48,
+                          height: 48,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          child: const Icon(Icons.album_outlined),
+                        ),
+                      )
+                    : Container(
+                        width: 48,
+                        height: 48,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        child: const Icon(Icons.album_outlined),
+                      ),
               ),
               title:
                   Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis),

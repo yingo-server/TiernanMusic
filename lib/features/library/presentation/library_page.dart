@@ -371,7 +371,9 @@ class _AccountCard extends ConsumerWidget {
               backgroundImage: (account?.avatar ?? '').isNotEmpty
                   ? CachedNetworkImageProvider(
         cacheManager: AppImageCache.instance,
-        account!.avatar)
+        account!.avatar,
+        // V33-12（修复②）：头像约 52px 直径，乘 dpr 限制解码尺寸（第 25 条）。
+        maxWidth: (52 * MediaQuery.devicePixelRatioOf(context)).round())
                   : null,
               child: (account?.avatar ?? '').isEmpty
                   ? Icon(Icons.person_rounded, color: scheme.onPrimaryContainer)
@@ -550,27 +552,37 @@ class _MyPlaylistRow extends StatelessWidget {
                               : '?user=${Uri.encodeComponent(p.listid)}';
                           context.push('/playlist/$detailId$user');
                         },
-                        child: CachedNetworkImage(
-                    cacheManager: AppImageCache.instance,
-                        imageUrl: p.cover,
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.cover,
-                        memCacheWidth:
-                            (120 * MediaQuery.devicePixelRatioOf(context))
-                                .round(),
-                        placeholder: (_, __) => Container(
-                          width: 120,
-                          height: 120,
-                          color: theme.colorScheme.surfaceContainerHighest,
-                        ),
-                        errorWidget: (_, __, ___) => Container(
-                          width: 120,
-                          height: 120,
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          child: const Icon(Icons.queue_music_rounded),
-                        ),
-                      ),
+                        // V33-18（修复②）：空封面守卫（R-30 同类）。
+                        child: p.cover.isNotEmpty
+                            ? CachedNetworkImage(
+                                cacheManager: AppImageCache.instance,
+                                imageUrl: p.cover,
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.cover,
+                                memCacheWidth: (120 *
+                                        MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
+                                placeholder: (_, __) => Container(
+                                  width: 120,
+                                  height: 120,
+                                  color: theme
+                                      .colorScheme.surfaceContainerHighest,
+                                ),
+                                errorWidget: (_, __, ___) => Container(
+                                  width: 120,
+                                  height: 120,
+                                  color: theme
+                                      .colorScheme.surfaceContainerHighest,
+                                  child: const Icon(Icons.queue_music_rounded),
+                                ),
+                              )
+                            : Container(
+                                width: 120,
+                                height: 120,
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                child: const Icon(Icons.queue_music_rounded),
+                              ),
                     ),
                     ),
                     Positioned(

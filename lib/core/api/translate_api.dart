@@ -41,8 +41,14 @@ class TranslateApi {
       },
     );
 
-    final content = res.data?['choices']?[0]?['message']?['content'] as String?;
-    if (content == null) return lines;
+    // V33-03（修复①，第 13 条）：choices 可能为 null 或空列表（模型限流/
+    // 上游返回 `{"choices":[]}`），`choices[0]` 取不到内容 → 空翻译。
+    // 已用 `?.[0]` 避免 RangeError，这里再显式判定空列表，直接退回原文，
+    // 不把空串当译文塞回界面。
+    final choices = res.data?['choices'];
+    if (choices is! List || choices.isEmpty) return lines;
+    final content = choices[0]?['message']?['content'] as String?;
+    if (content == null || content.trim().isEmpty) return lines;
     final translated = content.split('\n');
     // 对齐行数，不足补原文
     return List.generate(

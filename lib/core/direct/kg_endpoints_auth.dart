@@ -54,8 +54,13 @@ class KgEndpointAuth {
 
   /// 发送短信验证码（对应 module/captcha_sent.js）
   Future<KgResponse> captchaSent(Map<String, dynamic> q) {
+    // V33-03（修复①，第 27 条）：原直连 `http://login.user.kugou.com` 明文 http
+    // 在 Android 9+ 默认被 cleartext 拦截；实测 https 直连 TLS hostname mismatch
+    // （batch4 M7）。改为走 gateway 裸路径 + x-router（https 通路），与登录态
+    // 其余端点一致。
     return kg.request('/v7/send_mobile_code',
-        baseUrl: 'http://login.user.kugou.com',
+        baseUrl: KgConfig.gateway,
+        headers: {'x-router': 'login.user.kugou.com'},
         method: 'POST',
         encryptType: 'android',
         data: {
@@ -205,7 +210,8 @@ class KgEndpointAuth {
     if (lite) dataMap['dev'] = kg.device.dev;
 
     final r = await kg.request('/v5/login_by_token',
-        baseUrl: 'http://login.user.kugou.com',
+        baseUrl: KgConfig.gateway,
+        headers: {'x-router': 'login.user.kugou.com'},
         method: 'POST',
         data: dataMap,
         encryptType: 'android');

@@ -29,6 +29,9 @@ class AppImageCache extends CacheManager {
           'tiernanImageCache',
           stalePeriod: const Duration(days: 30),
           maxNrOfCacheObjects: 600,
+          // B-28（v3.3 修复①，第 25 条）：原无字节上限，低端机长期积累封面
+          // 撑爆内部存储。加 500MB 硬上限，CacheManager 按 LRU 自动淘汰最旧条目。
+          maxCacheSizeBytes: 500 * 1024 * 1024,
         ));
 
   static final AppImageCache instance = AppImageCache._();

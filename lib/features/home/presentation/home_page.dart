@@ -253,22 +253,29 @@ class _DailyRecommend extends ConsumerWidget {
                         SizedBox(
                           width: 78,
                           height: 78,
-                          child: CachedNetworkImage(
-                    cacheManager: AppImageCache.instance,
-                            imageUrl: s.cover,
-                            fit: BoxFit.cover,
-                            memCacheWidth:
-                                (78 * MediaQuery.devicePixelRatioOf(context))
-                                    .round(),
-                            placeholder: (_, __) => Container(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest),
-                            errorWidget: (_, __, ___) => const SizedBox(
-                                width: 78,
-                                height: 78,
-                                child: Icon(Icons.music_note)),
-                          ),
+                          // V33-14（修复②）：空封面守卫（R-30 同类）。
+                          child: s.cover.isNotEmpty
+                              ? CachedNetworkImage(
+                                  cacheManager: AppImageCache.instance,
+                                  imageUrl: s.cover,
+                                  fit: BoxFit.cover,
+                                  memCacheWidth: (78 *
+                                          MediaQuery.devicePixelRatioOf(
+                                              context))
+                                      .round(),
+                                  placeholder: (_, __) => Container(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHighest),
+                                  errorWidget: (_, __, ___) => const SizedBox(
+                                      width: 78,
+                                      height: 78,
+                                      child: Icon(Icons.music_note)),
+                                )
+                              : const SizedBox(
+                                  width: 78,
+                                  height: 78,
+                                ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -343,27 +350,34 @@ class _PlaylistRow extends StatelessWidget {
                     }
                     context.push('/playlist/${Uri.encodeComponent(gid)}');
                   },
-                      child: CachedNetworkImage(
-                    cacheManager: AppImageCache.instance,
-                        imageUrl: p.cover,
-                        width: 130,
-                        height: 130,
-                        fit: BoxFit.cover,
-                        memCacheWidth:
-                            (130 * MediaQuery.devicePixelRatioOf(context))
-                                .round(),
-                        placeholder: (_, __) => Container(
-                          width: 130,
-                          height: 130,
-                          color: theme.colorScheme.surfaceContainerHighest,
-                        ),
-                        errorWidget: (_, __, ___) => Container(
-                          width: 130,
-                          height: 130,
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          child: const Icon(Icons.queue_music),
-                        ),
-                      ),
+                      // V33-15（修复②）：空封面守卫（R-30 同类）。
+                      child: p.cover.isNotEmpty
+                          ? CachedNetworkImage(
+                              cacheManager: AppImageCache.instance,
+                              imageUrl: p.cover,
+                              width: 130,
+                              height: 130,
+                              fit: BoxFit.cover,
+                              memCacheWidth: (130 *
+                                      MediaQuery.devicePixelRatioOf(context))
+                                  .round(),
+                              placeholder: (_, __) => Container(
+                                width: 130,
+                                height: 130,
+                                color: theme.colorScheme.surfaceContainerHighest,
+                              ),
+                              errorWidget: (_, __, ___) => Container(
+                                width: 130,
+                                height: 130,
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                child: const Icon(Icons.queue_music),
+                              ),
+                            )
+                          : Container(
+                              width: 130,
+                              height: 130,
+                              color: theme.colorScheme.surfaceContainerHighest,
+                            ),
                     ),
                   ),
                 ),

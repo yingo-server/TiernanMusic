@@ -72,10 +72,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/rank/:rankId',
-        builder: (_, state) => RankDetailPage(
-          rankId: int.tryParse(state.pathParameters['rankId'] ?? '') ?? 0,
-          name: state.uri.queryParameters['name'] ?? '',
-        ),
+        builder: (_, state) {
+          // V33-03（修复①，第 14 条）：B-39 深链 rankId 非法（空/非数字）时，
+          // `?? 0` 会让 RankDetailPage 拿 rankId=0 去请求，上游返回空 → 用户
+          // 看到空白榜且无提示。改为解析失败直接跳错误页，避免无意义的空请求。
+          final rankId = int.tryParse(state.pathParameters['rankId'] ?? '');
+          if (rankId == null || rankId <= 0) {
+            return const Scaffold(
+              body: Center(child: Text('排行榜参数无效')),
+            );
+          }
+          return RankDetailPage(
+            rankId: rankId,
+            name: state.uri.queryParameters['name'] ?? '',
+          );
+        },
       ),
       GoRoute(
         path: '/mv/:hash',
