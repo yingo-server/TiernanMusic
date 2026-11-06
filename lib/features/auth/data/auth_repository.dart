@@ -211,7 +211,7 @@ class AuthRepository {
     // 异常逃逸出 authStateProvider build → AsyncError → main 监听
     // 把有凭证用户当匿名清空（静默永久匿名，重启无法自愈）。
     // 边界读取必须防护（第 6/14 条）：失败按「无凭证」降级并留痕。
-    List<Credentials>? cred;
+    final Credentials? cred;
     try {
       cred = await _storage.readCredentials();
     } catch (e, st) {

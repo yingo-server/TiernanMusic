@@ -211,7 +211,7 @@ class KgClient {
     // 两分支，List<int> 会被 jsonEncode 成整数数组文本——MV 收藏的
     // base64Decode 传参实际发的是「[21,34,...]」文本而非二进制（V34 修复
     // 的真实行为与 Node 不符）。加 Uint8List 分支直传字节。
-    final bodyStr = data == null
+    final String? bodyStr = data == null
         ? ''
         : data is Uint8List
             ? null // 二进制直传，不走字符串编码
@@ -221,8 +221,8 @@ class KgClient {
     if (!allParams.containsKey('signature') && !notSignature) {
       allParams['signature'] = switch (encryptType) {
         'register' => KgSignature.register(allParams),
-        'web' => KgSignature.web(allParams, data: bodyStr),
-        _ => KgSignature.android(allParams, data: bodyStr, lite: lite),
+        'web' => KgSignature.web(allParams, data: bodyStr ?? ''),
+        _ => KgSignature.android(allParams, data: bodyStr ?? '', lite: lite),
       };
     }
 
@@ -246,13 +246,15 @@ class KgClient {
         // V35-C1：二进制 body（Uint8List）直传；字符串按原逻辑
         data: data is Uint8List
             ? data
-            : (bodyStr.isEmpty ? null : bodyStr),
+            : (bodyStr == null || bodyStr.isEmpty ? null : bodyStr),
         options: Options(
           method: method,
           headers: reqHeaders,
           contentType: data is Uint8List
               ? 'application/octet-stream'
-              : (bodyStr.isEmpty ? null : 'application/json;charset=utf-8'),
+              : (bodyStr == null || bodyStr.isEmpty
+                  ? null
+                  : 'application/json;charset=utf-8'),
         ),
       );
     } on DioException catch (e) {
