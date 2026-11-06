@@ -154,7 +154,17 @@ langs = {
 for lang, d in langs.items():
     fn = f'app_{lang}.arb'
     lines = open(fn, encoding='utf-8').read().splitlines()
-    lines = [l for l in lines if l.rstrip() != '}']
+    lines = [l for l in lines if l.rstrip() != '}' and l.rstrip() != '},']
+    # 去掉可能残留的孤立 ",\\" 行（上次失败运行遗留）
+    lines = [l for l in lines if l.strip() not in (',\\', ',')]
+    # 恢复被误删的 "},"：无法恢复——若发现以 '"..."' 结尾且下一个以 '"' 开头的键没有逗号则补
+    out = []
+    for i, l in enumerate(lines):
+        out.append(l)
+        if i + 1 < len(lines):
+            nxt = lines[i+1].strip()
+            if not l.rstrip().endswith((',', '{', '[', ':')) and (nxt.startswith('"') or nxt in ('{','[')):
+                out[-1] = l.rstrip() + ','
     # 最后一行（最后一个键）若无逗号则补
     if not lines[-1].rstrip().endswith(','):
         lines[-1] += ','

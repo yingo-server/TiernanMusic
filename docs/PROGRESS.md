@@ -374,3 +374,11 @@ QUALITY_STANDARD.md 33 条；每条结论标违反条款+用户可见后果；�
 
 ### UI 修复批已提交（3032145）
 - 收藏到歌单入口（播放页+搜索）+ captcha i18n + en 4 键
+
+## v3.4 审查③消化（7e86701）
+
+- P0 keystore：已移出仓库+gitignore+通告（**需用户轮换 keystore**——历史对象仍在公开仓库）
+- V34-C-02: 登录态同步拆空 catch + 冷启动竞态 200ms 重试
+- V34-C-03: 切号/登出清 MemoryCache（跨账号串数据根修）
+- l10n 双源漂移（模板注释/en 4 键/albumPageComingSoon 缺失）：UI 修复批已带 en 补译，其余留 UI 批收尾
+- 剩余 P2/P3 随 UI 修复批与 v3.5 批次消化
