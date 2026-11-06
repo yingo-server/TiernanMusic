@@ -478,17 +478,24 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
         _initialLoading = false;
         _loading = false;
         _error = null;
+        // F-5（第7批终审，P2）：成功后必须清分页失败态——
+        // 否则 ErrorRetry 重试成功后 footer 仍渲染「重试」按钮
+        // 而非正常转圈，滚动自动加载也被阻断。
+        _pageError = null;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _initialLoading = false;
-        _error = e;
-        // R-29（第6批②，P2）：分页失败进入可重试态——
-        // footer 改为「重试」入口而非无条件转圈，滚动监听不再被
-        // _error 阻断，网络抖动后可继续加载（第 9/16 条）。
-        _pageError = e;
+        // F-5：分页失败不复用 _error（_error 会阻断滚动自动加载，
+        // 且首屏 ErrorRetry 与分页 footer 是两个不同的失败面）。
+        // 只在「首屏尚无内容」时才算首次失败。
+        if (_items.isEmpty) {
+          _error = e;
+        } else {
+          _pageError = e;
+        }
       });
       // 列表已有内容时静默降级：仅弹一条去重 Toast，不打断浏览
       if (_items.isNotEmpty) {

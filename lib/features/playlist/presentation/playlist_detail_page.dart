@@ -44,8 +44,9 @@ final userPlaylistTracksProvider = FutureProvider.family
 /// 加载更多后手动触发 UI 重建的计数器
 final _tracksReloadProvider = StateProvider<int>((ref) => 0);
 
-/// 收藏操作飞行锁（V3-14，第 21 条）：页面是 ConsumerWidget（不可变），
-/// 防重状态必须放 Provider 而不是实例字段。
+/// 收藏操作飞行锁（V3-14 + F-4 终审修正）：**autoDispose**——
+/// 进程级单例锁在 widget 销毁后 finally 复位失败时会永久卡死
+/// （只能重启 App）；autoDispose 让锁与页面共存亡。
 final _collectingProvider = StateProvider<bool>((ref) => false);
 
 class PlaylistDetailPage extends ConsumerWidget {
@@ -309,8 +310,9 @@ class PlaylistDetailPage extends ConsumerWidget {
   Future<void> _collectPlaylist(
       BuildContext context, WidgetRef ref, PlaylistDetail detail) async {
     if (!ensureLoggedIn(context, ref, action: context.l10n.favorite)) return;
+    final lock = ref.read(_collectingProvider.notifier);
     if (ref.read(_collectingProvider)) return;
-    ref.read(_collectingProvider.notifier).state = true;
+    lock.state = true;
     try {
       await ref.read(_playlistRepoProvider).collectPlaylist(
             name: detail.name,
@@ -331,7 +333,13 @@ class PlaylistDetailPage extends ConsumerWidget {
         Toast.show(context, context.l10n.operateFailed('$e'));
       }
     } finally {
-      ref.read(_collectingProvider.notifier).state = false;
+      // F-4（第7批终审，P1）：widget 可能已销毁（用户收藏后立刻返回），
+      // 在已 dispose 的 element 上 ref.read 会抛 StateError → 锁永不
+      // 复位 → 所有歌单页收藏永久无反应。用 notifier 快照复位；
+      // 快照本身持有 controller，不受 widget 生命周期影响。
+      try {
+        lock.state = false;
+      } catch (_) {}
     }
   }
 }

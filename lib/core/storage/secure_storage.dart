@@ -62,12 +62,15 @@ class SecureStorage {
   /// 共享设备/转手设备场景等于账号仍处于登录态）。
   /// [userid] 提供时同时删除该账号的切换 token。
   Future<void> clearCredentials({String? userid}) async {
+    // F-1（第7批终审，P1）：dfid 属于**设备**不属于**账号**——删掉它会让
+    // 每次退出重登被判成新设备（风控验证/试听降权），且把 kapi
+    // /register/dev 变成常规登录路径（违反第 27 条）。保留 dfid，
+    // 凭证四键与账号切换 token 照删。
     await Future.wait([
       _storage.delete(key: _kToken),
       _storage.delete(key: _kUserId),
       _storage.delete(key: _kT1),
       _storage.delete(key: _kAuth),
-      _storage.delete(key: _kDfid),
       if (userid != null && userid.isNotEmpty)
         _storage.delete(key: '$_kAcctTokenPrefix$userid'),
     ]);

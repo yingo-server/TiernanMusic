@@ -382,11 +382,10 @@ class TiernanAudioHandler extends BaseAudioHandler
         processingState: AudioProcessingState.error,
         errorMessage: '播放失败：$e',
       ));
-      // 失败后必须真正停住引擎，否则 player.playing 仍为 true，
-      // UI 的播放按钮会卡在"暂停"态（真机反馈：播放态滞留）
-      try {
-        await _playerOrNull?.pause();
-      } catch (_) {}
+      // F-3（第7批终审，P1）：失败分支用 _pauseEngineOnly——
+      // pause() 会 _playToken++，导致 canAdvance 恒 false，
+      // 自动跳歌彻底失效（用户必须手动点下一首）。
+      await _pauseEngineOnly();
       _failureStreak++;
       final canAdvance =
           token == _playToken && _songs.length > 1 && _failureStreak < _songs.length;
@@ -446,6 +445,17 @@ class TiernanAudioHandler extends BaseAudioHandler
   Future<void> play() async {
     if (!await ensureEngineReady()) return;
     await _player.play();
+  }
+
+  /// 失败分支专用：只停引擎，**不**作废世代（F-3，第7批终审 P1）。
+  /// 用户主动暂停用 [pause]（作废世代防缓冲中自动续播）；
+  /// 失败路径的世代由 catch 里的 canAdvance 判定使用，作废即失效。
+  Future<void> _pauseEngineOnly() async {
+    final p = _playerOrNull;
+    if (p == null) return;
+    try {
+      await p.pause();
+    } catch (_) {}
   }
 
   @override
