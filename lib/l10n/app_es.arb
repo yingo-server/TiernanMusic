@@ -520,10 +520,9 @@
   "sortNew": "Más recientes",
   "sortHot": "Populares",
   "loginToViewFavorites": "Inicia sesión para ver los favoritos",
-  "qualitySuper": "Calidad maestra"
-,\
-  "previewOnly": "Vista previa",\
-  "loginRequiredTitle": "Se requiere iniciar sesión",\
-  "loginRequiredHint": "Esta función requiere iniciar sesión con una cuenta de KuGou.",\
+  "qualitySuper": "Calidad maestra",
+  "previewOnly": "Vista previa",
+  "loginRequiredTitle": "Se requiere iniciar sesión",
+  "loginRequiredHint": "Esta función requiere iniciar sesión con una cuenta de KuGou.",
   "loginRequiredAction": "Inicia sesión para usar \"{action}\"."
 }

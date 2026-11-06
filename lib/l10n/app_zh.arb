@@ -532,5 +532,30 @@
   "sortNew": "最新",
   "sortHot": "最热",
   "loginToViewFavorites": "登录后查看收藏",
-  "qualitySuper": "臻品母带"
+  "qualitySuper": "臻品母带",
+  "addedToPlaylist": "已加入歌单",
+  "playlistNameEmpty": "请输入歌单名称",
+  "captchaTitle": "人机验证",
+  "captchaLoadFailed": "获取验证信息失败，请重试",
+  "captchaSmsTitle": "短信验证",
+  "captchaSmsHint": "请输入接收到的验证码完成验证",
+  "captchaSmsCodeLabel": "验证码",
+  "captchaSmsCodeHint": "6 位数字",
+  "captchaSubmit": "提交验证",
+  "captchaNotPassed": "验证未通过，请重试",
+  "captchaPassedButRetry": "验证已通过，但请求仍需重试",
+  "captchaSubmitFailed": "提交失败，请稍后重试",
+  "captchaTencentHint": "如验证码未自动弹出，请点击页面中的「开始验证」",
+  "captchaExternalHint": "该验证类型需要在酷狗官方 App 内完成。\n建议：先在官方 App 完成一次操作，再回到本应用重试。",
+  "captchaClose": "关闭",
+  "captchaUnknownType": "未知验证类型（v_type={type}）",
+  "@captchaUnknownType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "captchaNoVerifyUrl": "服务端未返回验证 url",
+  "captchaTryFingerprint": "直接尝试提交指纹验证"
 }

@@ -520,10 +520,9 @@
   "sortNew": "Newest",
   "sortHot": "Popular",
   "loginToViewFavorites": "Log in to view favorites",
-  "qualitySuper": "Master Quality"
-,\
-  "previewOnly": "Preview",\
-  "loginRequiredTitle": "Sign in required",\
-  "loginRequiredHint": "This feature requires signing in to a KuGou account.",\
+  "qualitySuper": "Master Quality",
+  "previewOnly": "Preview",
+  "loginRequiredTitle": "Sign in required",
+  "loginRequiredHint": "This feature requires signing in to a KuGou account.",
   "loginRequiredAction": "Sign in to use \"{action}\"."
 }

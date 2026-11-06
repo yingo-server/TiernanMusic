@@ -520,10 +520,9 @@
   "sortNew": "最新",
   "sortHot": "人気",
   "loginToViewFavorites": "ログインするとお気に入りが見られます",
-  "qualitySuper": "マスター品質"
-,\
-  "previewOnly": "試聴",\
-  "loginRequiredTitle": "ログインが必要です",\
-  "loginRequiredHint": "この機能は KuGou アカウントへのログインが必要です。",\
+  "qualitySuper": "マスター品質",
+  "previewOnly": "試聴",
+  "loginRequiredTitle": "ログインが必要です",
+  "loginRequiredHint": "この機能は KuGou アカウントへのログインが必要です。",
   "loginRequiredAction": "「{action}」を使用するにはログインしてください。"
 }

@@ -250,29 +250,25 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
     ref.listen(authStateProvider, (_, next) {
       // loading 期间不做任何事（避免把已登录态误清空）
       if (next.isLoading) return;
-      try {
+      // V34-C-02（v3.4 审查③，P1）：整个同步体不再套单一空 catch——
+      // 此前 `ref.read(kgClientProvider)` 在冷启动恢复期 provider 未就绪
+      // 会抛异常，**连同后面的 invalidate 一起被跳过** → token 丢失且
+      // 首页/库页不刷新，无补偿。改为各步骤独立防护 + 失败重试一次。
+      void applyAuth() {
         final client = ref.read(kgClientProvider);
         final user = next.valueOrNull;
-        // 登录态变化后，首页个性化区块（每日推荐）与"我的歌单"必须重新拉取，
-        // 否则登录成功返回首页仍是登录前的内容（真机反馈：登录不刷新）。
         ref.invalidate(homeDataProvider);
-        // ①-1（第3批复核②，P2）：库页「我的歌单」与首页登录刷新不对称——
-        // main 只 invalidate home，库页的 _userPlaylistsProvider 依赖
-        // AccountManager.onCurrentAccountChanged（切号才触发），但
-        // 「首次登录成功」不走切号路径 → 库页保持登录前状态。
-        // 此处补 invalidate（provider 是 autoDispose.family，失效后
-        // 下次 watch 会以新 loggedIn 参数重建）。
         ref.invalidate(libraryUserPlaylistsProvider);
         ref.invalidate(libraryCollectedMvsProvider);
-        // 退出登录时必须清空，否则会继续以旧账号身份请求
         client.token = user?.token ?? '';
         client.userid = user?.userid ?? '0';
+        // V34-C-03（v3.4 审查③，P1）：切号/登出必须清 MemoryCache——
+        // 缓存键不含用户身份维度（B-15 同根），不清则 90 秒内跨账号串
+        // 数据（A 的歌单/每日推荐显示给 B）。登录/登出/切号都走这里。
+        MemoryCache.instance.clear();
         if (user == null) {
-          // 退出时必须清空，否则残留旧 t1。
           client.t1 = '';
         } else {
-          // W3：登录/恢复时异步补 t1（AuthUser 不携带 t1，
-          // 从 SecureStorage credentials 读取），失败不阻塞。
           SecureStorage.instance.readCredentials().then((c) {
             client.t1 =
                 (c != null && c.userId == user.userid) ? (c.t1 ?? '') : '';
@@ -280,8 +276,21 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
             debugPrint('[auth-sync] readCredentials failed: $e');
           });
         }
+      }
+
+      try {
+        applyAuth();
       } catch (e) {
-        debugPrint('[auth-sync] $e');
+        // 冷启动竞态（provider 未就绪）：延迟一帧重试一次（第 11 条：
+        // 降级须有恢复条件），仍失败才留痕放弃。
+        debugPrint('[auth-sync] deferred retry after: $e');
+        Future.delayed(const Duration(milliseconds: 200), () {
+          try {
+            applyAuth();
+          } catch (e2) {
+            debugPrint('[auth-sync] retry failed: $e2');
+          }
+        });
       }
     });
 

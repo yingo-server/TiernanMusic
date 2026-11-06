@@ -1,10 +1,5 @@
-#!/bin/sh
-# 修正 fix_arb_1.sh 的拼接错误：sed '$ d' 删掉的不是纯 "}"（JSON 末行是 "}" 但
-# 前一行 "qualitySuper" 无逗号）。统一用 python 修：删掉错误块、给 qualitySuper 补逗号、重拼。
-set -e
-cd /var/minis/workspace/TiernanMusic/lib/l10n
-python3 - <<'EOF'
-import json, io, re, sys
+import json, re, sys, os
+os.chdir('/var/minis/workspace/TiernanMusic/lib/l10n')
 
 blocks = {
  'en': '  "previewOnly": "Preview",\n  "loginRequiredTitle": "Sign in required",\n  "loginRequiredHint": "This feature requires signing in to a KuGou account.",\n  "loginRequiredAction": "Sign in to use \\"{action}\\"."',
@@ -20,20 +15,16 @@ blocks = {
 
 for lang, blk in blocks.items():
     fn = f'app_{lang}.arb'
-    s = open(fn, encoding='utf-8').read()
-    # 删除上次脚本追加的错误块：从 ',\\n' 行（质量行后）到文件尾
-    m = re.search(r',\\\n  "previewOnly".*\n\}\n?$', s, re.S)
-    if m:
-        s = s[:m.start()] + '\n'
-    else:
-        # 也许文件现在以 '  "loginRequiredAction": "..."。\n}' 结尾（无 \\）
-        m2 = re.search(r',\\\n', s)
-        print(fn, 'pattern miss — inspect manually'); sys.exit(1)
+    lines = open(fn, encoding='utf-8').read().splitlines()
+    # 找最后一个 "qualitySuper" 行，截断其后所有行（去掉坏块）
+    idx = max(i for i, l in enumerate(lines) if '"qualitySuper"' in l)
+    lines = lines[:idx+1]
     # qualitySuper 行补逗号
-    s = re.sub(r'("qualitySuper": "[^"]*")\n\}', r'\1,\n}\n', s)
-    # 追加新块
-    s = s[:-2] + blk + '\n}\n'
-    json.loads(s)  # 校验
+    if not lines[idx].rstrip().endswith(','):
+        lines[idx] += ','
+    lines += blk.split('\n')
+    lines.append('}')
+    s = '\n'.join(lines) + '\n'
+    json.loads(s)
     open(fn, 'w', encoding='utf-8').write(s)
     print(fn, 'OK')
-EOF
