@@ -376,6 +376,11 @@ class TiernanAudioHandler extends BaseAudioHandler
         return;
       }
       // 播放失败，尝试下一首（连续失败达到队列长度即停止，防止无限循环）
+      // V35-B1-1（第 B 批，P2）：catch 入口必须先校验世代——resolveUrl
+      // 在飞时用户按暂停（pause 作废世代）→ 旧请求随后网络失败抛异常，
+      // 此前会 ①上报已作废请求的假错误（UI 弹「播放失败」）②暂停引擎
+      // ——把新歌的装载一并暂停（新请求 play() 之前的窗口）。
+      if (token != _playToken) return;
       _errorController.add('播放失败：$e');
       playbackState.add(playbackState.value.copyWith(
         playing: false,
