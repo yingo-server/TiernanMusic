@@ -263,3 +263,20 @@ B-11 只删 `acct_token_<当前 userid>`。共享/转手设备场景：A 退出�
 4. `_collectingProvider` 改为 `autoDispose` 且 `finally` 里改用 `try/catch` 包裹的 `ref` 访问；或退回页面级
    `StatefulWidget` + `setState` 的锁。
 5. R-29：成功分支清 `_pageError`；分页失败不要复用 `_error`（或改为 `_error = _items.isEmpty ? e : null`）。
+
+---
+
+## 附录：审查期间工作区并发改动核对（HEAD `cce8178`，非本报告基线）
+
+> 本报告全部结论基于基线 `722f2bb`（tag v3.2.0）。审查结束时工作区已被并行修复推进到
+> `cce8178`（`3.2.1+33`），据此复核这 5 项修复是否真正落地，供放行判断参考。
+
+| 修复 | 落地情况 | 结论 |
+|---|---|---|
+| F-1 `debugPrint` 导入 | `kugou_api_client.dart:4` 已补 `package:flutter/foundation.dart` | **通过**，P0 解除 |
+| F-2 登出保留 dfid | `secure_storage.dart` 已删掉 `_kDfid` 的 delete，凭证四键与 `acct_token_*` 仍清 | **通过**，P1-1 与验证死循环解除（`getDfid` 不再走 kapi 常规路径） |
+| F-3 `_pauseEngineOnly` | 失败分支改为不作废世代的 `_pauseEngineOnly()`，`canAdvance` 恢复有效 | **通过**，P1-2 解除 |
+| F-5 分页失败态收敛 | 成功清 `_pageError`；失败按 `_items.isEmpty` 分流到 `_error` / `_pageError` | **通过**，P2-3 解除 |
+| F-4 收藏锁 | `finally` 改用 notifier 快照复位（不再触 `ref`），卡死路径已消除；但**声明仍是 `StateProvider<bool>((ref) => false)`，没有 `.autoDispose`**，注释却写「**autoDispose**——让锁与页面共存亡」 | **半修**：功能上卡死已解决，但注释与代码不符（第 31 条）；锁仍是进程级单例 → 在 A 收藏请求飞行中切到 B 点收藏，最长 20 秒内仍会被静默忽略。建议把声明改成 `StateProvider.autoDispose<bool>((ref) => false)`（此时 `lock.state = false` 在 provider 已销毁时会抛异常，但已被现有 `try/catch` 吞掉，锁随 provider 销毁即为初始 false，行为正确） |
+
+另：`pubspec` 已 bump 到 `3.2.1+33`，与已发布的 `v3.2.0` tag 不同，release note 与 tag 需重新对齐。

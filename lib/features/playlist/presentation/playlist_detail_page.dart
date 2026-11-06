@@ -46,8 +46,11 @@ final _tracksReloadProvider = StateProvider<int>((ref) => 0);
 
 /// 收藏操作飞行锁（V3-14 + F-4 终审修正）：**autoDispose**——
 /// 进程级单例锁在 widget 销毁后 finally 复位失败时会永久卡死
-/// （只能重启 App）；autoDispose 让锁与页面共存亡。
-final _collectingProvider = StateProvider<bool>((ref) => false);
+/// （只能重启 App）；autoDispose 让锁与页面共存亡（F-4 终审：声明必须
+/// 与注释一致——此前注释写 autoDispose 实际是全局单例，切页面后锁仍
+/// 挂 20 秒。改为 autoDispose 后 provider 随页面销毁，finally 里的
+/// 复位异常已被 try/catch 吞掉，行为正确）。
+final _collectingProvider = StateProvider.autoDispose<bool>((ref) => false);
 
 class PlaylistDetailPage extends ConsumerWidget {
   const PlaylistDetailPage({super.key, required this.id, this.userListId});
