@@ -12,6 +12,8 @@ import '../../lyric/data/krc_parser.dart';
 import '../../lyric/presentation/lyric_view.dart';
 import '../../mv/mv_provider.dart';
 import '../../download/presentation/download_sheet.dart';
+import '../../playlist/data/playlist_repository.dart';
+import '../../playlist/presentation/add_to_playlist_sheet.dart';
 import '../data/models.dart';
 import '../player_provider.dart';
 import 'queue_sheet.dart';
@@ -84,14 +86,40 @@ class FullPlayerPage extends ConsumerWidget {
                   onSelected: (v) {
                     if (v == 'download' && song != null) {
                       showDownloadSheet(context, song);
+                    } else if (v == 'addToPlaylist' && song != null) {
+                      // V34-UI-01：收藏到歌单
+                      showAddToPlaylistSheet(
+                        context,
+                        TrackRef(
+                          name: song.name,
+                          hash: song.hash,
+                          albumId: song.albumId,
+                          albumAudioId: song.albumAudioId,
+                        ),
+                      );
                     } else if (v == 'queue') {
                       showQueueSheet(context);
                     }
                   },
                   itemBuilder: (context) => [
-                    PopupMenuItem<String>(
-                      value: 'download',
-                      enabled: song != null,
+                  // V34-UI-01：收藏到歌单入口（激活 addToPlaylist 死键，
+                  // 打通「搜索→播放→收藏」任务流）
+                  PopupMenuItem<String>(
+                    value: 'addToPlaylist',
+                    enabled: song != null,
+                    child: Row(
+                      children: [
+                        Icon(Icons.playlist_add_rounded,
+                            size: 20,
+                            color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 12),
+                        Text(context.l10n.addToPlaylist),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'download',
+                    enabled: song != null,
                       child: Row(
                         children: [
                           Icon(Icons.download_outlined,
