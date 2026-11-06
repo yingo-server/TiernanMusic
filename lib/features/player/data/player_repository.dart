@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/audio/preferred_quality.dart';
 import '../../../core/direct/kg_play_api.dart';
+import '../../../core/direct/kg_client.dart';
 import '../../../core/direct/kg_providers.dart';
 import '../../../core/storage/secure_storage.dart';
 import 'models.dart';
@@ -66,6 +67,12 @@ class PlayerRepository {
     final completer = Completer<void>();
     _registeringFuture = completer.future;
     try {
+      // V35-A2-2（第 A 批，P2）：`/register/dev` 走 kapi 中转（第 33 条：
+      // kapi 返回不可作判定依据，仅作未移植路径兜底）。原生注册在
+      // KgClient.registerDevice（userservice risk/v3/r_register_dev）。
+      // 约束：优先用 SecureStorage 已存 dfid（上游镜像），真正缺失时
+      // 走 kapi 兜底——兜底结果三写同步（Hive/SecureStorage/内存），
+      // 避免此前「只写 SecureStorage 绕过 Hive 单源」的分叉。
       final res = await _api.get('/register/dev');
       final data = res['data'];
       final dfid = data is Map ? '${data['dfid'] ?? ''}' : '';
@@ -78,9 +85,12 @@ class PlayerRepository {
       //（这是「全部播放有问题」根因链的最后一环）。kg.device.dfid 是
       // 直连层唯一读点（PLY-12 同源）。
       try {
+        // 三写同步（V35-A2-2）：内存 device.dfid（直连层唯一读点）+
+        // Hive 单源（KgDeviceStore）+ SecureStorage 镜像（上方已写）。
         _ref?.read(kgClientProvider).device.dfid = dfid;
+        KgDeviceStore.saveDfidSync(dfid);
       } catch (_) {
-        debugPrint('[player] dfid sync to KgClient failed');
+        debugPrint('[player] dfid sync to KgClient/Hive failed');
       }
       _registerRetries = 0;
       return dfid;

@@ -47,7 +47,13 @@ class TranslateApi {
     // 不把空串当译文塞回界面。
     final choices = res.data?['choices'];
     if (choices is! List || choices.isEmpty) return lines;
-    final content = choices[0]?['message']?['content'] as String?;
+    // V35-A2-1（第 A 批，P2）：`choices[0]` 可能是非 Map（上游返回
+    // `[null]` / `["str"]` 等畸形形态），`?[0]?['message']` 对非 Map
+    // 会抛 NoSuchMethodError（`?.` 不保护「取下标成功但成员不存在」
+    // 之外的动态分发）。显式验证类型，畸形即退回原文（第 13 条）。
+    final first = choices[0];
+    final content =
+        (first is Map ? first['message'] : null)?['content'] as String?;
     if (content == null || content.trim().isEmpty) return lines;
     final translated = content.split('\n');
     // 对齐行数，不足补原文
