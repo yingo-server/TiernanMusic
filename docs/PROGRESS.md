@@ -526,3 +526,18 @@ C 批完成后统一清点 → v3.6 LTS 封版。
 
 ## v3.5 三批审查总结
 A/B/C 共 9 份报告、约 90 条；P0×1/P1×9/P2×15+ 已修大半；明细见各 v35_review_*.md
+
+## ✅ v3.6.0 LTS 发布确认
+
+- release 437087468（draft=False），tag 9d687d8 构建成功
+- 资产：arm64/v7a/x86_64 APK + screenshots-271.zip
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.6.0/app-arm64-v8a-release.apk
+
+### v3.6.0 内容（v3.5 全模块深度审查 3 批 × 3 代理 = 9 份报告约 120 条）
+- Kotlin 原生通道首审：finalize 真实行数判定（IS_PENDING 卡 7 天根因）
+- 发布链：realTempPath 真实扩展名 + MIME 真链（.flac 不再以 .mp3 入库）
+- auth 首次深审：Keystore 故障防护、登录态世代号、20028 三套实现互不一致（架构级收敛留 v3.7）
+- MV 收藏二进制 body（KgClient Uint8List 分支）、歌手页排序世代校验
+- 收藏弹层：新建链式加歌闸门修复、「去登录」真跳转
+- 配置层：l10n 生成物同步（编译必败根因）、ErrorWidget 重启按钮、keystore 移出仓库
+- 遗留决策项：20028 收敛、slider_solver、收藏 MV 入口、断点续传 → v3.7
