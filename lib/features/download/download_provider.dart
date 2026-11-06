@@ -178,16 +178,25 @@ class DownloadManager extends StateNotifier<DownloadState> {
         ),
       );
       // DL-05（审查③）：连临时文件一起清（下载中/失败的任务不会有已发布文件）
-      // D-01 配套：文件名规则与 _run 的 tempPath（dimKey）保持一致
+      // V34-05（v3.4 审查①，P1）：audio 真实扩展名由服务端 extName 决定
+      //（可能 .flac/.m4a），此前恒用 .mp3 重建路径 → 磁盘泄漏。修复：
+      // 优先用任务持久化的 realTempPath，无则按 dimKey+默认扩展名重建
+      //（与 _run 的 tempPath 生成规则一致）。
       try {
         final tmpDir = await PublicMediaStore.tempDir();
         final raw = '${task.hash}_${task.type.name}_${task.quality ?? ''}'
             '_${task.albumAudioId ?? ''}';
         final h = KgCrypto.md5(raw).substring(0, 12);
-        final f = File('${tmpDir.path}/'
-            '${task.hash}_${task.type.name}_$h${task.type.fileExtension}');
-        // （删除失败静默：临时目录会由系统回收）
-        if (f.existsSync()) f.deleteSync();
+        final dimKey = '${task.hash}_${task.type.name}_$h';
+        final candidates = <String>[
+          if (task.realTempPath.isNotEmpty) task.realTempPath,
+          '${tmpDir.path}/$dimKey${task.type.fileExtension}',
+        ];
+        for (final path in candidates) {
+          final f = File(path);
+          // （删除失败静默：临时目录会由系统回收）
+          if (f.existsSync()) f.deleteSync();
+        }
       } catch (_) {}
     }
     state = state.copyWith(
@@ -322,6 +331,9 @@ class DownloadManager extends StateNotifier<DownloadState> {
             quality: task.quality,
           );
           realTempPath = tempPath.replaceAll(RegExp(r'\.mp3$'), ext);
+          // V34-05（v3.4 审查①，P1）：持久化真实路径，remove() 按它清理
+          _update(_find(task.id)?.copyWith(realTempPath: realTempPath) ??
+              task.copyWith(realTempPath: realTempPath));
           await _repo.downloadFile(url, realTempPath,
               onProgress: onProgress, cancelToken: token);
           break;

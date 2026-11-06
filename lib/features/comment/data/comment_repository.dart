@@ -85,6 +85,15 @@ class CommentRepository {
         // 查询失败不阻断发送，childrenid 交给直连层兜底
       }
     }
+    // V34-04（v3.4 审查①，P1）：零评论歌曲——查询评论返回空列表时
+    // childrenId 为 null，special_id 不下发 → 服务端 400，**第一条
+    // 评论永远发不出**（每首歌都要有人发第一条）。修复：空列表时用
+    // mixsongid 本身兜底（Node comment_music_send.js 语义：special_id
+    // 为空时服务端按 mixsongid 建评论池）。
+    if (type == CommentResourceType.song &&
+        (childrenId == null || childrenId.isEmpty)) {
+      childrenId = id;
+    }
     final query = switch (type) {
       CommentResourceType.song => {
           'mixsongid': id,

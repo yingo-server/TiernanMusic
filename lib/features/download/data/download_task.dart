@@ -64,6 +64,7 @@ class DownloadTask {
     this.displayPath = '',
     this.received = 0,
     this.total = 0,
+    this.realTempPath = '',
     this.status = DownloadTaskStatus.queued,
     this.error,
     this.createdAt = 0,
@@ -105,6 +106,10 @@ class DownloadTask {
   /// 总字节（未知时为 0）
   final int total;
 
+  /// V34-05（v3.4 审查①，P1）：真实临时文件路径（audio 由服务端
+  /// extName 决定扩展名，可能非 .mp3）——remove() 按它清理，防泄漏。
+  final String realTempPath;
+
   final DownloadTaskStatus status;
 
   /// 失败原因
@@ -145,6 +150,7 @@ class DownloadTask {
     String? displayPath,
     int? received,
     int? total,
+    String? realTempPath,
     DownloadTaskStatus? status,
     String? error,
     bool clearError = false,
@@ -169,6 +175,7 @@ class DownloadTask {
       displayPath: displayPath ?? this.displayPath,
       received: received ?? this.received,
       total: total ?? this.total,
+      realTempPath: realTempPath ?? this.realTempPath,
       status: status ?? this.status,
       error: clearError ? null : (error ?? this.error),
       createdAt: createdAt ?? this.createdAt,
@@ -194,6 +201,7 @@ class DownloadTask {
         'displayPath': displayPath,
         'received': received,
         'total': total,
+        'realTempPath': realTempPath,
         'status': status.name,
         'error': error,
         'createdAt': createdAt,
@@ -230,6 +238,7 @@ class DownloadTask {
       total: (json['total'] is int)
           ? json['total'] as int
           : int.tryParse('${json['total'] ?? 0}') ?? 0,
+      realTempPath: '${json['realTempPath'] ?? ''}',
       status: DownloadTaskStatus.values.firstWhere(
         (s) => s.name == statusName,
         orElse: () => DownloadTaskStatus.queued,

@@ -189,6 +189,16 @@ class LyricRepository {
         for (var j = 0; j < n; j++) {
           final value = translated[j];
           if (value.isEmpty) continue;
+          // V34-03（v3.4 审查①，P1）：`missing` 是**行号**列表，`texts` 是
+          // 按 missing 顺序构建的文本数组——批内偏移 j 对应的行号是
+          // `missing[i + j]`（i 也是 missing 的下标偏移），原写法正确；
+          // 但若上游 translateLines 改为「按段落合并返回」（返回条数
+          // ≠ 请求条数），此处 n 截断后逐行假设就失效，译文整批错位。
+          // 防御：返回条数与批不等时不落缓存（不确认语义前宁可丢）。
+          if (translated.length != batch.length) {
+            debugPrint('[lyric] 翻译返回条数 ${translated.length} != 请求 ${batch.length}，本批不入缓存');
+            break;
+          }
           translations[missing[i + j]] = value;
         }
       } catch (e) {

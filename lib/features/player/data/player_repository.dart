@@ -109,7 +109,12 @@ class PlayerRepository {
         if (entries.isEmpty) return song;
         final matching = entries.where((entry) =>
             '${entry['hash']}'.toUpperCase() == song.hash.toUpperCase());
-        final detail = matching.isNotEmpty ? matching.first : entries.first;
+        // V34-01（v3.4 审查①，P1）：hash 未命中 = 详情不可用，不能用
+        // entries.first 兜底——那会把别的歌的 name/artist/cover/
+        // albumAudioId 合并进来（点 A 歌放 B 歌封面，后续 /v5/url 用错
+        // album_audio_id）。缺失就返回原 song（第 14/16 条）。
+        if (matching.isEmpty) return song;
+        final detail = matching.first;
         final merged = Song.fromJson(Map<String, dynamic>.from(detail));
         return merged.copyWith(
           hash: song.hash,
@@ -178,6 +183,13 @@ class PlayerRepository {
         // 20028/权益错误直接上抛，不再回退（回退也会被同样拦截）
         if (e.errorCode == 20028) rethrow;
         // 其它错误回退 kapi 再试
+      } catch (e) {
+        // V34-02（v3.4 审查①，P1）：直连的**网络异常**（DioException/
+        // SocketException 等非 ApiException）此前不被捕获，直接冒泡
+        // → kapi 回退永不执行 →「有网但播不了」（直连先挂时整首失败）。
+        // 回退触发条件应覆盖一切直连失败（第 8/11 条：回退路径异常
+        // 形态一致、触发条件完整）。20028 之外的异常都值得一试 kapi。
+        debugPrint('[player] direct resolve failed, fallback to kapi: $e');
       }
     }
     return _resolveViaKapi(song, preferred: preferred);
