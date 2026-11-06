@@ -233,3 +233,15 @@
 - F-4 半修项补齐：_collectingProvider 声明改 StateProvider.autoDispose（注释与实现一致）
 - 终审附录确认：F-1/2/3/5 全部通过，v3.2.1（cce8178）回归清零
 - v3.2.1 构建验证中，验收任务 db0a178b 处理 release
+
+## ✅ v3.2.1 发布完成
+
+- release 435927876（draft=False）：3 APK + screenshots-204.zip，CI 绿
+- tag 已重打到 8ee8f4c（含 F-4 autoDispose 补齐）
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.2.1/app-arm64-v8a-release.apk
+- 终审确认：F-1~F-5 全部通过，回归清零
+
+## 迭代总结（v3.0.0 → v3.2.1）
+- 7 批审查（21 份报告）约 400 条问题；P0×3、P1×20+、P2×30+ 亲自修复
+- 质量准则 32 条（docs/QUALITY_STANDARD.md）全程判定基准
+- 方法论核心：修复者不能自审——终审独立视角抓回 5 条自引入回归
