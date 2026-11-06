@@ -206,7 +206,18 @@ class AuthRepository {
 
   /// 启动时恢复凭证并静默刷新
   Future<AuthUser?> restoreSession() async {
-    final cred = await _storage.readCredentials();
+    // V35-A3（第 A 批，P2）：readCredentials 在 Keystore 故障机型
+    // （EncryptedSharedPreferences 解密失败，实测常见）会直接抛——
+    // 异常逃逸出 authStateProvider build → AsyncError → main 监听
+    // 把有凭证用户当匿名清空（静默永久匿名，重启无法自愈）。
+    // 边界读取必须防护（第 6/14 条）：失败按「无凭证」降级并留痕。
+    List<Credentials>? cred;
+    try {
+      cred = await _storage.readCredentials();
+    } catch (e, st) {
+      debugPrint('[auth] readCredentials failed (keystore?): $e\n$st');
+      return null;
+    }
     if (cred == null) return null;
     await _api.setCredentials(
       token: cred.token,

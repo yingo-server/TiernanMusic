@@ -246,10 +246,13 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
       final msg = next.value;
       if (msg != null && msg.isNotEmpty) _onPlayerError(msg, ref);
     });
-    // 登录态变化时同步到直连客户端（仅在有值时创建 client，避免启动期强依赖）
+    // 登录态世代号（V35-A3：重试闭包捕获旧 next 的问题在这里根治）——
+    // 每次 listen 回调递增，重试前校验自己是否仍是最新事件（第 18 条）。
+    var authEventGeneration = 0;
     ref.listen(authStateProvider, (_, next) {
       // loading 期间不做任何事（避免把已登录态误清空）
       if (next.isLoading) return;
+      final generation = ++authEventGeneration;
       // V34-C-02（v3.4 审查③，P1）：整个同步体不再套单一空 catch——
       // 此前 `ref.read(kgClientProvider)` 在冷启动恢复期 provider 未就绪
       // 会抛异常，**连同后面的 invalidate 一起被跳过** → token 丢失且
@@ -285,6 +288,14 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
         // 降级须有恢复条件），仍失败才留痕放弃。
         debugPrint('[auth-sync] deferred retry after: $e');
         Future.delayed(const Duration(milliseconds: 200), () {
+          // V35-A3（第 A 批，P2）：重试前必须校验世代——200ms 窗口内
+          // 若来了新 auth 事件（restoreSession 落定/用户登出），旧事件
+          // 的重试会把新 token 回滚为旧值（违反第 18 条：异步结果
+          // 未校验世代；恰好发生在登录成功瞬间最拥挤的时序）。
+          if (generation != authEventGeneration) {
+            debugPrint('[auth-sync] retry skipped (stale generation $generation)');
+            return;
+          }
           try {
             applyAuth();
           } catch (e2) {
