@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/image/app_image_cache.dart';
@@ -74,8 +75,12 @@ class _AddToPlaylistSheetState extends ConsumerState<AddToPlaylistSheet> {
 
   /// 加歌写操作统一出口：失败文案区分「确定失败」与「可能已生效」
   /// （第 9 条可观测 / 第 21 条防重复提交）。
-  Future<void> _addTo(UserPlaylist p) async {
-    if (_busy) return;
+  ///
+  /// V35-C2-1（第 C 批，P1）：[_createAndAdd] 在持有 `_busy` 期间调用
+  /// 本方法，首行 `if (_busy) return` 会把加歌**静默吞掉**——新建歌单
+  /// 成功但歌没进去。加 `bypassBusy` 供内部链式调用。
+  Future<void> _addTo(UserPlaylist p, {bool bypassBusy = false}) async {
+    if (_busy && !bypassBusy) return;
     if (p.listid.trim().isEmpty ||
         widget.track.hash.trim().isEmpty) {
       // 边界校验（第 14 条）：缺 hash 打上去只会得到无法解释的业务错误
@@ -125,7 +130,7 @@ class _AddToPlaylistSheetState extends ConsumerState<AddToPlaylistSheet> {
         Navigator.of(context).pop();
         return;
       }
-      await _addTo(created.first);
+      await _addTo(created.first, bypassBusy: true);
     } on PlaylistWriteException catch (e) {
       if (mounted) Toast.show(context, e.message);
     } catch (e) {
@@ -165,9 +170,12 @@ class _AddToPlaylistSheetState extends ConsumerState<AddToPlaylistSheet> {
                 message: l10n.loginRequiredHint,
                 actionLabel: l10n.goLogin,
                 onAction: () {
+                  // V35-C2-2（第 C 批，P1）：「去登录」此前只 pop 不跳转——
+                  // 注释声称走 /login 路由但实现缺失（第 3 条：注释与
+                  // 行为必须一致）。pop 后跳登录页，登录成功后用户自然
+                  // 重新打开收藏弹层。
                   Navigator.of(context).pop();
-                  // 收藏歌单本身需要登录态；先登录再回来重试
-                  // （走全局 /login 路由，与 ensureLoggedIn 引导一致）。
+                  context.push('/login');
                 },
               ),
             )
