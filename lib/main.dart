@@ -48,9 +48,13 @@ Future<void> main() async {
     };
 
     // 任何构建异常都显示可读错误页，而不是红屏/白屏
+    // V35-C3（第 C 批，P2）：加「重启应用」按钮——此前 ErrorWidget.builder
+    // 全局替换后任何 build 异常都落在不可交互的静态页，整页死锁只能杀
+    // 进程（第 9 条：失败必须给出下一步动作）。
     ErrorWidget.builder = (details) => StartupErrorPage(
       error: details.exception,
       compact: true,
+      onRestart: () => main(),
     );
 
     KgDevice? device;
@@ -339,10 +343,15 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
 
 /// 启动/构建异常兜底页
 class StartupErrorPage extends StatelessWidget {
-  const StartupErrorPage({super.key, required this.error, this.compact = false});
+  const StartupErrorPage(
+      {super.key, required this.error, this.compact = false, this.onRestart});
 
   final Object error;
   final bool compact;
+
+  /// V35-C3（第 C 批，P2）：ErrorWidget.builder 场景传入重启入口，
+  /// 避免 build 异常后整页死锁只能杀进程。
+  final VoidCallback? onRestart;
 
   @override
   Widget build(BuildContext context) {
@@ -372,6 +381,14 @@ class StartupErrorPage extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
+                if (onRestart != null) ...[
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: onRestart,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重启应用'),
+                  ),
+                ],
               ],
             ),
           ),
