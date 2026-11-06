@@ -13,8 +13,7 @@ import '../../features/auth/data/edt_generator.dart';
 import 'kg_crypto.dart';
 
 /// 直连响应
-class KgResponse {
-  const KgResponse({
+class KgResponse {  const KgResponse({
     required this.status,
     required this.body,
     this.headers = const {},
@@ -40,7 +39,12 @@ class KgResponse {
   /// - 多数业务接口：`body.status == 1`
   /// - 歌词类（lyrics.kugou.com）：HTTP 200 + `body.status == 200` + `errcode == 200`
   /// 故这里把 `status == 200` 也视为成功；细节判定仍由各端点的 `_wrap` 负责。
-  bool get isOk => this.status == 200 && (body['status'] == 1 || body['status'] == 200);
+  ///
+  /// V35-A1（第 A 批，P2）：⚠️ 本 getter 与 `_wrap` 的判定口径**不一致**
+  ///（此处不看 err_code/error_code，_wrap 有五分支）——全仓零调用方
+  ///（第 32 条死代码），保留会诱导调用方绕过 _wrap。已确认删除依据：
+  /// `rg isOk` 仅此一处声明。若未来需要「HTTP 层快速判定」，请命名
+  /// `isHttpOk` 并在注释中说明与 _wrap 的分工。
 
   /// 业务错误码
   ///
