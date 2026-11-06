@@ -217,12 +217,13 @@ class ErrorLogger {
   static String _redact(String s) {
     // key=value / key: value / "key":"value" / 'key':'value' 形式
     // （覆盖 header 与 JSON / YAML body）。
+    // V33-03（修复①，第 13/14 条，B-17）：新增 dfid / t1 / userid / mobile 键，
+    // 兼容双引号与单引号两种 JSON 形态。用普通字符串（非 raw）以正确转义引号。
     s = s.replaceAllMapped(
       RegExp(
-        // V33-03: 新增 dfid / t1 / userid / mobile 键
-        r'((?:authorization|token|access[_-]?token|refresh[_-]?token|api[_-]?key|'
-        r'secret|sign(ature)?|cookie|session(?:_id)?|dfid|t1|userid|mobile)\s*[=:]\s*)'
-        r'(?:"([^"]*)"|\'([^\']*)\'|(\S+))',
+        '((?:authorization|token|access[_-]?token|refresh[_-]?token|api[_-]?key|'
+        'secret|sign(ature)?|cookie|session(?:_id)?|dfid|t1|userid|mobile)\\s*[=:]\\s*)'
+        '(?:"([^"]*)"|\'([^\']*)\'|(\\S+))',
         caseSensitive: false,
       ),
       (m) => '${m.group(1)}***',
