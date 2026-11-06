@@ -257,3 +257,13 @@
 下载：
 - https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.2.1/app-arm64-v8a-release.apk
 - https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.2.0/app-arm64-v8a-release.apk
+
+## v3.3 修复②完成（7008c11）
+
+- 启动屏手写笔迹动画：SVG path 硬编码描摹（11 段，零运行时解析）、笔头跟随、写完停顿渐隐循环、文字后淡入（V33-01/04）
+- MV 缩略图 {size} 按控件选档归一；BoxFit.fill 全仓 0 处（本就合规）；memCacheWidth 补 2 处；空封面守卫补 7 处（V33-10~19）
+- 旧 animated_svg_logo.dart 已由 splash_handwriting.dart 替代删除
+
+### 待办
+- [ ] 修复①（存储外置+歌单P0+播放排查）进行中
+- [ ] 第3批复核三代理（修复①完成后派）
