@@ -245,3 +245,15 @@
 - 7 批审查（21 份报告）约 400 条问题；P0×3、P1×20+、P2×30+ 亲自修复
 - 质量准则 32 条（docs/QUALITY_STANDARD.md）全程判定基准
 - 方法论核心：修复者不能自审——终审独立视角抓回 5 条自引入回归
+
+## ✅ 发布终态（全部 draft 已清）
+
+- v3.2.1：release 435927876，tag 8ee8f4c，资产为新构建 APK（25.1/23.0/26.6MB），draft=False
+- v3.2.0：release 435879242（5ec5c71 构建），draft=False
+- v2.0.0：保持
+- 清理：4 个废弃 draft（旧 tag 重打遗留）已删除
+- 关键发现：**重打 tag 会使既有 release 自动转 draft**（非 API 500）——这是全程 release 反复「消失」的真正根因
+
+下载：
+- https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.2.1/app-arm64-v8a-release.apk
+- https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.2.0/app-arm64-v8a-release.apk
