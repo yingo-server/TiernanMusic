@@ -360,3 +360,17 @@ QUALITY_STANDARD.md 33 条；每条结论标违反条款+用户可见后果；�
 - 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.3.0/app-arm64-v8a-release.apk
 - 教训固化：修复代理任务书新增「触碰文件收尾前必须 analyze 并贴报告」（v3.3.0 两次 CI P0：main 缺导入、maxCacheSizeBytes 参数不存在）
 - 并发纪律：修复/审查批一律 3 代理并行（用户口径）
+
+## v3.4 审查③（跨模块）+ P0 处置
+
+### P0 已处置
+- keystore.b64.txt 确认曾明文入库（历史对象仍在，**需轮换 keystore**）
+- 已从 git 索引移除 + .gitignore + 安全通告写入 keystore_setup.md（6f683c6）
+
+### P1×3 待修
+- main.dart 登录态同步空 catch 包裹（冷启动恢复期 token 丢失无补偿）
+- MemoryCache 无用户维度+登出不清缓存（切号 90s 内串数据——B-15 同根，需键加 userid + 登出 clear）
+- 播放链路/设置页副本不在登录态依赖图内（传播主线缺口）
+
+### UI 修复批已提交（3032145）
+- 收藏到歌单入口（播放页+搜索）+ captcha i18n + en 4 键
