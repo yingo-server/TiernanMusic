@@ -227,3 +227,9 @@
 
 - tag v3.2.1 已打（cce8178，版本 3.2.1+33）
 - 复核通过项：B-07 CookieJar 时序、B-10 dfid 双写、R-28、R-01、V3-14 锁语义
+
+## 第7批终审收尾（2d88c2e）
+
+- F-4 半修项补齐：_collectingProvider 声明改 StateProvider.autoDispose（注释与实现一致）
+- 终审附录确认：F-1/2/3/5 全部通过，v3.2.1（cce8178）回归清零
+- v3.2.1 构建验证中，验收任务 db0a178b 处理 release
