@@ -352,3 +352,11 @@
 
 ### 判定基准
 QUALITY_STANDARD.md 33 条；每条结论标违反条款+用户可见后果；只读不编译。
+
+## ✅ v3.3.0 发布确认
+
+- release 436782440（draft=False），tag 3d1b3cf 构建成功
+- 资产：arm64 24.7MB / v7a 22.5MB / x86_64 26.2MB + screenshots-226.zip
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.3.0/app-arm64-v8a-release.apk
+- 教训固化：修复代理任务书新增「触碰文件收尾前必须 analyze 并贴报告」（v3.3.0 两次 CI P0：main 缺导入、maxCacheSizeBytes 参数不存在）
+- 并发纪律：修复/审查批一律 3 代理并行（用户口径）
