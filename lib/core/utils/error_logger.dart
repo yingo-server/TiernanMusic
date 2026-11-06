@@ -105,6 +105,9 @@ class ErrorLogger {
     // B-22（v3.3 修复①，第 22 条）：整段落盘（公共 + 降级）放进串行链，
     // 避免并发 log 互相截断。同一时刻只有一个写事务。
     final completer = Completer<void>();
+    // 复核①-1（第3批，P1）：串行链必须「一断不断」——任何一环抛出
+    // 未被内层覆盖的异常会让 _writeQueue 进入 error 态，后续所有
+    // .then 被跳过 → 日志锁永久死锁（第 19/22 条）。链尾兜底。
     _writeQueue = _writeQueue.then((_) async {
       try {
         // 优先写公共目录（文件管理器可见）
@@ -131,6 +134,10 @@ class ErrorLogger {
       } finally {
         if (!completer.isCompleted) completer.complete();
       }
+    });
+    // 链尾兜底：任何逃逸异常只断当前事务，不断整条链（复核①-1）
+    _writeQueue = _writeQueue.catchError((Object e) {
+      debugPrint('[ErrorLogger] write queue escaped error: $e');
     });
     await completer.future;
   }

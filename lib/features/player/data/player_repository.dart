@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -34,16 +36,35 @@ class PlayerRepository {
 
   bool _registering = false;
 
+  /// 复核①-15（第3批，P1）：当前注册事务的 Future——并发等待者挂在它
+  /// 上面而不是 300ms 轮询递归。
+  Future<void>? _registeringFuture;
+  int _registerRetries = 0;
+
   /// 确保本地有 dfid，首次播放前自动注册设备。
   Future<String> ensureDfid() async {
     final cached = await SecureStorage.instance.readDfid();
     if (cached != null && cached.isNotEmpty) return cached;
     if (_registering) {
-      // 简单防并发
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      return ensureDfid();
+      // 复核①-15（第3批，P1）：旧实现是 300ms 轮询递归——注册接口 hang
+      // 时多请求无限轮询挂起（每次 +300ms 栈深），播放永久转圈。
+      // 改为等待「当前注册事务」的 Future，注册结束所有等待者同时返回。
+      final pending = _registeringFuture;
+      if (pending != null) {
+        try {
+          await pending;
+        } catch (_) {}
+        return ensureDfid(); // 重读一次缓存（成功则拿到；失败则再试一轮，有界）
+      }
+      // 走到这里说明前一个注册者已失败落库，重试一轮（计入次数，防止无限）
+      if (_registerRetries >= 3) {
+        throw ApiException(-1, '设备注册多次失败，请检查网络后重试');
+      }
+      _registerRetries++;
     }
     _registering = true;
+    final completer = Completer<void>();
+    _registeringFuture = completer.future;
     try {
       final res = await _api.get('/register/dev');
       final data = res['data'];
@@ -52,9 +73,14 @@ class PlayerRepository {
         throw ApiException(-1, '注册设备失败：未返回 dfid');
       }
       await SecureStorage.instance.saveDfid(dfid);
+      _registerRetries = 0;
       return dfid;
+    } catch (e) {
+      rethrow;
     } finally {
       _registering = false;
+      _registeringFuture = null;
+      completer.complete();
     }
   }
 
@@ -152,6 +178,12 @@ class PlayerRepository {
   Future<PlayableResult?> _resolveViaDirect(Song song,
       {AudioQuality? preferred}) async {
     final play = _directPlay!;
+    // 复核①-16（第3批，P1）：直连前必须 ensureDfid——kapi 路径有这一步
+    //（:243），直连路径却依赖 KgPlayApi 内部状态。实测证据：/v5/url
+    // 未签名报「err clientver or mid or dfid or clienttime」——dfid
+    // 未就绪时首播直连必失败再回退 kapi，这正是「全部播放有问题」的
+    // 根因链（用户反馈）。修法：直连前等待 dfid 就绪。
+    await ensureDfid();
     final start = preferred ?? song.quality;
     final order = AudioQuality.fallbackOrder;
     var startIndex = order.indexOf(start);
