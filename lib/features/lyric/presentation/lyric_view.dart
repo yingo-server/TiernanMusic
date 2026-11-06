@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/l10n.dart';
 import '../../../core/theme/settings_provider.dart';
 import '../data/krc_parser.dart';
 

@@ -594,14 +594,14 @@ class _SongResultTabState extends ConsumerState<_SongResultTab>
                   if (v == 'addToPlaylist') {
                     showAddToPlaylistSheet(
                       context,
-                      Song(
-                        hash: s.hash ?? s.id,
-                        albumId: s.albumId ?? '',
-                        albumAudioId: s.albumAudioId ?? '',
+                      // V34-UI-01 补验：弹层契约是 TrackRef（name/hash/
+                      // albumId/albumAudioId），不是 Song——此前传 Song
+                      // 是类型错误（CI 实测 argument_type_not_assignable）。
+                      TrackRef(
                         name: s.name,
-                        artist: s.singer,
-                        cover: s.cover,
-                        duration: Duration(seconds: s.duration),
+                        hash: s.hash ?? s.id,
+                        albumId: s.albumId,
+                        albumAudioId: s.albumAudioId,
                       ),
                     );
                   } else if (v == 'download') {
