@@ -461,3 +461,18 @@ QUALITY_STANDARD.md 33 条；每条结论标违反条款+用户可见后果；�
 - P1-1 remove 竞态复活、P1-2/6 先删旧文件+rename 窗口、P2-14 viewFolder content:// 失败
 - B1 的 audio_handler catch 缺世代守卫、player_provider 生命周期三连
 - B2 的 home_repository 四处回落无日志
+
+## v3.5 B1/B2 消化（000da12）
+
+### B1（player+lyric）✅
+- V34 系列修复回归全过；ensureDfid 直连前置延迟评估净收益为正
+- 已修：V35-B1-1 catch 世代守卫（暂停后假错误+误暂停新歌）
+- 复认 6 条 P2（流切换/handler dispose/audioEngineReadyProvider 死态）→ C 批后统一清点
+
+### B2（playlist+comment+rank+home）✅
+- 13 条全部 P3，无用户可见故障路径
+- V34-04 原生实测：childrenid='' 必拒（10013）、mixsongid 兜底进业务层——修复有效
+- 楼中楼 name 维持 P3 不升级（通道已通）
+- 三条 P3 待 C 批后修（home 回落无日志/口径不一/maybeSucceeded 语义）
+
+### B3 ✅（已消化，见 56e2c32）
