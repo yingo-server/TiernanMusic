@@ -393,3 +393,15 @@ QUALITY_STANDARD.md 33 条；每条结论标违反条款+用户可见后果；�
 - 审查三档：功能 46 + UI 28 + 跨模块 21 = 95 条
 - 已修：P0×1（keystore 移出，需用户轮换）、P1×9、P2×10+
 - 出 v3.4.0 → 启动 v3.5 全面审查（9 代理 3 批，3 并发）
+
+## ✅ v3.4.0 发布确认
+
+- release 436927165（draft=False），tag 8c095ee 构建成功
+- 资产：arm64/v7a/x86_64 APK + screenshots-245.zip
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.4.0/app-arm64-v8a-release.apk
+
+### v3.4.0 内容
+- UI 专档修复批（收藏入口双端/captcha i18n/假开关移除/登录返回来源页/空态引导）
+- 跨模块 P0 keystore 移出 + 登录态同步重试 + 切号清缓存
+- 功能模块 P1×5（错歌详情污染/网络异常回退/翻译条数防御/零评论兜底/下载泄漏）
+- CI 试错 4 轮的教训：①代理自报 analyze 不可信（noise 误判真错误）②噪音过滤只适用于 Flutter SDK 符号，项目自有类报错即真错误 ③跨文件改动必须双向核对（调用方↔被调方）
