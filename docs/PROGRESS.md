@@ -721,3 +721,22 @@ JustAudioBackground.init 真机永久失败 → ensureEngineReady false → play
 ### 待用户配合
 - adb logcat -s flutter | grep -i JustAudioBackground 复现播放，确认引擎失败的具体异常
 - 播放页是否显示顶栏/进度条（区分 H1 空态 vs ErrorWidget 真空白）
+
+## ✅ 付费歌曲通道对比实测完成（efe51b2a）——用户假设判定
+
+报告：docs/v37_paid_song_channel.md（脚本 /tmp/probe_paid.py、probe_lite_v5.py）
+
+### 标准版基线（三态实锤）
+- 样本「晴天」确认付费曲（privilege=10/pay_type=3）
+- 非VIP 不带 IsFreePart → status=2 + fail_process=[pkg,buy] + end_ms=60000
+- 带 IsFreePart=1 → 下载 ffprobe 实测 **59.98 秒**——是「前 60 秒」，非高潮非全曲
+- VIP 全曲正常（既有审计）
+
+### 概念版通道（本轮突破：Node 本体打通 lite 匿名 /v5/url）
+- 上轮 31833 翻案：根因是我们 Python signKey 形态差异，**非 lite 被拒**——本轮用 Node 本体（platform=lite + pid=411/need_ogg=1）签名被接受
+- 匿名 lite 全档 IsFreePart=0 均 status=2 试听墙；IsFreePart=1 给的 URL 与标准版**同一份 60 秒片段**（同为 p_0_960115 截断）
+- 注册边界：rsaEncrypt2 PKCS1-V1_5 修正后 register_dev 仍 20010——lite dfid 拿不到，登录态策略无法继续（如实标注）
+
+### 判定
+用户假设**不成立**：概念版可复刻范围内对付费歌曲行为与标准版完全一致（60s 试听），不存在免费完整听旁路。privilege_lite.js 的 freeListen 只是 UI 展示逻辑。
+处置：lite 常量零成本保留，不接 lite 通道；标准版直连已是协议最优。
