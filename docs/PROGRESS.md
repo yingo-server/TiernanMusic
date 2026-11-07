@@ -873,3 +873,18 @@ C: 歌单顺序漂移实测排查（上游稳定四假设排除，upstreamOrder 
 
 ### v3.9.11 待办
 歌词 in-flight 去重/候选短路（P1）、翻译 504 重试（P2）
+
+## v4.0.0 封版（ccae1c7，版本 4.0.0+43）
+
+### 三档（A/B 已落盘，C 收尾中）
+- A: 11 键×11 语言按钮文案精简；LyricTranslationStream 逐批实时插入（fontSize 14→12）
+- B: core/resource 三模块（ResourceCache 168h JSON/90s 列表/文件永久/in-flight 合并/失效回退、CachedApiCall、LyricTranslationStream）；6 repository 接入；翻译 504 重试
+- C: PrefetchEngine/启动用户态/播放列表暗病——代理 aea2bf08 收尾中（报告 docs/v400_fix_c.md 待落盘）
+
+### 主代理亲修
+- **反反顺序**（docs/v400_order.md）：_fetchAllReversed 页序倒+页内倒，485%10 余数按实际长度、未知总数探测、单页失败留痕跳过；与概念版分享页前 20 首逐位吻合
+- lyric_view 二分 `>>`→`~/`（CI 会报 double 类型错）
+- arb 362×11 校验通过、gen_l10n 重跑、逐文件 analyze 无项目自有错误
+
+### 注意
+C 档产出未并入本 tag；其报告回来后复核并出 v4.0.1。
