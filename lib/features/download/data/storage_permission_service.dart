@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -76,8 +77,12 @@ class StoragePermissionService {
   Future<bool> requestAllFilesAccess() async {
     try {
       final result = await Permission.manageExternalStorage.request();
+      // V37-PERM-04：request() 内部异常/ROM 差异导致的失败不能静默
+      //（第 9 条）——落 debugPrint，线上可由 verbose 日志捕获。
+      debugPrint('[perm] manageExternalStorage.request → ${result.name}');
       return result.isGranted;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[perm] manageExternalStorage.request failed: $e');
       return false;
     }
   }

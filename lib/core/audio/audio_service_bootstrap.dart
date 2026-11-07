@@ -2,6 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import '../../features/player/data/audio_handler.dart';
+import '../../features/player/data/player_repository.dart';
+import '../api/kugou_api_client.dart';
+
+import '../utils/error_logger.dart';
 
 /// 音频后台服务引导器。
 ///
@@ -49,16 +54,37 @@ class AudioServiceBootstrap {
 
   static Future<bool> _init() async {
     try {
+      // V37-PLAY-1（用户真机反馈「播放页全空白」根因）：JustAudioBackground
+      // 的 init **必须传入 handler**——否则后台服务启动后没有任何
+      // AudioHandler 挂载，AudioPlayer 创建的通知/媒体会话是「孤儿」，
+      // 播放流程静默失败、播放页 song==null 全空白。此前缺 `handler:`
+      // 与 `androidNotificationChannelDescription` 参数。
       await JustAudioBackground.init(
         androidNotificationChannelId: 'com.tiernan.music.channel.audio',
         androidNotificationChannelName: '汀澜音乐播放',
+        androidNotificationChannelDescription: '后台播放控制与通知',
         androidNotificationOngoing: true,
+        handler: TiernanAudioHandler(PlayerRepository(
+          // V37-PLAY-1：init 阶段尚无 ProviderContainer 可读，直接构造。
+          // handler 内部 _ref 可空（见 player_provider），repository 的
+          // 网络调用发生在 resolveUrl（播放时），那时容器已就绪。
+          KugouApiClient(),
+        )),
       );
       _ready = true;
       return true;
     } catch (e, st) {
       _error = e;
       _ready = false;
+      // V37-PERM-01：init 失败此前只 debugPrint（release 下用户不可见、
+      // ErrorLogger 文件里也没有），是「播放失败且无日志」盲区的直接补口
+      // （第 9 条：失败必须可观测）。必须 import dart:async 的 unawaited。
+      unawaited(ErrorLogger.instance.log(
+        e,
+        st,
+        source: 'audio_bootstrap',
+        context: 'JustAudioBackground.init failed',
+      ));
       debugPrint('[audio] JustAudioBackground.init failed: $e\n$st');
       return false;
     }

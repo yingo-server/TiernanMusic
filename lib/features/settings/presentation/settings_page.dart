@@ -35,7 +35,8 @@ class SettingsPage extends ConsumerStatefulWidget {
   ConsumerState<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends ConsumerState<SettingsPage> {
+class _SettingsPageState extends ConsumerState<SettingsPage>
+    with WidgetsBindingObserver {
   String _cacheSize = '';
   String _version = '';
   Map<String, dynamic>? _account;
@@ -77,6 +78,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _storageGranted = PermissionGate.instance.hasStorageWriteAccess();
     // V37-LOG-10：根路径 + 模式一次性读取
     _storageRoot = _loadStorageRoot();
+    // V37-PERM-02：「授权所有文件访问」跳的是系统设置页（无弹窗回调），
+    // 用户在系统侧授权/取消授权后回到 App，只能靠 resumed 事件重新查询。
+    // 没有 resumed 刷新时，UI 会一直停留在授权前的旧状态——这正是
+    // 「权限请求网关没做好」的表象之一（第 20 条：生命周期监听对称释放）。
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // V37-PERM-02：从系统设置页返回（resumed）时重查存储授权态与根目录。
+    // 查询是纯只读（hasStorageWriteAccess/resolveRoot 均不弹窗），开销可控。
+    if (state == AppLifecycleState.resumed && mounted) {
+      setState(() {
+        _storageGranted = PermissionGate.instance.hasStorageWriteAccess();
+        _storageRoot = _loadStorageRoot();
+      });
+    }
   }
 
   /// V37-LOG-10：读取当前生效存储根（路径, 模式）。
@@ -92,16 +110,29 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   /// V37-LOG-10：授权所有文件访问（跳系统授权页），返回后刷新状态。
   Future<void> _requestAllFilesAccess() async {
+    // V37-PERM-02：permission_handler 对 MANAGE_EXTERNAL_STORAGE 的 request()
+    // 会先尝试直接跳转系统授权页（部分 ROM 成功），也可能静默失败不跳转
+    //（无返回跳转回调，直接落回当前态）。跳转失败时 fallback 到
+    // openAppSettings()，保证用户总能到达可授权的系统界面。
     final ok = await StoragePermissionService.instance.requestAllFilesAccess();
+    if (!ok) await PermissionGate.instance.openSettings();
     if (!mounted) return;
     setState(() {
       _storageRoot = _loadStorageRoot();
       _storageGranted = PermissionGate.instance.hasStorageWriteAccess();
     });
-    Toast.show(
-      context,
-      ok ? context.l10n.permissionGranted : context.l10n.permissionDenied,
-    );
+    // V37-PERM-03：request() 的返回值不是本次授权结果——系统授权页
+    // 跳转**没有结果回调**，request 立即返回当前态（未授权 false）。
+    // 若把它当「用户拒绝了」弹「未授权」，用户从系统页授权回来反而
+    // 看到失败提示（第 31 条：误导性反馈）。resumed 刷新（V37-PERM-02）
+    // 已负责回填真实状态，这里不再弹误导性提示。
+  }
+
+  @override
+  void dispose() {
+    // V37-PERM-02：与 initState 的 addObserver 对称释放（第 20 条）。
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<void> _loadVersion() async {
