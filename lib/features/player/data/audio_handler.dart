@@ -6,6 +6,8 @@ import 'package:audio_session/audio_session.dart';
 import 'package:dio/dio.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../../../core/utils/error_logger.dart';
+
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/audio/audio_service_bootstrap.dart';
 import 'models.dart';
@@ -49,6 +51,15 @@ class TiernanAudioHandler extends BaseAudioHandler
         processingState: AudioProcessingState.idle,
       ));
       _errorController.add(engineError!);
+      // V37-DIAG（排查报告 H1）：引擎失败此前只走 debugPrint（release
+      // 不可见）——「播放失败且无日志」盲区的根因之一。接入 ErrorLogger
+      // 落盘（第 9 条失败可观测），并写入 AudioServiceBootstrap 的 _error。
+      ErrorLogger.instance.log(
+        AudioServiceBootstrap.error ?? engineError!,
+        StackTrace.current,
+        source: 'audio_handler',
+        context: 'ensureEngineReady failed',
+      );
       return false;
     }
     if (_initialized) return true;
