@@ -568,5 +568,15 @@
   "storageRootPath": "저장소 루트",
   "storageModeRoot": "루트 모드(모든 파일 액세스 허용됨)",
   "storageModeDownload": "Download 모드(미허용, Download/TiernanMusic에 기록)",
-  "grantAllFilesAccess": "모든 파일 액세스 허용"
+  "grantAllFilesAccess": "모든 파일 액세스 허용",
+  "qualityViperTape": "Viper 테이프",
+  "qualityViperClear": "Viper 클리어",
+  "qualityViperAtmos": "Viper Atmos",
+  "qualityMagicPiano": "매직 피아노",
+  "qualityMagicAcappella": "매직 아카펠라",
+  "qualityMagicDj": "매직 DJ",
+  "qualityMagicSurnay": "매직 서라운드",
+  "qualityMagicSubwoofer": "매직 베이스",
+  "qualityMagicAncient": "매직 빈티지",
+  "storageProbeFailed": "쓰기 탐지 실패"
 }

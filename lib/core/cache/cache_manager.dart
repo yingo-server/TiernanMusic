@@ -1,6 +1,74 @@
+import 'dart:convert';
+
 import 'package:hive/hive.dart';
 
 import '../config/app_config.dart';
+
+/// 歌词本体持久缓存（V399-A2，Hive，模式同 lyric_translations）。
+///
+/// key = '<箱名前缀>:<网络缓存键>'，value = JSON 编码的响应体 Map。
+/// 网络失败时优先返回过期旧值（降级可观测，第 9/16 条）。
+class LyricPersistentCache {
+  LyricPersistentCache._();
+  static final instance = LyricPersistentCache._();
+
+  static const boxName = 'lyric_cache';
+
+  Box<String>? _box;
+
+  Future<void> init() async {
+    _box ??= await Hive.openBox<String>(boxName);
+  }
+
+  String _key(String networkKey, String kind) => '$kind:$networkKey';
+
+  /// 命中未过期的缓存；同时返回已过期但存在的旧值供网络失败时降级。
+  Future<(Map<String, dynamic>?, Map<String, dynamic>?)> getWithStale(
+    String networkKey, {
+    required String kind,
+    required Duration ttl,
+  }) async {
+    await init();
+    final raw = _box!.get(_key(networkKey, kind));
+    if (raw == null) return (null, null);
+    Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } catch (_) {
+      // 缓存体损坏等同未命中（第 13/14 条：不把坏数据当有效数据）。
+      await _box!.delete(_key(networkKey, kind));
+      return (null, null);
+    }
+    if (decoded is! Map) return (null, null);
+    final storedAt = decoded['storedAt'];
+    final fresh = storedAt is int &&
+        DateTime.now().isBefore(
+            DateTime.fromMillisecondsSinceEpoch(storedAt).add(ttl));
+    final body = decoded['body'];
+    final bodyMap = body is Map ? Map<String, dynamic>.from(body) : null;
+    return (fresh ? bodyMap : null, bodyMap);
+  }
+
+  Future<void> set(
+    String networkKey, {
+    required String kind,
+    required Map<String, dynamic> body,
+  }) async {
+    await init();
+    await _box!.put(
+      _key(networkKey, kind),
+      jsonEncode({
+        'storedAt': DateTime.now().millisecondsSinceEpoch,
+        'body': body,
+      }),
+    );
+  }
+
+  Future<void> clear() async {
+    await init();
+    await _box!.clear();
+  }
+}
 
 /// 内存缓存（90 秒过期）
 class MemoryCache {

@@ -105,7 +105,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           // ---- 我的歌单 ----
           if (account != null) ...[
             SectionHeader(title: context.l10n.myPlaylists),
+            // V399-B1（stale-while-revalidate）：重新登录/失效重取时先展示
+            // 上一次数据（skipLoadingOnReload），后台刷新完成后无缝替换——
+            // 首屏不再被网络请求阻塞。骨架屏只出现在真正无缓存的首次加载。
             playlistsAsync.when(
+              skipLoadingOnReload: true,
               loading: () => const _PlaylistRowSkeleton(),
               error: (e, _) => _PlaylistRowError(
                 // V34-UI-06（修复②，P3）：error 对象传入 ErrorRetry，
@@ -273,6 +277,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     }
     final async = ref.watch(libraryCollectedMvsProvider(true));
     return async.when(
+      // V399-B1（stale-while-revalidate）：同歌单区块口径——
+      // 重取时先渲染上一次数据，骨架/转圈只在首次无缓存时出现。
+      skipLoadingOnReload: true,
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
         child: Center(child: CircularProgressIndicator()),

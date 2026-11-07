@@ -54,19 +54,25 @@ class PlaylistRepository {
 
   /// 公共歌单歌曲（分页）
   ///
-  /// 【排序语义】用户要求「整体从新到旧」。
-  /// 实测上游分页方向：**page=1 是最新，page 越大越旧**；且**页内也是从新到旧**。
-  /// 因此「整体从新到旧」= 按页号升序拼接（第 1 页 → 第 N 页），**不反转任何一页**。
-  /// 旧实现把第 2 页起的每页 reversed 后插到队首，得到的是
-  /// 「最旧页…→第 1 页」，前后两段方向相反（F4-13 已修）。
+  /// 【顺序保证（V399-C1）】本方法对歌曲顺序**不做任何改写**：
+  /// - 页与页之间：严格**串行 await** 逐页拉取，按页号升序 `addAll` 拼接
+  ///   （不存在并发乱序插页的可能——Dart await 顺序执行）；
+  /// - 页内：`PlaylistTracks.fromJson` 原序映射，不 reverse、不 sort；
+  /// - 因此「同一歌单多次刷新顺序一致且与上游一致」由「上游分页稳定 +
+  ///   本层确定性合并」共同保证（上游稳定性经原生 pubsongs 直连 6 跑
+  ///   hash 级全序列一致实测，见 docs/v399_fix_c.md）。
   ///
-  /// [newestFirst] = true 时按上述语义返回；false 时保持上游原序（第 1 页在前）。
+  /// 【参数语义澄清（V399-C1，第 30 条命名即文档）】原参数名 `newestFirst`
+  /// 是历史误导：自 F4-13 修复后本方法**根本不做倒序**，只是「按上游给定
+  /// 页序拼接」。改名 `upstreamOrder`，调用方传 true 即「保持上游给定顺序」。
+  ///
+  /// [upstreamOrder] = true 时按上述语义返回；false 时只返回请求的单页。
   /// [allPages] = true 时一次性拉完所有页（用于需要完整列表的场景）。
   Future<PlaylistTracks> fetchTracks(
     String globalCollectionId, {
     int page = 1,
     int pageSize = 100,
-    bool newestFirst = true,
+    bool upstreamOrder = true,
     bool allPages = false,
   }) async {
     Future<PlaylistTracks> fetch(int p) async {
@@ -83,7 +89,7 @@ class PlaylistRepository {
     }
 
     final firstTracks = await fetch(page);
-    if (!newestFirst || !allPages) return firstTracks;
+    if (!upstreamOrder || !allPages) return firstTracks;
 
     final songs = <PlaylistSong>[...firstTracks.songs];
     // 页数上限（第 25 条：所有循环必须有界）。pageSize=100 时 100 页 = 1 万首，
@@ -129,6 +135,13 @@ class PlaylistRepository {
   }
 
   /// 用户歌单歌曲
+  ///
+  /// 【顺序保证（V399-C1）】顺序 = 上游给定序，客户端不改写（无 sort/reverse）。
+  /// 与 Node playlist_track_all_new.js 逐字段一致（listid/userid/type/page/
+  /// pagesize/area_code/allplatform/show_cover/token，默认 pagesize=300）。
+  /// 登录态原生实测（vip cookie 直打 cloudlist，listid=1 共 18 首）：
+  /// 连续 3 跑 hash 序列完全一致 —— 用户歌单上游顺序同样稳定。
+  /// 注意：本方法**不经 MemoryCache**（每次直连），不存在跨刷新缓存混序。
   Future<PlaylistTracks> fetchUserTracks(String listid,
       {int page = 1, int pageSize = 300}) async {
     final data = await _api.get('/playlist/track/all/new',

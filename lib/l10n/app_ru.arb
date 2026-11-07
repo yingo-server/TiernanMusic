@@ -568,5 +568,15 @@
   "storageRootPath": "Корень хранилища",
   "storageModeRoot": "Режим корня (доступ ко всем файлам предоставлен)",
   "storageModeDownload": "Режим Download (нет доступа, запись в Download/TiernanMusic)",
-  "grantAllFilesAccess": "Разрешить доступ ко всем файлам"
+  "grantAllFilesAccess": "Разрешить доступ ко всем файлам",
+  "qualityViperTape": "Viper Лента",
+  "qualityViperClear": "Viper Чистый",
+  "qualityViperAtmos": "Viper Atmos",
+  "qualityMagicPiano": "Волшебное пианино",
+  "qualityMagicAcappella": "Волшебное а капелла",
+  "qualityMagicDj": "Волшебный DJ",
+  "qualityMagicSurnay": "Волшебный объёмный звук",
+  "qualityMagicSubwoofer": "Волшебные басы",
+  "qualityMagicAncient": "Волшебный ретро",
+  "storageProbeFailed": "Ошибка проверки записи"
 }

@@ -347,9 +347,11 @@ class DownloadManager extends StateNotifier<DownloadState> {
       var realTempPath = tempPath;
       switch (task.type) {
         case DownloadTaskType.audio:
-          // V3-11（复查）：一次解析同时拿 url + 扩展名（原来调两次 songUrl，
-          // 请求翻倍且两次结果可能不一致）
-          final (url, ext) = await _repo.resolveAudioUrlWithExt(
+          // V399-B4（任务书 B4，P1）：非 VIP 下载择优——比较 API 返回的
+          // 试听片段与高潮片段（offset_hash）**声明的字节数**选长者作为
+          // 下载源；禁止真的下载两个文件比对（元数据请求而已）。
+          // 所选片段类型记录进任务元信息（segment 字段）。
+          final (url, ext, seg) = await _repo.resolveAudioDownloadSource(
             task.hash,
             albumId: task.albumId,
             albumAudioId: task.albumAudioId,
@@ -357,8 +359,11 @@ class DownloadManager extends StateNotifier<DownloadState> {
           );
           realTempPath = tempPath.replaceAll(RegExp(r'\.mp3$'), ext);
           // V34-05（v3.4 审查①，P1）：持久化真实路径，remove() 按它清理
-          _update(_find(task.id)?.copyWith(realTempPath: realTempPath) ??
-              task.copyWith(realTempPath: realTempPath));
+          _update(_find(task.id)?.copyWith(
+                realTempPath: realTempPath,
+                segment: seg,
+              ) ??
+              task.copyWith(realTempPath: realTempPath, segment: seg));
           await _repo.downloadFile(url, realTempPath,
               onProgress: onProgress, cancelToken: token);
           break;

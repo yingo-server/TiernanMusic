@@ -33,9 +33,29 @@ class LyricRepository {
     };
     final cacheKey = MemoryCache.keyOf('/search/lyric', query);
     final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
-    final data = cached ?? await _api.get('/search/lyric', query: query);
-    if (cached == null) {
-      MemoryCache.instance.set(cacheKey, data, ttl: _lyricCacheTtl);
+    // V399-A2（P1）：歌词候选接入持久缓存（Hive lyric_cache 箱），
+    // 命中不发网络；网络失败时返回过期旧值并留痕（降级可观测，第 9/16 条）。
+    Map<String, dynamic> data;
+    if (cached != null) {
+      data = cached;
+    } else {
+      final p = await LyricPersistentCache.instance
+          .getWithStale(cacheKey, kind: 'search', ttl: _lyricCacheTtl);
+      if (p.$1 != null) {
+        data = p.$1!;
+      } else {
+        try {
+          data = await _api.get('/search/lyric', query: query);
+          MemoryCache.instance.set(cacheKey, data, ttl: _lyricCacheTtl);
+          await LyricPersistentCache.instance
+              .set(cacheKey, kind: 'search', body: data);
+        } catch (e) {
+          final stale = p.$2;
+          if (stale == null) rethrow;
+          debugPrint('[lyric] 搜索候选网络失败，降级用旧缓存：$e');
+          data = stale;
+        }
+      }
     }
 
     final candidates = data['candidates'];
@@ -102,9 +122,28 @@ class LyricRepository {
     };
     final cacheKey = MemoryCache.keyOf('/lyric', query);
     final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
-    final data = cached ?? await _api.get('/lyric', query: query);
-    if (cached == null) {
-      MemoryCache.instance.set(cacheKey, data, ttl: _lyricCacheTtl);
+    // V399-A2（P1）：/lyric 同样接入持久缓存 + 失败降级旧值（第 9/16 条）。
+    Map<String, dynamic> data;
+    if (cached != null) {
+      data = cached;
+    } else {
+      final p = await LyricPersistentCache.instance
+          .getWithStale(cacheKey, kind: 'lyric', ttl: _lyricCacheTtl);
+      if (p.$1 != null) {
+        data = p.$1!;
+      } else {
+        try {
+          data = await _api.get('/lyric', query: query);
+          MemoryCache.instance.set(cacheKey, data, ttl: _lyricCacheTtl);
+          await LyricPersistentCache.instance
+              .set(cacheKey, kind: 'lyric', body: data);
+        } catch (e) {
+          final stale = p.$2;
+          if (stale == null) rethrow;
+          debugPrint('[lyric] 歌词网络失败，降级用旧缓存：$e');
+          data = stale;
+        }
+      }
     }
 
     // 优先用服务端 decodeContent；LRC 的 content 是明文 Base64，KRC 则加密。

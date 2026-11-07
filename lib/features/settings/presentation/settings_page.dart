@@ -26,6 +26,7 @@ import '../../../l10n/l10n.dart';
 import '../../auth/data/account_manager.dart';
 import '../../auth/data/auth_providers.dart';
 import '../../download/data/storage_permission_service.dart';
+import '../../player/data/models.dart';
 import 'settings_providers.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -42,6 +43,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
   Map<String, dynamic>? _account;
 
   /// 音质档位名称（运行时从 l10n 取，随语言切换；替代原硬编码中文常量）
+  /// V399-B3：新增蝰蛇三档 + 魔法六档（魔法档匿名可用）。
   Map<String, String> _qualityNames(BuildContext c) => {
         '128': c.l10n.quality128,
         '320': c.l10n.quality320,
@@ -50,6 +52,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
         // 旧版写的 'hires' 由 AudioQuality.fromString 兼容
         'high': c.l10n.qualityHigh,
         'super': c.l10n.qualitySuper,
+        // V399-B3：蝰蛇三档（VIP 态真实返回；非 VIP 选它时由解析链
+        // 在族内降级并明确报因，不降为普通音源）
+        AudioQuality.viperTape.value: c.l10n.qualityViperTape,
+        AudioQuality.viperClear.value: c.l10n.qualityViperClear,
+        AudioQuality.viperAtmos.value: c.l10n.qualityViperAtmos,
+        // V399-B3：魔法六档（特殊音源，匿名也可用；不进通用 fallback）
+        AudioQuality.magicPiano.value: c.l10n.qualityMagicPiano,
+        AudioQuality.magicAcappella.value: c.l10n.qualityMagicAcappella,
+        AudioQuality.magicDj.value: c.l10n.qualityMagicDj,
+        AudioQuality.magicSurnay.value: c.l10n.qualityMagicSurnay,
+        AudioQuality.magicSubwoofer.value: c.l10n.qualityMagicSubwoofer,
+        AudioQuality.magicAncient.value: c.l10n.qualityMagicAncient,
       };
 
   /// 日志目录路径（**必须是 State 字段**）
@@ -99,10 +113,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
 
   /// V37-LOG-10：读取当前生效存储根（路径, 模式）。
   /// 失败时返回占位值，绝不抛异常打断设置页构建（第 11 条降级有界）。
+  /// V399-B1：resolveRoot / resolveRootMode 并行（后者内部含写探针，
+  /// 串行会使该 tile 延迟翻倍）。
   Future<(String, String)> _loadStorageRoot() async {
     try {
       final service = StoragePermissionService.instance;
-      return (await service.resolveRoot(), await service.resolveRootMode());
+      final results =
+          await Future.wait([service.resolveRoot(), service.resolveRootMode()]);
+      return (results[0], results[1]);
     } catch (_) {
       return ('-', 'download');
     }
@@ -197,7 +215,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
       MemoryCache.instance.clear();
       await LyricTranslationCache.instance.clear();
       // 清空 Hive 缓存类 box（不动 settings box）
-      for (final name in ['api_cache', 'image_cache', 'lyric_translations']) {
+      for (final name in ['api_cache', 'image_cache', 'lyric_translations', LyricPersistentCache.boxName]) {
         if (Hive.isBoxOpen(name)) {
           await Hive.box(name).clear();
         }
@@ -291,7 +309,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
               final mode = data?.$2 == 'root'
                   ? context.l10n.storageModeRoot
                   : context.l10n.storageModeDownload;
-              return Text('$path\n$mode');
+              // V399-B2（B2-d）：展示「探测到的实际可写路径」——
+              // resolveRoot 每次实测写入能力；探测失败时附失败原因，
+              // 不再把「声称的路径」当「实际可写」误导用户（第 31 条）。
+              final probeErr = StoragePermissionService.lastProbeError;
+              return Text(probeErr == null
+                  ? '$path\n$mode'
+                  : '$path\n$mode\n${context.l10n.storageProbeFailed}: $probeErr');
             },
           ),
           isThreeLine: true,

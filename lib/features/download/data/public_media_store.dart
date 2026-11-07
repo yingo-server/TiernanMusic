@@ -157,9 +157,13 @@ class PublicMediaStore {
     final sub = StoragePermissionService.subDirOf(type.name);
     String dirPath;
     String display;
-    String? grantedRoot;
-    if (await service.isAllFilesAccessGranted()) grantedRoot = StoragePermissionService.rootPath;
-    if (grantedRoot != null) {
+    // V399-B2（B2-a/c）：不再自行判授权态拼根路径（那会信「声称的路径」），
+    // 统一走 resolveRoot()——它每次实测写入能力，返回「探测到的实际可写路径」。
+    // 探测失败时 resolveRoot 已降级到 Download 根；仍不可写则写入抛错，
+    // 由调用方（publish 的降级链）接管 appFallback。
+    final grantedRoot = await service.resolveRoot();
+    final isGrantedRoot = grantedRoot == StoragePermissionService.rootPath;
+    if (isGrantedRoot) {
       dirPath = '$grantedRoot/$sub';
       display = dirPath;
     } else {

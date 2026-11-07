@@ -88,6 +88,7 @@ Future<void> main() async {
       await openSafe('recent_plays');
       await openSafe('search_history', stringValues: true);
       await openSafe('lyric_translations', stringValues: true);
+      await openSafe('lyric_cache', stringValues: true);
       await openSafe('downloads');
 
       // Cookie 持久化目录（应用私有存储，三层存储规范第 2 层）。

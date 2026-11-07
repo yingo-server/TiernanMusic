@@ -568,5 +568,15 @@
   "storageRootPath": "ストレージのルート",
   "storageModeRoot": "ルートモード（すべてのファイルアクセスを許可済み）",
   "storageModeDownload": "Download モード（未許可、Download/TiernanMusic に書き込み）",
-  "grantAllFilesAccess": "すべてのファイルアクセスを許可"
+  "grantAllFilesAccess": "すべてのファイルアクセスを許可",
+  "qualityViperTape": "Viper テープ",
+  "qualityViperClear": "Viper クリア",
+  "qualityViperAtmos": "Viper Atmos",
+  "qualityMagicPiano": "魔法ピアノ",
+  "qualityMagicAcappella": "魔法アカペラ",
+  "qualityMagicDj": "魔法DJ",
+  "qualityMagicSurnay": "魔法サラウンド",
+  "qualityMagicSubwoofer": "魔法低音",
+  "qualityMagicAncient": "魔法レトロ",
+  "storageProbeFailed": "書き込み検出失敗"
 }

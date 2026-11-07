@@ -42,16 +42,26 @@ class SecureStorage {
     await Future.wait(ops);
   }
 
+  /// V399-B1：readCredentials 四键读取并行化——此前四个 await 串行，
+  /// Keystore 慢机型（解密耗时实测可见）每次读凭证延迟 ×4；
+  /// flutter_secure_storage 的 read 相互独立，Future.wait 并行即可。
   Future<Credentials?> readCredentials() async {
-    final token = await _storage.read(key: _kToken);
-    final userId = await _storage.read(key: _kUserId);
+    final results = await Future.wait([
+      _storage.read(key: _kToken),
+      _storage.read(key: _kUserId),
+      _storage.read(key: _kT1),
+      _storage.read(key: _kAuth),
+      _storage.read(key: _kDfid),
+    ]);
+    final token = results[0];
+    final userId = results[1];
     if (token == null || userId == null) return null;
     return Credentials(
       token: token,
       userId: userId,
-      t1: await _storage.read(key: _kT1),
-      auth: await _storage.read(key: _kAuth),
-      dfid: await _storage.read(key: _kDfid),
+      t1: results[2],
+      auth: results[3],
+      dfid: results[4],
     );
   }
 

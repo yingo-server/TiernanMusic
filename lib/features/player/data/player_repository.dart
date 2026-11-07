@@ -181,6 +181,10 @@ class PlayerRepository {
   AudioQuality _preferredFromSettings() => preferredQuality();
 
   /// 获取可播放 URL：直连优先，失败回退 kapi。
+  ///
+  /// V399-B3：蝰蛇/魔法档是特殊音源——直连失败（含权益不足）**不得**
+  /// 落到 kapi 通用路径（那会把特殊音源降级成普通音质），必须直接抛出
+  /// 明确报因。
   Future<PlayableResult> resolveUrl(Song song,
       {AudioQuality? preferred}) async {
     preferred ??= _preferredFromSettings();
@@ -189,9 +193,13 @@ class PlayerRepository {
         final direct =
             await _resolveViaDirect(song, preferred: preferred);
         if (direct != null) return direct;
+        // 直连无结果且是特殊档：不回退 kapi，明确报因（第 11 条降级有界）
+        if (preferred.isSpecial) {
+          throw ApiException(-1, '音质 ${preferred.value} 直连未返回播放地址');
+        }
       } on ApiException catch (e) {
         // 20028/权益错误直接上抛，不再回退（回退也会被同样拦截）
-        if (e.errorCode == 20028) rethrow;
+        if (e.errorCode == 20028 || preferred.isSpecial) rethrow;
         // 其它错误回退 kapi 再试
       } catch (e) {
         // V34-02（v3.4 审查①，P1）：直连的**网络异常**（DioException/
@@ -200,6 +208,10 @@ class PlayerRepository {
         // 回退触发条件应覆盖一切直连失败（第 8/11 条：回退路径异常
         // 形态一致、触发条件完整）。20028 之外的异常都值得一试 kapi。
         debugPrint('[player] direct resolve failed, fallback to kapi: $e');
+        // V399-B3：特殊音源档网络异常同样不落 kapi（第 11 条）
+        if (preferred.isSpecial) {
+          throw ApiException(-1, '音质 ${preferred.value} 解析失败：$e');
+        }
       }
     }
     return _resolveViaKapi(song, preferred: preferred);
@@ -216,7 +228,16 @@ class PlayerRepository {
     // 根因链（用户反馈）。修法：直连前等待 dfid 就绪。
     await ensureDfid();
     final start = preferred ?? song.quality;
-    final order = AudioQuality.fallbackOrder;
+    // V399-B3：蝰蛇/魔法档在族内降级，不进通用 fallbackOrder
+    //（魔法档匿名可用、蝰蛇档 VIP 态返回；降级不得越过族边界）。
+    final List<AudioQuality> order;
+    if (start.isMagic) {
+      order = AudioQuality.magicOrder;
+    } else if (start.isViper) {
+      order = AudioQuality.viperOrder;
+    } else {
+      order = AudioQuality.fallbackOrder;
+    }
     var startIndex = order.indexOf(start);
     if (startIndex < 0) startIndex = order.length - 1;
 
@@ -247,9 +268,10 @@ class PlayerRepository {
       }
       // 20028（需验证）直接退出
       if (result.errorCode == 20028) break;
-      // 权益不足（需购买/无版权）：先尝试官方 60 秒试听通道（IsFreePart=1），
-      // 拿到就按试听播放；拿不到再退出（不再为同一首歌打 5 次无效请求）。
-      if (result.failProcess.isNotEmpty) {
+      // V399-B3：特殊音源档不享有官方 60 秒试听通道兜底——
+      // 魔法/蝰蛇是特殊音源，freePart 试听返回的是普通音源片段，
+      // 冒充特殊音效属数据失真；失败直接进入下一族内档或抛错报因。
+      if (result.failProcess.isNotEmpty && !q.isSpecial) {
         final preview = await play.songUrl(
           hash: song.hash,
           albumId: int.tryParse(song.albumId) ?? 0,
@@ -282,7 +304,10 @@ class PlayerRepository {
   static AudioQuality _qualityFromBitrate(PlayUrlResult r, AudioQuality requested) {
     // 服务端给了明确 extName/quality 时优先采信
     final q = AudioQuality.fromString(r.extName.isNotEmpty ? r.extName : r.quality);
-    if (q != AudioQuality.q128) return q;
+    // V399-B3：特殊音源档（蝰蛇/魔法）不做码率推断——服务端对特殊档
+    // 常回 bitRate=0/extName 缺失，推断会把 magic_atmos 错标成 q128
+    //（第 15 条单位显式 / 第 16 条语义分离）。
+    if (q != AudioQuality.q128 || requested.isSpecial) return q;
     // 否则按码率推断；未知/0 一律按最低，避免把试听错标为高音质
     // PLY-07（审查③）：服务端 bitRate 是 **bps**（320000/128000），
     // 此前按 kbps 阈值（2000/900/300）推断，128/320 恒被判成 flac。

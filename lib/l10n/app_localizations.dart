@@ -351,6 +351,16 @@ const _strings_de = <String, String>{
   'storageModeRoot': 'Stammverzeichnis-Modus (Alle-Dateien-Zugriff erteilt)',
   'storageModeDownload': 'Download-Modus (nicht erteilt, schreibt nach Download/TiernanMusic)',
   'grantAllFilesAccess': 'Alle-Dateien-Zugriff erteilen',
+  'qualityViperTape': 'Viper Band',
+  'qualityViperClear': 'Viper Klar',
+  'qualityViperAtmos': 'Viper Atmos',
+  'qualityMagicPiano': 'Magisches Klavier',
+  'qualityMagicAcappella': 'Magischer A-cappella',
+  'qualityMagicDj': 'Magischer DJ',
+  'qualityMagicSurnay': 'Magischer Surround',
+  'qualityMagicSubwoofer': 'Magischer Bass',
+  'qualityMagicAncient': 'Magisch Vintage',
+  'storageProbeFailed': 'Schreibtest fehlgeschlagen',
 };
 
 const _strings_en = <String, String>{
@@ -700,6 +710,16 @@ const _strings_en = <String, String>{
   'storageModeRoot': 'Root mode (all-files access granted)',
   'storageModeDownload': 'Download mode (not granted, writing to Download/TiernanMusic)',
   'grantAllFilesAccess': 'Grant all-files access',
+  'qualityViperTape': 'Viper Tape',
+  'qualityViperClear': 'Viper Clear',
+  'qualityViperAtmos': 'Viper Atmos',
+  'qualityMagicPiano': 'Magic Piano',
+  'qualityMagicAcappella': 'Magic Acapella',
+  'qualityMagicDj': 'Magic DJ',
+  'qualityMagicSurnay': 'Magic Surround',
+  'qualityMagicSubwoofer': 'Magic Bass',
+  'qualityMagicAncient': 'Magic Vintage',
+  'storageProbeFailed': 'Write probe failed',
 };
 
 const _strings_es = <String, String>{
@@ -1049,6 +1069,16 @@ const _strings_es = <String, String>{
   'storageModeRoot': 'Modo raíz (acceso a todos los archivos concedido)',
   'storageModeDownload': 'Modo Download (sin permiso, se escribe en Download/TiernanMusic)',
   'grantAllFilesAccess': 'Conceder acceso a todos los archivos',
+  'qualityViperTape': 'Viper Cinta',
+  'qualityViperClear': 'Viper Claro',
+  'qualityViperAtmos': 'Viper Atmos',
+  'qualityMagicPiano': 'Piano mágico',
+  'qualityMagicAcappella': 'A capela mágico',
+  'qualityMagicDj': 'DJ mágico',
+  'qualityMagicSurnay': 'Sonido envolvente mágico',
+  'qualityMagicSubwoofer': 'Bajos mágicos',
+  'qualityMagicAncient': 'Vintage mágico',
+  'storageProbeFailed': 'Prueba de escritura fallida',
 };
 
 const _strings_fr = <String, String>{
@@ -1398,6 +1428,16 @@ const _strings_fr = <String, String>{
   'storageModeRoot': 'Mode racine (accès à tous les fichiers accordé)',
   'storageModeDownload': 'Mode Download (non accordé, écriture dans Download/TiernanMusic)',
   'grantAllFilesAccess': 'Accorder l\'accès à tous les fichiers',
+  'qualityViperTape': 'Viper Bande',
+  'qualityViperClear': 'Viper Clair',
+  'qualityViperAtmos': 'Viper Atmos',
+  'qualityMagicPiano': 'Piano magique',
+  'qualityMagicAcappella': 'A-cappella magique',
+  'qualityMagicDj': 'DJ magique',
+  'qualityMagicSurnay': 'Surround magique',
+  'qualityMagicSubwoofer': 'Basses magiques',
+  'qualityMagicAncient': 'Vintage magique',
+  'storageProbeFailed': 'Test d\'écriture échoué',
 };
 
 const _strings_ja = <String, String>{
@@ -1747,6 +1787,16 @@ const _strings_ja = <String, String>{
   'storageModeRoot': 'ルートモード（すべてのファイルアクセスを許可済み）',
   'storageModeDownload': 'Download モード（未許可、Download/TiernanMusic に書き込み）',
   'grantAllFilesAccess': 'すべてのファイルアクセスを許可',
+  'qualityViperTape': 'Viper テープ',
+  'qualityViperClear': 'Viper クリア',
+  'qualityViperAtmos': 'Viper Atmos',
+  'qualityMagicPiano': '魔法ピアノ',
+  'qualityMagicAcappella': '魔法アカペラ',
+  'qualityMagicDj': '魔法DJ',
+  'qualityMagicSurnay': '魔法サラウンド',
+  'qualityMagicSubwoofer': '魔法低音',
+  'qualityMagicAncient': '魔法レトロ',
+  'storageProbeFailed': '書き込み検出失敗',
 };
 
 const _strings_ko = <String, String>{
@@ -2096,6 +2146,16 @@ const _strings_ko = <String, String>{
   'storageModeRoot': '루트 모드(모든 파일 액세스 허용됨)',
   'storageModeDownload': 'Download 모드(미허용, Download/TiernanMusic에 기록)',
   'grantAllFilesAccess': '모든 파일 액세스 허용',
+  'qualityViperTape': 'Viper 테이프',
+  'qualityViperClear': 'Viper 클리어',
+  'qualityViperAtmos': 'Viper Atmos',
+  'qualityMagicPiano': '매직 피아노',
+  'qualityMagicAcappella': '매직 아카펠라',
+  'qualityMagicDj': '매직 DJ',
+  'qualityMagicSurnay': '매직 서라운드',
+  'qualityMagicSubwoofer': '매직 베이스',
+  'qualityMagicAncient': '매직 빈티지',
+  'storageProbeFailed': '쓰기 탐지 실패',
 };
 
 const _strings_pt = <String, String>{
@@ -2445,6 +2505,16 @@ const _strings_pt = <String, String>{
   'storageModeRoot': 'Modo raiz (acesso a todos os arquivos concedido)',
   'storageModeDownload': 'Modo Download (não concedido, gravando em Download/TiernanMusic)',
   'grantAllFilesAccess': 'Conceder acesso a todos os arquivos',
+  'qualityViperTape': 'Viper Fita',
+  'qualityViperClear': 'Viper Claro',
+  'qualityViperAtmos': 'Viper Atmos',
+  'qualityMagicPiano': 'Piano mágico',
+  'qualityMagicAcappella': 'A capela mágico',
+  'qualityMagicDj': 'DJ mágico',
+  'qualityMagicSurnay': 'Surround mágico',
+  'qualityMagicSubwoofer': 'Graves mágicos',
+  'qualityMagicAncient': 'Vintage mágico',
+  'storageProbeFailed': 'Teste de gravação falhou',
 };
 
 const _strings_ru = <String, String>{
@@ -2794,6 +2864,16 @@ const _strings_ru = <String, String>{
   'storageModeRoot': 'Режим корня (доступ ко всем файлам предоставлен)',
   'storageModeDownload': 'Режим Download (нет доступа, запись в Download/TiernanMusic)',
   'grantAllFilesAccess': 'Разрешить доступ ко всем файлам',
+  'qualityViperTape': 'Viper Лента',
+  'qualityViperClear': 'Viper Чистый',
+  'qualityViperAtmos': 'Viper Atmos',
+  'qualityMagicPiano': 'Волшебное пианино',
+  'qualityMagicAcappella': 'Волшебное а капелла',
+  'qualityMagicDj': 'Волшебный DJ',
+  'qualityMagicSurnay': 'Волшебный объёмный звук',
+  'qualityMagicSubwoofer': 'Волшебные басы',
+  'qualityMagicAncient': 'Волшебный ретро',
+  'storageProbeFailed': 'Ошибка проверки записи',
 };
 
 const _strings_zh = <String, String>{
@@ -3143,6 +3223,16 @@ const _strings_zh = <String, String>{
   'storageModeRoot': '根目录模式（已授权所有文件访问）',
   'storageModeDownload': 'Download 模式（未授权，写入 Download/TiernanMusic）',
   'grantAllFilesAccess': '授权所有文件访问',
+  'qualityViperTape': 'Viper 磁带',
+  'qualityViperClear': 'Viper 清澈',
+  'qualityViperAtmos': 'Viper 全景',
+  'qualityMagicPiano': '魔法钢琴',
+  'qualityMagicAcappella': '魔法清唱',
+  'qualityMagicDj': '魔法DJ',
+  'qualityMagicSurnay': '魔法环绕',
+  'qualityMagicSubwoofer': '魔法低音',
+  'qualityMagicAncient': '魔法复古',
+  'storageProbeFailed': '写入探测失败',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -3492,6 +3582,16 @@ const _strings_zh_CN = <String, String>{
   'storageModeRoot': '根目录模式（已授权所有文件访问）',
   'storageModeDownload': 'Download 模式（未授权，写入 Download/TiernanMusic）',
   'grantAllFilesAccess': '授权所有文件访问',
+  'qualityViperTape': 'Viper 磁带',
+  'qualityViperClear': 'Viper 清澈',
+  'qualityViperAtmos': 'Viper 全景',
+  'qualityMagicPiano': '魔法钢琴',
+  'qualityMagicAcappella': '魔法清唱',
+  'qualityMagicDj': '魔法DJ',
+  'qualityMagicSurnay': '魔法环绕',
+  'qualityMagicSubwoofer': '魔法低音',
+  'qualityMagicAncient': '魔法复古',
+  'storageProbeFailed': '写入探测失败',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3841,6 +3941,16 @@ const _strings_zh_TW = <String, String>{
   'storageModeRoot': '根目錄模式（已授權所有檔案存取）',
   'storageModeDownload': 'Download 模式（未授權，寫入 Download/TiernanMusic）',
   'grantAllFilesAccess': '授權所有檔案存取',
+  'qualityViperTape': 'Viper 磁带',
+  'qualityViperClear': 'Viper 清澈',
+  'qualityViperAtmos': 'Viper 全景',
+  'qualityMagicPiano': '魔法鋼琴',
+  'qualityMagicAcappella': '魔法清唱',
+  'qualityMagicDj': '魔法DJ',
+  'qualityMagicSurnay': '魔法環繞',
+  'qualityMagicSubwoofer': '魔法低音',
+  'qualityMagicAncient': '魔法復古',
+  'storageProbeFailed': '寫入探測失敗',
 };
 
 const _template = _strings_zh_CN;
@@ -4246,6 +4356,16 @@ class AppLocalizations {
   String get storageModeRoot => _t('storageModeRoot');
   String get storageModeDownload => _t('storageModeDownload');
   String get grantAllFilesAccess => _t('grantAllFilesAccess');
+  String get qualityViperTape => _t('qualityViperTape');
+  String get qualityViperClear => _t('qualityViperClear');
+  String get qualityViperAtmos => _t('qualityViperAtmos');
+  String get qualityMagicPiano => _t('qualityMagicPiano');
+  String get qualityMagicAcappella => _t('qualityMagicAcappella');
+  String get qualityMagicDj => _t('qualityMagicDj');
+  String get qualityMagicSurnay => _t('qualityMagicSurnay');
+  String get qualityMagicSubwoofer => _t('qualityMagicSubwoofer');
+  String get qualityMagicAncient => _t('qualityMagicAncient');
+  String get storageProbeFailed => _t('storageProbeFailed');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

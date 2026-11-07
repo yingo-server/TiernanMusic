@@ -98,9 +98,19 @@ class KgPlayApi {
 class KgSharedParams {
   KgSharedParams._();
 
-  /// 魔法音质（概念版）
+  /// 魔法音效（概念版）。V399-B3：与 AudioQuality.magicOrder 对齐——
+  /// 这里是**wire 名**（/v5/url 的 quality 参数用 `magic_` 前缀），
+  /// 兼容带前缀与不带前缀两种写法（枚举 value 是带前缀形态）。
   static const List<String> magicQualities = [
     'piano', 'acappella', 'subwoofer', 'ancient', 'dj', 'surnay',
+    'magic_piano', 'magic_acappella', 'magic_subwoofer',
+    'magic_ancient', 'magic_dj', 'magic_surnay',
+  ];
+
+  /// V399-B3：蝰蛇三档 wire 名（VIP 态 /v5/url 实测真实返回 URL）。
+  /// quality 参数原样传（无前缀），与 AudioQuality.viperOrder 对齐。
+  static const List<String> viperQualities = [
+    'viper_tape', 'viper_clear', 'viper_atmos',
   ];
 
   /// F4-07（审查①-B，P1）：上游一次请求的**完整**音质表
@@ -145,7 +155,10 @@ class KgSharedParams {
     bool freePart = false,
   }) {
     final lowerHash = hash.toLowerCase();
-    final q = magicQualities.contains(quality) ? 'magic_$quality' : quality;
+    // V399-B3：魔法档统一补 magic_ 前缀（已是 magic_* 形态的不再重复补）；
+    // 蝰蛇档原样传（wire 名即 viper_*，无前缀规则）。
+    var q = quality;
+    if (!q.startsWith('magic_') && magicQualities.contains(q)) q = 'magic_$q';
     final lite = client.lite;
 
     return <String, dynamic>{
@@ -262,6 +275,9 @@ class PlayUrlResult {
     this.endMs = 0,
     this.clipHash = '',
     this.offsetHash = '',
+    // V399-B4：试听/高潮片段的 API 声明字节数（不下载即可比较长短）
+    this.previewFileSize = 0,
+    this.offsetFileSize = 0,
   });
 
   final List<String> urls;
@@ -292,7 +308,14 @@ class PlayUrlResult {
   /// `hash_offset` 的 offset_hash（服务端区间标识）
   final String offsetHash;
 
-  /// 试听片段时长（毫秒）；无区间信息时为 0
+  /// V399-B4：试听片段声明的字节数（响应体 filesize；0=未声明）
+  final int previewFileSize;
+
+  /// V399-B4：高潮片段（offset_hash）声明的字节数
+  ///（hash_offset.start_byte/end_byte 之差；0=未声明）
+  final int offsetFileSize;
+
+  /// V399-B4：试听片段时长（毫秒）；无区间信息时为 0
   int get clipDurationMs => endMs > startMs ? endMs - startMs : endMs;
 
   String? get bestUrl => urls.isNotEmpty
@@ -323,6 +346,15 @@ class PlayUrlResult {
     final startMs = ms('start_ms');
     final endMs = ms('end_ms');
     final clipHash = '${offset['clip_hash'] ?? ''}';
+    // V399-B4：API 声明的字节数（试听片段 vs 高潮片段），供下载侧择优
+    // 比较——禁止真的下载两个文件比对（第 24 条按需计算 / 任务书 B4）。
+    final previewSize =
+        b['filesize'] is int ? b['filesize'] as int : int.tryParse('${b['filesize'] ?? ''}') ?? 0;
+    final offsetStartByte = ms('start_byte');
+    final offsetEndByte = ms('end_byte');
+    final offsetSize = offsetEndByte > offsetStartByte
+        ? offsetEndByte - offsetStartByte
+        : (offsetEndByte > 0 ? offsetEndByte : 0);
 
     return PlayUrlResult(
       urls: urls,
@@ -344,6 +376,8 @@ class PlayUrlResult {
       endMs: endMs,
       clipHash: clipHash,
       offsetHash: '${offset['offset_hash'] ?? ''}',
+      previewFileSize: previewSize,
+      offsetFileSize: offsetSize,
     );
   }
 }

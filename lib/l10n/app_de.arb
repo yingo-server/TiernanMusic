@@ -568,5 +568,15 @@
   "storageRootPath": "Speicher-Stammverzeichnis",
   "storageModeRoot": "Stammverzeichnis-Modus (Alle-Dateien-Zugriff erteilt)",
   "storageModeDownload": "Download-Modus (nicht erteilt, schreibt nach Download/TiernanMusic)",
-  "grantAllFilesAccess": "Alle-Dateien-Zugriff erteilen"
+  "grantAllFilesAccess": "Alle-Dateien-Zugriff erteilen",
+  "qualityViperTape": "Viper Band",
+  "qualityViperClear": "Viper Klar",
+  "qualityViperAtmos": "Viper Atmos",
+  "qualityMagicPiano": "Magisches Klavier",
+  "qualityMagicAcappella": "Magischer A-cappella",
+  "qualityMagicDj": "Magischer DJ",
+  "qualityMagicSurnay": "Magischer Surround",
+  "qualityMagicSubwoofer": "Magischer Bass",
+  "qualityMagicAncient": "Magisch Vintage",
+  "storageProbeFailed": "Schreibtest fehlgeschlagen"
 }

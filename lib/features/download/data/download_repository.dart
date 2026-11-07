@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/direct/kg_play_api.dart';
@@ -40,104 +41,92 @@ class DownloadRepository {
       'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) '
       'Chrome/120.0.0.0 Mobile Safari/537.36';
 
-  /// 解析音频直连播放地址（http → 代理 https）
-  Future<String> resolveAudioUrl(
+  /// V399-B4：下载音频唯一解析入口。
+  ///
+  /// 非 VIP（仅试听权益）时，同时比较 API **声明的字节数**（不下载比对）：
+  ///  - 试听片段：/v5/url 响应体 `filesize`；
+  ///  - 高潮片段：`hash_offset.start_byte/end_byte` 之差（offset_hash 标识）。
+  /// 选长者作为下载源；高潮片段更长时用 offset_hash 再发一次**元数据请求**
+  /// 拿它的直连 URL（仍是 API 调用，不是下载）。
+  ///
+  /// 历史：resolveAudioUrl / resolveAudioExt / resolveAudioUrlWithExt 三个
+  /// 方法已被本实现取代并删除（第 32 条死代码零容忍）；全曲（VIP/免费）
+  /// 情形下行为与原 resolveAudioUrlWithExt 一致（单次 songUrl 同时拿
+  /// url + 扩展名）。
+  ///
+  /// 返回 (url, ext, 片段类型)；片段类型 'full'/'trial'/'climax' 供任务
+  /// 元信息（DownloadTask.segment）记录。
+  Future<(String, String, String)> resolveAudioDownloadSource(
     String hash, {
-    String albumId = '',
-    String albumAudioId = '',
-    String quality = '128',
+    required String albumId,
+    required String albumAudioId,
+    required String quality,
   }) async {
     final api = _playApi;
     if (api == null) throw StateError('播放接口未初始化');
-    final result = await api.songUrl(
+    final albumIdInt = int.tryParse(albumId) ?? 0;
+    final audioIdInt = int.tryParse(albumAudioId) ?? 0;
+
+    // 1) 先试全曲（VIP/免费曲直接走原路径）
+    final full = await api.songUrl(
       hash: hash,
-      albumId: int.tryParse(albumId) ?? 0,
-      albumAudioId: int.tryParse(albumAudioId) ?? 0,
+      albumId: albumIdInt,
+      albumAudioId: audioIdInt,
       quality: quality,
     );
-    final url = result.bestUrl;
-    if (url == null || url.isEmpty) {
-      throw StateError(result.message.isEmpty ? '无可用播放地址' : result.message);
+    if (full.hasUrl && !full.isPreview) {
+      final (url, ext) = _urlAndExt(full);
+      return (url, ext, 'full');
     }
-    // DL-01（审查③）：试听片段（60s）不能当完整歌曲落盘——
-    // isPreview 时直接拒绝，错误信息带上 failProcess 让用户知道原因。
-    if (result.isPreview) {
-      throw StateError(result.failProcess.isNotEmpty
-          ? '该音质需要会员或付费（${result.failProcess.join('/')}），不支持下载'
-          : '仅获取到试听片段，完整歌曲需要相应权益');
+
+    // 2) 非全曲：试听通道（IsFreePart=1），从同一响应里读两段声明的字节数
+    final preview = await api.songUrl(
+      hash: hash,
+      albumId: albumIdInt,
+      albumAudioId: audioIdInt,
+      quality: quality,
+      freePart: true,
+    );
+    if (!preview.hasUrl) {
+      throw StateError(preview.message.isEmpty
+          ? '该音质需要会员或付费，且无试听片段'
+          : '该音质需要会员或付费（${preview.message}）');
     }
-    // 直连原始地址（kugou 子域已允许 cleartext），代理不支持 Range 会拖慢/截断下载
-    return url;
+    final trialUrl = preview.bestUrl!;
+    final trialBytes = preview.previewFileSize;
+    final climaxBytes = preview.offsetFileSize;
+
+    // 3) 择优：高潮片段声明字节数更长且能解析到 URL 时选高潮（不下载比对）
+    if (preview.offsetHash.isNotEmpty && climaxBytes > trialBytes) {
+      try {
+        final climax = await api.songUrl(
+          hash: preview.offsetHash,
+          albumId: albumIdInt,
+          albumAudioId: audioIdInt,
+          quality: quality,
+        );
+        if (climax.hasUrl && !climax.isPreview) {
+          final (url, ext) = _urlAndExt(climax);
+          return (url, ext, 'climax');
+        }
+      } catch (_) {
+        // V399-B4：高潮片段解析失败必须留痕并回落试听（第 9 条），不可静默
+        debugPrint('[download] climax(offset_hash) 解析失败，回落试听片段');
+      }
+    }
+    final (_, ext) = _urlAndExt(preview);
+    return (trialUrl, ext, 'trial');
   }
 
-  /// DL-02（审查③）：服务端实际扩展名（extName 缺失时从 URL 推断）。
-  /// 供下载侧写入正确的文件名与 MIME，不再硬编码 .mp3。
-  /// DL-02 / V3-02（审查③+复查）：真实音频扩展名。
-  ///
-  /// ⚠️ `extName` 在本仓库其它位置是**音质 token**（128/320/flac/high/super），
-  /// 直接拼 `.320`/`.super` 会产生非法后缀。这里只接受**真实容器格式**
-  /// 白名单；否则从 URL 路径推断；再不行回落 `.mp3`。
-  Future<String> resolveAudioExt(
-      {required String hash,
-      required String albumId,
-      required String albumAudioId,
-      required String quality}) async {
-    const audioExts = {'mp3', 'flac', 'ogg', 'm4a', 'wav', 'aac', 'ape'};
-    final api = _playApi;
-    if (api == null) return '.mp3';
-    final result = await api.songUrl(
-      hash: hash,
-      albumId: int.tryParse(albumId) ?? 0,
-      albumAudioId: int.tryParse(albumAudioId) ?? 0,
-      quality: quality,
-    );
-    final ext = result.extName.trim().toLowerCase();
-    if (audioExts.contains(ext) && ext != 'mp3') return '.$ext';
-    // 从 URL 路径兜底（更可靠：URL 里有真实资源后缀）
-    final url = result.bestUrl ?? '';
-    final m = RegExp(r'\.(mp3|flac|ogg|m4a|wav|aac|ape)(\?|$)').firstMatch(url);
-    if (m != null) return '.${m.group(1)}';
-    return '.mp3';
-  }
-
-
-  /// V3-11（复查）：单次 songUrl 同时返回播放地址与真实扩展名。
-  /// 此前 resolveAudioUrl 与 resolveAudioExt 各调一次接口（请求翻倍且
-  /// 两次结果可能不一致）。
-  Future<(String, String)> resolveAudioUrlWithExt(
-      String hash,
-      {required String albumId,
-      required String albumAudioId,
-      required String quality}) async {
-    final api = _playApi;
-    if (api == null) throw StateError('播放接口未初始化');
-    final result = await api.songUrl(
-      hash: hash,
-      albumId: int.tryParse(albumId) ?? 0,
-      albumAudioId: int.tryParse(albumAudioId) ?? 0,
-      quality: quality,
-    );
-    final url = result.bestUrl;
-    if (url == null || url.isEmpty) {
-      throw StateError(result.message.isEmpty ? '无可用播放地址' : result.message);
-    }
-    // DL-01：试听片段不能当完整歌曲落盘
-    if (result.isPreview) {
-      throw StateError(result.failProcess.isNotEmpty
-          ? '该音质需要会员或付费（${result.failProcess.join('/')}），不支持下载'
-          : '仅获取到试听片段，完整歌曲需要相应权益');
-    }
+  /// 从 PlayUrlResult 取直连 URL 与真实容器扩展名（本文件内共用）
+  static (String, String) _urlAndExt(PlayUrlResult result) {
+    final url = result.bestUrl!;
     const audioExts = {'mp3', 'flac', 'ogg', 'm4a', 'wav', 'aac', 'ape'};
     final ext = result.extName.trim().toLowerCase();
-    String resolved;
-    if (audioExts.contains(ext) && ext != 'mp3') {
-      resolved = '.$ext';
-    } else {
-      final m = RegExp(r'\.(mp3|flac|ogg|m4a|wav|aac|ape)(\?|$)')
-          .firstMatch(url);
-      resolved = m != null ? '.${m.group(1)}' : '.mp3';
-    }
-    return (url, resolved);
+    if (audioExts.contains(ext) && ext != 'mp3') return (url, '.$ext');
+    final m =
+        RegExp(r'\.(mp3|flac|ogg|m4a|wav|aac|ape)(\?|$)').firstMatch(url);
+    return (url, m != null ? '.${m.group(1)}' : '.mp3');
   }
 
   /// 解析 MV 播放地址（http → 代理 https）

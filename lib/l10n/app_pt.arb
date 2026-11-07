@@ -568,5 +568,15 @@
   "storageRootPath": "Raiz de armazenamento",
   "storageModeRoot": "Modo raiz (acesso a todos os arquivos concedido)",
   "storageModeDownload": "Modo Download (não concedido, gravando em Download/TiernanMusic)",
-  "grantAllFilesAccess": "Conceder acesso a todos os arquivos"
+  "grantAllFilesAccess": "Conceder acesso a todos os arquivos",
+  "qualityViperTape": "Viper Fita",
+  "qualityViperClear": "Viper Claro",
+  "qualityViperAtmos": "Viper Atmos",
+  "qualityMagicPiano": "Piano mágico",
+  "qualityMagicAcappella": "A capela mágico",
+  "qualityMagicDj": "DJ mágico",
+  "qualityMagicSurnay": "Surround mágico",
+  "qualityMagicSubwoofer": "Graves mágicos",
+  "qualityMagicAncient": "Vintage mágico",
+  "storageProbeFailed": "Teste de gravação falhou"
 }

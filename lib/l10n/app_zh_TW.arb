@@ -568,5 +568,15 @@
   "storageRootPath": "儲存根目錄",
   "storageModeRoot": "根目錄模式（已授權所有檔案存取）",
   "storageModeDownload": "Download 模式（未授權，寫入 Download/TiernanMusic）",
-  "grantAllFilesAccess": "授權所有檔案存取"
+  "grantAllFilesAccess": "授權所有檔案存取",
+  "qualityViperTape": "Viper 磁带",
+  "qualityViperClear": "Viper 清澈",
+  "qualityViperAtmos": "Viper 全景",
+  "qualityMagicPiano": "魔法鋼琴",
+  "qualityMagicAcappella": "魔法清唱",
+  "qualityMagicDj": "魔法DJ",
+  "qualityMagicSurnay": "魔法環繞",
+  "qualityMagicSubwoofer": "魔法低音",
+  "qualityMagicAncient": "魔法復古",
+  "storageProbeFailed": "寫入探測失敗"
 }

@@ -16,9 +16,11 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../../core/image/app_image_cache.dart';
 import '../../../core/providers.dart' show lyricRepositoryProvider;
-import '../../../core/theme/settings_provider.dart';
+import '../../../core/theme/settings_provider.dart'
+    show LyricDisplayMode, lyricModeProvider;
 import '../../../core/widgets/empty_state.dart';
 import '../../../l10n/l10n.dart';
+import '../../auth/presentation/login_guard.dart';
 import '../../lyric/data/krc_parser.dart';
 import '../../lyric/presentation/lyric_view.dart';
 import '../../download/presentation/download_sheet.dart';
@@ -52,6 +54,11 @@ final currentLyricProvider = FutureProvider.autoDispose<
   final targetLang = locale.countryCode != null
       ? '${locale.languageCode}_${locale.countryCode}'
       : (locale.languageCode == 'zh' ? 'zh_CN' : locale.languageCode);
+  // V399-A3（P1，非必要不翻译）：纯原文模式（original）不翻译——
+  // 既省翻译 API 配额，也避免无谓网络等待。双语/纯译文模式才补译文。
+  if (ref.watch(lyricModeProvider) == LyricDisplayMode.original) {
+    return (lyric: lyric, error: null);
+  }
   final translated =
       await repo.ensureTranslation(lyric, candidate.id, targetLang);
   return (lyric: translated, error: null);
@@ -433,6 +440,37 @@ class _EntryButtonsRow extends ConsumerWidget {
                   ? null
                   : () => context.push(
                       '/comments/song/${Uri.encodeComponent(albumAudioId)}'),
+            ),
+          ),
+          // V399-A1（P1）：播放页功能入口行此前只有评论/MV/队列，收藏到
+          // 歌单只能绕到顶栏「更多」菜单（可达性差）。在此补直达入口：
+          // 未登录先走 ensureLoggedIn（现有模式），已登录用当前 Song 构造
+          // TrackRef（hash/albumId/albumAudioId 直接取 Song 同名字段）。
+          Expanded(
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 40),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                visualDensity: VisualDensity.compact,
+              ),
+              icon: const Icon(Icons.playlist_add_rounded, size: 18),
+              label: Text(context.l10n.addToPlaylist,
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              onPressed: () {
+                if (!ensureLoggedIn(context, ref,
+                    action: context.l10n.addToPlaylist)) {
+                  return;
+                }
+                showAddToPlaylistSheet(
+                  context,
+                  TrackRef(
+                    name: song.name,
+                    hash: song.hash,
+                    albumId: song.albumId,
+                    albumAudioId: song.albumAudioId,
+                  ),
+                );
+              },
             ),
           ),
           if (hasMv) ...[

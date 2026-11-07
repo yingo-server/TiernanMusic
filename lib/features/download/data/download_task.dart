@@ -65,6 +65,8 @@ class DownloadTask {
     this.received = 0,
     this.total = 0,
     this.realTempPath = '',
+    // V399-B4：所选下载片段类型（'full'/'trial'/'climax'，下载择优记录）
+    this.segment = 'full',
     this.status = DownloadTaskStatus.queued,
     this.error,
     this.createdAt = 0,
@@ -110,6 +112,10 @@ class DownloadTask {
   /// extName 决定扩展名，可能非 .mp3）——remove() 按它清理，防泄漏。
   final String realTempPath;
 
+  /// V399-B4：非 VIP 下载择优后所选片段类型（'full'/'trial'/'climax'）。
+  /// 元信息记录，UI 无需变化（任务书 B4）。
+  final String segment;
+
   final DownloadTaskStatus status;
 
   /// 失败原因
@@ -151,6 +157,7 @@ class DownloadTask {
     int? received,
     int? total,
     String? realTempPath,
+    String? segment,
     DownloadTaskStatus? status,
     String? error,
     bool clearError = false,
@@ -176,6 +183,7 @@ class DownloadTask {
       received: received ?? this.received,
       total: total ?? this.total,
       realTempPath: realTempPath ?? this.realTempPath,
+      segment: segment ?? this.segment,
       status: status ?? this.status,
       error: clearError ? null : (error ?? this.error),
       createdAt: createdAt ?? this.createdAt,
@@ -202,6 +210,7 @@ class DownloadTask {
         'received': received,
         'total': total,
         'realTempPath': realTempPath,
+        'segment': segment,
         'status': status.name,
         'error': error,
         'createdAt': createdAt,
@@ -239,6 +248,9 @@ class DownloadTask {
           ? json['total'] as int
           : int.tryParse('${json['total'] ?? 0}') ?? 0,
       realTempPath: '${json['realTempPath'] ?? ''}',
+      segment: json['segment'] is String && (json['segment'] as String).isNotEmpty
+          ? json['segment'] as String
+          : 'full',
       status: DownloadTaskStatus.values.firstWhere(
         (s) => s.name == statusName,
         orElse: () => DownloadTaskStatus.queued,
