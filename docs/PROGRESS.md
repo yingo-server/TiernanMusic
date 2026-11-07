@@ -810,3 +810,19 @@ JustAudioBackground.init 真机永久失败 → ensureEngineReady false → play
 
 ### ⚠️ 勘误（权限+播放全面检查 a102436e）
 8de30b4 的「JustAudioBackground.init 补 handler 参数」结论**错误**：包源码（just_audio_background 0.0.1-beta.13, just_audio_background.dart:34-51）确认 init 只收通知渠道/前台服务配置，**没有 handler 参数**——handler 由 AudioPlayer 的 mixin 在平台通道激活时挂载。c99898a 已是修正版（无 handler + channelDescription + androidStopForegroundOnPause=false）。播放页全空白的真实根因仍待真机日志定位，不臆造结论。
+
+## ✅ v3.9.0 发布确认
+
+- release 437436026（draft=False），tag e7cd472 构建成功（版本 3.9.0+40）
+- 资产：arm64/v7a/x86_64 APK + screenshots-322.zip
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.9.0/app-arm64-v8a-release.apk
+
+### 内容（三代理交叉检查+完全重写）
+- 真根因：MainActivity 继承 AudioServiceActivity（日志实锤 PlatformException，引擎永久失败→播放页全空白）
+- ① 契约清点：20+ 文件全文读，19 provider/路由/模型契约表；评论入口被 MV early-return 吞掉（B1）
+- ② 播放页 786 行完全重写：四态分离、评论入口无条件可达、资源对称、窄屏布局、build 零副作用
+- ③ 辅助页+评论链路重写：队列世代校验、失败重试、play_helper 三处转换合并、hash 不冒充
+- CI 试错 3 轮（albumAudioId/friendly_error 导入/theme 局部变量）全部为重写声明漏项，已清
+
+### 请用户真机验证
+从首页点歌→播放页信息齐全；评论入口始终可见；歌单全部播放恢复；引擎初始化不再报 PlatformException。若仍异常，verbose 日志开起来看 TierNanMusic/logs/。
