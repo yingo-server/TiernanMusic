@@ -778,3 +778,19 @@ JustAudioBackground.init 真机永久失败 → ensureEngineReady false → play
 5. Android≤9 分支
 6. release 下 debugPrint 包装开销
 7. 日志体积与轮转
+
+## v3.7 PLAY-1 根因修复（8de30b4）——用户真机现象实锤
+
+用户反馈：从首页点歌 → 播放页**所有信息空白**；歌单全部播放同样失败；授权页也不弹。
+
+### 根因（代码实锤，非推测）
+`JustAudioBackground.init` **缺 `handler:` 参数**——init 只创建了通知渠道，没有把 TiernanAudioHandler 挂载到后台服务。AudioPlayer 创建后是「孤儿」：通知/媒体会话/播放流程全部静默失败 → 播放页 song==null 全空白。下载不经此 init，故正常。
+
+### 已修
+- init 补 `handler: TiernanAudioHandler(...)` + channelDescription
+- bootstrap 直接构造 repository（init 阶段无容器，handler._ref 可空设计允许）
+- 授权页不弹：permission_handler 的 manageExternalStorage.request() 在部分 ROM 不弹系统页，需回退 openAppSettings()——已由并行代理在修（settings_page 跳转链路）
+
+### 待办
+- 概念版通道验证报告已出（假设不成立）
+- 权限网关修复代理进行中

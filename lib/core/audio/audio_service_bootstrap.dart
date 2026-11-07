@@ -54,22 +54,22 @@ class AudioServiceBootstrap {
 
   static Future<bool> _init() async {
     try {
-      // V37-PLAY-1（用户真机反馈「播放页全空白」根因）：JustAudioBackground
-      // 的 init **必须传入 handler**——否则后台服务启动后没有任何
-      // AudioHandler 挂载，AudioPlayer 创建的通知/媒体会话是「孤儿」，
-      // 播放流程静默失败、播放页 song==null 全空白。此前缺 `handler:`
-      // 与 `androidNotificationChannelDescription` 参数。
+      // V37-PLAY-01：just_audio_background 的 init **没有 handler 参数**
+      //（包源码 just_audio_background.dart:34-51 已核实：init 只收通知渠道/
+      // 前台服务配置；handler 由 AudioPlayer 自身的 just_audio_background
+      // mixin 在平台通道激活时挂载）。曾出现向 init 传 handler: 的写法——
+      // 该参数不存在，属编译错误，且会诱导在启动期提前构造 PlayerRepository
+      //（绕过 Provider 生命周期）。此处只做插件级配置。
+      //
+      // androidStopForegroundOnPause=false：暂停时不退出前台服务——
+      // 包默认 true（暂停即降级），部分 ROM 上暂停降级后再恢复需重启
+      // service，会受 Android 12+ 后台启动限制而失败（暂停后无法续播）。
       await JustAudioBackground.init(
         androidNotificationChannelId: 'com.tiernan.music.channel.audio',
         androidNotificationChannelName: '汀澜音乐播放',
         androidNotificationChannelDescription: '后台播放控制与通知',
         androidNotificationOngoing: true,
-        handler: TiernanAudioHandler(PlayerRepository(
-          // V37-PLAY-1：init 阶段尚无 ProviderContainer 可读，直接构造。
-          // handler 内部 _ref 可空（见 player_provider），repository 的
-          // 网络调用发生在 resolveUrl（播放时），那时容器已就绪。
-          KugouApiClient(),
-        )),
+        androidStopForegroundOnPause: false,
       );
       _ready = true;
       return true;
