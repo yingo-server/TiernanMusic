@@ -210,8 +210,16 @@ class PlaylistDetailPage extends ConsumerWidget {
                         : ref.read(playlistTracksProvider(id));
                     final tracks = tracksAsync.value;
                     if (tracks != null && tracks.songs.isNotEmpty) {
+                      // R-39（v3.7 排查环节 2）：fire-and-forget 保持不变，
+                      // 未捕获异常由 runZonedGuarded 落盘。V37-PLAY-04：
+                      // 列表加载中/为空/失败时此前**静默无响应**（用户点
+                      // 按钮没反应，第 9 条失败可感知），补 Toast 告知。
                       ref.read(playHelperProvider).playPlaylistQueue(
                           tracks.songs, 0, cover: detail.cover);
+                    } else if (tracksAsync.isLoading) {
+                      Toast.show(context, context.l10n.loading);
+                    } else {
+                      Toast.show(context, context.l10n.loadFailed);
                     }
                   },
                   icon: const Icon(Icons.play_arrow),

@@ -22,6 +22,7 @@ import 'core/widgets/splash_handwriting.dart' show HandwritingCycle;
 import 'core/widgets/splash_screen.dart';
 import 'core/utils/toast.dart';
 import 'core/utils/error_logger.dart';
+import 'core/utils/permission_gate.dart';
 import 'core/storage/secure_storage.dart';
 import 'features/auth/data/auth_providers.dart';
 import 'features/download/download_provider.dart';
@@ -206,6 +207,12 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
     // 首帧后再标记就绪，确保 SplashScreen 至少绘制一帧（可见动画）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _appReady = true);
+      // V37-PLAY-02：Android 13+ 通知运行时权限（POST_NOTIFICATIONS）——
+      // manifest 里声明了权限但没有运行时申请，Android 13+ 上默认拒绝，
+      // 媒体通知不显示（锁屏/通知栏控制全部失效，后台播放状态不可见）。
+      // 首帧后非阻塞申请一次（fire-and-forget；系统只在合适时机弹一次，
+      // 永久拒绝时 StoragePermissionService 会引导系统设置页）。
+      unawaited(PermissionGate.instance.ensureNotification());
     });
     _splashTimer = Timer(HandwritingCycle.minVisible, () {
       if (mounted) setState(() => _splashMinElapsed = true);

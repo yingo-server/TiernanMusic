@@ -61,11 +61,43 @@ class FullPlayerPage extends ConsumerWidget {
     final loopMode = ref.watch(repeatProvider).valueOrNull ?? LoopMode.off;
     final controller = ref.read(playerControllerProvider);
     final theme = Theme.of(context);
+    // V37-PLAY-03（排查报告 H1 收尾）：引擎初始化失败时全页只有「未在播放」
+    // 空态，用户不知道发生了什么。这里把 handler.engineError 以 banner 形式
+    // 呈现（第 9 条失败可观测：有用户可见反馈）。ErrorLogger 落盘已由
+    // ensureEngineReady 内完成。
+    final engineError =
+        ref.watch(audioHandlerProvider).engineError;
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
+            if (engineError != null)
+              Material(
+                color: theme.colorScheme.errorContainer,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline,
+                            size: 18,
+                            color: theme.colorScheme.onErrorContainer),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(engineError,
+                              style: TextStyle(
+                                  color:
+                                      theme.colorScheme.onErrorContainer,
+                                  fontSize: 13)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             // 顶部栏：左侧收起、居中标题、右侧「更多」菜单（下载/队列收进菜单，
             // 避免行内排一排 IconButton）。
             Row(
