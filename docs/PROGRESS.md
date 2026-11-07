@@ -888,3 +888,15 @@ C: 歌单顺序漂移实测排查（上游稳定四假设排除，upstreamOrder 
 
 ### 注意
 C 档产出未并入本 tag；其报告回来后复核并出 v4.0.1。
+
+## ✅ v4.0.0 发布确认
+
+- release 437736063（draft=False），tag ccae1c7 构建成功（版本 4.0.0+43）
+- 资产：arm64/v7a/x86_64 APK + screenshots-336.zip
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v4.0.0/app-arm64-v8a-release.apk
+
+### v4.0.0 内容
+- A: 按钮文案精简（11键×11语言）+ 翻译实时插入（fontSize 12）
+- B: core/resource 三模块（168h/90s/永久/in-flight/失效回退）+ 6 repository 接入 + 翻译504重试
+- ORDER: 反反歌单顺序（页序倒+页内倒、余数健壮、与概念版分享页吻合）
+- **不含预加载**：C 档 aea2bf08 超时零产出，已拆为 C-1（370a97a3 只建模块）与 C-2（接线）两窄任务，并入 v4.0.1
