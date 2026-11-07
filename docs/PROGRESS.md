@@ -740,3 +740,13 @@ JustAudioBackground.init 真机永久失败 → ensureEngineReady false → play
 ### 判定
 用户假设**不成立**：概念版可复刻范围内对付费歌曲行为与标准版完全一致（60s 试听），不存在免费完整听旁路。privilege_lite.js 的 freeListen 只是 UI 展示逻辑。
 处置：lite 常量零成本保留，不接 lite 通道；标准版直连已是协议最优。
+
+## v3.7 日志系统+存储重构批启动（b52f5ee9，60 分钟预算）
+
+用户需求（已确认方案）：
+- 设置加 verbose 开关：全量捕获（debugPrint 拦截/网络层/播放状态/下载状态），全过脱敏走串行链；关闭保持现状
+- 存储根：/storage/emulated/0/TiernanMusic/（MANAGE_EXTERNAL_STORAGE+设置页跳授权），未授权自动降级 Download/TiernanMusic；子目录 audio/mv/logs/cover/lyrics
+- 应用内部存储（凭证/Hive）不动；旧下载文件不迁移
+- 三处根路径统一 resolveRoot()
+
+同时进行：付费歌曲通道对比（已完成：概念版=标准版 60s 试听无旁路）、音频加密审计（已闭环：全明文）。
