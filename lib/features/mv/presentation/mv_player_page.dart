@@ -40,6 +40,11 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
   String? _activeHash; // 当前正在播放的清晰度 hash
   bool _resolving = false;
 
+  // V37-UI-01 补正（CI 实测）：UI 代理在方法里用了防重/收藏态字段
+  // 却没声明——undefined_identifier ×5。
+  bool _collecting = false; // 收藏请求飞行中（第 21 条防重）
+  bool _collected = false; // 会话内收藏态（collectservice 无查询端点）
+
   @override
   void initState() {
     super.initState();
