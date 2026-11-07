@@ -807,3 +807,6 @@ JustAudioBackground.init 真机永久失败 → ensureEngineReady false → play
 - POST_NOTIFICATIONS 运行时申请（Android 13+ 媒体通知）
 - 权限网关收尾（permission_gate 接入启动编排）
 - 版本 bump 纪律已执行（v3.7.0 的 6 轮教训）
+
+### ⚠️ 勘误（权限+播放全面检查 a102436e）
+8de30b4 的「JustAudioBackground.init 补 handler 参数」结论**错误**：包源码（just_audio_background 0.0.1-beta.13, just_audio_background.dart:34-51）确认 init 只收通知渠道/前台服务配置，**没有 handler 参数**——handler 由 AudioPlayer 的 mixin 在平台通道激活时挂载。c99898a 已是修正版（无 handler + channelDescription + androidStopForegroundOnPause=false）。播放页全空白的真实根因仍待真机日志定位，不臆造结论。
