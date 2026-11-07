@@ -525,6 +525,8 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
 
   @override
   Widget build(BuildContext context) {
+    // V39-CI-2：build 内使用 theme 前必须先声明（代理重写漏项）。
+    final theme = Theme.of(context);
     final lyricAsync = ref.watch(currentLyricProvider);
     final lyricMode = ref.watch(lyricModeProvider);
     final position = ref.watch(positionProvider).valueOrNull ?? Duration.zero;
@@ -636,6 +638,8 @@ class _ProgressBarState extends ConsumerState<_ProgressBar> {
 
   @override
   Widget build(BuildContext context) {
+    // V39-CI-2：同上，进度条分支使用 theme 需声明。
+    final theme = Theme.of(context);
     final position = ref.watch(positionProvider).valueOrNull ?? Duration.zero;
     final buffered =
         ref.watch(bufferedPositionProvider).valueOrNull ?? Duration.zero;
