@@ -561,5 +561,11 @@
   "goHome": "Zur Startseite",
   "mvNoSource": "Dieses MV hat keine abspielbare Quelle und kann nicht geladen werden",
   "downloadMvUnavailable": "Dieser Song hat kein ladbares MV",
-  "collectResultUnknown": "Favorit-Ergebnis unbekannt — bitte in „Meine Musik“ bestätigen"
+  "collectResultUnknown": "Favorit-Ergebnis unbekannt — bitte in „Meine Musik“ bestätigen",
+  "verboseLogging": "Ausführliche Protokollierung",
+  "verboseLoggingHint": "Erfasst bei Aktivierung alle Protokolle (Netzwerk/Wiedergabe/Download)",
+  "storageRootPath": "Speicher-Stammverzeichnis",
+  "storageModeRoot": "Stammverzeichnis-Modus (Alle-Dateien-Zugriff erteilt)",
+  "storageModeDownload": "Download-Modus (nicht erteilt, schreibt nach Download/TiernanMusic)",
+  "grantAllFilesAccess": "Alle-Dateien-Zugriff erteilen"
 }

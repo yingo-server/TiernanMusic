@@ -561,5 +561,11 @@
   "goHome": "Ir para o início",
   "mvNoSource": "Este MV não tem fonte reproduzível e não pode ser baixado",
   "downloadMvUnavailable": "Esta música não tem MV para baixar",
-  "collectResultUnknown": "Resultado da favoritação desconhecido — confirme em «Minha música»"
+  "collectResultUnknown": "Resultado da favoritação desconhecido — confirme em «Minha música»",
+  "verboseLogging": "Registro detalhado",
+  "verboseLoggingHint": "Ao ativar, todos os registros (rede/reprodução/download) são capturados",
+  "storageRootPath": "Raiz de armazenamento",
+  "storageModeRoot": "Modo raiz (acesso a todos os arquivos concedido)",
+  "storageModeDownload": "Modo Download (não concedido, gravando em Download/TiernanMusic)",
+  "grantAllFilesAccess": "Conceder acesso a todos os arquivos"
 }

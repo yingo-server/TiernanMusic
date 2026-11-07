@@ -561,5 +561,11 @@
   "goHome": "返回首頁",
   "mvNoSource": "該 MV 暫無可用播放位址，無法下載",
   "downloadMvUnavailable": "目前歌曲沒有可下載的 MV",
-  "collectResultUnknown": "收藏結果未知，請到「我的音樂」確認是否收藏成功"
+  "collectResultUnknown": "收藏結果未知，請到「我的音樂」確認是否收藏成功",
+  "verboseLogging": "日誌詳細模式",
+  "verboseLoggingHint": "開啟後無條件記錄所有日誌（網路/播放/下載）",
+  "storageRootPath": "儲存根目錄",
+  "storageModeRoot": "根目錄模式（已授權所有檔案存取）",
+  "storageModeDownload": "Download 模式（未授權，寫入 Download/TiernanMusic）",
+  "grantAllFilesAccess": "授權所有檔案存取"
 }

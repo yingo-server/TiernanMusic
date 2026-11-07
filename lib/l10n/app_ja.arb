@@ -561,5 +561,11 @@
   "goHome": "ホームへ戻る",
   "mvNoSource": "この MV は再生可能なソースがなくダウンロードできません",
   "downloadMvUnavailable": "この曲にはダウンロードできる MV がありません",
-  "collectResultUnknown": "お気に入りの結果は不明です。「マイミュージック」で確認してください"
+  "collectResultUnknown": "お気に入りの結果は不明です。「マイミュージック」で確認してください",
+  "verboseLogging": "詳細ログ",
+  "verboseLoggingHint": "オンにするとすべてのログ（ネットワーク/再生/ダウンロード）を記録します",
+  "storageRootPath": "ストレージのルート",
+  "storageModeRoot": "ルートモード（すべてのファイルアクセスを許可済み）",
+  "storageModeDownload": "Download モード（未許可、Download/TiernanMusic に書き込み）",
+  "grantAllFilesAccess": "すべてのファイルアクセスを許可"
 }

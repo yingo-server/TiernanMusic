@@ -561,5 +561,11 @@
   "goHome": "Ir al inicio",
   "mvNoSource": "Este MV no tiene fuente reproducible y no se puede descargar",
   "downloadMvUnavailable": "Esta canción no tiene MV descargable",
-  "collectResultUnknown": "Resultado de favorito desconocido: consulta «Mi música» para confirmarlo"
+  "collectResultUnknown": "Resultado de favorito desconocido: consulta «Mi música» para confirmarlo",
+  "verboseLogging": "Registro detallado",
+  "verboseLoggingHint": "Al activarlo, se registran todos los registros (red/reproducción/descarga)",
+  "storageRootPath": "Raíz de almacenamiento",
+  "storageModeRoot": "Modo raíz (acceso a todos los archivos concedido)",
+  "storageModeDownload": "Modo Download (sin permiso, se escribe en Download/TiernanMusic)",
+  "grantAllFilesAccess": "Conceder acceso a todos los archivos"
 }

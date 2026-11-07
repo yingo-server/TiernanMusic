@@ -17,15 +17,20 @@ class PublicMediaStore {
   static const MethodChannel _channel =
       MethodChannel('com.tiernan.music/storage');
 
-  /// App 名（公共目录下的子目录名）
-  static const String folderName = 'Tiernan Music';
-
   /// 各类型对应的公共目录与 MIME
+  ///
+  /// V37-LOG-08：改为 Download/TiernanMusic 分域子目录（audio/mv/cover/lyrics）。
+  /// 这是**未授权 MANAGE_EXTERNAL_STORAGE 时**的 MediaStore 回退路径；
+  /// 已授权时 _publishDirect 走 resolveRoot() 直写根目录同名子目录。
   static String relativePathOf(DownloadTaskType type) => switch (type) {
-        DownloadTaskType.audio => 'Music/$folderName',
-        DownloadTaskType.cover => 'Pictures/$folderName',
-        DownloadTaskType.lyric => 'Documents/$folderName/Lyrics',
-        DownloadTaskType.mv => 'Movies/$folderName',
+        DownloadTaskType.audio =>
+          'Download/${StoragePermissionService.fallbackRootDirName}/${StoragePermissionService.audioSubDir}',
+        DownloadTaskType.cover =>
+          'Download/${StoragePermissionService.fallbackRootDirName}/${StoragePermissionService.coverSubDir}',
+        DownloadTaskType.lyric =>
+          'Download/${StoragePermissionService.fallbackRootDirName}/${StoragePermissionService.lyricsSubDir}',
+        DownloadTaskType.mv =>
+          'Download/${StoragePermissionService.fallbackRootDirName}/${StoragePermissionService.mvSubDir}',
       };
 
   static String collectionOf(DownloadTaskType type) => switch (type) {
@@ -60,13 +65,13 @@ class PublicMediaStore {
     };
   }
 
-  /// 公共目录名（Android 9 及以下直接写路径时使用）
-  static String publicDirNameOf(DownloadTaskType type) => switch (type) {
-        DownloadTaskType.audio => 'music',
-        DownloadTaskType.cover => 'pictures',
-        DownloadTaskType.lyric => 'documents',
-        DownloadTaskType.mv => 'movies',
-      };
+  /// 公共目录名（Android 9 及以下直接写路径时使用）。
+  ///
+  /// V37-LOG-08：改为 resolveRoot 的分域子目录——原生 publicDir(type)
+  /// 的 type 参数只用于探测「系统公共目录是否存在」，子目录归属由
+  /// resolveRoot()+subDirOf 统一决定（三处根路径统一，禁各自硬编码）。
+  static String publicDirNameOf(DownloadTaskType type) =>
+      StoragePermissionService.subDirOf(type.name);
 
 
   /// 下载用临时目录（App 私有，发布完成后再写入公共目录）。
@@ -138,34 +143,36 @@ class PublicMediaStore {
   }
 
   /// 直接写公共目录（Android 9 及以下）或降级目录。
+  ///
+  /// V37-LOG-08：三处根路径统一——先经 [StoragePermissionService.resolveRoot]：
+  /// 已授权 MANAGE_EXTERNAL_STORAGE → `<root>/<audio|mv|cover|lyrics>` 直写；
+  /// 未授权 → 原生 publicDir 探测的 Download 根 + 同名子目录；两者都不可得
+  /// 才降级 appFallback（App 私有外部目录）。
   Future<PublishedFile> _publishDirect(
     DownloadTaskType type,
     String tempFilePath,
     String displayName,
   ) async {
     final service = StoragePermissionService.instance;
-    final publicBase = await service.publicDir(publicDirNameOf(type));
+    final sub = StoragePermissionService.subDirOf(type.name);
     String dirPath;
     String display;
-    if (publicBase == null || publicBase.isEmpty) {
-      dirPath = await fallbackDir(type);
+    String? grantedRoot;
+    if (await service.isAllFilesAccessGranted()) grantedRoot = StoragePermissionService.rootPath;
+    if (grantedRoot != null) {
+      dirPath = '$grantedRoot/$sub';
       display = dirPath;
     } else {
-      var base = publicBase;
-      // 歌词目录：Documents 不可用时退到 Download
-      if (type == DownloadTaskType.lyric) {
-        final target = Directory('$base/$folderName/Lyrics');
-        if (!await target.exists()) {
-          final downloadBase = await service.publicDir('downloads');
-          if (downloadBase != null && downloadBase.isNotEmpty) {
-            base = downloadBase;
-          }
-        }
+      final publicBase = await service.publicDir(publicDirNameOf(type));
+      if (publicBase == null || publicBase.isEmpty) {
+        dirPath = await fallbackDir(type);
+        display = dirPath;
+      } else {
+        final dir = Directory('$publicBase/$sub');
+        if (!await dir.exists()) await dir.create(recursive: true);
+        dirPath = dir.path;
+        display = dirPath;
       }
-      final dir = Directory('$base/$folderName${_subSuffix(type)}');
-      if (!await dir.exists()) await dir.create(recursive: true);
-      dirPath = dir.path;
-      display = '/sdcard/${relativePathOf(type)}';
     }
 
     final target = File('$dirPath/$displayName');
@@ -204,9 +211,6 @@ class PublicMediaStore {
     return PublishedFile(path: target.path, displayPath: display);
   }
 
-  static String _subSuffix(DownloadTaskType type) =>
-      type == DownloadTaskType.lyric ? '/Lyrics' : '';
-
   /// 查询已存在的同名文件（用于「已下载」判定）。
   Future<PublishedFile?> queryExisting({
     required DownloadTaskType type,
@@ -232,7 +236,8 @@ class PublicMediaStore {
     }
     final base = await service.publicDir(publicDirNameOf(type));
     if (base == null || base.isEmpty) return null;
-    final dir = Directory('$base/$folderName${_subSuffix(type)}');
+    final dir =
+        Directory('$base/${StoragePermissionService.subDirOf(type.name)}');
     final file = File('${dir.path}/$displayName');
     if (await file.exists()) {
       return PublishedFile(

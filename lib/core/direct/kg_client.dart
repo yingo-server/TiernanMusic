@@ -10,7 +10,12 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 
 import '../../features/auth/data/edt_generator.dart';
+import '../utils/error_logger.dart';
 import 'kg_crypto.dart';
+
+/// V37-LOG-04（v3.7 日志批）：请求/响应体在 verbose 日志中的截断上限
+///（第 25 条：所有资源必须有上限——单行日志过大本身会拖慢落盘链）。
+const int _kgVerboseBodyLimit = 4 * 1024;
 
 /// 直连响应
 class KgResponse {  const KgResponse({
@@ -153,6 +158,33 @@ class KgClient {
   final KgDevice device;
   final Dio _dio;
 
+  /// V37-LOG-04：verbose 网络捕获。verbose 关时 [ErrorLogger.verbose]
+  /// 内部零开销直接返回（不构建字符串、不落盘）。
+  void _logVerboseRequest(
+    String method,
+    String url,
+    int status,
+    int elapsedMs, {
+    String? errorCode,
+    String? requestPreview,
+    String? responsePreview,
+  }) {
+    if (!ErrorLogger.verboseMode) return;
+    final sb = StringBuffer('HTTP $method $url -> status=$status')
+      ..write(' cost=${elapsedMs}ms')
+      ..write(' errorCode=${errorCode ?? '-'}');
+    if (requestPreview != null && requestPreview.isNotEmpty) {
+      sb.write('\n  req: ${_truncate(requestPreview, _kgVerboseBodyLimit)}');
+    }
+    if (responsePreview != null && responsePreview.isNotEmpty) {
+      sb.write('\n  res: ${_truncate(responsePreview, _kgVerboseBodyLimit)}');
+    }
+    ErrorLogger.instance.verbose(sb.toString(), tag: 'net');
+  }
+
+  static String _truncate(String s, int limit) =>
+      s.length <= limit ? s : '${s.substring(0, limit)}…(截断,共${s.length}字符)';
+
   String token = '';
   String userid = '0';
   String t1 = ''; // 登录态 t1 票据（login/token 刷新签名用）
@@ -239,6 +271,7 @@ class KgClient {
     };
 
     Response<List<int>> res;
+    final sw = Stopwatch()..start();
     try {
       res = await _dio.request<List<int>>(
         '$baseUrl$path',
@@ -258,6 +291,13 @@ class KgClient {
         ),
       );
     } on DioException catch (e) {
+      // V37-LOG-04（v3.7 日志批）：verbose 网络捕获——请求异常也记一行。
+      // 脱敏由 ErrorLogger 入口统一执行（B-17/N-2 规则不可绕过）。
+      _logVerboseRequest(
+        method, '$baseUrl$path', -1, sw.elapsedMilliseconds,
+        errorCode: e.message ?? e.type.name,
+        requestPreview: bodyStr,
+      );
       return KgResponse(
         status: 502,
         body: {'status': 0, 'error': '${e.message}'},
@@ -272,6 +312,16 @@ class KgClient {
     } catch (_) {
       body = {'status': 0, 'error': '响应解析失败', 'raw': raw.substring(0, raw.length.clamp(0, 200))};
     }
+
+    // V37-LOG-04：verbose 网络捕获（method/url/status/耗时/errorCode +
+    // 请求/响应体截断 4KB；verbose 关时该方法内部零开销直接返回）
+    final errorCode = body['error_code'] ?? body['errcode'] ?? body['err_code'];
+    _logVerboseRequest(
+      method, '$baseUrl$path', res.statusCode ?? 0, sw.elapsedMilliseconds,
+      errorCode: '$errorCode',
+      requestPreview: bodyStr,
+      responsePreview: raw,
+    );
 
     final headerMap = <String, String>{};
     res.headers.forEach((k, v) {

@@ -25,6 +25,7 @@ import '../../../core/widgets/song_tile.dart' show SectionHeader;
 import '../../../l10n/l10n.dart';
 import '../../auth/data/account_manager.dart';
 import '../../auth/data/auth_providers.dart';
+import '../../download/data/storage_permission_service.dart';
 import 'settings_providers.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -59,6 +60,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   /// 存储写入权限状态（同上，必须提为字段避免无限重建）
   late Future<bool> _storageGranted;
 
+  /// V37-LOG-10：当前存储根路径与模式（'root'/'download'），
+  /// 必须是 State 字段（避免 build 内新建 Future → 无限重建，同 _logDirPath）
+  late Future<(String, String)> _storageRoot;
+
   /// 「检查更新」进行中（用于显示进度圈）
   bool _checkingUpdate = false;
 
@@ -70,6 +75,33 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _loadAccount();
     _logDirPath = ErrorLogger.instance.currentDirPath();
     _storageGranted = PermissionGate.instance.hasStorageWriteAccess();
+    // V37-LOG-10：根路径 + 模式一次性读取
+    _storageRoot = _loadStorageRoot();
+  }
+
+  /// V37-LOG-10：读取当前生效存储根（路径, 模式）。
+  /// 失败时返回占位值，绝不抛异常打断设置页构建（第 11 条降级有界）。
+  Future<(String, String)> _loadStorageRoot() async {
+    try {
+      final service = StoragePermissionService.instance;
+      return (await service.resolveRoot(), await service.resolveRootMode());
+    } catch (_) {
+      return ('-', 'download');
+    }
+  }
+
+  /// V37-LOG-10：授权所有文件访问（跳系统授权页），返回后刷新状态。
+  Future<void> _requestAllFilesAccess() async {
+    final ok = await StoragePermissionService.instance.requestAllFilesAccess();
+    if (!mounted) return;
+    setState(() {
+      _storageRoot = _loadStorageRoot();
+      _storageGranted = PermissionGate.instance.hasStorageWriteAccess();
+    });
+    Toast.show(
+      context,
+      ok ? context.l10n.permissionGranted : context.l10n.permissionDenied,
+    );
   }
 
   Future<void> _loadVersion() async {
@@ -185,6 +217,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   _buildPlaybackSection(),
                   _buildDownloadSection(),
                   _buildCacheSection(),
+                  // V37-LOG-10：「存储与日志」区（verbose 开关 + 根路径 + 授权入口）
+                  _buildStorageAndLoggingSection(),
                   _buildDiagnosticsSection(),
                   _buildAboutSection(),
                 ],
@@ -193,6 +227,68 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
         ],
       ),
+    );
+  }
+
+  // ---------- 存储与日志（V37-LOG-10） ----------
+  Widget _buildStorageAndLoggingSection() {
+    final verbose = ref.watch(verboseLoggingProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(title: context.l10n.storageRootPath),
+        // verbose 日志开关（settings_provider.verboseLoggingProvider，
+        // 持久化 Hive settings box；main.dart watch 同步到 ErrorLogger）
+        SwitchListTile(
+          secondary: const Icon(Icons.receipt_long_outlined),
+          title: Text(context.l10n.verboseLogging),
+          subtitle: Text(context.l10n.verboseLoggingHint),
+          value: verbose,
+          onChanged: (v) =>
+              ref.read(verboseLoggingProvider.notifier).set(v),
+        ),
+        // 当前存储根路径（实际生效路径 + 模式说明）
+        ListTile(
+          leading: const Icon(Icons.folder_outlined),
+          title: Text(context.l10n.storageRootPath),
+          subtitle: FutureBuilder<(String, String)>(
+            future: _storageRoot,
+            builder: (context, snap) {
+              final data = snap.data;
+              final path = data?.$1 ?? context.l10n.unknown;
+              // F4-46 同口径：界面只显示可读的路径与模式，完整路径可复制
+              final mode = data?.$2 == 'root'
+                  ? context.l10n.storageModeRoot
+                  : context.l10n.storageModeDownload;
+              return Text('$path\n$mode');
+            },
+          ),
+          isThreeLine: true,
+          trailing: IconButton(
+            icon: const Icon(Icons.copy_all_outlined),
+            tooltip: context.l10n.copyPath,
+            onPressed: () async {
+              final (path, _) = await _storageRoot;
+              if (!context.mounted) return;
+              await Toast.copy(context, path);
+            },
+          ),
+        ),
+        // 「授权所有文件访问」按钮：已授权时隐藏（无效入口，F4-45 同口径）
+        FutureBuilder<(String, String)>(
+          future: _storageRoot,
+          builder: (context, snap) {
+            if (snap.data?.$2 == 'root') return const SizedBox.shrink();
+            return ListTile(
+              leading: const Icon(Icons.security_outlined),
+              title: Text(context.l10n.grantAllFilesAccess),
+              subtitle: Text(context.l10n.storagePermissions),
+              trailing: const Icon(Icons.open_in_new),
+              onTap: _requestAllFilesAccess,
+            );
+          },
+        ),
+      ],
     );
   }
 

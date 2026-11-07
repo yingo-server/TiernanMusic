@@ -561,5 +561,11 @@
   "goHome": "홈으로 이동",
   "mvNoSource": "이 MV는 재생 가능한 소스가 없어 다운로드할 수 없습니다",
   "downloadMvUnavailable": "이 곡에는 다운로드 가능한 MV가 없습니다",
-  "collectResultUnknown": "즐겨찾기 결과를 알 수 없습니다. 내 음악에서 확인해 주세요"
+  "collectResultUnknown": "즐겨찾기 결과를 알 수 없습니다. 내 음악에서 확인해 주세요",
+  "verboseLogging": "상세 로그",
+  "verboseLoggingHint": "켜면 모든 로그(네트워크/재생/다운로드)를 기록합니다",
+  "storageRootPath": "저장소 루트",
+  "storageModeRoot": "루트 모드(모든 파일 액세스 허용됨)",
+  "storageModeDownload": "Download 모드(미허용, Download/TiernanMusic에 기록)",
+  "grantAllFilesAccess": "모든 파일 액세스 허용"
 }

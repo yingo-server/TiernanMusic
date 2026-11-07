@@ -561,5 +561,11 @@
   "goHome": "Go to home",
   "mvNoSource": "This MV has no playable source and cannot be downloaded",
   "downloadMvUnavailable": "This song has no downloadable MV",
-  "collectResultUnknown": "Favorite result unknown — check \"My Music\" to confirm"
+  "collectResultUnknown": "Favorite result unknown — check \"My Music\" to confirm",
+  "verboseLogging": "Verbose logging",
+  "verboseLoggingHint": "When on, all logs (network/playback/download) are captured",
+  "storageRootPath": "Storage root",
+  "storageModeRoot": "Root mode (all-files access granted)",
+  "storageModeDownload": "Download mode (not granted, writing to Download/TiernanMusic)",
+  "grantAllFilesAccess": "Grant all-files access"
 }

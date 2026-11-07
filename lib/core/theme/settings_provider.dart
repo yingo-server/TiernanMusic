@@ -102,4 +102,29 @@ final lyricModeProvider =
   (ref) => LyricModeNotifier(ref.watch(_settingsBoxProvider)),
 );
 
+// V37-LOG-01（v3.7 日志批）：verbose 日志开关。
+//
+// 采用与同文件 themeMode / locale / lyricMode 一致的 StateNotifier 模式
+// （而非裸 StateProvider）：初值须从 Hive 读盘（第 5 条状态单一来源——
+// Hive 与内存不可并存两份可写副本），setter 持久化写回。
+class VerboseLoggingNotifier extends StateNotifier<bool> {
+  VerboseLoggingNotifier(this._box) : super(_load(_box));
+
+  final Box<dynamic>? _box;
+  static const _key = 'verboseLogging';
+
+  static bool _load(Box<dynamic>? box) =>
+      box?.get(_key, defaultValue: false) as bool? ?? false;
+
+  Future<void> set(bool value) async {
+    state = value;
+    await _box?.put(_key, value);
+  }
+}
+
+final verboseLoggingProvider =
+    StateNotifierProvider<VerboseLoggingNotifier, bool>(
+  (ref) => VerboseLoggingNotifier(ref.watch(_settingsBoxProvider)),
+);
+
 Future<void> initSettingsBox() => Hive.openBox('settings');

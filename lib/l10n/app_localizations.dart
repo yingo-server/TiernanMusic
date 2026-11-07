@@ -344,6 +344,12 @@ const _strings_de = <String, String>{
   'mvNoSource': 'Dieses MV hat keine abspielbare Quelle und kann nicht geladen werden',
   'downloadMvUnavailable': 'Dieser Song hat kein ladbares MV',
   'collectResultUnknown': 'Favorit-Ergebnis unbekannt — bitte in „Meine Musik“ bestätigen',
+  'verboseLogging': 'Ausführliche Protokollierung',
+  'verboseLoggingHint': 'Erfasst bei Aktivierung alle Protokolle (Netzwerk/Wiedergabe/Download)',
+  'storageRootPath': 'Speicher-Stammverzeichnis',
+  'storageModeRoot': 'Stammverzeichnis-Modus (Alle-Dateien-Zugriff erteilt)',
+  'storageModeDownload': 'Download-Modus (nicht erteilt, schreibt nach Download/TiernanMusic)',
+  'grantAllFilesAccess': 'Alle-Dateien-Zugriff erteilen',
 };
 
 const _strings_en = <String, String>{
@@ -686,6 +692,12 @@ const _strings_en = <String, String>{
   'mvNoSource': 'This MV has no playable source and cannot be downloaded',
   'downloadMvUnavailable': 'This song has no downloadable MV',
   'collectResultUnknown': 'Favorite result unknown — check "My Music" to confirm',
+  'verboseLogging': 'Verbose logging',
+  'verboseLoggingHint': 'When on, all logs (network/playback/download) are captured',
+  'storageRootPath': 'Storage root',
+  'storageModeRoot': 'Root mode (all-files access granted)',
+  'storageModeDownload': 'Download mode (not granted, writing to Download/TiernanMusic)',
+  'grantAllFilesAccess': 'Grant all-files access',
 };
 
 const _strings_es = <String, String>{
@@ -1028,6 +1040,12 @@ const _strings_es = <String, String>{
   'mvNoSource': 'Este MV no tiene fuente reproducible y no se puede descargar',
   'downloadMvUnavailable': 'Esta canción no tiene MV descargable',
   'collectResultUnknown': 'Resultado de favorito desconocido: consulta «Mi música» para confirmarlo',
+  'verboseLogging': 'Registro detallado',
+  'verboseLoggingHint': 'Al activarlo, se registran todos los registros (red/reproducción/descarga)',
+  'storageRootPath': 'Raíz de almacenamiento',
+  'storageModeRoot': 'Modo raíz (acceso a todos los archivos concedido)',
+  'storageModeDownload': 'Modo Download (sin permiso, se escribe en Download/TiernanMusic)',
+  'grantAllFilesAccess': 'Conceder acceso a todos los archivos',
 };
 
 const _strings_fr = <String, String>{
@@ -1370,6 +1388,12 @@ const _strings_fr = <String, String>{
   'mvNoSource': 'Ce clip n\'a aucune source lisible et ne peut pas être téléchargé',
   'downloadMvUnavailable': 'Cette chanson n\'a pas de clip téléchargeable',
   'collectResultUnknown': 'Résultat de favori inconnu — vérifiez dans « Ma musique »',
+  'verboseLogging': 'Journalisation détaillée',
+  'verboseLoggingHint': 'Une fois activé, tous les journaux (réseau/lecture/téléchargement) sont capturés',
+  'storageRootPath': 'Racine de stockage',
+  'storageModeRoot': 'Mode racine (accès à tous les fichiers accordé)',
+  'storageModeDownload': 'Mode Download (non accordé, écriture dans Download/TiernanMusic)',
+  'grantAllFilesAccess': 'Accorder l\'accès à tous les fichiers',
 };
 
 const _strings_ja = <String, String>{
@@ -1712,6 +1736,12 @@ const _strings_ja = <String, String>{
   'mvNoSource': 'この MV は再生可能なソースがなくダウンロードできません',
   'downloadMvUnavailable': 'この曲にはダウンロードできる MV がありません',
   'collectResultUnknown': 'お気に入りの結果は不明です。「マイミュージック」で確認してください',
+  'verboseLogging': '詳細ログ',
+  'verboseLoggingHint': 'オンにするとすべてのログ（ネットワーク/再生/ダウンロード）を記録します',
+  'storageRootPath': 'ストレージのルート',
+  'storageModeRoot': 'ルートモード（すべてのファイルアクセスを許可済み）',
+  'storageModeDownload': 'Download モード（未許可、Download/TiernanMusic に書き込み）',
+  'grantAllFilesAccess': 'すべてのファイルアクセスを許可',
 };
 
 const _strings_ko = <String, String>{
@@ -2054,6 +2084,12 @@ const _strings_ko = <String, String>{
   'mvNoSource': '이 MV는 재생 가능한 소스가 없어 다운로드할 수 없습니다',
   'downloadMvUnavailable': '이 곡에는 다운로드 가능한 MV가 없습니다',
   'collectResultUnknown': '즐겨찾기 결과를 알 수 없습니다. 내 음악에서 확인해 주세요',
+  'verboseLogging': '상세 로그',
+  'verboseLoggingHint': '켜면 모든 로그(네트워크/재생/다운로드)를 기록합니다',
+  'storageRootPath': '저장소 루트',
+  'storageModeRoot': '루트 모드(모든 파일 액세스 허용됨)',
+  'storageModeDownload': 'Download 모드(미허용, Download/TiernanMusic에 기록)',
+  'grantAllFilesAccess': '모든 파일 액세스 허용',
 };
 
 const _strings_pt = <String, String>{
@@ -2396,6 +2432,12 @@ const _strings_pt = <String, String>{
   'mvNoSource': 'Este MV não tem fonte reproduzível e não pode ser baixado',
   'downloadMvUnavailable': 'Esta música não tem MV para baixar',
   'collectResultUnknown': 'Resultado da favoritação desconhecido — confirme em «Minha música»',
+  'verboseLogging': 'Registro detalhado',
+  'verboseLoggingHint': 'Ao ativar, todos os registros (rede/reprodução/download) são capturados',
+  'storageRootPath': 'Raiz de armazenamento',
+  'storageModeRoot': 'Modo raiz (acesso a todos os arquivos concedido)',
+  'storageModeDownload': 'Modo Download (não concedido, gravando em Download/TiernanMusic)',
+  'grantAllFilesAccess': 'Conceder acesso a todos os arquivos',
 };
 
 const _strings_ru = <String, String>{
@@ -2738,6 +2780,12 @@ const _strings_ru = <String, String>{
   'mvNoSource': 'У этого клипа нет доступного источника, загрузка невозможна',
   'downloadMvUnavailable': 'У этой песни нет загружаемого клипа',
   'collectResultUnknown': 'Результат добавления в избранное неизвестен — проверьте в «Моей музыке»',
+  'verboseLogging': 'Подробный журнал',
+  'verboseLoggingHint': 'Включено: записываются все журналы (сеть/воспроизведение/загрузка)',
+  'storageRootPath': 'Корень хранилища',
+  'storageModeRoot': 'Режим корня (доступ ко всем файлам предоставлен)',
+  'storageModeDownload': 'Режим Download (нет доступа, запись в Download/TiernanMusic)',
+  'grantAllFilesAccess': 'Разрешить доступ ко всем файлам',
 };
 
 const _strings_zh = <String, String>{
@@ -3080,6 +3128,12 @@ const _strings_zh = <String, String>{
   'mvNoSource': '该 MV 暂无可用播放地址，无法下载',
   'downloadMvUnavailable': '当前歌曲没有可下载的 MV',
   'collectResultUnknown': '收藏结果未知，请到「我的音乐」确认是否收藏成功',
+  'verboseLogging': '日志详细模式',
+  'verboseLoggingHint': '开启后无条件记录所有日志（网络/播放/下载）',
+  'storageRootPath': '存储根目录',
+  'storageModeRoot': '根目录模式（已授权所有文件访问）',
+  'storageModeDownload': 'Download 模式（未授权，写入 Download/TiernanMusic）',
+  'grantAllFilesAccess': '授权所有文件访问',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -3422,6 +3476,12 @@ const _strings_zh_CN = <String, String>{
   'mvNoSource': '该 MV 暂无可用播放地址，无法下载',
   'downloadMvUnavailable': '当前歌曲没有可下载的 MV',
   'collectResultUnknown': '收藏结果未知，请到「我的音乐」确认是否收藏成功',
+  'verboseLogging': '日志详细模式',
+  'verboseLoggingHint': '开启后无条件记录所有日志（网络/播放/下载）',
+  'storageRootPath': '存储根目录',
+  'storageModeRoot': '根目录模式（已授权所有文件访问）',
+  'storageModeDownload': 'Download 模式（未授权，写入 Download/TiernanMusic）',
+  'grantAllFilesAccess': '授权所有文件访问',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3764,6 +3824,12 @@ const _strings_zh_TW = <String, String>{
   'mvNoSource': '該 MV 暫無可用播放位址，無法下載',
   'downloadMvUnavailable': '目前歌曲沒有可下載的 MV',
   'collectResultUnknown': '收藏結果未知，請到「我的音樂」確認是否收藏成功',
+  'verboseLogging': '日誌詳細模式',
+  'verboseLoggingHint': '開啟後無條件記錄所有日誌（網路/播放/下載）',
+  'storageRootPath': '儲存根目錄',
+  'storageModeRoot': '根目錄模式（已授權所有檔案存取）',
+  'storageModeDownload': 'Download 模式（未授權，寫入 Download/TiernanMusic）',
+  'grantAllFilesAccess': '授權所有檔案存取',
 };
 
 const _template = _strings_zh_CN;
@@ -4162,6 +4228,12 @@ class AppLocalizations {
   String get mvNoSource => _t('mvNoSource');
   String get downloadMvUnavailable => _t('downloadMvUnavailable');
   String get collectResultUnknown => _t('collectResultUnknown');
+  String get verboseLogging => _t('verboseLogging');
+  String get verboseLoggingHint => _t('verboseLoggingHint');
+  String get storageRootPath => _t('storageRootPath');
+  String get storageModeRoot => _t('storageModeRoot');
+  String get storageModeDownload => _t('storageModeDownload');
+  String get grantAllFilesAccess => _t('grantAllFilesAccess');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

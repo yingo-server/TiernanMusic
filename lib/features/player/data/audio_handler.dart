@@ -121,6 +121,9 @@ class TiernanAudioHandler extends BaseAudioHandler
   bool _loading = false;
   int _playToken = 0;
 
+  /// V37-LOG-05：上次记录的播放状态组合（去重，仅枚举变化时落盘）
+  String _lastLoggedStateCombo = '';
+
   /// 对外暴露的 player：未就绪时返回 null（UI 需判空）。
   AudioPlayer? get player => _playerOrNull;
 
@@ -147,6 +150,17 @@ class TiernanAudioHandler extends BaseAudioHandler
     final p = _playerOrNull;
     if (p == null) return;
     final playing = p.playing;
+    // V37-LOG-05（v3.7 日志批）：verbose 播放状态捕获——仅状态枚举
+    // （processingState/playing 组合）变化时记一行，不逐帧
+    // （第 26 条热路径零分配：verbose 关时仅一次布尔读 + 组合比较）。
+    final stateCombo = '${p.processingState}/$playing';
+    if (stateCombo != _lastLoggedStateCombo) {
+      _lastLoggedStateCombo = stateCombo;
+      ErrorLogger.instance.verbose(
+        'playback: processingState=${p.processingState} playing=$playing',
+        tag: 'audio',
+      );
+    }
     playbackState.add(playbackState.value.copyWith(
       controls: [
         MediaControl.skipToPrevious,

@@ -561,5 +561,11 @@
   "goHome": "Aller à l'accueil",
   "mvNoSource": "Ce clip n'a aucune source lisible et ne peut pas être téléchargé",
   "downloadMvUnavailable": "Cette chanson n'a pas de clip téléchargeable",
-  "collectResultUnknown": "Résultat de favori inconnu — vérifiez dans « Ma musique »"
+  "collectResultUnknown": "Résultat de favori inconnu — vérifiez dans « Ma musique »",
+  "verboseLogging": "Journalisation détaillée",
+  "verboseLoggingHint": "Une fois activé, tous les journaux (réseau/lecture/téléchargement) sont capturés",
+  "storageRootPath": "Racine de stockage",
+  "storageModeRoot": "Mode racine (accès à tous les fichiers accordé)",
+  "storageModeDownload": "Mode Download (non accordé, écriture dans Download/TiernanMusic)",
+  "grantAllFilesAccess": "Accorder l'accès à tous les fichiers"
 }

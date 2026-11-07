@@ -243,6 +243,9 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
 
   @override
   Widget build(BuildContext context) {
+    // V37-LOG-03（v3.7 日志批）：verbose 日志开关同步到 ErrorLogger
+    // 静态总开关（setVerbose 幂等，verbose 关时为无操作）。
+    ErrorLogger.setVerbose(ref.watch(verboseLoggingProvider));
     // 激活最近播放记录器（F2：监听 onSongStarted 写最近播放，全局一次即可）
     ref.watch(recentPlayRecorderProvider);
     // 播放错误统一 Toast 提示（引擎未就绪 / 权益不足 / 播放失败）

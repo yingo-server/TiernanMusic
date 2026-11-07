@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/direct/kg_crypto.dart';
 import '../../core/direct/kg_providers.dart';
 import '../../core/providers.dart';
+import '../../core/utils/error_logger.dart';
 import '../../core/utils/friendly_error.dart';
 import '../mv/data/mv_repository.dart';
 import 'data/download_repository.dart';
@@ -270,6 +271,18 @@ class DownloadManager extends StateNotifier<DownloadState> {
   }
 
   void _update(DownloadTask task) {
+    // V37-LOG-06（v3.7 日志批）：下载状态迁移 verbose 记录——与旧状态
+    // 比较，仅变化时记一行（进度回调每秒多次调用 _update，逐次记录
+    // 会淹没日志，第 25 条上限纪律）。
+    final old = _find(task.id);
+    if (old != null && old.status != task.status) {
+      ErrorLogger.instance.verbose(
+        'download ${task.displayName.isEmpty ? task.hash : task.displayName}: '
+        '${old.status.name} -> ${task.status.name}'
+        '${task.error == null ? '' : ' (error: ${task.error})'}',
+        tag: 'download',
+      );
+    }
     _replace(task);
     unawaited(DownloadStore.save(task));
   }

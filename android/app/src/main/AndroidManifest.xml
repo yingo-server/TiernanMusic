@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- V37-LOG-09：Android 10 兼容——允许直写公共目录（scoped storage 生效前的过渡） -->
     <application
+        android:requestLegacyExternalStorage="true"
         android:label="汀澜音乐"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
@@ -57,6 +59,9 @@
             android:value="2" />
     </application>
 
+    <!-- V37-LOG-09（v3.7 存储重构）：所有文件访问（写入 /storage/emulated/0/TierNanMusic）。
+         需用户在设置页手动授权；未授权时自动降级 Download/TiernanMusic -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
