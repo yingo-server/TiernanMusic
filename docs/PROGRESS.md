@@ -758,3 +758,23 @@ JustAudioBackground.init 真机永久失败 → ensureEngineReady false → play
 - Manifest: MANAGE_EXTERNAL_STORAGE + requestLegacyExternalStorage；设置页「存储与日志」区（开关/路径展示/授权跳转）
 - 主代理独立复核：pubspec 未动 ✅、Manifest 权限在位 ✅、verbose 联动链在位 ✅、三处 resolveRoot ✅、arb 345 键×11 无缺失 ✅、gen_l10n 重跑 ✅
 - 真机验证清单 7 项见 docs/v37_logging_storage.md
+
+## ✅ v3.7.1 发布确认
+
+- release 437360060（draft=False），tag f37e172 构建成功（版本 3.7.1+38）
+- 资产：arm64/v7a/x86_64 APK + screenshots-306.zip
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.7.1/app-arm64-v8a-release.apk
+
+### v3.7.1 内容
+- verbose 日志开关（全量捕获：debugPrint 拦截/网络层/播放下载状态，全过脱敏走串行链）
+- 存储根重构：/storage/emulated/0/TierNanMusic/（audio/mv/logs/cover/lyrics），MANAGE_EXTERNAL_STORAGE+自动降级，三处 resolveRoot 统一
+- 设置页「存储与日志」区；Manifest 权限
+
+### 需要用户真机验证（7 项清单见 docs/v37_logging_storage.md）
+1. 授权跳转（设置页→所有文件访问）
+2. 授权后根目录 TierNanMusic/logs 落盘验证（**播放一次失败的歌，日志里应有引擎失败记录**——播放空白排查的关键证据）
+3. 厂商 ROM 直写兼容
+4. MediaStore logs 路径（Android 10+）
+5. Android≤9 分支
+6. release 下 debugPrint 包装开销
+7. 日志体积与轮转
