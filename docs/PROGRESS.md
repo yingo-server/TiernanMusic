@@ -826,3 +826,27 @@ JustAudioBackground.init 真机永久失败 → ensureEngineReady false → play
 
 ### 请用户真机验证
 从首页点歌→播放页信息齐全；评论入口始终可见；歌单全部播放恢复；引擎初始化不再报 PlatformException。若仍异常，verbose 日志开起来看 TierNanMusic/logs/。
+
+## ✅ v3.9.9 发布确认
+
+- release 437491034（draft=False），tag 1fa61a5 构建成功（版本 3.9.9+41）
+- 资产：arm64/v7a/x86_64 APK + screenshots-325.zip
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.9.9/app-arm64-v8a-release.apk
+
+### v3.9.9 内容（三档，30 文件）
+A: 播放页收藏到歌单入口 / 歌词持久缓存（Hive lyric_cache，三级读取）/ 翻译自动化（缓存→上游译文→才调API）
+B: 登录落盘并行化 / 权限网关实测写探针（写→读回→删，逐步骤留痕）/ 蝰蛇三档+魔法六档 / 非VIP下载按API字节数择优
+C: 歌单顺序漂移实测排查（上游稳定四假设排除，upstreamOrder 语义澄清）
+
+### 真机验证项
+1. 播放页收藏按钮（入口行第4个）
+2. 设置页音质菜单九新档（魔法档匿名可用）
+3. 授权后设置页显示「探测到的实际可写路径」
+4. 非 VIP 下载应拿到更长片段（试听/高潮按字节数择优）
+5. 登录后进个人信息页速度
+6. 歌单多次刷新顺序一致性
+
+### 用户新反馈（日志审计已定位，进 v3.9.10）
+- 歌词重复请求（同一 KRC 下载 2~3 次，无 in-flight 去重/候选短路）
+- 翻译 504 无重试
+- **MV 页 20010 实锤：/v1/video 传了 hash 应传 video_id**（v3.9 重写未覆盖 mv_player_page）
