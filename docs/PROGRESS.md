@@ -707,3 +707,17 @@ v37_audio_encryption_audit.md 的「明文」结论维持，无需修复方案�
 - 无接入价值，标准版直连链路已是最优
 - kg_crypto.dart 的 lite 常量零成本保留（防御性配置，勿删）
 - 播放增强的真正地基仍是 20028 收敛（标准版通道内解决）
+
+## v3.7 播放空白排查（8c2e33a）——用户四现象已解释
+
+报告：docs/v37_playback_blank_diag.md（11 环节+根因排序 H1~H4+真机诊断 6 项）
+
+### 根因链（H1，静态推导）
+JustAudioBackground.init 真机永久失败 → ensureEngineReady false → playQueue/playSong 首行静默 return（队列从未装载）→ 播放页空态=「失败/空白」→ 下载不经引擎故正常 → 失败只走 debugPrint（release 不可见）=「无日志」
+
+### 已修
+- ensureEngineReady 失败分支接入 ErrorLogger 落盘（消除盲区，下次真机复现日志里就有）
+
+### 待用户配合
+- adb logcat -s flutter | grep -i JustAudioBackground 复现播放，确认引擎失败的具体异常
+- 播放页是否显示顶栏/进度条（区分 H1 空态 vs ErrorWidget 真空白）
