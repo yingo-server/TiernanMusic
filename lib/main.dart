@@ -13,6 +13,7 @@ import 'features/library/presentation/library_page.dart'
 import 'core/api/kugou_api_client.dart';
 import 'core/direct/kg_client.dart';
 import 'core/direct/kg_providers.dart';
+import 'core/providers.dart' show kugouApiClientProvider;
 import 'core/prefetch/prefetch_engine.dart';
 import 'core/resource/resource_cache.dart';
 import 'core/audio/audio_service_bootstrap.dart';
