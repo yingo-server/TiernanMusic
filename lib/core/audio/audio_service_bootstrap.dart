@@ -2,9 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:just_audio_background/just_audio_background.dart';
-import '../../features/player/data/audio_handler.dart';
-import '../../features/player/data/player_repository.dart';
-import '../api/kugou_api_client.dart';
 
 import '../utils/error_logger.dart';
 
