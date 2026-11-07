@@ -182,6 +182,7 @@ const _strings_de = <String, String>{
   'noRecentlyPlayed': 'Noch keine Wiedergabeverlauf vorhanden. Geh zur Startseite und such dir ein Lied aus.',
   'loginToViewPlaylists': 'Melde dich an, um deine Playlist zu sehen.',
   'queueEmpty': 'Die Warteschlange ist leer. Spiele zuerst ein paar Lieder ab.',
+  'queueChangedHint': 'Die Warteschlange hat sich geändert; dieser Titel ist nicht mehr darin',
   'cache': 'Zwischenspeichern',
   'replyPrefix': 'Antwort an {name}: {content}',
   'downloadManagement': 'Download-Verwaltung',
@@ -530,6 +531,7 @@ const _strings_en = <String, String>{
   'noRecentlyPlayed': 'No playback history yet. Go to the homepage and pick a song.',
   'loginToViewPlaylists': 'Log in to view your playlist.',
   'queueEmpty': 'The queue is empty. Go play a few songs first.',
+  'queueChangedHint': 'The queue has changed; this song is no longer in it',
   'cache': 'Cache',
   'replyPrefix': 'Replying to {name}: {content}',
   'downloadManagement': 'Download Management',
@@ -878,6 +880,7 @@ const _strings_es = <String, String>{
   'noRecentlyPlayed': 'Aún no hay historial de reproducción. Ve a la página de inicio y elige una canción',
   'loginToViewPlaylists': 'Inicia sesión para ver tu lista de reproducción',
   'queueEmpty': 'La cola está vacía. Ve a reproducir algunas canciones primero',
+  'queueChangedHint': 'La cola ha cambiado; esta canción ya no está en ella',
   'cache': 'Almacenamiento en caché',
   'replyPrefix': 'Responder a {name}: {content}',
   'downloadManagement': 'Gestión de descargas',
@@ -1226,6 +1229,7 @@ const _strings_fr = <String, String>{
   'noRecentlyPlayed': 'Aucun historique de lecture pour le moment, allez sur la page d\'accueil pour choisir une chanson',
   'loginToViewPlaylists': 'Connectez-vous pour consulter votre playlist',
   'queueEmpty': 'La file d\'attente est vide, lancez d\'abord quelques chansons',
+  'queueChangedHint': 'La file d\'attente a changé ; ce titre n\'y figure plus',
   'cache': 'Mise en cache',
   'replyPrefix': 'Réponse à {name} : {content}',
   'downloadManagement': 'Gestion des téléchargements',
@@ -1574,6 +1578,7 @@ const _strings_ja = <String, String>{
   'noRecentlyPlayed': '再生履歴がありません。トップページで曲を選んでみましょう',
   'loginToViewPlaylists': 'ログインしてプレイリストを確認',
   'queueEmpty': 'キューが空です。まずは曲をいくつか再生してみましょう',
+  'queueChangedHint': 'キューが更新され、この曲は現在のキューにありません',
   'cache': 'キャッシュ',
   'replyPrefix': '{name} への返信：{content}',
   'downloadManagement': 'ダウンロード管理',
@@ -1922,6 +1927,7 @@ const _strings_ko = <String, String>{
   'noRecentlyPlayed': '아직 재생 기록이 없어요. 홈으로 가서 노래를 골라보세요',
   'loginToViewPlaylists': '로그인 후 내 플레이리스트 확인하기',
   'queueEmpty': '대기열이 비어 있어요. 먼저 노래 몇 곡을 재생해 보세요',
+  'queueChangedHint': '대기열이 변경되어 이 곡은 현재 대기열에 없습니다',
   'cache': '캐시',
   'replyPrefix': '답글 {name}：{content}',
   'downloadManagement': '다운로드 관리',
@@ -2270,6 +2276,7 @@ const _strings_pt = <String, String>{
   'noRecentlyPlayed': 'Ainda não há histórico de reprodução. Vá para a página inicial e escolha uma música',
   'loginToViewPlaylists': 'Faça login para ver sua playlist',
   'queueEmpty': 'A fila está vazia. Vá reproduzir algumas músicas primeiro',
+  'queueChangedHint': 'A fila foi alterada; esta música não está mais nela',
   'cache': 'Cache',
   'replyPrefix': 'Responder a {name}: {content}',
   'downloadManagement': 'Gerenciamento de downloads',
@@ -2618,6 +2625,7 @@ const _strings_ru = <String, String>{
   'noRecentlyPlayed': 'Записей воспроизведения пока нет, перейдите на главную страницу и выберите песню',
   'loginToViewPlaylists': 'Посмотрите свой плейлист после входа в систему',
   'queueEmpty': 'Очередь пуста, сначала включите несколько песен',
+  'queueChangedHint': 'Очередь изменилась; этого трека больше нет в ней',
   'cache': 'Кэш',
   'replyPrefix': 'Ответ для {name}: {content}',
   'downloadManagement': 'Управление загрузками',
@@ -2966,6 +2974,7 @@ const _strings_zh = <String, String>{
   'noRecentlyPlayed': '还没有播放记录，去首页挑首歌吧',
   'loginToViewPlaylists': '登录后查看你的歌单',
   'queueEmpty': '队列为空，先去播放几首歌吧',
+  'queueChangedHint': '队列已更新，这首不在当前队列里',
   'cache': '缓存',
   'replyPrefix': '回复 {name}：{content}',
   'downloadManagement': '下载管理',
@@ -3314,6 +3323,7 @@ const _strings_zh_CN = <String, String>{
   'noRecentlyPlayed': '还没有播放记录，去首页挑首歌吧',
   'loginToViewPlaylists': '登录后查看你的歌单',
   'queueEmpty': '队列为空，先去播放几首歌吧',
+  'queueChangedHint': '队列已更新，这首不在当前队列里',
   'cache': '缓存',
   'replyPrefix': '回复 {name}：{content}',
   'downloadManagement': '下载管理',
@@ -3662,6 +3672,7 @@ const _strings_zh_TW = <String, String>{
   'noRecentlyPlayed': '目前還沒有任何播放記錄，請到首頁選一首歌吧',
   'loginToViewPlaylists': '登入後即可查看你的歌單',
   'queueEmpty': '隊列為空，先去播放幾首歌吧',
+  'queueChangedHint': '佇列已更新，這首不在目前佇列裡',
   'cache': '快取',
   'replyPrefix': '回覆 {name}：{content}',
   'downloadManagement': '下載管理',
@@ -4066,6 +4077,7 @@ class AppLocalizations {
   String get noRecentlyPlayed => _t('noRecentlyPlayed');
   String get loginToViewPlaylists => _t('loginToViewPlaylists');
   String get queueEmpty => _t('queueEmpty');
+  String get queueChangedHint => _t('queueChangedHint');
   String get cache => _t('cache');
   String replyPrefix(String name, String content) => _t('replyPrefix').r({'name': name, 'content': content});
   String get downloadManagement => _t('downloadManagement');

@@ -7,8 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/providers.dart';
 import '../../../core/utils/friendly_error.dart';
-import '../../../core/utils/toast.dart';
-import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/utils/toast.dart';import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../../auth/presentation/login_guard.dart';
 import '../../auth/data/auth_providers.dart';
@@ -163,6 +162,8 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
   final _inputFocus = FocusNode();
   final _scroll = ScrollController();
   Comment? _replyTo;
+  // V39-AUX-04：发送防重闸门（第 21 条）
+  bool _sending = false;
 
   late final _args = _CommentArgs(
     switch (widget.resourceType) {
@@ -370,7 +371,9 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                 IconButton.filled(
                   tooltip: context.l10n.send,
                   // 未登录：点发送直接引导去登录页（之前只 toast）
-                  onPressed: _isLoggedIn ? _send : () => context.push('/login'),
+                  onPressed: _isLoggedIn
+                      ? (_sending ? null : _send)
+                      : () => context.push('/login'),
                   icon: const Icon(Icons.send),
                 ),
               ],
@@ -389,6 +392,13 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
       ensureLoggedIn(context, ref, action: context.l10n.comment);
       return;
     }
+    // V39-AUX-04（第 21 条防重）：发送是写操作，飞行期间拒绝重复提交
+    //（连点发送会对服务端重复发评论）。
+    if (_sending) return;
+    _sending = true;
+    setState(() {});
+    // V39-AUX-04：失败后把文本还原回输入框，用户可直接重试不丢内容
+    //（原实现先 clear 再发请求，失败即输入永久丢失）。
     _inputCtrl.clear();
     final replyTo = _replyTo;
     setState(() => _replyTo = null);
@@ -402,7 +412,9 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
               content: text,
               resourceType: _args.type,
             );
-        // 与顶层评论路径保持一致：成功后刷新列表（replyCount 更新）
+        // 与顶层评论路径保持一致：成功后刷新列表（replyCount 更新）。
+        // 刷新回第 1 页属预期行为：新回复在其顶层评论的 replyCount 上，
+        // 保留原始分页位置无对应上游接口，此处不做额外跳转（V39-AUX-05）。
         await ref
             .read(_commentsProvider(_args).notifier)
             .load(refresh: true);
@@ -415,6 +427,11 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
         Toast.show(context, context.l10n.commentSuccess);
       }
     } catch (e) {
+      if (mounted) {
+        // 失败可重试：还原输入内容（V39-AUX-04）
+        _inputCtrl.text = text;
+        _replyTo = replyTo;
+      }
       // A2-07（审查②）：直连层抛 DioException(error: ApiException)，
       // `on ApiException` 永远不命中。统一 unwrapApi 解包。
       final e0 = unwrapApi(e);
@@ -438,15 +455,19 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
               context,
               ok == true
                   ? context.l10n.commentVerifiedRetryHint
-                  : context.l10n.commentFailed('$e'));
+                  : context.l10n.commentFailed(e0.message));
         }
         return;
       }
       if (mounted) {
         // V3-09（复查）：用解包结果出文案，不裸出 '$e' 技术串
         Toast.show(context,
-            context.l10n.commentFailed(e0 != null ? e0.message : '$e'));
+            context.l10n.commentFailed(e0 != null ? e0.message : friendlyError(e)));
       }
+    } finally {
+      // V39-AUX-04：闸门与所有者同栈成对释放（第 19 条）
+      _sending = false;
+      if (mounted) setState(() {});
     }
   }
 
@@ -484,6 +505,9 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
     try {
       // 顶层评论删除：cid（+ mixsongid）。楼层回复的删除在 CommentFloorPage
       // 内处理（需额外带 special_id + tid）。
+      // V39-AUX-12（P3·未实测标注，第 29 条）：顶层删除带 special_child_id
+      // 但不带 tid 的直连层语义未实测（kapi 包装结果不可作依据），
+      // 保持现有参数组合不动，避免凭猜测改坏可用路径。
       await ref.read(_commentsProvider(_args).notifier).deleteComment(
           comment.id,
           specialId: comment.specialChildId);
@@ -492,7 +516,10 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
       }
     } catch (e) {
       if (mounted) {
-        Toast.show(context, context.l10n.deleteFailed('$e'));
+        // V39-AUX-08：与 _send 同一解包口径（第 8 条异常形态一致）
+        final e0 = unwrapApi(e);
+        Toast.show(context,
+            context.l10n.deleteFailed(e0 != null ? e0.message : friendlyError(e)));
       }
     }
   }

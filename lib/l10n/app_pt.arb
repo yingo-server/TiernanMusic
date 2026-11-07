@@ -360,6 +360,7 @@
   "noRecentlyPlayed": "Ainda não há histórico de reprodução. Vá para a página inicial e escolha uma música",
   "loginToViewPlaylists": "Faça login para ver sua playlist",
   "queueEmpty": "A fila está vazia. Vá reproduzir algumas músicas primeiro",
+  "queueChangedHint": "A fila foi alterada; esta música não está mais nela",
   "cache": "Cache",
   "downloadDeleteConfirm": "Tem certeza de que deseja excluir este conteúdo baixado?",
   "downloadClearAll": "Limpar histórico de downloads",

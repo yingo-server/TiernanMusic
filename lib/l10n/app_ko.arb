@@ -344,6 +344,7 @@
   "noRecentlyPlayed": "아직 재생 기록이 없어요. 홈으로 가서 노래를 골라보세요",
   "loginToViewPlaylists": "로그인 후 내 플레이리스트 확인하기",
   "queueEmpty": "대기열이 비어 있어요. 먼저 노래 몇 곡을 재생해 보세요",
+  "queueChangedHint": "대기열이 변경되어 이 곡은 현재 대기열에 없습니다",
   "cache": "캐시",
   "replyPrefix": "답글 {name}：{content}",
   "downloadManagement": "다운로드 관리",

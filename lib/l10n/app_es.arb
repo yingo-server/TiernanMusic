@@ -360,6 +360,7 @@
   "noRecentlyPlayed": "Aún no hay historial de reproducción. Ve a la página de inicio y elige una canción",
   "loginToViewPlaylists": "Inicia sesión para ver tu lista de reproducción",
   "queueEmpty": "La cola está vacía. Ve a reproducir algunas canciones primero",
+  "queueChangedHint": "La cola ha cambiado; esta canción ya no está en ella",
   "cache": "Almacenamiento en caché",
   "downloadSong": "Descargar canción",
   "downloadCover": "Descargar portada",

@@ -50,6 +50,11 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
   bool _loadingMore = false;
   bool _hasMore = true;
   String? _error;
+  // V39-AUX-06（第 16 条）：分页失败与「没有更多」是不同事实；
+  // 失败置 _pageError，footer 显示重试（对齐 comments_page V37-08 范式）。
+  String? _pageError;
+  // V39-AUX-04 同源：发送防重闸门（第 21 条）
+  bool _sending = false;
 
   bool get _isLoggedIn => ref.read(authStateProvider).valueOrNull != null;
 
@@ -83,6 +88,7 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
     _loading = true;
     setState(() {
       _error = null;
+      _pageError = null;
       _page = 1;
       _hasMore = true;
     });
@@ -104,7 +110,8 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = '$e');
+      // V39-AUX-07：不裸上 '$e'（第 6/9 条 + friendly_error 口径）
+      setState(() => _error = friendlyError(e));
     } finally {
       _loading = false;
     }
@@ -128,9 +135,12 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
         _comments.addAll(result.comments);
         _page = next;
         _hasMore = result.comments.isNotEmpty && _comments.length < result.total;
+        _pageError = null;
       });
-    } catch (_) {
-      // 保留重试机会
+    } catch (e) {
+      // V39-AUX-06：失败不推进页码、留重试入口（第 9 条失败可观测）。
+      // 原空体 catch(_){} 使用户只看到 footer 永远转圈。
+      if (mounted) setState(() => _pageError = friendlyError(e));
     } finally {
       _loadingMore = false;
     }
@@ -144,6 +154,10 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
       return;
     }
     _inputCtrl.clear();
+    // V39-AUX-04 同源：floor 回复同样是写操作，飞行期间防重
+    if (_sending) return;
+    _sending = true;
+    setState(() {});
     try {
       await _repo.sendFloorReply(
         specialId: widget.args.specialId,
@@ -155,9 +169,13 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
       Toast.show(context, context.l10n.commentSuccess);
       await _load();
     } catch (e) {
-      if (mounted) {
-        Toast.show(context, context.l10n.commentFailed('$e'));
-      }
+      if (!mounted) return;
+      // V39-AUX-07：失败还原输入 + friendlyError 解包（不裸上 '$e'）
+      _inputCtrl.text = text;
+      Toast.show(context, context.l10n.commentFailed(friendlyError(e)));
+    } finally {
+      _sending = false;
+      if (mounted) setState(() {});
     }
   }
 
@@ -184,7 +202,8 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
       await _load();
     } catch (e) {
       if (mounted) {
-        Toast.show(context, context.l10n.deleteFailed('$e'));
+        // V39-AUX-08：与 comments_page 同一 unwrap/friendly 口径（第 8 条）
+        Toast.show(context, context.l10n.deleteFailed(friendlyError(e)));
       }
     }
   }
@@ -227,6 +246,22 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
                           itemCount: _comments.length + (_hasMore ? 1 : 0),
                           itemBuilder: (context, index) {
                             if (index == _comments.length) {
+                              // V39-AUX-06：分页失败 → 重试按钮（第 16 条）
+                              if (_pageError != null) {
+                                return Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Center(
+                                    child: TextButton.icon(
+                                      onPressed: () {
+                                        setState(() => _pageError = null);
+                                        _loadMore();
+                                      },
+                                      icon: const Icon(Icons.refresh),
+                                      label: Text(context.l10n.retry),
+                                    ),
+                                  ),
+                                );
+                              }
                               return const Padding(
                                 padding: EdgeInsets.all(16),
                                 child: Center(

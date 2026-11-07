@@ -360,6 +360,7 @@
   "noRecentlyPlayed": "Aucun historique de lecture pour le moment, allez sur la page d'accueil pour choisir une chanson",
   "loginToViewPlaylists": "Connectez-vous pour consulter votre playlist",
   "queueEmpty": "La file d'attente est vide, lancez d'abord quelques chansons",
+  "queueChangedHint": "La file d'attente a changé ; ce titre n'y figure plus",
   "copyDetails": "Copier les détails",
   "diagnostics": "Diagnostic",
   "errorLogLocation": "Emplacement du journal d'erreurs",

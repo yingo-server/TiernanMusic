@@ -311,6 +311,7 @@
   "noRecentlyPlayed": "再生履歴がありません。トップページで曲を選んでみましょう",
   "loginToViewPlaylists": "ログインしてプレイリストを確認",
   "queueEmpty": "キューが空です。まずは曲をいくつか再生してみましょう",
+  "queueChangedHint": "キューが更新され、この曲は現在のキューにありません",
   "cache": "キャッシュ",
   "defaultQuality": "デフォルト音質",
   "wifiAutoHighQualityDesc": "Wi-Fi接続時にロスレス/Hi-Resを優先的に再生（保留）",

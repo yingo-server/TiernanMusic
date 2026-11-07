@@ -318,6 +318,7 @@
   "noRecentlyPlayed": "No playback history yet. Go to the homepage and pick a song.",
   "loginToViewPlaylists": "Log in to view your playlist.",
   "queueEmpty": "The queue is empty. Go play a few songs first.",
+  "queueChangedHint": "The queue has changed; this song is no longer in it",
   "cache": "Cache",
   "replyPrefix": "Replying to {name}: {content}",
   "networkErrorTitle": "Network connection failed",

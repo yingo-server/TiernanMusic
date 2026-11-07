@@ -318,6 +318,7 @@
   "noRecentlyPlayed": "目前還沒有任何播放記錄，請到首頁選一首歌吧",
   "loginToViewPlaylists": "登入後即可查看你的歌單",
   "queueEmpty": "隊列為空，先去播放幾首歌吧",
+  "queueChangedHint": "佇列已更新，這首不在目前佇列裡",
   "cache": "快取",
   "replyPrefix": "回覆 {name}：{content}",
   "moreActions": "更多",

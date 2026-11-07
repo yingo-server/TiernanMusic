@@ -360,6 +360,7 @@
   "noRecentlyPlayed": "Noch keine Wiedergabeverlauf vorhanden. Geh zur Startseite und such dir ein Lied aus.",
   "loginToViewPlaylists": "Melde dich an, um deine Playlist zu sehen.",
   "queueEmpty": "Die Warteschlange ist leer. Spiele zuerst ein paar Lieder ab.",
+  "queueChangedHint": "Die Warteschlange hat sich geändert; dieser Titel ist nicht mehr darin",
   "cache": "Zwischenspeichern",
   "replyPrefix": "Antwort an {name}: {content}",
   "downloadClearAll": "Downloadverlauf löschen",
