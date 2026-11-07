@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/preferred_quality.dart';
 import '../../../l10n/l10n.dart';
+import '../../mv/mv_provider.dart';
 import '../../player/data/models.dart';
 import '../data/download_task.dart';
 import '../download_provider.dart';
@@ -27,6 +28,12 @@ class DownloadSheet extends ConsumerWidget {
     final state = ref.watch(downloadManagerProvider);
     final manager = ref.read(downloadManagerProvider.notifier);
     final theme = Theme.of(context);
+
+    // V37-UI-09：MV 可得性预判（albumAudioId 为空视为无 MV）
+    final albumAudioId = song.albumAudioId;
+    final mvAsync = albumAudioId.isEmpty
+        ? null
+        : ref.watch(songMvProvider(albumAudioId));
 
     final audioTask = manager.audioTaskOf(song.hash);
 
@@ -96,6 +103,11 @@ class DownloadSheet extends ConsumerWidget {
               icon: Icons.movie_outlined,
               title: context.l10n.downloadMv,
               task: _taskOf(state.tasks, DownloadTaskType.mv),
+              // V37-UI-09（P2-11）：按 songMvProvider 预判——无 MV 的歌曲
+              // 禁用「下载 MV」+ 说明，不再创建注定失败的任务（第 16 条：
+              // 「无 MV」与「失败」语义分离；可预期交互）。
+              enabled: mvAsync.value ?? true,
+              enabledHint: context.l10n.downloadMvUnavailable,
               onDownload: () async {
                 await manager.add(buildTask(DownloadTaskType.mv));
               },
@@ -136,30 +148,47 @@ class _OptionTile extends StatelessWidget {
     required this.title,
     required this.onDownload,
     this.task,
+    // V37-UI-09：禁用态 + 说明（null/true = 可用）
+    this.enabled = true,
+    this.enabledHint,
   });
 
   final IconData icon;
   final String title;
   final DownloadTask? task;
   final Future<void> Function() onDownload;
+  final bool enabled;
+  final String? enabledHint;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final progress = task?.progress;
     final status = task?.status;
+    final fg = enabled ? theme.colorScheme.primary : theme.disabledColor;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: theme.colorScheme.primary),
-      title: Text(title),
-      subtitle: progress != null &&
-              (status == DownloadTaskStatus.running ||
-                  status == DownloadTaskStatus.paused)
+      leading: Icon(icon, color: fg),
+      title: Text(title,
+          style: enabled
+              ? null
+              : TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+      // V37-UI-09：禁用时给出原因说明（第 9 条可观测）
+      subtitle: !enabled && enabledHint != null
           ? Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: LinearProgressIndicator(value: progress),
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(enabledHint!,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
             )
-          : null,
+          : progress != null &&
+                  (status == DownloadTaskStatus.running ||
+                      status == DownloadTaskStatus.paused)
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: LinearProgressIndicator(value: progress),
+                )
+              : null,
       trailing: status == DownloadTaskStatus.completed
           ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
           : status == DownloadTaskStatus.running
@@ -169,13 +198,13 @@ class _OptionTile extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : IconButton(
-                  icon: const Icon(Icons.download_outlined),
+                  icon: Icon(Icons.download_outlined, color: fg),
                   // V37-UI-05：弹层行内下载按钮显式保证 48dp 触控区
                   visualDensity: VisualDensity.compact,
                   constraints:
                       const BoxConstraints(minWidth: 48, minHeight: 48),
                   padding: EdgeInsets.zero,
-                  onPressed: () => onDownload(),
+                  onPressed: enabled ? () => onDownload() : null,
                 ),
     );
   }

@@ -121,23 +121,25 @@ class _AddToPlaylistSheetState extends ConsumerState<AddToPlaylistSheet> {
     setState(() => _busy = true);
     final repo = ref.read(playlistRepositoryProvider);
     try {
-      await repo.collectPlaylist(name: trimmed);
-      // V37-07（C2 P2，第 3/29 条）：按名称匹配在存在同名旧歌单时会
-      // 命中 `created.first`（旧歌单）——歌进错歌单。修法：创建前先
-      // 拉一次歌单做基线，创建后取「同名中基线没有的（新出现）」，仍
-      // 同名并存时按服务端返回顺序取第一个新出现的（/user/playlist
-      // 按创建时间倒序，新建的排最前——实测口径）。
+      // V37-07（C2 P2，第 3/29 条）：按名称匹配在存在同名旧歌单时会命中
+      // 旧歌单——歌进错歌单。修法：collectPlaylist **前**先快照已存在的
+      // 同名 listid 集合；创建后取「同名中基线没有的（新出现）」。
       final before = await repo.fetchUserPlaylists();
-      final beforeIds = before.map((p) => p.listid).toSet();
+      final existedIds = before
+          .where((p) => p.name == trimmed)
+          .map((p) => p.listid)
+          .toSet();
+      await repo.collectPlaylist(name: trimmed);
       final list = await repo.fetchUserPlaylists();
-      final sameNameNew =
-          list.where((p) => p.name == trimmed && !beforeIds.contains(p.listid)).toList();
-      final created = sameNameNew.isNotEmpty
-          ? sameNameNew
-          : list.where((p) => p.name == trimmed).toList();
+      final created = list
+          .where((p) => p.name == trimmed && !existedIds.contains(p.listid))
+          .toList();
       if (!mounted) return;
       if (created.isEmpty) {
-        Toast.show(context, context.l10n.collectSuccess);
+        // 上游 /playlist/add 不返回新歌单 listid（第 29 条：未实测的返回
+        // 结构不得当作依据），排除旧同名歌单后无法再定位；此时不盲匹配
+        // 旧歌单，回落为「已收藏到同名歌单」提示。
+        Toast.show(context, context.l10n.addedToSameNamePlaylist);
         Navigator.of(context).pop();
         return;
       }

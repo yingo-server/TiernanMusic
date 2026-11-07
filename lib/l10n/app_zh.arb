@@ -83,7 +83,6 @@
   "qualityHigh": "Hi-Res",
   "vipOnly": "VIP 专属",
   "noCopyright": "暂无版权",
-  "tryListen": "试听",
   "fullPlay": "完整播放",
   "noRecommend": "暂无推荐内容，请下拉重试",
   "newSongsRecommend": "新歌推荐",
@@ -142,9 +141,7 @@
   "playback": "播放",
   "lyricDisplayMode": "歌词显示模式",
   "defaultQuality": "默认音质",
-  "wifiAutoHighQuality": "Wi-Fi 下自动最高音质",
   "wifiAutoHighQualityDesc": "连接 Wi-Fi 时优先播放无损/Hi-Res（预留）",
-  "cellularLowQuality": "流量下降低音质",
   "cellularLowQualityDesc": "使用移动网络时自动切换为标准音质（预留）",
   "cacheUsage": "缓存占用",
   "recalculate": "重新计算",
@@ -426,10 +423,6 @@
   "all": "全部",
   "showPassword": "显示密码",
   "hidePassword": "隐藏密码",
-  "albumPageComingSoon": "专辑详情页开发中，敬请期待",
-  "@albumPageComingSoon": {
-    "description": "Shown when tapping an album search result while the album page is not yet available"
-  },
   "hotSearchLoadFailed": "热搜加载失败",
   "@hotSearchLoadFailed": {
     "description": "Empty state message when the hot search board fails to load"

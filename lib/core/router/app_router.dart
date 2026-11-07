@@ -78,8 +78,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // 看到空白榜且无提示。改为解析失败直接跳错误页，避免无意义的空请求。
           final rankId = int.tryParse(state.pathParameters['rankId'] ?? '');
           if (rankId == null || rankId <= 0) {
-            return const Scaffold(
-              body: Center(child: Text('排行榜参数无效')),
+            // V37-UI-10（P3）：深链错误页原硬编码中文「排行榜参数无效」，
+            // 且无脱出动作（本页无 AppBar 只能系统返回）。改走 l10n +
+            // 「返回首页」出口（微文案维度 A / 易用性任务流 5）。
+            return Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(context.l10n.rankParamsInvalid),
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: () => context.go('/home'),
+                      icon: const Icon(Icons.home_outlined, size: 18),
+                      label: Text(context.l10n.goHome),
+                    ),
+                  ],
+                ),
+              ),
             );
           }
           return RankDetailPage(

@@ -86,6 +86,14 @@ grep `Toast.show(context` 无 l10n 的裸文案全量核对：
 - analyze（过滤后）：mini_player.dart 0 条 ✓
 
 ---
+## V37-UI-08（P2-8 comment_floor 死按钮）— 已修
+- comment_floor_page.dart:发送按钮原 `onPressed: _isLoggedIn ? _send : () {}`——未登录
+  点击完全无反应（死按钮，v34_review_2_ui.dart:177 记录属实）。`_send` 首行已有
+  `ensureLoggedIn(context, ref, action: comment)` 登录引导（与评论主页同一出口），
+  直接委托 `_send`，死分支消除。
+- analyze（过滤后）：comment_floor_page.dart 0 条 ✓
+
+---
 ## V37-UI-05（触控目标巡检）— 已修 4 处 / 其余合规
 全仓 27 处裸 `IconButton(` 逐一巡检结论：
 - **已修（图标 20dp 或行内密度不足、触控目标 <48dp）**，统一方案
@@ -106,3 +114,39 @@ grep `Toast.show(context` 无 l10n 的裸文案全量核对：
   download_sheet.dart 0 ✓ / rank_detail_page.dart 0 ✓
 
 ---
+## V37-UI-09（P2-11 download_sheet MV 预判）— 已修
+- download_sheet.dart：build 中 watch `songMvProvider(albumAudioId)`（autoDispose，
+  数据层已实测有缓存，无新增请求路径）；`_OptionTile` 新增 `enabled` / `enabledHint`：
+  无 MV（含 albumAudioId 为空）时「下载 MV」项禁用（灰 icon + 置灰标题），
+  subtitle 显示 `downloadMvUnavailable`（「当前歌曲没有可下载的 MV」）——
+  不再创建注定失败的下载任务（第 16 条语义分离 / 可预期交互）。
+  查询进行中（value 为 null）按可用处理，不误禁。
+- analyze（过滤后）：download_sheet.dart 0 条 ✓
+
+---
+## V37-UI-10（P3 深链错误文案）— 已修
+- app_router.dart `/rank/:rankId` 非法参数错误页：硬编码 `Text('排行榜参数无效')`
+  → `context.l10n.rankParamsInvalid`（10 语言），并补「返回首页」TextButton
+  （`goHome` 键，context.go('/home')）——原页无 AppBar，用户只能靠系统手势脱出。
+- analyze（过滤后）：app_router.dart 0 条 ✓
+
+---
+## 总结
+- 触碰文件 × dart analyze（过滤 Flutter/插件缺包噪音，项目自有类报错=0）：
+  | 文件 | 结果 |
+  |---|---|
+  | mv_player_page.dart | 0 ✓ |
+  | library_page.dart | 0 ✓ |
+  | settings_page.dart | 0 ✓ |
+  | song_tile.dart | 0 ✓ |
+  | comment_floor_page.dart | 0 ✓ |
+  | download_sheet.dart | 0 ✓ |
+  | rank_detail_page.dart | 0 ✓ |
+  | playlist_detail_page.dart | 0 ✓（L114 const 报错为基线噪音，stash 验证）|
+  | mini_player.dart | 0 ✓ |
+  | app_router.dart | 0 ✓ |
+  | l10n/app_localizations.dart（生成物）| 仅基线既有 unused_element / override 噪音 |
+- i18n：新增 **10 键**（mvCollectAdd/Remove/Success/Removed/LoginFirst、rankParamsInvalid、
+  goHome、mvNoSource、downloadMvUnavailable、collectResultUnknown），11 个 arb 全覆盖
+  （zh/zh_CN/zh_TW/en/ja/ko/es/fr/de/pt/ru），gen_l10n_min.py 重生成 339 键。
+- 未修项：清单 2（MV 深链无 videoId 时清晰度不可达——上游数据缺字段，记录结论不硬造）。
