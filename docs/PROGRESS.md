@@ -850,3 +850,9 @@ C: 歌单顺序漂移实测排查（上游稳定四假设排除，upstreamOrder 
 - 歌词重复请求（同一 KRC 下载 2~3 次，无 in-flight 去重/候选短路）
 - 翻译 504 无重试
 - **MV 页 20010 实锤：/v1/video 传了 hash 应传 video_id**（v3.9 重写未覆盖 mv_player_page）
+
+## ✅ v3.9.10 发布（MV 专项）
+
+- V3990-1 (P0): /v1/video hash→video_id 统一收口（mv_repository 层，会话缓存 128，调用方零改动）——用户日志 20010 根因修复
+- V3990-2: mv_player_page 完全重写（三态分离/清晰度当前档+mkv 容器标注/进页暂停音频队列/生命周期对称/l10n 6 新键）
+- 复核: arb 362×11 无缺失、三文件 analyze CLEAN、pubspec 先 bump 后打 tag
