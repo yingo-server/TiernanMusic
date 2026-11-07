@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../l10n/l10n.dart';
+import '../../../core/resource/lyric_translation_stream.dart';
 import '../../../core/theme/settings_provider.dart';
 import '../data/krc_parser.dart';
 
@@ -18,12 +21,26 @@ class LyricView extends StatefulWidget {
     required this.position,
     this.mode = LyricDisplayMode.bilingual,
     this.onTapLine,
+    this.lyricId,
+    this.songHash,
   });
 
   final KrcLyric lyric;
   final Duration position;
   final LyricDisplayMode mode;
   final ValueChanged<int>? onTapLine;
+
+  /// 歌词 ID（/search/lyric 候选 id）。
+  ///
+  /// V400-A-03：用于匹配 [LyricTranslationStream] 补丁的 `patch.lyricId`
+  /// （冻结契约：B 按 candidate.id emit）。为 null 时退化为「只接受当前
+  /// 歌词代际内、下标范围合法」的补丁（原则 23：匹配键尽量覆盖维度）。
+  final String? lyricId;
+
+  /// 所属歌曲 hash（V400-A-03：原则 18 的代际键之一）。
+  ///
+  /// 换歌后即使候选 id 恰好复用，旧歌词/旧译文也不得写入新歌视图。
+  final String? songHash;
 
   @override
   State<LyricView> createState() => _LyricViewState();
@@ -44,10 +61,69 @@ class _LyricViewState extends State<LyricView> {
   /// 上一次渲染的当前行，用于只在行号变化时 setState
   int _currentIndex = -1;
 
+  // V400-A-03：翻译增量订阅。
+  //
+  // 原文歌词随 provider 先秒显；译文由 B 的 [LyricTranslationStream]
+  // 按批广播（每批完成即 emit，不等整首），这里逐批写入
+  // `line.translation` 后只 setState 一次（原则 20：订阅与 dispose 对称；
+  // 原则 18：写入前校验补丁与当前歌词代际匹配）。
+  StreamSubscription<LyricTranslationPatch>? _patchSub;
+
+  /// 本 State 接收补丁时的歌词对象（didUpdateWidget 换词后代际失效）
+  KrcLyric? _boundLyric;
+
+  /// 与 _boundLyric 同代的歌曲 hash（补丁写入前的代际校验用）
+  String? _boundSongHash;
+
   @override
   void initState() {
     super.initState();
     _currentIndex = _findCurrentLine(_posMs);
+    _boundLyric = widget.lyric;
+    _boundSongHash = widget.songHash;
+    _subscribePatches();
+  }
+
+  /// 订阅译文增量广播（冻结契约：LyricTranslationStream.instance.patches）。
+  void _subscribePatches() {
+    _patchSub = LyricTranslationStream.instance.patches
+        .listen(_onTranslationPatch, onError: (Object e) {
+      // 广播异常不应拖垮歌词显示（第 7 条：只捕获并留痕）
+      debugPrint('[lyric_view] 翻译补丁流错误：$e');
+    });
+  }
+
+  void _onTranslationPatch(LyricTranslationPatch p) {
+    if (!mounted) return;
+    final lyric = _boundLyric;
+    if (lyric == null) return;
+    // 原则 18（世代校验）：换歌后旧补丁不得写入新歌词。
+    // 歌曲代际（songHash，切歌必变）优先；候选 id 一致时再要求相等。
+    final wantHash = widget.songHash;
+    if (wantHash != null && wantHash.isEmpty == false) {
+      final currentHash = _boundSongHash;
+      if (currentHash == null || currentHash != wantHash) return;
+    }
+    final wantId = widget.lyricId;
+    if (wantId != null && p.lyricId != wantId) return;
+    final lines = lyric.lines;
+    if (p.startIndex < 0 || p.startIndex >= lines.length) return;
+    var changed = false;
+    final values = p.values;
+    for (var j = 0; j < values.length; j++) {
+      final i = p.startIndex + j;
+      if (i >= lines.length) break;
+      final v = values[j];
+      // 只接受非空译文；已有译文的行不覆盖（先到先得，避免抖动）
+      if (v.isEmpty) continue;
+      if ((lines[i].translation ?? '').isEmpty) {
+        lines[i].translation = v;
+        changed = true;
+      }
+    }
+    if (changed) setState(() {});
+    // 不动滚动位置：_scrollTo 只由当前行号变化触发，插入译文后
+    // 各行高度估算（_estimateLineHeight 含译文分支）在下次定位时自然生效。
   }
 
   @override
@@ -55,11 +131,16 @@ class _LyricViewState extends State<LyricView> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.lyric != widget.lyric) {
       _currentIndex = _findCurrentLine(_posMs);
+      _boundLyric = widget.lyric;
+      _boundSongHash = widget.songHash;
     }
   }
 
   @override
   void dispose() {
+    // V400-A-03：与 initState 的订阅对称取消（原则 20）
+    _patchSub?.cancel();
+    _patchSub = null;
     _scroll.dispose();
     super.dispose();
   }
@@ -184,7 +265,7 @@ class _LyricViewState extends State<LyricView> {
     if (lines.isEmpty) return -1;
     var lo = 0, hi = lines.length - 1, result = -1;
     while (lo <= hi) {
-      final mid = (lo + hi) >> 1;
+      final mid = (lo + hi) ~/ 2;
       if (lines[mid].startMs <= posMs) {
         result = mid;
         lo = mid + 1;
@@ -236,7 +317,8 @@ class _LyricLineTile extends StatelessWidget {
                 translation,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
-                  fontSize: 14,
+                  // V400-A-03：译文 14 → 12，与原文 16/17 层次分明
+                  fontSize: 12,
                 ),
               ),
             ] else if (mode == LyricDisplayMode.translation &&
@@ -247,6 +329,8 @@ class _LyricLineTile extends StatelessWidget {
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: primary,
                   fontWeight: FontWeight.w600,
+                  // V400-A-03：纯译文模式同步降到 12（原 titleMedium 默认更大）
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -256,7 +340,8 @@ class _LyricLineTile extends StatelessWidget {
     );
   }
 
-  Widget _buildOriginal(ThemeData theme, Color primary) {    if (line.words.isEmpty) {
+  Widget _buildOriginal(ThemeData theme, Color primary) {
+    if (line.words.isEmpty) {
       return Text(
         line.text,
         style: theme.textTheme.titleMedium?.copyWith(

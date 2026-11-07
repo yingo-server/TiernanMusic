@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/providers.dart';
 import '../../../core/cache/cache_manager.dart';
+import '../../../core/resource/cached_api.dart';
+import '../../../core/resource/resource_cache.dart';
 
 /// 宽松地转 int：数字直接取整，字符串解析，失败返回 fallback。
 int _toInt(dynamic v, {int fallback = 0}) {
@@ -40,79 +42,47 @@ class PlaylistWriteException implements Exception {
 }
 
 class PlaylistRepository {
-  PlaylistRepository(this._api);
+  PlaylistRepository(this._api) : _cached = CachedApiCall(_api);
   final KugouApiClient _api;
+  final CachedApiCall _cached;
 
-  /// 公共歌单详情
+  /// 公共歌单详情（V400-B-04：走 ResourceCache，90 秒列表语义 + 失效回退）
   Future<PlaylistDetail> fetchDetail(String globalCollectionId) async {
-    final cacheKey = MemoryCache.keyOf('/playlist/detail', {'ids': globalCollectionId});
-    final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
-    final data = cached ?? await _api.get('/playlist/detail', query: {'ids': globalCollectionId});
-    if (cached == null) MemoryCache.instance.set(cacheKey, data);
+    final data = await _cached.get('/playlist/detail',
+        query: {'ids': globalCollectionId}, ttl: kListTtl);
     return PlaylistDetail.fromJson(data, globalCollectionId);
   }
 
-  /// 公共歌单歌曲（分页）
+  /// 公共歌单歌曲（V400-ORDER：改为概念版分享页一致的「反反」顺序）。
   ///
-  /// 【顺序保证（V399-C1）】本方法对歌曲顺序**不做任何改写**：
-  /// - 页与页之间：严格**串行 await** 逐页拉取，按页号升序 `addAll` 拼接
-  ///   （不存在并发乱序插页的可能——Dart await 顺序执行）；
-  /// - 页内：`PlaylistTracks.fromJson` 原序映射，不 reverse、不 sort；
-  /// - 因此「同一歌单多次刷新顺序一致且与上游一致」由「上游分页稳定 +
-  ///   本层确定性合并」共同保证（上游稳定性经原生 pubsongs 直连 6 跑
-  ///   hash 级全序列一致实测，见 docs/v399_fix_c.md）。
+  /// 用户实测 + 分享页对照：概念版分享页顺序 = 标准版分页的
+  /// **页序倒（末页在前）+ 页内倒**（见 /tmp/v4_paging_8.txt 四组对照，
+  /// 仅反反与分享页前 8 首逐位吻合）。原「按页升序拼接」已废弃。
   ///
-  /// 【参数语义澄清（V399-C1，第 30 条命名即文档）】原参数名 `newestFirst`
-  /// 是历史误导：自 F4-13 修复后本方法**根本不做倒序**，只是「按上游给定
-  /// 页序拼接」。改名 `upstreamOrder`，调用方传 true 即「保持上游给定顺序」。
-  ///
-  /// [upstreamOrder] = true 时按上述语义返回；false 时只返回请求的单页。
-  /// [allPages] = true 时一次性拉完所有页（用于需要完整列表的场景）。
+  /// [allPages] = true 时拉全量并反反；false 时只返回请求页（页内亦倒转，
+  /// 保证单页与全量语义一致）。余数/未知总数/失效回退由
+  /// [_fetchAllReversed] 统一处理。
   Future<PlaylistTracks> fetchTracks(
     String globalCollectionId, {
     int page = 1,
     int pageSize = 100,
-    bool upstreamOrder = true,
     bool allPages = false,
   }) async {
-    Future<PlaylistTracks> fetch(int p) async {
-      final q = {
-        'id': globalCollectionId,
-        'page': p,
-        'pagesize': pageSize,
-      };
-      final cacheKey = MemoryCache.keyOf('/playlist/track/all', q);
-      final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
-      final data = cached ?? await _api.get('/playlist/track/all', query: q);
-      if (cached == null) MemoryCache.instance.set(cacheKey, data);
-      return PlaylistTracks.fromJson(data);
-    }
-
-    final firstTracks = await fetch(page);
-    if (!upstreamOrder || !allPages) return firstTracks;
-
-    final songs = <PlaylistSong>[...firstTracks.songs];
-    // 页数上限（第 25 条：所有循环必须有界）。pageSize=100 时 100 页 = 1 万首，
-    // 超过该量级的歌单用户也无法逐条浏览，再拉只是拖慢首屏。
-    const maxPages = 100;
-    var totalPages = (firstTracks.total / pageSize).ceil();
-    // `count` 缺失时 PlaylistTracks.total 会退化为当前页条数，
-    // 分页数被低估成 1（只返回第一页）。这里在「本页满页」时按未知处理，
-    // 继续翻页直到出现不满页（第 16 条：缺失 ≠ 已到底）。
-    final unknownTotal = totalPages <= 1 && firstTracks.songs.length >= pageSize;
-
-    var p = page + 1;
-    while (p <= (unknownTotal ? maxPages : totalPages) && p <= maxPages) {
-      final t = await fetch(p);
-      songs.addAll(t.songs);
-      if (t.songs.isEmpty || t.songs.length < pageSize) break;
-      p++;
-    }
-    return PlaylistTracks(
-      songs: songs,
-      total: firstTracks.total > songs.length
-          ? firstTracks.total
-          : (unknownTotal ? songs.length : firstTracks.total),
+    return _fetchAllReversed(
+      fetchPage: (p) async {
+        final q = {
+          'id': globalCollectionId,
+          'page': p,
+          'pagesize': pageSize,
+        };
+        // V400-B-04：ResourceCache（失效回退 + in-flight 合并）
+        final data = await _cached.get('/playlist/track/all',
+            query: q, ttl: kListTtl);
+        return PlaylistTracks.fromJson(data);
+      },
+      page: page,
+      pageSize: pageSize,
+      allPages: allPages,
     );
   }
 
@@ -134,19 +104,115 @@ class PlaylistRepository {
         .toList();
   }
 
-  /// 用户歌单歌曲
+  /// 用户歌单歌曲（V400-ORDER：同样走反反，与公共歌单一致）。
   ///
-  /// 【顺序保证（V399-C1）】顺序 = 上游给定序，客户端不改写（无 sort/reverse）。
-  /// 与 Node playlist_track_all_new.js 逐字段一致（listid/userid/type/page/
-  /// pagesize/area_code/allplatform/show_cover/token，默认 pagesize=300）。
-  /// 登录态原生实测（vip cookie 直打 cloudlist，listid=1 共 18 首）：
-  /// 连续 3 跑 hash 序列完全一致 —— 用户歌单上游顺序同样稳定。
-  /// 注意：本方法**不经 MemoryCache**（每次直连），不存在跨刷新缓存混序。
+  /// 与 Node playlist_track_all_new.js 逐字段一致（listid/userid/type/
+  /// page/pagesize/area_code/allplatform/show_cover/token）。
+  /// 实测：listid=2 共 485 首 / pageSize=10 → 49 页，末页仅 5 首；
+  /// 反反拼法前 30 首与概念版分享页一致（歌名翻译差异已排除）。
+  /// 余数、未知总数、失效回退全部由 [_fetchAllReversed] 统一处理。
   Future<PlaylistTracks> fetchUserTracks(String listid,
-      {int page = 1, int pageSize = 300}) async {
-    final data = await _api.get('/playlist/track/all/new',
-        query: {'listid': listid, 'page': page, 'pagesize': pageSize, 'type': 0});
-    return PlaylistTracks.fromJson(data);
+      {int page = 1, int pageSize = 300, bool allPages = true}) async {
+    return _fetchAllReversed(
+      fetchPage: (p) async {
+        final q = {
+          'listid': listid,
+          'page': p,
+          'pagesize': pageSize,
+          'type': 0,
+        };
+        final data = await _cached.get('/playlist/track/all/new',
+            query: q, ttl: kListTtl);
+        return PlaylistTracks.fromJson(data);
+      },
+      page: page,
+      pageSize: pageSize,
+      allPages: allPages,
+    );
+  }
+
+  /// 反反全量抓取的共用实现（V400-ORDER）。
+  ///
+  /// 1) 先取起始页拿 `total` 与页内实体；
+  /// 2) 总页数按 ceil(total/pageSize) 计算，**末页余数按实际长度处理**；
+  /// 3) 从末页往回逐页抓，每页 `reversed` 后拼接 —— 页序倒 + 页内倒 = 反反；
+  /// 4) `count` 缺失或为不可信值（<=0 / 小于已见条数）时，逐页向前探测
+  ///    直到出现「不满页」，把所有探测到的页纳入拼接（第 16 条）；
+  /// 5) 任何单页失败：按第 9 条留痕并跳过该页，不吞成空列表、不中断整体；
+  /// 6) 循环恒有上界 maxPages（第 25 条），去重按 hash 保守执行（第 23 条）。
+  Future<PlaylistTracks> _fetchAllReversed({
+    required Future<PlaylistTracks> Function(int p) fetchPage,
+    required int page,
+    required int pageSize,
+    required bool allPages,
+  }) async {
+    final first = await fetchPage(page);
+    if (!allPages) {
+      // 单页也做页内倒转，与全量反反语义一致（不引入第二种排列）
+      return PlaylistTracks(
+        songs: first.songs.reversed.toList(),
+        total: first.total,
+      );
+    }
+
+    const maxPages = 100; // 上界：pageSize=100 时 1 万首
+    final size = pageSize > 0 ? pageSize : 100;
+
+    // 可信总数：>0 且不小于首页实际条数
+    final trustedTotal = first.total > 0 && first.total >= first.songs.length
+        ? first.total
+        : 0;
+    final totalPages = trustedTotal > 0
+        ? (trustedTotal / size).ceil().clamp(1, maxPages)
+        : 0; // 0 = 未知，走探测
+
+    // 收集所有页（页号 → 该页实体），首页直接复用不重复请求。
+    final pages = <int, List<PlaylistSong>>{page: first.songs};
+    // 已知总页数：抓取 1..totalPages（跳过首页）
+    if (totalPages > 0) {
+      for (var p = 1; p <= totalPages; p++) {
+        if (p == page || p > maxPages) continue;
+        try {
+          pages[p] = (await fetchPage(p)).songs;
+        } catch (e) {
+          debugPrint('[playlist] page $p failed: $e'); // 第 9 条：留痕
+        }
+      }
+    } else {
+      // 未知总数：从首页向前探测，直到不满页 / 空页 / 触达上界。
+      var p = page + 1;
+      while (p <= maxPages) {
+        try {
+          final t = await fetchPage(p);
+          pages[p] = t.songs;
+          if (t.songs.isEmpty || t.songs.length < size) break;
+        } catch (e) {
+          debugPrint('[playlist] probe page $p failed: $e');
+          break;
+        }
+        p++;
+      }
+      // 若首页不是第 1 页且总数未知，向后补齐 1..page-1（保证全量）
+      for (var q = 1; q < page && q <= maxPages; q++) {
+        try {
+          pages[q] = (await fetchPage(q)).songs;
+        } catch (e) {
+          debugPrint('[playlist] backfill page $q failed: $e');
+        }
+      }
+    }
+
+    // 反反：页号降序，每页内部倒转。末页不足 size 按实际长度全取，不补位。
+    final sortedKeys = pages.keys.toList()..sort((a, b) => b.compareTo(a));
+    final songs = <PlaylistSong>[];
+    for (final p in sortedKeys) {
+      songs.addAll(pages[p]!.reversed);
+    }
+
+    return PlaylistTracks(
+      songs: songs,
+      total: trustedTotal > 0 ? trustedTotal : songs.length,
+    );
   }
 
   /// 收藏歌单（type=1 收藏公共歌单，type=0 新建）
@@ -336,6 +402,9 @@ class PlaylistRepository {
   /// 否则加歌/删歌后 90 秒内再次进入歌单页仍显示旧列表，用户以为没生效，
   /// 重复点击进一步放大重复提交风险。
   void _invalidatePlaylistCaches() {
+    // V400-B-04：90 秒列表缓存已迁至 ResourceCache（resource_json 箱
+    // list: 前缀），写后失效同步清 MemoryCache（兼容未迁移调用方）。
+    ResourceCache.instance.clearLists();
     MemoryCache.instance.removeWhere((key) =>
         key.startsWith('/playlist/') || key.startsWith('/user/playlist'));
   }

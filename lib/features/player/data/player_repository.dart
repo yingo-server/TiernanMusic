@@ -9,6 +9,8 @@ import '../../../core/direct/kg_play_api.dart';
 import '../../../core/direct/kg_client.dart';
 import '../../../core/direct/kg_providers.dart';
 import '../../../core/storage/secure_storage.dart';
+import '../../../core/resource/cached_api.dart';
+import '../../../core/resource/resource_cache.dart';
 import 'models.dart';
 
 /// 一次成功解析出的播放结果。
@@ -27,9 +29,11 @@ class PlayableResult {
 ///
 /// 内容接口仍走 kapi；只有受风控影响的播放/权益链路直连。
 class PlayerRepository {
-  PlayerRepository(this._api, [this._ref]);
+  PlayerRepository(this._api, [this._ref])
+      : _cached = CachedApiCall(_api);
 
   final KugouApiClient _api;
+  final CachedApiCall _cached;
   final Ref? _ref;
 
   /// 动态获取直连播放接口（异步 provider，可能尚未就绪）
@@ -105,13 +109,15 @@ class PlayerRepository {
 
   /// 查询歌曲详情（/privilege/lite），返回补全后的 Song。
   /// 失败时返回原 song。
+  /// V400-B-04：详情响应接入 ResourceCache（90 秒 + userid 维度键 +
+  /// 失效回退 + in-flight 合并）；命中缓存不再重复打权益接口。
   Future<Song> fetchDetail(Song song) async {
     try {
-      final res = await _api.get('/privilege/lite', query: {
+      final res = await _cached.get('/privilege/lite', query: {
         'hash': song.hash,
         'album_id': song.albumId,
         'qualities': '128,320,flac,high',
-      });
+      }, ttl: kListTtl);
       final data = res['data'];
       // 部署版的 data 是各音质权益条目列表，并非单首歌曲对象。
       if (data is List) {

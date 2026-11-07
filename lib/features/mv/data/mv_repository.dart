@@ -1,9 +1,10 @@
 import '../../../core/api/kugou_api_client.dart';
-import '../../../core/cache/cache_manager.dart';
+import '../../../core/resource/cached_api.dart';
 
 class MvRepository {
-  MvRepository(this._api);
+  MvRepository(this._api) : _cached = CachedApiCall(_api);
   final KugouApiClient _api;
+  final CachedApiCall _cached;
 
   /// 歌曲关联 MV
   ///
@@ -16,10 +17,8 @@ class MvRepository {
       'album_audio_id': albumAudioId,
       'fields': 'mkv,tags,h264,h265,authors',
     };
-    final cacheKey = MemoryCache.keyOf('/kmr/audio/mv', q);
-    final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
-    final data = cached ?? await _api.get('/kmr/audio/mv', query: q);
-    if (cached == null) MemoryCache.instance.set(cacheKey, data);
+    // V400-B-04：走 ResourceCache（168h JSON + 失效回退 + in-flight 合并）
+    final data = await _cached.get('/kmr/audio/mv', query: q);
 
     final raw = data['data'];
     final groups = raw is List ? raw : const [];
@@ -62,11 +61,9 @@ class MvRepository {
     if (_looksLikeHash(videoId)) {
       videoId = _hashToVideoId[videoId] ?? await _resolveVideoIdByHash(videoId);
     }
-    final cacheKey = MemoryCache.keyOf('/video/detail', {'id': videoId});
-    final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
-    final data =
-        cached ?? await _api.get('/video/detail', query: {'id': videoId});
-    if (cached == null) MemoryCache.instance.set(cacheKey, data);
+    // V400-B-04：走 ResourceCache（168h JSON + 失效回退 + in-flight 合并），
+    // userid 维度键由 CachedApiCall 拼入。
+    final data = await _cached.get('/video/detail', query: {'id': videoId});
     return MvDetail.fromJson(data);
   }
 

@@ -5,14 +5,19 @@ import 'package:flutter/foundation.dart';
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/api/translate_api.dart';
 import '../../../core/cache/cache_manager.dart';
+import '../../../core/resource/cached_api.dart';
+import '../../../core/resource/lyric_translation_stream.dart';
 import 'krc_decoder.dart';
 import 'krc_parser.dart';
 
 class LyricRepository {
-  LyricRepository(this._api, this._translate);
+  LyricRepository(this._api, this._translate)
+      : _cached = CachedApiCall(_api);
 
+  // ignore: unused_field — 恒等字段：构造契约保留 _api 引用（调用方可直查 userid 等状态）
   final KugouApiClient _api;
   final TranslateApi _translate;
+  final CachedApiCall _cached;
 
   /// 歌词缓存 TTL。歌词内容与登录态无关、变化极慢，
   /// 90 秒的全局 TTL 会导致同一首歌每轮播放都重新走网络。
@@ -31,33 +36,10 @@ class LyricRepository {
       if (albumAudioId != null) 'album_audio_id': albumAudioId,
       if (durationSec != null) 'duration': durationSec,
     };
-    final cacheKey = MemoryCache.keyOf('/search/lyric', query);
-    final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
-    // V399-A2（P1）：歌词候选接入持久缓存（Hive lyric_cache 箱），
-    // 命中不发网络；网络失败时返回过期旧值并留痕（降级可观测，第 9/16 条）。
-    Map<String, dynamic> data;
-    if (cached != null) {
-      data = cached;
-    } else {
-      final p = await LyricPersistentCache.instance
-          .getWithStale(cacheKey, kind: 'search', ttl: _lyricCacheTtl);
-      if (p.$1 != null) {
-        data = p.$1!;
-      } else {
-        try {
-          data = await _api.get('/search/lyric', query: query);
-          MemoryCache.instance.set(cacheKey, data, ttl: _lyricCacheTtl);
-          await LyricPersistentCache.instance
-              .set(cacheKey, kind: 'search', body: data);
-        } catch (e) {
-          final stale = p.$2;
-          if (stale == null) rethrow;
-          debugPrint('[lyric] 搜索候选网络失败，降级用旧缓存：$e');
-          data = stale;
-        }
-      }
-    }
-
+    // V400-B-04：候选查询统一走 ResourceCache（30 分钟歌词语义 +
+    // in-flight 合并 + 失效回退），替代 MemoryCache+LyricPersistentCache 双写。
+    final data = await _cached.get('/search/lyric', query: query,
+        ttl: _lyricCacheTtl);
     final candidates = data['candidates'];
     if (candidates is! List) return null;
     for (final raw in candidates) {
@@ -120,31 +102,9 @@ class LyricRepository {
       'fmt': format,
       'decode': 'true',
     };
-    final cacheKey = MemoryCache.keyOf('/lyric', query);
-    final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
-    // V399-A2（P1）：/lyric 同样接入持久缓存 + 失败降级旧值（第 9/16 条）。
-    Map<String, dynamic> data;
-    if (cached != null) {
-      data = cached;
-    } else {
-      final p = await LyricPersistentCache.instance
-          .getWithStale(cacheKey, kind: 'lyric', ttl: _lyricCacheTtl);
-      if (p.$1 != null) {
-        data = p.$1!;
-      } else {
-        try {
-          data = await _api.get('/lyric', query: query);
-          MemoryCache.instance.set(cacheKey, data, ttl: _lyricCacheTtl);
-          await LyricPersistentCache.instance
-              .set(cacheKey, kind: 'lyric', body: data);
-        } catch (e) {
-          final stale = p.$2;
-          if (stale == null) rethrow;
-          debugPrint('[lyric] 歌词网络失败，降级用旧缓存：$e');
-          data = stale;
-        }
-      }
-    }
+    // V400-B-04：/lyric 同样统一走 ResourceCache（30 分钟 + 失效回退）。
+    final data = await _cached.get('/lyric', query: query,
+        ttl: _lyricCacheTtl);
 
     // 优先用服务端 decodeContent；LRC 的 content 是明文 Base64，KRC 则加密。
     String? krcText;
@@ -201,11 +161,21 @@ class LyricRepository {
     final cached = await LyricTranslationCache.instance
         .get(lyricId, '$targetLanguage@$versionKey');
     if (cached != null) {
+      var hit = 0;
       for (final i in missing) {
         final translation = cached[i];
         if (translation != null && translation.isNotEmpty) {
           lyric.lines[i].translation = translation;
+          hit++;
         }
+      }
+      // V400-B-03：命中缓存也 emit 一次（UI 秒显，不等 FutureProvider 完成）。
+      if (hit > 0) {
+        LyricTranslationStream.instance.emit(LyricTranslationPatch(
+          lyricId,
+          missing.first,
+          [for (final i in missing) lyric.lines[i].translation ?? ''],
+        ));
       }
       return lyric;
     }
@@ -219,8 +189,17 @@ class LyricRepository {
       final batch = texts.sublist(
           i, i + batchSize > texts.length ? texts.length : i + batchSize);
       try {
-        final translated = await _translate.translateLines(
-            lines: batch, targetLanguage: targetLanguage);
+        List<String> translated;
+        try {
+          translated = await _translate.translateLines(
+              lines: batch, targetLanguage: targetLanguage);
+        } catch (e) {
+          // V400-B-03：失败批重试一次（504 网关超时场景）；
+          // 重试仍失败按单批失败处理（留痕不崩不入缓存）。
+          debugPrint('[lyric] 翻译批次失败，重试一次：$e');
+          translated = await _translate.translateLines(
+              lines: batch, targetLanguage: targetLanguage);
+        }
         // F4-32（审查②-B，P1）：返回条数少于请求条数时旧实现用原文补位，
         // 译文区出现与原文一模一样的整行，且被当成「已翻译」写进持久缓存，
         // 之后即使服务恢复也不再重试。这里只接受真实返回的条目。
@@ -239,6 +218,14 @@ class LyricRepository {
             break;
           }
           translations[missing[i + j]] = value;
+        }
+        // V400-B-03：本批成功即 emit patch（UI 实时插行，不等整批翻译完）。
+        if (translated.length == batch.length && n > 0) {
+          LyricTranslationStream.instance.emit(LyricTranslationPatch(
+            lyricId,
+            missing[i],
+            [for (var j = 0; j < n; j++) translated[j]],
+          ));
         }
       } catch (e) {
         // 单批失败：保留原文供显示，但**不写入缓存**（否则永久无翻译）；

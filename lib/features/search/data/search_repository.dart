@@ -2,7 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
 import '../../../core/api/kugou_api_client.dart';
-import '../../../core/cache/cache_manager.dart';
+import '../../../core/resource/cached_api.dart';
+import '../../../core/resource/resource_cache.dart';
 import '../../../core/providers.dart';
 import '../../home/data/models.dart';
 
@@ -57,22 +58,19 @@ class HotSearchKeyword {
 
 /// 搜索仓库：搜索 / 热搜 / 建议 / 历史（Hive）
 class SearchRepository {
-  SearchRepository(this._api);
+  SearchRepository(this._api) : _cached = CachedApiCall(_api);
 
   final KugouApiClient _api;
-  final _cache = MemoryCache.instance;
+  final CachedApiCall _cached;
 
   static const String historyBoxName = 'search_history';
   static const int maxHistory = 20;
 
+  /// V400-B-04：读接口统一走 ResourceCache（搜索列表 90 秒语义 +
+  /// in-flight 合并 + 失效回退）。
   Future<Map<String, dynamic>> _cachedGet(String path,
-      {Map<String, dynamic>? query}) async {
-    final key = MemoryCache.keyOf(path, query);
-    final cached = _cache.get<Map<String, dynamic>>(key);
-    if (cached != null) return cached;
-    final data = await _api.get(path, query: query);
-    _cache.set(key, data);
-    return data;
+      {Map<String, dynamic>? query}) {
+    return _cached.get(path, query: query, ttl: kListTtl);
   }
 
   List<dynamic> _asList(dynamic v) => v is List ? v : const [];

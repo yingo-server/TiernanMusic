@@ -36,18 +36,28 @@ import 'queue_sheet.dart';
 /// 失败语义（第 16 条）：`error` 字段区分「无候选/解析失败」与正常空，
 /// 不与加载中混为一谈。
 final currentLyricProvider = FutureProvider.autoDispose<
-    ({KrcLyric? lyric, String? error})>((ref) async {
+    ({KrcLyric? lyric, String? error, String? lyricId, String? songHash})>((ref) async {
   final song = ref.watch(currentSongProvider).valueOrNull;
-  if (song == null) return (lyric: null, error: null);
+  if (song == null) return (lyric: null, error: null, lyricId: null, songHash: null);
   final repo = ref.watch(lyricRepositoryProvider);
+  // V400-A-04：记录本代歌词所属歌曲 hash，后续异步写入前做世代校验
+  // （原则 18：切歌后旧结果不得污染新歌曲的 UI）。
+  final songHash = song.hash;
   final candidate = await repo.findCandidate(
     hash: song.hash,
     albumAudioId: song.albumAudioId,
     durationSec: song.duration.inSeconds,
   );
-  if (candidate == null) return (lyric: null, error: '暂无歌词');
+  if (candidate == null) {
+    return (lyric: null, error: '暂无歌词', lyricId: null, songHash: songHash);
+  }
   final lyric = await repo.fetchLyric(candidate);
-  if (lyric == null) return (lyric: null, error: '歌词解析失败');
+  if (lyric == null) {
+    return (lyric: null, error: '歌词解析失败', lyricId: null, songHash: songHash);
+  }
+  // V400-A-04：candidate.id 透传给 LyricView，用于匹配翻译补丁的
+  // patch.lyricId（冻结契约 LyricTranslationStream，B 按 candidate.id emit）。
+  final lyricId = candidate.id;
   // 翻译跟随界面语言。取语言用 platformDispatcher 而非 BuildContext：
   // Provider 是全局对象，没有 Element（第 24 条：Provider 不触碰组件树）。
   final locale = WidgetsBinding.instance.platformDispatcher.locale;
@@ -57,11 +67,17 @@ final currentLyricProvider = FutureProvider.autoDispose<
   // V399-A3（P1，非必要不翻译）：纯原文模式（original）不翻译——
   // 既省翻译 API 配额，也避免无谓网络等待。双语/纯译文模式才补译文。
   if (ref.watch(lyricModeProvider) == LyricDisplayMode.original) {
-    return (lyric: lyric, error: null);
+    return (lyric: lyric, error: null, lyricId: lyricId, songHash: songHash);
   }
   final translated =
       await repo.ensureTranslation(lyric, candidate.id, targetLang);
-  return (lyric: translated, error: null);
+  // 原则 18（世代校验）：翻译 await 期间用户可能已切歌——当前歌曲
+  // 与发起时不一致则本次结果作废（不 yield 旧歌译文/歌词）。
+  final now = ref.read(currentSongProvider).valueOrNull;
+  if (now == null || now.hash != songHash) {
+    return (lyric: null, error: null, lyricId: null, songHash: null);
+  }
+  return (lyric: translated, error: null, lyricId: lyricId, songHash: songHash);
 });
 
 String _fmt(Duration d) {
@@ -569,6 +585,9 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
     final lyricMode = ref.watch(lyricModeProvider);
     final position = ref.watch(positionProvider).valueOrNull ?? Duration.zero;
     final lyric = lyricAsync.value?.lyric;
+    // V400-A-04：歌词 id + 所属歌曲 hash 透传（匹配翻译补丁 / 世代校验）
+    final lyricId = lyricAsync.value?.lyricId;
+    final songHash = lyricAsync.value?.songHash;
 
     return Stack(
       fit: StackFit.expand,
@@ -584,6 +603,8 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
                       lyric: lyric,
                       position: position,
                       mode: lyricMode,
+                      lyricId: lyricId,
+                      songHash: songHash,
                       // onTapLine 的参数单位是毫秒（lyric_view.dart KrcLine.startMs）
                       onTapLine: (ms) => ref
                           .read(playerControllerProvider)
@@ -829,3 +850,4 @@ class _CoverPlaceholder extends StatelessWidget {
     );
   }
 }
+

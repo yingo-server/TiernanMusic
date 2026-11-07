@@ -3,7 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/kugou_api_client.dart';
-import '../../../core/cache/cache_manager.dart';
+import '../../../core/resource/cached_api.dart';
+import '../../../core/resource/resource_cache.dart';
 import '../../../core/providers.dart';
 import 'models.dart';
 
@@ -19,22 +20,18 @@ final homeDataProvider = FutureProvider<HomeData>((ref) {
 /// 首页数据仓库：聚合 /yueku + /top/playlist + /rank/list，
 /// banner 与每日推荐独立容错（失败置 null / 空）。
 class HomeRepository {
-  HomeRepository(this._api);
+  HomeRepository(this._api) : _cached = CachedApiCall(_api);
 
   final KugouApiClient _api;
-  final _cache = MemoryCache.instance;
+  final CachedApiCall _cached;
 
   List<dynamic> _asList(dynamic v) => v is List ? v : const [];
 
-  /// 带缓存的 GET，返回 Map 中指定路径下的原始 JSON
+  /// 带缓存的 GET（V400-B-04）：持久缓存 + in-flight 合并 + 失效回退
+  /// 收口在 ResourceCache（home 列表语义 90 秒 TTL）。
   Future<Map<String, dynamic>> _cachedGet(String path,
-      {Map<String, dynamic>? query}) async {
-    final key = MemoryCache.keyOf(path, query);
-    final cached = _cache.get<Map<String, dynamic>>(key);
-    if (cached != null) return cached;
-    final data = await _api.get(path, query: query);
-    _cache.set(key, data);
-    return data;
+      {Map<String, dynamic>? query}) {
+    return _cached.get(path, query: query, ttl: kListTtl);
   }
 
   Future<List<HomeSong>> fetchYuekuSongs() async {

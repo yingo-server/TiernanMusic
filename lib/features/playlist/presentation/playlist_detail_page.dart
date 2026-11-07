@@ -24,21 +24,19 @@ final playlistDetailProvider = FutureProvider.family
   return ref.watch(_playlistRepoProvider).fetchDetail(id);
 });
 
-/// 歌单歌曲（一次性拉完，保持上游给定顺序——V399-C1：不再用有误导性的
-/// `newestFirst` 名字；`upstreamOrder: true` = 按上游页序拼接、页内原序，
-/// 同一歌单多次刷新顺序一致（上游稳定 + 本层串行合并，见
-/// docs/v399_fix_c.md 实测）。
+/// 歌单歌曲（一次性拉完，V400-ORDER：反反 = 页序倒 + 页内倒）。
+/// 依据：概念版分享页实测前 20 首与反反拼法逐位吻合（见
+/// docs/v400_order.md 与 /tmp/v4_paging_8.txt 四组对照）。
+/// 余数页（485%10=5）按实际长度全取，不补位。
 final playlistTracksProvider = FutureProvider.family
     .autoDispose<PlaylistTracks, String>((ref, id) {
   return ref
       .watch(_playlistRepoProvider)
-      .fetchTracks(id, upstreamOrder: true, allPages: true);
+      .fetchTracks(id, allPages: true);
 });
 
 /// 用户（我的）歌单歌曲：按 `listid` 走 `/playlist/track/all/new`。
-///
-/// 与公共歌单的 gid 不同，用户歌单只有数字 `listid`。
-/// 顺序保证：上游给定序，客户端不改写（V399-C1）。
+/// 顺序：同公共歌单，反反（V400-ORDER）。
 final userPlaylistTracksProvider = FutureProvider.family
     .autoDispose<PlaylistTracks, String>((ref, listId) {
   return ref.watch(_playlistRepoProvider).fetchUserTracks(listId);
