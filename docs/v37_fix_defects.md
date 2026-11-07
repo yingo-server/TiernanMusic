@@ -73,3 +73,66 @@
 2. 入口裸强转 `as Map<String, dynamic>` → `is Map<String, dynamic>` 分支校验（第 13 条）：album fetchDetail/fetchSongs、artist fetchDetail/fetchSongs/fetchAlbums 共 5 处，非 Map 上游给空 Map 走空数据路径，不再 TypeError 上抛。
 
 状态：✅ 完成
+
+## V37-07 同名旧歌单竞态（C2 P2 · 第 3/29 条）
+
+文件：`lib/features/playlist/presentation/add_to_playlist_sheet.dart`
+
+`_createAndAdd` 重写：collectPlaylist **前**先快照已存在同名 listid 集合（existedIds），创建后仅匹配「同名且基线没有」的歌单；排除后为空不再盲匹配旧歌单（原实现 `created.first` 会命中旧歌单——歌进错歌单），回落为 `addedToSameNamePlaylist` 提示并关闭弹层。上游 `/playlist/add` 不返回新 listid（第 29 条未实测约束）已在注释标注。新增 arb 键 `addedToSameNamePlaylist`，11 个语言文件全部同步。
+
+状态：✅ 完成
+
+## V37-08 comments_page loadMore 永久转圈（C2 P2 · 第 16/9 条）
+
+文件：`lib/features/comment/presentation/comments_page.dart`
+
+核对结论：该修复已随前轮提交（bcf753d，V37-01~06）落盘且在基线 31f33d8 中可见——controller 侧 `_pageError`/`retryLoadMore`/失败不推进页码/失败重建 state 触发通知均在位；UI 侧 footer 依序渲染 pageError→重试按钮、hasMore→转圈、否则 noMore。与 search_page `_pageError` 范式逐点对照一致（`retryLoadMore` 清空后重拉；成功路径 `_pageError` 保持 null；`load(refresh:true)` 推进 generation 丢弃旧 loadMore，页码语义自洽）。**无需新代码改动，核对通过。**
+
+状态：✅ 已在位（核对通过）
+
+## V37-09 arb 死键清理（第 32 条）
+
+grep 全仓确认引用后处置：
+- `wifiAutoHighQuality` / `cellularLowQuality` / `tryListen` / `albumPageComingSoon`：无任何 `l10n.*` 代码引用（settings_providers.dart 仅注释提及 Hive 遗留键名），11 个 arb 文件全删。
+- `mvQualitySelect`：mv_player_page.dart:396/434 有消费方，**保留不删**（任务书预判「无消费方」不成立）。
+
+gen_l10n_min.py 重跑输出：
+```
+wrote lib/l10n/app_localizations.dart: 336 keys, 11 locales
+```
+状态：✅ 完成
+
+## V37-10 captcha_page 二次核对（第 9/31 条）
+
+A3 的 5 处硬编码逐条核对：`captchaLoadFailed`/`captchaSmsTitle`/`captchaSmsHint`/`captchaSmsCodeLabel+Hint`/`captchaExternalHint`/`captchaUnknownType`/`captchaNoVerifyUrl` 全部在位。rg 全文仅剩注释中文 + WebView HTML 内 2 处用户可见中文（`开始验证`/`完成滑块后自动继续`）——本次补齐：新增 `captchaTencentStartButton`/`captchaTencentAutoHint` 两键（11 语言全补），HTML 内以 jsonEncode 字面量注入（防注入）。复检 rg 字符串级中文残留：0 处。
+
+gen_l10n_min.py 重跑输出：
+```
+wrote lib/l10n/app_localizations.dart: 336 keys → 337 keys → 339 keys, 11 locales（三步：删死键 / 增 addedToSameNamePlaylist / 增 captcha 2 键）
+```
+状态：✅ 完成
+
+## dart analyze 逐文件结果（环境无 Flutter SDK，Flutter/riverpod 符号缺失报错属噪音，已按规则过滤）
+
+| 文件 | 原始 issues | 过滤后 |
+|---|---|---|
+| add_to_playlist_sheet.dart | 126 | 0（无项目自有错误） |
+| comments_page.dart | 226 | 0（未改动，仅 analyze 核对） |
+| captcha_page.dart | 162 | 0 |
+| app_localizations.dart（生成物） | 62 | 0 |
+| 11×app_*.arb | 数据文件，不适用 dart analyze | — |
+
+## l10n 汇总
+- 删键：wifiAutoHighQuality / cellularLowQuality / tryListen / albumPageComingSoon（11 文件）
+- 增键：addedToSameNamePlaylist、captchaTencentStartButton、captchaTencentAutoHint（11 文件）
+- 最终 `python3 tool/gen_l10n_min.py` 输出：`wrote lib/l10n/app_localizations.dart: 339 keys, 11 locales`
+
+## 汇报（8 行内）
+1. V37-07 ✅ 已修：同名旧歌单竞态，基线快照排除法 + addedToSameNamePlaylist 回落
+2. V37-08 ✅ 核对通过：_pageError 范式已随 bcf753d 落盘于基线，无需改动
+3. V37-09 ✅ 已删 4 死键（mvQualitySelect 有消费方保留），gen_l10n_min 重跑通过
+4. V37-10 ✅ A3 五处核对在位；补 HTML 内 2 处中文为 l10n 新键，字符串级残留 0
+5. analyze：4 个 dart 文件逐文件跑，过滤 Flutter SDK 噪音后均 0 错误
+6. arb 变更全部 11 语言同步（zh/zh_TW/zh_CN/en/ja/ko/es/fr/de/pt/ru）
+7. 未修原因：无
+8. 禁令遵守：未 build/test/pub get/commit/push，仅 file_edit + dart analyze

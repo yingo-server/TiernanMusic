@@ -239,6 +239,10 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
   String _tencentHtml(String appId, String eventId) {
     final appIdJson = jsonEncode(appId);
     final eventJson = jsonEncode(eventId);
+    // V37-10（第 9/31 条）：按钮与提示文案此前硬编码中文， WebView HTML
+    // 内一并走 l10n（占位符以 JSON 字面量注入，防注入 + 免转义）。
+    final startLabelJson = jsonEncode(context.l10n.captchaTencentStartButton);
+    final autoHintJson = jsonEncode(context.l10n.captchaTencentAutoHint);
     return '''
 <!DOCTYPE html>
 <html><head>
@@ -255,8 +259,8 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
 </style></head>
 <body>
 <div id="box">
-  <button id="go">开始验证</button>
-  <p>完成滑块后自动继续</p>
+  <button id="go">$startLabelJson</button>
+  <p>$autoHintJson</p>
 </div>
 <script src="https://turing.captcha.qcloud.com/TCaptcha.js"></script>
 <script>
