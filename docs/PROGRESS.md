@@ -794,3 +794,16 @@ JustAudioBackground.init 真机永久失败 → ensureEngineReady false → play
 ### 待办
 - 概念版通道验证报告已出（假设不成立）
 - 权限网关修复代理进行中
+
+## ✅ v3.8.0 发布确认
+
+- release 437395224（draft=False），tag c99898a 构建成功（版本 3.8.0+39）
+- 资产：arm64/v7a/x86_64 APK + screenshots-311.zip
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.8.0/app-arm64-v8a-release.apk
+
+### v3.8.0 内容
+- 播放引擎 init 修正（channelDescription + androidStopForegroundOnPause=false——暂停降级再恢复受 Android 12+ 限制的根因）
+- 引擎失败 banner（播放页顶部可见，不再全空白）
+- POST_NOTIFICATIONS 运行时申请（Android 13+ 媒体通知）
+- 权限网关收尾（permission_gate 接入启动编排）
+- 版本 bump 纪律已执行（v3.7.0 的 6 轮教训）
