@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../../core/utils/error_logger.dart';
+import '../../../core/prefetch/prefetch_engine.dart';
 
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/audio/audio_service_bootstrap.dart';
@@ -39,6 +40,12 @@ class TiernanAudioHandler extends BaseAudioHandler
   /// 引擎初始化失败的原因（供 UI 展示；null = 未失败）
   String? engineError;
 
+  /// V401-C2（主代理亲修）：本次装载成功的播放 URL。
+  /// 播放完成回调（processingStateStream）拿不到 `_playAt` 的局部变量
+  /// `result.url`，必须把它存为字段，否则「完整播放后永久缓存实际文件」
+  /// 永远无法触发（C-2 收尾定时器的核对点）。
+  String _lastPlayUrl = '';
+
   /// 等待音频后台服务就绪；失败返回 false（调用方给友好错误，不要播放）。
   Future<bool> ensureEngineReady() async {
     if (_initialized) return true;
@@ -69,7 +76,14 @@ class TiernanAudioHandler extends BaseAudioHandler
     _engineReadyController.add(p);
     p.playbackEventStream.listen(_broadcastState);
     p.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed) skipToNext();
+      if (state == ProcessingState.completed) {
+        // V401-C2：完整播放完成后把实际音频文件永久缓存（ResourceCache）。
+        // URL 来自本曲装载成功时写入的 _lastPlayUrl；离线本地文件不重复缓存。
+        if (_lastPlayUrl.startsWith('http')) {
+          PrefetchEngine.instance.onPlaybackCompleted(_lastPlayUrl, 'audio');
+        }
+        skipToNext();
+      }
     });
     _configureSession();
     return true;
@@ -226,6 +240,9 @@ class TiernanAudioHandler extends BaseAudioHandler
               artUri: s.cover.isNotEmpty ? Uri.tryParse(s.cover) : null,
             ))
         .toList());
+    // V401-C2：队列/切歌变化时补充未来 15 首的 URL/歌词 JSON 预请求。
+    // 已请求过的 hash 由 PrefetchEngine._requested 去重；不阻塞播放。
+    PrefetchEngine.instance.updateUpcoming(_songs, _index);
   }
 
   /// 设置队列并从 [index] 开始播放。
@@ -322,6 +339,8 @@ class TiernanAudioHandler extends BaseAudioHandler
         // ---- 离线分支 ----
         _isPreview = false;
         _previewController.add(false);
+        // V401-C2：离线文件已在本地，播放完成无需再永久缓存。
+        if (token == _playToken) _lastPlayUrl = '';
         try {
           final applied = await _applySource(
             token,
@@ -345,6 +364,8 @@ class TiernanAudioHandler extends BaseAudioHandler
           _actualQualityController.add(result.quality);
           _isPreview = result.isPreview;
           _previewController.add(_isPreview);
+          // V401-C2：记录本次装载成功的 URL，供播放完成后永久缓存。
+          _lastPlayUrl = result.url;
           // 清掉失效的 localPath，防止下次再走坏源（PL-04 同源）
           // F4-15（审查②-B，P1）：`localPath: null` 在原 copyWith 中是空操作，
           // 必须走显式清除标记。
@@ -369,6 +390,8 @@ class TiernanAudioHandler extends BaseAudioHandler
         _isPreview = result.isPreview;
         _previewController.add(_isPreview);
         _songs[index] = detailed.copyWith(quality: result.quality);
+        // V401-C2：在线主分支同样记录 URL（播放完成后永久缓存实际文件）。
+        _lastPlayUrl = result.url;
         final applied = await _applySource(
           token,
           AudioSource.uri(Uri.parse(result.url), tag: mediaItem.value),
@@ -512,6 +535,7 @@ class TiernanAudioHandler extends BaseAudioHandler
     _playToken++;
     _pendingIndex = null;
     _pendingSongIndex = null;
+    _lastPlayUrl = ''; // V401-C2：停止后没有「完整播放」，不缓存实际文件
     final p = _playerOrNull;
     if (p == null) return;
     await p.stop();

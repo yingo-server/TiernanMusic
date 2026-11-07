@@ -13,9 +13,13 @@ import 'features/library/presentation/library_page.dart'
 import 'core/api/kugou_api_client.dart';
 import 'core/direct/kg_client.dart';
 import 'core/direct/kg_providers.dart';
+import 'core/prefetch/prefetch_engine.dart';
+import 'core/resource/resource_cache.dart';
 import 'core/audio/audio_service_bootstrap.dart';
 import 'core/router/app_router.dart';
 import 'features/home/data/home_repository.dart' show homeDataProvider;
+import 'features/home/data/models.dart' show HomeData, HomeSong;
+import 'features/player/data/models.dart' show Song;
 import 'core/theme/app_theme.dart';
 import 'core/theme/settings_provider.dart';
 import 'core/widgets/splash_handwriting.dart' show HandwritingCycle;
@@ -89,6 +93,7 @@ Future<void> main() async {
       await openSafe('search_history', stringValues: true);
       await openSafe('lyric_translations', stringValues: true);
       await openSafe('lyric_cache', stringValues: true);
+      await openSafe('resource_json', stringValues: true);
       await openSafe('downloads');
 
       // Cookie 持久化目录（应用私有存储，三层存储规范第 2 层）。
@@ -214,6 +219,27 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
       // 首帧后非阻塞申请一次（fire-and-forget；系统只在合适时机弹一次，
       // 永久拒绝时 StoragePermissionService 会引导系统设置页）。
       unawaited(PermissionGate.instance.ensureNotification());
+      // V401-C2（主代理接线）：预加载引擎注入 API 客户端 + 首页预热。
+      // 用户态：authStateProvider 的 build 已主动 restoreSession（首屏前
+      // 由 Riverpod 首次 watch 触发），账号卡昵称/头像随 AsyncValue 落定
+      // 即时显示（stale-while-revalidate 已在 v3.9.9 B1 落地）。
+      final api = ref.read(kugouApiClientProvider);
+      PrefetchEngine.instance.attach(api);
+      unawaited(ResourceCache.instance.init());
+      ref.listen(homeDataProvider, (_, next) {
+        next.whenData((HomeData data) {
+          final songs = <Song>[
+            for (final s in data.songs) _homeSongToPrefetch(s),
+            if (data.dailyRecommend != null)
+              for (final s in data.dailyRecommend!) _homeSongToPrefetch(s),
+          ];
+          if (songs.every((s) => s.hash.isEmpty)) return;
+          PrefetchEngine.instance.enqueueSongs(
+            songs.where((s) => s.hash.isNotEmpty),
+            spacing: const Duration(milliseconds: 100),
+          );
+        });
+      });
     });
     _splashTimer = Timer(HandwritingCycle.minVisible, () {
       if (mounted) setState(() => _splashMinElapsed = true);
@@ -351,6 +377,19 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
     );
   }
 }
+
+/// V401-C2（主代理接线）：首页预热用的最小 Song 构造。
+/// 不依赖 PlayHelper（那是播放入口，会触发 _controller 读取）；
+/// hash 缺失传空串由 PrefetchEngine 跳过（第 14/28 条）。
+Song _homeSongToPrefetch(HomeSong s) => Song(
+      hash: s.hash ?? '',
+      name: s.name,
+      artist: s.singer,
+      albumId: s.albumId ?? '',
+      albumAudioId: s.albumAudioId ?? '',
+      cover: s.cover,
+      duration: Duration(seconds: s.duration),
+    );
 
 /// 启动/构建异常兜底页
 class StartupErrorPage extends StatelessWidget {
