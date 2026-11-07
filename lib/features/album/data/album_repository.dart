@@ -128,17 +128,21 @@ class AlbumRepository {
   final KugouApiClient _api;
 
   Future<AlbumInfo> fetchDetail(String id) async {
-    final res =
-        await _api.get('/album/detail', query: {'id': id}) as Map<String, dynamic>;
+    // V37-06（C1 ALB-R2，第 13 条）：裸强转改 is Map 分支校验（对齐
+    // 同文件 fetchSongs 口径）——上游异常形态时给空数据而非 TypeError。
+    final raw = await _api.get('/album/detail', query: {'id': id});
+    final res = raw is Map<String, dynamic> ? raw : const <String, dynamic>{};
     return AlbumInfo.fromJson(res);
   }
 
   Future<AlbumSongsPage> fetchSongs(String id, {int page = 1}) async {
-    final res = await _api.get('/album/songs', query: {
+    // V37-06（C1 ALB-R2，第 13 条）：入口强转改 is 校验。
+    final raw = await _api.get('/album/songs', query: {
       'id': id,
       'page': page,
       'pagesize': 50,
-    }) as Map<String, dynamic>;
+    });
+    final res = raw is Map<String, dynamic> ? raw : const <String, dynamic>{};
     final data = res['data'];
     final Map d = data is Map ? data : const {};
     final list = d['songs'] is List ? d['songs'] as List : const [];

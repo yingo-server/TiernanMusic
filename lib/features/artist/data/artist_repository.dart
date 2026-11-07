@@ -159,19 +159,23 @@ class ArtistRepository {
   final KugouApiClient _api;
 
   Future<ArtistInfo> fetchDetail(String id) async {
+    // V37-06（C1 ART 同病，第 13 条）：裸强转改 is Map 分支校验——
+    // 上游异常形态（网关错误页/字符串）时给空数据而非 TypeError 上抛。
     final res = await _api.get('/artist/detail', query: {'id': id});
-    return ArtistInfo.fromJson(res as Map<String, dynamic>);
+    return ArtistInfo.fromJson(res is Map<String, dynamic> ? res : const {});
   }
 
   Future<ArtistSongsPage> fetchSongs(String id,
       {int page = 1, String sort = 'new'}) async {
-    final res = await _api.get('/artist/audios', query: {
+    // V37-06（C1 ART 同病，第 13 条）：入口强转改 is 校验。
+    final raw = await _api.get('/artist/audios', query: {
       'id': id,
       'page': page,
       // 实测 pagesize 上限 100，超限 error_code=20010
       'pagesize': 30,
       'sort': sort,
-    }) as Map<String, dynamic>;
+    });
+    final res = raw is Map<String, dynamic> ? raw : const <String, dynamic>{};
     final list = res['data'] is List ? res['data'] as List : const [];
     final songs = list
         .whereType<Map>()
@@ -185,11 +189,13 @@ class ArtistRepository {
   }
 
   Future<List<ArtistAlbum>> fetchAlbums(String id, {int page = 1}) async {
-    final res = await _api.get('/artist/albums', query: {
+    // V37-06（C1 ART 同病，第 13 条）：入口强转改 is 校验。
+    final raw = await _api.get('/artist/albums', query: {
       'id': id,
       'page': page,
       'pagesize': 30,
-    }) as Map<String, dynamic>;
+    });
+    final res = raw is Map<String, dynamic> ? raw : const <String, dynamic>{};
     final list = res['data'] is List ? res['data'] as List : const [];
     return list
         .whereType<Map>()

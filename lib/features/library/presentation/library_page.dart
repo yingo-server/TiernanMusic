@@ -284,7 +284,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         if (list.isEmpty) {
           return EmptyState(
             icon: Icons.movie_outlined,
-            message: context.l10n.noData,
+            // V37-UI-01b（任务流 4）：通用「暂无数据」改为动作引导文案，
+            // 告诉用户去哪收藏 MV（第 16 条：确实为空 ≠ 无数据，需给路径）
+            message: context.l10n.mvCollectGuide,
           );
         }
         return Column(

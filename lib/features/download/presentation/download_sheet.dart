@@ -170,6 +170,11 @@ class _OptionTile extends StatelessWidget {
                 )
               : IconButton(
                   icon: const Icon(Icons.download_outlined),
+                  // V37-UI-05：弹层行内下载按钮显式保证 48dp 触控区
+                  visualDensity: VisualDensity.compact,
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
+                  padding: EdgeInsets.zero,
                   onPressed: () => onDownload(),
                 ),
     );

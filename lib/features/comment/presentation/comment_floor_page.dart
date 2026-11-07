@@ -263,6 +263,12 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
                                           size: 20,
                                           color: theme.colorScheme.error),
                                       tooltip: context.l10n.delete,
+                                      // V37-UI-05：图标 20dp + 默认 padding 8 →
+                                      // 触控目标 <48dp；补足 48dp 触控区
+                                      visualDensity: VisualDensity.compact,
+                                      constraints: const BoxConstraints(
+                                          minWidth: 48, minHeight: 48),
+                                      padding: EdgeInsets.zero,
                                       onPressed: () => _deleteComment(c),
                                     )
                                   : null,
@@ -293,7 +299,11 @@ class _CommentFloorPageState extends ConsumerState<CommentFloorPage> {
                   const SizedBox(width: 8),
                   IconButton.filled(
                     tooltip: context.l10n.send,
-                    onPressed: _isLoggedIn ? _send : () {},
+                    // V37-UI-08（P2-8 死按钮）：原 `onPressed: _isLoggedIn
+                    // ? _send : () {}` 未登录点击完全无反应。_send 首行已有
+                    // ensureLoggedIn 登录引导（与 comments_page 同一口径），
+                    // 直接统一委托给它即可。
+                    onPressed: _send,
                     icon: const Icon(Icons.send),
                   ),
                 ],

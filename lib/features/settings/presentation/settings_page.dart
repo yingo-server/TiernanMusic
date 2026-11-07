@@ -203,7 +203,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     String? subtitle,
     Widget? trailing,
     VoidCallback? onTap,
+    // V37-UI-04：条件可见性（去重入口用），false 时不构建该 ListTile
+    bool visible = true,
   }) {
+    if (!visible) return const SizedBox.shrink();
     return ListTile(
       leading: Icon(leading),
       title: Text(title),
@@ -272,6 +275,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           // F4-40（审查③-B，P2）：该入口此前与上面的「账号」条目同义（都跳 /login），
           // 与 subtitle 承诺的「切换账号」不符。改为打开账号切换弹层，
           // 无其他账号时再回落到登录页（第 30 条命名即文档）。
+          // V37-UI-04：已登录且存在其他账号时，「切换账号」项承担同功能，
+          // 本项隐藏，去重（第 32 条：重复入口是维护成本）。
           onTap: () async {
             if (loggedIn && otherAccounts.isNotEmpty) {
               await _showSwitchAccountDialog();
@@ -280,6 +285,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               _loadAccount();
             }
           },
+          visible: !(loggedIn && otherAccounts.isNotEmpty),
         ),
         // 切换账号：仅已登录且存在其他账号时显示（F3）
         if (loggedIn && otherAccounts.isNotEmpty)

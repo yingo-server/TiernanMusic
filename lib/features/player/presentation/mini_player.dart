@@ -58,8 +58,12 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        children: [
+                      // V37-UI-07（P2-2）：小屏/大字号下 44 封面 + 3×48 按钮 +
+                      // 文本会溢出 Row。用 LayoutBuilder 在窄宽度下降级为
+                      // 紧凑布局（隐藏「队列」次操作，主/下一保留），不再硬溢出。
+                      child: LayoutBuilder(builder: (context, constraints) {
+                        final compact = constraints.maxWidth < 360;
+                        final row = <Widget>[
                           Hero(
                             tag: 'album-art',
                             child: ClipRRect(
@@ -69,7 +73,7 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
                                 height: 44,
                                 child: song.cover.isNotEmpty
                                     ? CachedNetworkImage(
-                    cacheManager: AppImageCache.instance,
+                                        cacheManager: AppImageCache.instance,
                                         imageUrl: song.cover,
                                         fit: BoxFit.cover,
                                         fadeInDuration:
@@ -125,14 +129,18 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
                             tooltip: context.l10n.next,
                             onPressed: controller.next,
                           ),
-                          // 播放队列：显式入口（不只靠长按这一隐藏手势）
-                          IconButton(
+                        ];
+                        if (!compact) {
+                          // 播放队列：显式入口（不只靠长按这一隐藏手势）；
+                          // 窄宽度降级时仅保留长按手势入口
+                          row.add(IconButton(
                             icon: const Icon(Icons.queue_music_rounded),
                             tooltip: context.l10n.playQueue,
                             onPressed: () => showQueueSheet(context),
-                          ),
-                        ],
-                      ),
+                          ));
+                        }
+                        return Row(children: row);
+                      }),
                     ),
                   ),
                 ],

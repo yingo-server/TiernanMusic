@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart' show kugouApiClientProvider;
+// V37-UI-06：收藏失败文案统一走 friendlyError 解包（不拼 '$e' 技术串）
+import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/toast.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -326,14 +328,17 @@ class PlaylistDetailPage extends ConsumerWidget {
       }
     } on PlaylistWriteException catch (e) {
       if (!context.mounted) return;
+      // V37-UI-06：原「操作结果未知，请到「我的音乐」确认」为 l10n 包装内的
+      // 硬编码中文（英文界面漏翻）；且失败分支拼原始异常 '$e' 直出技术串。
+      // 统一改走 friendlyError 解包 + 明确下一步动作（第 9 条/微文案维度 A）。
       Toast.show(
           context,
           e.maybeSucceeded
-              ? context.l10n.operateFailed('操作结果未知，请到「我的音乐」确认')
+              ? context.l10n.collectResultUnknown
               : context.l10n.operateFailed(e.message));
     } catch (e) {
       if (context.mounted) {
-        Toast.show(context, context.l10n.operateFailed('$e'));
+        Toast.show(context, context.l10n.operateFailed(friendlyError(e)));
       }
     } finally {
       // F-4（第7批终审，P1）：widget 可能已销毁（用户收藏后立刻返回），

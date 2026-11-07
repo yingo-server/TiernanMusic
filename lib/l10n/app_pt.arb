@@ -560,5 +560,6 @@
   "rankParamsInvalid": "Parâmetros do ranking inválidos",
   "goHome": "Ir para o início",
   "mvNoSource": "Este MV não tem fonte reproduzível e não pode ser baixado",
-  "downloadMvUnavailable": "Esta música não tem MV para baixar"
+  "downloadMvUnavailable": "Esta música não tem MV para baixar",
+  "collectResultUnknown": "Resultado da favoritação desconhecido — confirme em «Minha música»"
 }

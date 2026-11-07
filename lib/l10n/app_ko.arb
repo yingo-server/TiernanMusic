@@ -560,5 +560,6 @@
   "rankParamsInvalid": "차트 파라미터가 잘못되었습니다",
   "goHome": "홈으로 이동",
   "mvNoSource": "이 MV는 재생 가능한 소스가 없어 다운로드할 수 없습니다",
-  "downloadMvUnavailable": "이 곡에는 다운로드 가능한 MV가 없습니다"
+  "downloadMvUnavailable": "이 곡에는 다운로드 가능한 MV가 없습니다",
+  "collectResultUnknown": "즐겨찾기 결과를 알 수 없습니다. 내 음악에서 확인해 주세요"
 }

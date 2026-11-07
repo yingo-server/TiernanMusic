@@ -560,5 +560,6 @@
   "rankParamsInvalid": "Ungültige Chart-Parameter",
   "goHome": "Zur Startseite",
   "mvNoSource": "Dieses MV hat keine abspielbare Quelle und kann nicht geladen werden",
-  "downloadMvUnavailable": "Dieser Song hat kein ladbares MV"
+  "downloadMvUnavailable": "Dieser Song hat kein ladbares MV",
+  "collectResultUnknown": "Favorit-Ergebnis unbekannt — bitte in „Meine Musik“ bestätigen"
 }

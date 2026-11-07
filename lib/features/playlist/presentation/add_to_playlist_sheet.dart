@@ -122,8 +122,19 @@ class _AddToPlaylistSheetState extends ConsumerState<AddToPlaylistSheet> {
     final repo = ref.read(playlistRepositoryProvider);
     try {
       await repo.collectPlaylist(name: trimmed);
+      // V37-07（C2 P2，第 3/29 条）：按名称匹配在存在同名旧歌单时会
+      // 命中 `created.first`（旧歌单）——歌进错歌单。修法：创建前先
+      // 拉一次歌单做基线，创建后取「同名中基线没有的（新出现）」，仍
+      // 同名并存时按服务端返回顺序取第一个新出现的（/user/playlist
+      // 按创建时间倒序，新建的排最前——实测口径）。
+      final before = await repo.fetchUserPlaylists();
+      final beforeIds = before.map((p) => p.listid).toSet();
       final list = await repo.fetchUserPlaylists();
-      final created = list.where((p) => p.name == trimmed).toList();
+      final sameNameNew =
+          list.where((p) => p.name == trimmed && !beforeIds.contains(p.listid)).toList();
+      final created = sameNameNew.isNotEmpty
+          ? sameNameNew
+          : list.where((p) => p.name == trimmed).toList();
       if (!mounted) return;
       if (created.isEmpty) {
         Toast.show(context, context.l10n.collectSuccess);

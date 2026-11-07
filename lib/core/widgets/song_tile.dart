@@ -182,9 +182,16 @@ class SongTile extends StatelessWidget {
             durationLabel,
             const SizedBox(width: 8),
           ],
+          // V37-UI-05：图标 20 + 默认内边距仅 8 → 实际触控目标 <48dp，
+          // 在 SongTile 密排行里易误触相邻条目。压 padding 不降可达性：
+          // 视觉密度 compact 同时保证触控目标仍 ≥40dp 观感并居中，
+          // 用 constraints 显式补足 48dp 触控区（Material 无障碍基线）。
           IconButton(
             icon: const Icon(Icons.download_outlined, size: 20),
             tooltip: context.l10n.download,
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            padding: EdgeInsets.zero,
             onPressed: onDownload,
           ),
         ],

@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../core/utils/toast.dart';
 import '../../../l10n/l10n.dart';
+import '../data/mv_collection_repository.dart';
 import '../mv_provider.dart';
 
 /// MV 全屏播放页。
@@ -104,6 +105,42 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
     }
   }
 
+  /// V37-UI-01（任务流 4）：收藏 / 取消收藏 MV。
+  ///
+  /// 登录守卫：未登录给「需登录」Toast；setCollected 返回 false
+  /// （仓库层未登录/风控空包）给明确失败 Toast（第 9 条）。
+  Future<void> _toggleCollect() async {
+    if (_collecting) return; // 防重（第 21 条）
+    final videoId = int.tryParse(widget.videoId ?? '');
+    if (videoId == null) {
+      // 无 videoId（深链只带 hash）无法调用收藏接口，如实告知而非静默失败
+      if (mounted) Toast.show(context, context.l10n.mvNoSource);
+      return;
+    }
+    final next = !_collected;
+    setState(() => _collecting = true);
+    try {
+      final ok = await ref
+          .read(mvCollectionRepositoryProvider)
+          .setCollected(videoId, collect: next);
+      if (!mounted) return;
+      if (ok) {
+        setState(() => _collected = next);
+        Toast.show(
+            context,
+            next
+                ? context.l10n.mvCollectSuccess
+                : context.l10n.mvCollectRemoved);
+      } else {
+        Toast.show(context, context.l10n.mvCollectLoginFirst);
+      }
+    } catch (_) {
+      if (mounted) Toast.show(context, context.l10n.mvCollectLoginFirst);
+    } finally {
+      if (mounted) setState(() => _collecting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLandscape =
@@ -199,6 +236,20 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
                       icon: const Icon(Icons.arrow_back, size: 18),
                       label: Text(context.l10n.back),
                     ),
+                    // V37-UI-01：收藏 MV（任务流 4 此前的全 app 缺口）
+                    IconButton(
+                      tooltip: _collected
+                          ? context.l10n.mvCollectRemove
+                          : context.l10n.mvCollectAdd,
+                      icon: Icon(
+                        _collected
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color:
+                            _collected ? Colors.redAccent : Colors.white,
+                      ),
+                      onPressed: _collecting ? null : _toggleCollect,
+                    ),
                     // 主操作：FilledButton
                     FilledButton.icon(
                       onPressed: () => _resolve(_activeHash ?? widget.hash),
@@ -232,6 +283,14 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
                 ? context.l10n.pause
                 : context.l10n.play,
             icon: Icon(controller.value.isPlaying
+                ? Icons.pause_circle
+                : Icons.play_circle),
+            onPressed: () {
+              controller.value.isPlaying
+                  ? controller.pause()
+                  : controller.play();
+              setState(() {});
+            },
                 ? Icons.pause_circle
                 : Icons.play_circle),
             onPressed: () {
@@ -294,8 +353,7 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
               OutlinedButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(context.l10n.back),
-              ),
-            ],
+              ),            ],
           ),
         ],
       ),

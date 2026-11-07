@@ -560,5 +560,6 @@
   "rankParamsInvalid": "Invalid chart parameters",
   "goHome": "Go to home",
   "mvNoSource": "This MV has no playable source and cannot be downloaded",
-  "downloadMvUnavailable": "This song has no downloadable MV"
+  "downloadMvUnavailable": "This song has no downloadable MV",
+  "collectResultUnknown": "Favorite result unknown — check \"My Music\" to confirm"
 }

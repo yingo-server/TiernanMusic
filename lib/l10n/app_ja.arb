@@ -560,5 +560,6 @@
   "rankParamsInvalid": "ランキングのパラメータが無効です",
   "goHome": "ホームへ戻る",
   "mvNoSource": "この MV は再生可能なソースがなくダウンロードできません",
-  "downloadMvUnavailable": "この曲にはダウンロードできる MV がありません"
+  "downloadMvUnavailable": "この曲にはダウンロードできる MV がありません",
+  "collectResultUnknown": "お気に入りの結果は不明です。「マイミュージック」で確認してください"
 }

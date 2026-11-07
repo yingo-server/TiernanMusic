@@ -343,6 +343,7 @@ const _strings_de = <String, String>{
   'goHome': 'Zur Startseite',
   'mvNoSource': 'Dieses MV hat keine abspielbare Quelle und kann nicht geladen werden',
   'downloadMvUnavailable': 'Dieser Song hat kein ladbares MV',
+  'collectResultUnknown': 'Favorit-Ergebnis unbekannt — bitte in „Meine Musik“ bestätigen',
 };
 
 const _strings_en = <String, String>{
@@ -684,6 +685,7 @@ const _strings_en = <String, String>{
   'goHome': 'Go to home',
   'mvNoSource': 'This MV has no playable source and cannot be downloaded',
   'downloadMvUnavailable': 'This song has no downloadable MV',
+  'collectResultUnknown': 'Favorite result unknown — check "My Music" to confirm',
 };
 
 const _strings_es = <String, String>{
@@ -1025,6 +1027,7 @@ const _strings_es = <String, String>{
   'goHome': 'Ir al inicio',
   'mvNoSource': 'Este MV no tiene fuente reproducible y no se puede descargar',
   'downloadMvUnavailable': 'Esta canción no tiene MV descargable',
+  'collectResultUnknown': 'Resultado de favorito desconocido: consulta «Mi música» para confirmarlo',
 };
 
 const _strings_fr = <String, String>{
@@ -1366,6 +1369,7 @@ const _strings_fr = <String, String>{
   'goHome': 'Aller à l\'accueil',
   'mvNoSource': 'Ce clip n\'a aucune source lisible et ne peut pas être téléchargé',
   'downloadMvUnavailable': 'Cette chanson n\'a pas de clip téléchargeable',
+  'collectResultUnknown': 'Résultat de favori inconnu — vérifiez dans « Ma musique »',
 };
 
 const _strings_ja = <String, String>{
@@ -1707,6 +1711,7 @@ const _strings_ja = <String, String>{
   'goHome': 'ホームへ戻る',
   'mvNoSource': 'この MV は再生可能なソースがなくダウンロードできません',
   'downloadMvUnavailable': 'この曲にはダウンロードできる MV がありません',
+  'collectResultUnknown': 'お気に入りの結果は不明です。「マイミュージック」で確認してください',
 };
 
 const _strings_ko = <String, String>{
@@ -2048,6 +2053,7 @@ const _strings_ko = <String, String>{
   'goHome': '홈으로 이동',
   'mvNoSource': '이 MV는 재생 가능한 소스가 없어 다운로드할 수 없습니다',
   'downloadMvUnavailable': '이 곡에는 다운로드 가능한 MV가 없습니다',
+  'collectResultUnknown': '즐겨찾기 결과를 알 수 없습니다. 내 음악에서 확인해 주세요',
 };
 
 const _strings_pt = <String, String>{
@@ -2389,6 +2395,7 @@ const _strings_pt = <String, String>{
   'goHome': 'Ir para o início',
   'mvNoSource': 'Este MV não tem fonte reproduzível e não pode ser baixado',
   'downloadMvUnavailable': 'Esta música não tem MV para baixar',
+  'collectResultUnknown': 'Resultado da favoritação desconhecido — confirme em «Minha música»',
 };
 
 const _strings_ru = <String, String>{
@@ -2730,6 +2737,7 @@ const _strings_ru = <String, String>{
   'goHome': 'На главную',
   'mvNoSource': 'У этого клипа нет доступного источника, загрузка невозможна',
   'downloadMvUnavailable': 'У этой песни нет загружаемого клипа',
+  'collectResultUnknown': 'Результат добавления в избранное неизвестен — проверьте в «Моей музыке»',
 };
 
 const _strings_zh = <String, String>{
@@ -3071,6 +3079,7 @@ const _strings_zh = <String, String>{
   'goHome': '返回首页',
   'mvNoSource': '该 MV 暂无可用播放地址，无法下载',
   'downloadMvUnavailable': '当前歌曲没有可下载的 MV',
+  'collectResultUnknown': '收藏结果未知，请到「我的音乐」确认是否收藏成功',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -3412,6 +3421,7 @@ const _strings_zh_CN = <String, String>{
   'goHome': '返回首页',
   'mvNoSource': '该 MV 暂无可用播放地址，无法下载',
   'downloadMvUnavailable': '当前歌曲没有可下载的 MV',
+  'collectResultUnknown': '收藏结果未知，请到「我的音乐」确认是否收藏成功',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3753,6 +3763,7 @@ const _strings_zh_TW = <String, String>{
   'goHome': '返回首頁',
   'mvNoSource': '該 MV 暫無可用播放位址，無法下載',
   'downloadMvUnavailable': '目前歌曲沒有可下載的 MV',
+  'collectResultUnknown': '收藏結果未知，請到「我的音樂」確認是否收藏成功',
 };
 
 const _template = _strings_zh_CN;
@@ -4150,6 +4161,7 @@ class AppLocalizations {
   String get goHome => _t('goHome');
   String get mvNoSource => _t('mvNoSource');
   String get downloadMvUnavailable => _t('downloadMvUnavailable');
+  String get collectResultUnknown => _t('collectResultUnknown');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

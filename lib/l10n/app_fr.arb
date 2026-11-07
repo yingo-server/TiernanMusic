@@ -560,5 +560,6 @@
   "rankParamsInvalid": "Paramètres du classement invalides",
   "goHome": "Aller à l'accueil",
   "mvNoSource": "Ce clip n'a aucune source lisible et ne peut pas être téléchargé",
-  "downloadMvUnavailable": "Cette chanson n'a pas de clip téléchargeable"
+  "downloadMvUnavailable": "Cette chanson n'a pas de clip téléchargeable",
+  "collectResultUnknown": "Résultat de favori inconnu — vérifiez dans « Ma musique »"
 }

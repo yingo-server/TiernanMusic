@@ -44,3 +44,32 @@
 - 明确标注：kapi 返回不可作为实测依据（第 33 条）
 
 状态：✅ 完成
+
+## V37-04 B3 发布链三条 P1
+
+文件：`lib/features/download/download_provider.dart`、`lib/features/download/data/public_media_store.dart`
+
+1. **P1-1 remove 竞态复活**（第 18/21 条）：remove 的多步 await 期间，被取消的旧 `_run` 回调可能通过 `_update` 把任务写回 state/Hive。修法：remove 内用**哨兵 token**（新 CancelToken 已 cancel）占住 `_tokens[id]`，使迟到回调的世代 guard `_tokens[task.id] == token` 恒假；Hive 删除后收尾移除哨兵。
+2. **P1-2 先删旧文件+rename 非原子窗口**（第 21 条）：`_publishDirect` 原实现 `if (await target.exists()) await target.delete(); await partFile.rename(...)` 存在「既无旧文件也无新文件」窗口。修法：直接 `rename`——POSIX/Linux rename 目标存在时**原子覆盖**，无需预先 delete。
+3. **P1-6 .part 残留清扫**（第 20 条）：进程被杀时 .part 永久残留。修法：`_publishDirect` 每次发布前对同前缀 `<target>.part` 做清扫（失败不阻断）。
+
+状态：✅ 完成
+
+## V37-05 B3 P2-14 viewFolder content:// 恒失败
+
+文件：`lib/features/download/data/public_media_store.dart`、`presentation/download_page.dart`、`lib/l10n/*.arb`（11 文件）
+
+修法（提前判定降级 Toast，不引入路径方案改动）：`viewFolder` 本身已有 `path` 空守卫，本次把失败语义补全——
+- `download_page.dart` 失败分支新增 `Toast.show(…downloadFolderOpenFailed)` 明确告知「未能打开（文件在系统媒体库）」+ 原有复制路径兜底，不再静默。
+- 新 arb 键 `downloadFolderOpenFailed`，11 个语言文件全部同步（zh_CN 模板 + zh/zh_TW/en/ja/ko/de/fr/es/pt/ru）。
+
+状态：✅ 完成（l10n 生成物重跑见收尾节）
+
+## V37-06 C1 ALB-R1/R2
+
+文件：`lib/features/album/data/album_repository.dart`、`lib/features/artist/data/artist_repository.dart`
+
+1. `final dynamic _api` → `final KugouApiClient _api`（第 10/2 条）：两文件均补 `core/api/kugou_api_client.dart` 导入；`kugouApiClientProvider` 注入的即 KugouApiClient（有 `get` 方法），双向核对通过。
+2. 入口裸强转 `as Map<String, dynamic>` → `is Map<String, dynamic>` 分支校验（第 13 条）：album fetchDetail/fetchSongs、artist fetchDetail/fetchSongs/fetchAlbums 共 5 处，非 Map 上游给空 Map 走空数据路径，不再 TypeError 上抛。
+
+状态：✅ 完成

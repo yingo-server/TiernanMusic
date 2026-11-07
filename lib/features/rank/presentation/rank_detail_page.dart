@@ -175,6 +175,11 @@ class _RankDetailPageState extends ConsumerState<RankDetailPage> {
                       : IconButton(
                           tooltip: context.l10n.mv,
                           icon: const Icon(Icons.movie_outlined),
+                          // V37-UI-05：SongTile trailing 位显式 48dp 触控区
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints(
+                              minWidth: 48, minHeight: 48),
+                          padding: EdgeInsets.zero,
                           onPressed: () => context.push('/mv/${s.mvHash}'),
                         ),
                 );

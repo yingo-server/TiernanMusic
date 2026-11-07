@@ -180,10 +180,6 @@ class PublicMediaStore {
     }
     final partFile = File('${target.path}.part');
     // D-02（第6批③，P1）：**先写临时文件，成功后再原子替换**（第 21 条）。
-    // 此前 openWrite(FileMode.write) 直接覆盖旧文件——中途异常（断网/
-    // 空间不足）会让旧的好文件被截断成残缺文件。改为：写 <target>.part
-    // → flush 校验 → rename 覆盖（见下）。
-    final partFile = File('${target.path}.part');
     final inRaf = File(tempFilePath).openRead();
     final outRaf = partFile.openWrite(mode: FileMode.write);
     try {

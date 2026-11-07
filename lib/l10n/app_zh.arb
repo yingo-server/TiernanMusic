@@ -572,5 +572,6 @@
   "rankParamsInvalid": "排行榜参数无效",
   "goHome": "返回首页",
   "mvNoSource": "该 MV 暂无可用播放地址，无法下载",
-  "downloadMvUnavailable": "当前歌曲没有可下载的 MV"
+  "downloadMvUnavailable": "当前歌曲没有可下载的 MV",
+  "collectResultUnknown": "收藏结果未知，请到「我的音乐」确认是否收藏成功"
 }

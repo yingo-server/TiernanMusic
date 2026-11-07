@@ -45,7 +45,19 @@ class _CommentsController extends StateNotifier<AsyncValue<CommentPage>> {
 
   bool _loadingMore = false;
   bool _hasMore = true;
+  // V37-08（C2 P2，第 16 条）：分页失败与「没有更多」是不同事实。
+  // 失败态置 _pageError，footer 显示重试按钮（复制 search_page 范式）。
+  Object? _pageError;
   bool get hasMore => _hasMore;
+  Object? get pageError => _pageError;
+
+  void retryLoadMore() {
+    _pageError = null;
+    // 清错误后重建一份 state，footer 从「重试」切回「转圈」
+    final cur = state.value;
+    if (cur != null) state = AsyncValue.data(cur);
+    loadMore();
+  }
 
   Future<void> load({bool refresh = false}) async {
     if (refresh) {
@@ -101,8 +113,15 @@ class _CommentsController extends StateNotifier<AsyncValue<CommentPage>> {
       if (result.comments.isEmpty || _page * 30 >= result.total) {
         _hasMore = false;
       }
-    } catch (_) {
-      // 失败不推进页码，保留重试机会
+    } catch (e) {
+      // V37-08：失败不推进页码；置 _pageError 供 footer 重试（第 9 条）。
+      // 失败时 AsyncValue.data 不变不会通知监听者 → 重建一份触发
+      // footer 从「转圈」切到「重试」按钮。
+      if (gen == _generation) {
+        _pageError = e;
+        final cur = state.value;
+        if (cur != null) state = AsyncValue.data(cur);
+      }
     } finally {
       _loadingMore = false;
     }
@@ -225,6 +244,29 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                         itemCount: page.comments.length + 1,
                         itemBuilder: (context, index) {
                           if (index == page.comments.length) {
+                            // V37-08：分页失败 → footer 显示重试按钮
+                            // （复制 search_page _pageError 范式，第 16 条）
+                            final notifier = ref
+                                .read(_commentsProvider(_args).notifier);
+                            if (notifier.pageError != null) {
+                              return Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Center(
+                                  child: TextButton.icon(
+                                    onPressed: () {
+                                      // retryLoadMore 内部清 _pageError 并重拉；
+                                      // 成功/失败都会经 state 更新触发重建
+                                      ref
+                                          .read(_commentsProvider(_args)
+                                              .notifier)
+                                          .retryLoadMore();
+                                    },
+                                    icon: const Icon(Icons.refresh),
+                                    label: Text(context.l10n.retry),
+                                  ),
+                                ),
+                              );
+                            }
                             if (ref
                                 .read(_commentsProvider(_args).notifier)
                                 .hasMore) {
