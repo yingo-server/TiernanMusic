@@ -8,8 +8,9 @@
 3. **设备存储改为**：文件管理器根目录 `/storage/emulated/0/TierNanMusic/` 下分域子目录：`audio` / `mv` / `logs` ……
 4. 用户已确认方案：**MANAGE_EXTERNAL_STORAGE（所有文件访问）+ 自动降级**——授权成功写根目录 TierNanMusic；未授权自动退回 `Download/TiernanMusic`；两个位置的路径都要在设置页展示并支持一键跳转授权页
 
-## ⚠️ 硬性规则
-- 禁装 Flutter SDK/build/test/pub get（permission_handler 已在 pubspec，禁止新增依赖）
+## ⚠️ 硬性规则（最高优先级，违反即任务失败）
+- **绝对禁止安装 Flutter SDK / flutter build / flutter test / flutter gen-l10n / dart pub get**——本沙箱是 ARM64 无 Flutter 环境，装了也无法构建（上一个代理试图删 pubspec 的 flutter 依赖来绕过，直接污染了仓库，已回滚）。**任何对 pubspec.yaml 的修改都是失败**。允许且只允许：`dart analyze`（Dart SDK 3.13.7 在 /opt/dart/bin）。
+- analyze 出现的 Flutter/第三方包符号报错（Widget/State/BuildContext/riverpod 等）是**预期噪音**，过滤规则见下；但 **pubspec.yaml 一行都不许动**。
 - 允许 dart analyze；**触碰的每个文件收尾前必须 analyze 并逐文件贴报告——缺一即失败**（v3.4 试错 4 轮教训）
 - 跨文件改动双向核对；项目自有类报错即真错误
 - 禁 git commit/push；只用 file_edit；改动标 `V37-LOG-xx`
