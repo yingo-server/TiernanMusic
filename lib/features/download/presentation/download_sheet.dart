@@ -106,7 +106,10 @@ class DownloadSheet extends ConsumerWidget {
               // V37-UI-09（P2-11）：按 songMvProvider 预判——无 MV 的歌曲
               // 禁用「下载 MV」+ 说明，不再创建注定失败的任务（第 16 条：
               // 「无 MV」与「失败」语义分离；可预期交互）。
-              enabled: mvAsync.value ?? true,
+              // V37-UI-09 补正（CI 实测）：mvAsync 可为 null（albumAudioId
+              // 为空时根本没 watch），且 AsyncValue.value 类型是
+              // MvInfo?（对象存在即有 MV）——改为 null 安全 + 存在性判定。
+              enabled: mvAsync?.value != null,
               enabledHint: context.l10n.downloadMvUnavailable,
               onDownload: () async {
                 await manager.add(buildTask(DownloadTaskType.mv));

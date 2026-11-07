@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/kugou_api_client.dart';
@@ -185,19 +186,6 @@ class HomeRepository {
     final daily = results[4] as List<HomeSong>?;
 
     if (songs.isEmpty && playlists.isEmpty && ranks.isEmpty && banners.isEmpty) {
-      throw Exception('首页数据加载失败，请检查网络后重试');
-    }
-
-    return HomeData(
-      banners: banners,
-      songs: songs,
-      playlists: playlists,
-      ranks: ranks,
-      dailyRecommend: daily,
-    );
-  }
-}
-sEmpty) {
       throw Exception('首页数据加载失败，请检查网络后重试');
     }
 
