@@ -750,3 +750,11 @@ JustAudioBackground.init 真机永久失败 → ensureEngineReady false → play
 - 三处根路径统一 resolveRoot()
 
 同时进行：付费歌曲通道对比（已完成：概念版=标准版 60s 试听无旁路）、音频加密审计（已闭环：全明文）。
+
+## ✅ v3.7.1 发布（6cbf3d6）——日志系统+存储重构
+
+- V37-LOG-01~11 全落地：verbose 开关（Hive 持久化）/debugPrint 全局包装（防递归）/网络层逐请求落盘（4KB 截断+脱敏）/播放下载状态迁移记录，全走串行链
+- 存储根重构：resolveRoot()（授权→/storage/emulated/0/TiernanMusic，未授权→Download/TiernanMusic）+ audio/mv/logs/cover/lyrics 子目录；三处根路径统一零硬编码
+- Manifest: MANAGE_EXTERNAL_STORAGE + requestLegacyExternalStorage；设置页「存储与日志」区（开关/路径展示/授权跳转）
+- 主代理独立复核：pubspec 未动 ✅、Manifest 权限在位 ✅、verbose 联动链在位 ✅、三处 resolveRoot ✅、arb 345 键×11 无缺失 ✅、gen_l10n 重跑 ✅
+- 真机验证清单 7 项见 docs/v37_logging_storage.md
