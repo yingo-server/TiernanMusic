@@ -856,3 +856,20 @@ C: 歌单顺序漂移实测排查（上游稳定四假设排除，upstreamOrder 
 - V3990-1 (P0): /v1/video hash→video_id 统一收口（mv_repository 层，会话缓存 128，调用方零改动）——用户日志 20010 根因修复
 - V3990-2: mv_player_page 完全重写（三态分离/清晰度当前档+mkv 容器标注/进页暂停音频队列/生命周期对称/l10n 6 新键）
 - 复核: arb 362×11 无缺失、三文件 analyze CLEAN、pubspec 先 bump 后打 tag
+
+## ✅ v3.9.10 发布确认
+
+- release 437575730（draft=False），tag 30827c8 构建成功（版本 3.9.10+42）
+- 资产：arm64/v7a/x86_64 APK + screenshots-333.zip
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.9.10/app-arm64-v8a-release.apk
+
+### v3.9.10 内容（MV 专项）
+- V3990-1 (P0): /v1/video hash→video_id 统一收口（20010 根因，用户日志实锤）
+- V3990-2: mv_player_page 完全重写（三态/清晰度容器标注/音频互斥/生命周期对称）
+- CI 试错 2 轮：movie_off_outlined 与 video_camera_off_outlined 均非真实图标名，实际为 videocam_off_outlined——Icons.* 常量必须验证存在的教训已记
+
+### 请真机验证
+播放页点 MV → MV 应正常播放（20010 已修）；清晰度切换带当前档指示；进 MV 时音频队列自动暂停。
+
+### v3.9.11 待办
+歌词 in-flight 去重/候选短路（P1）、翻译 504 重试（P2）
