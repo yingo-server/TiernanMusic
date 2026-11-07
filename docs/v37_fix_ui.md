@@ -71,7 +71,15 @@ grep `Toast.show(context` 无 l10n 的裸文案全量核对：
   已用 `git stash` 验证基线同样存在）。
 
 ---
-## V37-UI-07（P2-2 mini_player 按钮挤压）— 已修
+## V37-UI-08（P2-8 comment_floor 死按钮）— 已修
+- comment_floor_page.dart:发送按钮原 `onPressed: _isLoggedIn ? _send : () {}`——未登录
+  点击完全无反应（死按钮，v34_review_2_ui.dart:177 记录属实）。`_send` 首行已有
+  `ensureLoggedIn(context, ref, action: comment)` 登录引导（与评论主页同一出口），
+  直接委托 `_send`，死分支消除。
+- analyze（过滤后）：comment_floor_page.dart 0 条 ✓
+
+---
+
 - mini_player.dart：Row 内容改为 LayoutBuilder 包裹；`maxWidth < 360`（小屏或大字号
   textScale 挤压）时降级为紧凑布局——隐藏「播放队列」次操作（长按手势入口保留），
   主操作（播放/暂停）与「下一首」必保。消除 Overflow。
