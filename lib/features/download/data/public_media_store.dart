@@ -186,10 +186,6 @@ class PublicMediaStore {
       await for (final chunk in inRaf) {
         outRaf.add(chunk);
       }
-    try {
-      await for (final chunk in inRaf) {
-        outRaf.add(chunk);
-      }
       await outRaf.flush();
       await outRaf.close();
       // 写完后才替换旧文件；此后任何异常都不会破坏旧副本。

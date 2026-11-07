@@ -72,10 +72,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/rank/:rankId',
-        builder: (_, state) {
+        builder: (context, state) {
           // V33-03（修复①，第 14 条）：B-39 深链 rankId 非法（空/非数字）时，
           // `?? 0` 会让 RankDetailPage 拿 rankId=0 去请求，上游返回空 → 用户
           // 看到空白榜且无提示。改为解析失败直接跳错误页，避免无意义的空请求。
+          // V37-UI-10（P3）：builder 参数改名（_, state → context, state），
+          // 此前错误分支用 context.l10n 但参数是 `_` → undefined_identifier。
           final rankId = int.tryParse(state.pathParameters['rankId'] ?? '');
           if (rankId == null || rankId <= 0) {
             // V37-UI-10（P3）：深链错误页原硬编码中文「排行榜参数无效」，
