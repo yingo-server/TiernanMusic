@@ -910,3 +910,17 @@ C 档产出未并入本 tag；其报告回来后复核并出 v4.0.1。
 - analyze：项目自有类 0 报错
 
 C-2（332b329a）运行中：main.dart 开箱/首帧预热/用户态、audio_handler 接线、设置页清缓存、播放列表暗病表。完成后并入 v4.0.1。
+
+## v4.0.1 封版（a5cf25b，版本 4.0.1+44）
+
+C-2 代理（332b329a）同样超时零产出 → 主代理亲自接线：
+- main.dart: openSafe('resource_json') / 首帧 attach+init / homeDataProvider 预热(100ms) / 用户态三态核对
+- audio_handler.dart: `_lastPlayUrl` 字段（解决 completed 回调拿不到 result.url）、播放完成永久缓存实际文件、stop 清空、`_emitQueue` 补 `updateUpcoming(15)`
+- settings_page.dart: `ResourceCache.clearJson()/clearLists()` 接入清缓存，实际文件永久不删
+- 三文件 analyze CLEAN、arb 362×11、括号平衡
+
+### 已知待办（v4.0.2）
+1. `retryPendingPlayback()` 队列被换后按旧 idx 播新队列错歌（P1）：需世代+hash 校验
+2. `playQueue` 首次引擎初始化窗口内第二次队列不作废第一次（旧 P3）
+3. 收藏歌单歌曲未纳入启动预热（需登录态 provider，C-2 未做）
+4. keystore 轮换（用户手动）
