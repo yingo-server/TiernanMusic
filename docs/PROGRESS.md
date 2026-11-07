@@ -637,3 +637,17 @@ A/B/C 共 9 份报告、约 90 条；P0×1/P1×9/P2×15+ 已修大半；明细�
 3. **断点续传**（S，CDN Range 实测通过，直链 5 分钟过期需校准偏移）
 4. **搜索建议直连化**（S，消除 kapi 违纪+找回分类型联想）
 5. 每日推荐日历 → 个人 FM → v3.8 的歌单广场/排序/听歌上报
+
+## ✅ v3.7.0 发布确认
+
+- release 437266297（draft=False），tag 969025b 构建成功（版本 3.7.0+37 已对齐）
+- 资产：arm64/v7a/x86_64 APK + screenshots-292.zip
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v3.7.0/app-arm64-v8a-release.apk
+
+### v3.7.0 内容
+- 收藏 MV 入口（播放页按钮+防重+登录守卫）、触控目标 4 处、账号双入口去重
+- 缺陷 V37-01~10：captcha i18n 收尾、同名歌单基线快照排除法、arb 死键清理、viewFolder、ALB 类型化等
+- 两份对比报告：功能缺口（32 域）+ 阉割对比（13 条，蝰蛇/魔法音效三态实测全通）
+
+### v3.7.x 待办（路线图）
+20028 收敛（地基）→ 蝰蛇+魔法音效 → 断点续传（S）→ 搜索建议直连化 → KGM/VPR 文件解密（S）→ 每日推荐日历 → FM
