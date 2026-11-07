@@ -900,3 +900,13 @@ C 档产出未并入本 tag；其报告回来后复核并出 v4.0.1。
 - B: core/resource 三模块（168h/90s/永久/in-flight/失效回退）+ 6 repository 接入 + 翻译504重试
 - ORDER: 反反歌单顺序（页序倒+页内倒、余数健壮、与概念版分享页吻合）
 - **不含预加载**：C 档 aea2bf08 超时零产出，已拆为 C-1（370a97a3 只建模块）与 C-2（接线）两窄任务，并入 v4.0.1
+
+## v4.0.1 C-1 复核（PrefetchEngine 模块）
+
+- `lib/core/prefetch/prefetch_engine.dart`（209 行）落盘，冻结签名 5 成员 + attach(KugouApiClient) 显式注入
+- 预热端点核对：`/song/url`、`/search/lyric`、`/album/detail` **均在原生分派表**（kg_direct_api_client.dart:235/214/318），走 CachedApiCall→ResourceCache.json(168h)，不下载实际文件，合规第 27/33 条。注释「kapi /song/url」措辞不准（kapi 同名路由，直连已移植），仅表述问题不改动
+- 去重：_requested hash 集 + ResourceCache in-flight 合并；单次入队上限 60；Timer 对称释放；失败三段各自留痕
+- 封面：Song.cover 已是解析好的 URL，无独立实测接口，不造端点（第 28 条）
+- analyze：项目自有类 0 报错
+
+C-2（332b329a）运行中：main.dart 开箱/首帧预热/用户态、audio_handler 接线、设置页清缓存、播放列表暗病表。完成后并入 v4.0.1。
