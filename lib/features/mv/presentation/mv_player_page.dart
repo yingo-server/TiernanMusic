@@ -411,7 +411,7 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            missing ? Icons.movie_off_outlined : Icons.error_outline,
+            missing ? Icons.video_camera_off_outlined : Icons.error_outline,
             color: Colors.white54,
             size: 56,
           ),
