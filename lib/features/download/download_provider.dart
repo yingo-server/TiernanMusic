@@ -170,6 +170,15 @@ class DownloadManager extends StateNotifier<DownloadState> {
     _tokens[id]?.cancel('removed');
     _tokens.remove(id);
     _running.remove(id);
+    // V37-04（B3 P1-1，第 18/21 条）：防「remove 与 _run 完成回调竞态
+    // 复活已删任务」——本方法在 token 取消后有多处 await（删公共文件/
+    // 清临时文件），期间被取消的 _run 的 catch/finally 可能正好执行
+    // _update（其内部 guard `cur != null` 在此刻仍可能为真，因为任务
+    // 尚未从 state 移除），把任务写回 state 与 Hive。因此在最终删除
+    // state/Hive 记录前**二次确认任务仍在**：若已被复活（重新 save），
+    // 删除仍会执行，但为彻底封死窗口，这里先把 token 表钉死空值，
+    // 使迟到的 _update guard `_tokens[task.id] == token` 恒假。
+    _tokens[id] = CancelToken()..cancel('removed-final');
     if (task != null) {
       await PublicMediaStore.instance.delete(
         PublishedFile(
@@ -203,6 +212,9 @@ class DownloadManager extends StateNotifier<DownloadState> {
       tasks: state.tasks.where((t) => t.id != id).toList(),
     );
     await DownloadStore.remove(id);
+    // V37-04（B3 P1-1）：收尾移除钉死的哨兵 token；迟到的 _run 回调
+    // （guard `_tokens[task.id] == token`）自此恒假，不会再写回任务。
+    if (identical(_tokens[id]?.isCancelled, true)) _tokens.remove(id);
     unawaited(_schedule());
   }
 

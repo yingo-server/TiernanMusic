@@ -508,6 +508,7 @@
   },
   "accountNeedRelogin": "该账号需要重新登录",
   "downloadOpenFileFailed": "打开文件失败",
+  "downloadFolderOpenFailed": "未能打开所在文件夹（该文件位于系统媒体库），路径已复制",
   "downloadFallbackHint": "文件位于应用私有目录（Android/data），部分文件管理器可能无法访问",
   "previewOnly": "试听",
   "playlistUnavailableSoon": "该歌单暂不支持打开（缺少全局 ID）",
@@ -562,5 +563,14 @@
   "reloginGuide": "登录已过期，请重新登录后查看歌单",
   "mvCollectGuide": "还没有收藏的 MV。在歌曲播放页点「MV」观看，并在 MV 页收藏，就会出现在这里",
   "mvUnavailable": "该 MV 数据不完整，暂时无法播放",
-  "downloadFolderFallback": "路径已复制，请在文件管理器中粘贴导航"
+  "downloadFolderFallback": "路径已复制，请在文件管理器中粘贴导航",
+  "mvCollectAdd": "收藏 MV",
+  "mvCollectRemove": "取消收藏",
+  "mvCollectSuccess": "已收藏 MV，可在「我的」页查看",
+  "mvCollectRemoved": "已取消收藏",
+  "mvCollectLoginFirst": "收藏 MV 需要先登录",
+  "rankParamsInvalid": "排行榜参数无效",
+  "goHome": "返回首页",
+  "mvNoSource": "该 MV 暂无可用播放地址，无法下载",
+  "downloadMvUnavailable": "当前歌曲没有可下载的 MV"
 }

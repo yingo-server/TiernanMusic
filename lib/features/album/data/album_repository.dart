@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/api/kugou_api_client.dart' show KugouApiClient;
 import '../../../core/providers.dart' show kugouApiClientProvider;
 import '../../home/data/models.dart' show kugouImageUrl;
 
@@ -120,9 +121,11 @@ class AlbumSongsPage {
 }
 
 class AlbumRepository {
+  // V37-06（C1 ALB-R1，第 13/2 条）：`final dynamic _api` 改具体类型——
+  // dynamic 绕过静态检查，`_api.get` 拼错方法名/参数名要到运行期才炸。
   AlbumRepository(this._api);
 
-  final dynamic _api;
+  final KugouApiClient _api;
 
   Future<AlbumInfo> fetchDetail(String id) async {
     final res =

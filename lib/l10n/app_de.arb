@@ -472,6 +472,7 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "Öffnen fehlgeschlagen: keine passende App gefunden",
+  "downloadFolderOpenFailed": "Ordner konnte nicht geöffnet werden (Datei liegt in der System-Mediathek). Pfad kopiert",
   "downloadFallbackHint": "Im app-spezifischen Verzeichnis (Android/data) gespeichert, für einige Dateimanager unsichtbar",
   "logoutConfirm": "Aktuelles Konto abmelden?",
   "@logoutConfirm": {
@@ -550,5 +551,14 @@
   "reloginGuide": "Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an, um Ihre Playlists zu sehen.",
   "mvCollectGuide": "Noch keine favorisierten MVs. Tippen Sie im Player auf „MV“, schauen Sie es an und favorisieren Sie es auf der MV-Seite.",
   "mvUnavailable": "Dieses MV hat unvollständige Daten und kann derzeit nicht wiedergegeben werden",
-  "downloadFolderFallback": "Pfad kopiert — fügen Sie ihn in Ihren Dateimanager ein, um dorthin zu navigieren"
+  "downloadFolderFallback": "Pfad kopiert — fügen Sie ihn in Ihren Dateimanager ein, um dorthin zu navigieren",
+  "mvCollectAdd": "MV favorisieren",
+  "mvCollectRemove": "Favorit entfernen",
+  "mvCollectSuccess": "MV favorisiert — in der „Musikbibliothek“ sichtbar",
+  "mvCollectRemoved": "Aus Favoriten entfernt",
+  "mvCollectLoginFirst": "Zum Favorisieren von MVs bitte anmelden",
+  "rankParamsInvalid": "Ungültige Chart-Parameter",
+  "goHome": "Zur Startseite",
+  "mvNoSource": "Dieses MV hat keine abspielbare Quelle und kann nicht geladen werden",
+  "downloadMvUnavailable": "Dieser Song hat kein ladbares MV"
 }

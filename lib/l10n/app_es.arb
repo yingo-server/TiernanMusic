@@ -472,6 +472,7 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "No se pudo abrir: no hay una app compatible",
+  "downloadFolderOpenFailed": "No se pudo abrir la carpeta (el archivo está en la biblioteca multimedia del sistema). Ruta copiada",
   "downloadFallbackHint": "Guardado en el directorio específico de la app (Android/data), invisible para algunos gestores de archivos",
   "logoutConfirm": "¿Cerrar sesión de la cuenta actual?",
   "@logoutConfirm": {
@@ -550,5 +551,14 @@
   "reloginGuide": "La sesión ha expirado. Vuelve a iniciar sesión para ver tus playlists.",
   "mvCollectGuide": "Aún no hay MV favoritos. Pulsa \"MV\" en el reproductor para verlo y márcalo como favorito en la página del MV.",
   "mvUnavailable": "Este MV tiene datos incompletos y no se puede reproducir ahora",
-  "downloadFolderFallback": "Ruta copiada: pégala en tu administrador de archivos para navegar allí"
+  "downloadFolderFallback": "Ruta copiada: pégala en tu administrador de archivos para navegar allí",
+  "mvCollectAdd": "Favorito MV",
+  "mvCollectRemove": "Quitar de favoritos",
+  "mvCollectSuccess": "MV añadido a favoritos: consúltalo en «Biblioteca»",
+  "mvCollectRemoved": "Eliminado de favoritos",
+  "mvCollectLoginFirst": "Inicia sesión para añadir MV a favoritos",
+  "rankParamsInvalid": "Parámetros de la lista no válidos",
+  "goHome": "Ir al inicio",
+  "mvNoSource": "Este MV no tiene fuente reproducible y no se puede descargar",
+  "downloadMvUnavailable": "Esta canción no tiene MV descargable"
 }

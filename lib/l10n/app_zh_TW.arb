@@ -472,6 +472,7 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "開啟失敗，未找到可用的應用",
+  "downloadFolderOpenFailed": "無法開啟所在資料夾（該檔案位於系統媒體庫），路徑已複製",
   "downloadFallbackHint": "已儲存到應用專屬目錄（Android/data），部分檔案管理器不可見",
   "logoutConfirm": "確定要登出目前帳號嗎？",
   "@logoutConfirm": {
@@ -550,5 +551,14 @@
   "reloginGuide": "登入已過期，請重新登入後查看歌單",
   "mvCollectGuide": "還沒有收藏的 MV。在歌曲播放頁點「MV」觀看，並在 MV 頁收藏，就會出現在這裡",
   "mvUnavailable": "該 MV 資料不完整，暫時無法播放",
-  "downloadFolderFallback": "路徑已複製，請在檔案管理員中貼上導航"
+  "downloadFolderFallback": "路徑已複製，請在檔案管理員中貼上導航",
+  "mvCollectAdd": "收藏 MV",
+  "mvCollectRemove": "取消收藏",
+  "mvCollectSuccess": "已收藏 MV，可在「我的」頁查看",
+  "mvCollectRemoved": "已取消收藏",
+  "mvCollectLoginFirst": "收藏 MV 需要先登入",
+  "rankParamsInvalid": "排行榜參數無效",
+  "goHome": "返回首頁",
+  "mvNoSource": "該 MV 暫無可用播放位址，無法下載",
+  "downloadMvUnavailable": "目前歌曲沒有可下載的 MV"
 }

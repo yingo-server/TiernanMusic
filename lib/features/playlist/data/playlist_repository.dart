@@ -268,9 +268,13 @@ class PlaylistRepository {
     Map<String, dynamic> params, {
     required String dedupeKey,
   }) async {
-    // 防重（第 21／22 条）：同一次提交在飞行期间不被重复触发
+    // 防重（第 21／22 条）：同一次提交在飞行期间不被重复触发。
+    // V37-03（B2 P3·语义修正）：防重拒绝发生在请求发出**之前**，
+    // 本次操作必然未生效——`maybeSucceeded: true` 会误导调用方把
+    // 「重复点击被拒」当「可能已成功」（如弹「歌单可能已更新」提示）。
     if (!_inFlight.add(dedupeKey)) {
-      throw PlaylistWriteException('相同操作正在提交中，请稍候', maybeSucceeded: true);
+      throw PlaylistWriteException('相同操作正在提交中，请稍候',
+          maybeSucceeded: false);
     }
     try {
       await _api.get(path, query: params);

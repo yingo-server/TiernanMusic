@@ -145,7 +145,9 @@ class CommentRepository {
       'cid': cid,
       // 直连层按 resource_type 选评论 code（歌曲/歌单/专辑各不相同）
       'resource_type': resourceType.name,
-      if (mixsongid != null) 'mixsongid': mixsongid,
+      // V37-03（B2 P3·口径统一，对齐 kg_endpoints_comment _nonEmpty）：
+      // 空串与缺失语义相同，不发——服务端拿到空串 mixsongid 可能 400
+      if (mixsongid != null && mixsongid.isNotEmpty) 'mixsongid': mixsongid,
       if (specialId != null) 'special_id': specialId,
       if (tid != null) 'tid': tid,
     });

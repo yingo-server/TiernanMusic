@@ -169,11 +169,20 @@ class PublicMediaStore {
     }
 
     final target = File('$dirPath/$displayName');
+    // V37-04（B3 P1-6，第 20/21 条）：**发布前清扫同前缀 .part 残留**——
+    // 此前写入中途失败时 catch 里虽会清 .part，但若进程被杀（断电/
+    // 强杀），.part 会永久残留占空间。每次发布同名文件前先删残留。
+    try {
+      final stalePart = File('${target.path}.part');
+      if (await stalePart.exists()) await stalePart.delete();
+    } catch (_) {
+      // 清扫失败不阻断发布（.part 残留会由下一次发布再次尝试清理）
+    }
+    final partFile = File('${target.path}.part');
     // D-02（第6批③，P1）：**先写临时文件，成功后再原子替换**（第 21 条）。
     // 此前 openWrite(FileMode.write) 直接覆盖旧文件——中途异常（断网/
-    // 空间不足）会让旧的好文件被截断成残缺文件，净结果「越修越坏且
-    // 不可恢复」。改为：写 <target>.part → flush 校验 → rename 覆盖。
-    // rename 在同一文件系统上是原子操作。
+    // 空间不足）会让旧的好文件被截断成残缺文件。改为：写 <target>.part
+    // → flush 校验 → rename 覆盖（见下）。
     final partFile = File('${target.path}.part');
     final inRaf = File(tempFilePath).openRead();
     final outRaf = partFile.openWrite(mode: FileMode.write);
@@ -181,10 +190,17 @@ class PublicMediaStore {
       await for (final chunk in inRaf) {
         outRaf.add(chunk);
       }
+    try {
+      await for (final chunk in inRaf) {
+        outRaf.add(chunk);
+      }
       await outRaf.flush();
       await outRaf.close();
-      // 写完后才替换旧文件；此后任何异常都不会破坏旧副本
-      if (await target.exists()) await target.delete();
+      // 写完后才替换旧文件；此后任何异常都不会破坏旧副本。
+      // V37-04（B3 P1-2）：rename 覆盖改法——已存在旧文件时**先删旧
+      // 文件再 rename** 之间存在「既无旧文件也无新文件」的窗口；
+      // Android/Linux 的 rename 在目标存在时**原子覆盖**，因此只需
+      // 直接 rename，无需预先 delete（避免删除-改名之间的非原子窗口）。
       await partFile.rename(target.path);
     } catch (e) {
       // 失败时清理 .part，旧文件原封不动
@@ -268,6 +284,11 @@ class PublicMediaStore {
   }
 
   /// 在系统文件管理器中打开所在目录。
+  ///
+  /// V37-05（B3 P2-14，第 3 条契约先行）：MediaStore 发布的文件只有
+  /// content:// uri（path 为空）→ 恒失败。改为：调用前判定，无绝对
+  /// 路径时直接返回 false（不发起注定失败的 invokeMethod），
+  /// 调用方据此给出降级反馈（复制路径 Toast）。
   Future<bool> viewFolder(PublishedFile file) async {
     final path = file.path;
     if (path == null || path.isEmpty) return false;

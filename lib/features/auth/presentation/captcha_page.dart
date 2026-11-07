@@ -353,8 +353,8 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
           Text(s.type.label, style: theme.textTheme.titleLarge),
           const SizedBox(height: 12),
           Text(
-            '该验证类型需要在酷狗官方 App 内完成。\n'
-            '建议：先在官方 App 完成一次操作，再回到本应用重试。',
+            // V37-01：硬编码中文 → arb 键
+            context.l10n.captchaExternalHint,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),

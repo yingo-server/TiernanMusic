@@ -472,6 +472,7 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "開けません：このファイルを扱えるアプリがありません",
+  "downloadFolderOpenFailed": "フォルダを開けませんでした（ファイルはシステムメディアライブラリ内）。パスをコピーしました",
   "downloadFallbackHint": "アプリ専用ディレクトリ（Android/data）に保存されました。一部のファイルマネージャーでは表示されません",
   "logoutConfirm": "現在のアカウントからログアウトしますか？",
   "@logoutConfirm": {
@@ -550,5 +551,14 @@
   "reloginGuide": "ログインの有効期限が切れました。再ログインするとプレイリストを表示できます。",
   "mvCollectGuide": "お気に入りの MV はまだありません。再生ページの「MV」から視聴し、MV ページでお気に入りに追加するとここに表示されます。",
   "mvUnavailable": "この MV はデータが不完全で、現在再生できません",
-  "downloadFolderFallback": "パスをコピーしました。ファイルマネージャーに貼り付けて開いてください"
+  "downloadFolderFallback": "パスをコピーしました。ファイルマネージャーに貼り付けて開いてください",
+  "mvCollectAdd": "MV をお気に入り",
+  "mvCollectRemove": "お気に入り解除",
+  "mvCollectSuccess": "MV をお気に入りに追加しました（「ライブラリ」で確認できます）",
+  "mvCollectRemoved": "お気に入りを解除しました",
+  "mvCollectLoginFirst": "MV のお気に入りにはログインが必要です",
+  "rankParamsInvalid": "ランキングのパラメータが無効です",
+  "goHome": "ホームへ戻る",
+  "mvNoSource": "この MV は再生可能なソースがなくダウンロードできません",
+  "downloadMvUnavailable": "この曲にはダウンロードできる MV がありません"
 }

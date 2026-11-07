@@ -472,6 +472,7 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "Échec de l'ouverture : aucune application compatible",
+  "downloadFolderOpenFailed": "Impossible d'ouvrir le dossier (fichier dans la bibliothèque multimédia système). Chemin copié",
   "downloadFallbackHint": "Enregistré dans le dossier spécifique à l'application (Android/data), invisible pour certains gestionnaires de fichiers",
   "logoutConfirm": "Se déconnecter du compte actuel ?",
   "@logoutConfirm": {
@@ -550,5 +551,14 @@
   "reloginGuide": "Votre session a expiré. Reconnectez-vous pour voir vos playlists.",
   "mvCollectGuide": "Aucun clip favori pour le moment. Appuyez sur « MV » dans le lecteur pour le regarder, puis ajoutez-le en favori sur la page du clip.",
   "mvUnavailable": "Ce clip a des données incomplètes et ne peut pas être lu pour le moment",
-  "downloadFolderFallback": "Chemin copié — collez-le dans votre gestionnaire de fichiers pour y accéder"
+  "downloadFolderFallback": "Chemin copié — collez-le dans votre gestionnaire de fichiers pour y accéder",
+  "mvCollectAdd": "Ajouter aux favoris",
+  "mvCollectRemove": "Retirer des favoris",
+  "mvCollectSuccess": "Clip ajouté aux favoris — visible dans « Bibliothèque »",
+  "mvCollectRemoved": "Retiré des favoris",
+  "mvCollectLoginFirst": "Connectez-vous pour ajouter des clips aux favoris",
+  "rankParamsInvalid": "Paramètres du classement invalides",
+  "goHome": "Aller à l'accueil",
+  "mvNoSource": "Ce clip n'a aucune source lisible et ne peut pas être téléchargé",
+  "downloadMvUnavailable": "Cette chanson n'a pas de clip téléchargeable"
 }

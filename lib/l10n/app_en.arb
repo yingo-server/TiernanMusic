@@ -472,6 +472,7 @@
     "description": "Toast when MV quality switch fails"
   },
   "downloadOpenFileFailed": "Open failed: no app available for this file",
+  "downloadFolderOpenFailed": "Couldn't open the containing folder (file is in the system media library). Path copied",
   "downloadFallbackHint": "Saved to the app-specific directory (Android/data), invisible to some file managers",
   "logoutConfirm": "Log out of the current account?",
   "@logoutConfirm": {
@@ -550,5 +551,14 @@
   "reloginGuide": "Your session has expired. Sign in again to view your playlists.",
   "mvCollectGuide": "No favorite MVs yet. Tap \"MV\" on the player page to watch, and favorite it on the MV page — it will show up here.",
   "mvUnavailable": "This MV has incomplete data and cannot be played right now",
-  "downloadFolderFallback": "Path copied — paste it in your file manager to navigate there"
+  "downloadFolderFallback": "Path copied — paste it in your file manager to navigate there",
+  "mvCollectAdd": "Favorite MV",
+  "mvCollectRemove": "Unfavorite",
+  "mvCollectSuccess": "MV favorited — see it in “Library”",
+  "mvCollectRemoved": "Removed from favorites",
+  "mvCollectLoginFirst": "Sign in to favorite MVs",
+  "rankParamsInvalid": "Invalid chart parameters",
+  "goHome": "Go to home",
+  "mvNoSource": "This MV has no playable source and cannot be downloaded",
+  "downloadMvUnavailable": "This song has no downloadable MV"
 }

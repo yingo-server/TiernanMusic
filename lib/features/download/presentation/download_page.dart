@@ -226,11 +226,14 @@ class _DownloadTile extends ConsumerWidget {
                 ),
               );
               if (!ok && context.mounted) {
-                // 多数文件管理器不支持以 FileProvider uri 打开目录，
-                // 失败时复制路径到剪贴板作为兜底
+                // V37-05（B3 P2-14）：MediaStore 发布（Android 10+）只有
+                // content:// uri，无绝对路径 → viewFolder 恒失败。
+                // 降级 Toast 明确告知（不再让用户误以为点了没反应），
+                // 并复制路径兜底。
                 final path = task.filePath.isNotEmpty
                     ? task.filePath
                     : task.displayPath;
+                Toast.show(context, context.l10n.downloadFolderOpenFailed);
                 await Toast.copy(context, path);
               }
               break;

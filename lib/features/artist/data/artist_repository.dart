@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/api/kugou_api_client.dart' show KugouApiClient;
 import '../../../core/providers.dart' show kugouApiClientProvider;
 import '../../home/data/models.dart' show kugouImageUrl;
 
@@ -152,9 +153,10 @@ class ArtistSong {
 }
 
 class ArtistRepository {
+  // V37-06（C1 ALB-R2，第 13/2 条）：同 album_repository——dynamic 改具体类型。
   ArtistRepository(this._api);
 
-  final dynamic _api;
+  final KugouApiClient _api;
 
   Future<ArtistInfo> fetchDetail(String id) async {
     final res = await _api.get('/artist/detail', query: {'id': id});

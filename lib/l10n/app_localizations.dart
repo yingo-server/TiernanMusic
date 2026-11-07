@@ -294,6 +294,7 @@ const _strings_de = <String, String>{
   'qualitySwitchFailed': 'Qualitätswechsel fehlgeschlagen',
   'downloadOpenFileFailed': 'Öffnen fehlgeschlagen: keine passende App gefunden',
   'downloadFallbackHint': 'Im app-spezifischen Verzeichnis (Android/data) gespeichert, für einige Dateimanager unsichtbar',
+  'downloadFolderOpenFailed': 'Ordner konnte nicht geöffnet werden (Datei liegt in der System-Mediathek). Pfad kopiert',
   'logoutConfirm': 'Aktuelles Konto abmelden?',
   'logoutSuccess': 'Abgemeldet',
   'logoutFailed': 'Abmeldung fehlgeschlagen: {error}',
@@ -333,6 +334,15 @@ const _strings_de = <String, String>{
   'mvCollectGuide': 'Noch keine favorisierten MVs. Tippen Sie im Player auf „MV“, schauen Sie es an und favorisieren Sie es auf der MV-Seite.',
   'mvUnavailable': 'Dieses MV hat unvollständige Daten und kann derzeit nicht wiedergegeben werden',
   'downloadFolderFallback': 'Pfad kopiert — fügen Sie ihn in Ihren Dateimanager ein, um dorthin zu navigieren',
+  'mvCollectAdd': 'MV favorisieren',
+  'mvCollectRemove': 'Favorit entfernen',
+  'mvCollectSuccess': 'MV favorisiert — in der „Musikbibliothek“ sichtbar',
+  'mvCollectRemoved': 'Aus Favoriten entfernt',
+  'mvCollectLoginFirst': 'Zum Favorisieren von MVs bitte anmelden',
+  'rankParamsInvalid': 'Ungültige Chart-Parameter',
+  'goHome': 'Zur Startseite',
+  'mvNoSource': 'Dieses MV hat keine abspielbare Quelle und kann nicht geladen werden',
+  'downloadMvUnavailable': 'Dieser Song hat kein ladbares MV',
 };
 
 const _strings_en = <String, String>{
@@ -625,6 +635,7 @@ const _strings_en = <String, String>{
   'qualitySwitchFailed': 'Failed to switch quality',
   'downloadOpenFileFailed': 'Open failed: no app available for this file',
   'downloadFallbackHint': 'Saved to the app-specific directory (Android/data), invisible to some file managers',
+  'downloadFolderOpenFailed': 'Couldn\'t open the containing folder (file is in the system media library). Path copied',
   'logoutConfirm': 'Log out of the current account?',
   'logoutSuccess': 'Logged out',
   'logoutFailed': 'Logout failed: {error}',
@@ -664,6 +675,15 @@ const _strings_en = <String, String>{
   'mvCollectGuide': 'No favorite MVs yet. Tap "MV" on the player page to watch, and favorite it on the MV page — it will show up here.',
   'mvUnavailable': 'This MV has incomplete data and cannot be played right now',
   'downloadFolderFallback': 'Path copied — paste it in your file manager to navigate there',
+  'mvCollectAdd': 'Favorite MV',
+  'mvCollectRemove': 'Unfavorite',
+  'mvCollectSuccess': 'MV favorited — see it in “Library”',
+  'mvCollectRemoved': 'Removed from favorites',
+  'mvCollectLoginFirst': 'Sign in to favorite MVs',
+  'rankParamsInvalid': 'Invalid chart parameters',
+  'goHome': 'Go to home',
+  'mvNoSource': 'This MV has no playable source and cannot be downloaded',
+  'downloadMvUnavailable': 'This song has no downloadable MV',
 };
 
 const _strings_es = <String, String>{
@@ -956,6 +976,7 @@ const _strings_es = <String, String>{
   'qualitySwitchFailed': 'Error al cambiar la calidad',
   'downloadOpenFileFailed': 'No se pudo abrir: no hay una app compatible',
   'downloadFallbackHint': 'Guardado en el directorio específico de la app (Android/data), invisible para algunos gestores de archivos',
+  'downloadFolderOpenFailed': 'No se pudo abrir la carpeta (el archivo está en la biblioteca multimedia del sistema). Ruta copiada',
   'logoutConfirm': '¿Cerrar sesión de la cuenta actual?',
   'logoutSuccess': 'Sesión cerrada',
   'logoutFailed': 'Error al cerrar sesión: {error}',
@@ -995,6 +1016,15 @@ const _strings_es = <String, String>{
   'mvCollectGuide': 'Aún no hay MV favoritos. Pulsa "MV" en el reproductor para verlo y márcalo como favorito en la página del MV.',
   'mvUnavailable': 'Este MV tiene datos incompletos y no se puede reproducir ahora',
   'downloadFolderFallback': 'Ruta copiada: pégala en tu administrador de archivos para navegar allí',
+  'mvCollectAdd': 'Favorito MV',
+  'mvCollectRemove': 'Quitar de favoritos',
+  'mvCollectSuccess': 'MV añadido a favoritos: consúltalo en «Biblioteca»',
+  'mvCollectRemoved': 'Eliminado de favoritos',
+  'mvCollectLoginFirst': 'Inicia sesión para añadir MV a favoritos',
+  'rankParamsInvalid': 'Parámetros de la lista no válidos',
+  'goHome': 'Ir al inicio',
+  'mvNoSource': 'Este MV no tiene fuente reproducible y no se puede descargar',
+  'downloadMvUnavailable': 'Esta canción no tiene MV descargable',
 };
 
 const _strings_fr = <String, String>{
@@ -1287,6 +1317,7 @@ const _strings_fr = <String, String>{
   'qualitySwitchFailed': 'Échec du changement de qualité',
   'downloadOpenFileFailed': 'Échec de l\'ouverture : aucune application compatible',
   'downloadFallbackHint': 'Enregistré dans le dossier spécifique à l\'application (Android/data), invisible pour certains gestionnaires de fichiers',
+  'downloadFolderOpenFailed': 'Impossible d\'ouvrir le dossier (fichier dans la bibliothèque multimédia système). Chemin copié',
   'logoutConfirm': 'Se déconnecter du compte actuel ?',
   'logoutSuccess': 'Déconnecté',
   'logoutFailed': 'Échec de la déconnexion : {error}',
@@ -1326,6 +1357,15 @@ const _strings_fr = <String, String>{
   'mvCollectGuide': 'Aucun clip favori pour le moment. Appuyez sur « MV » dans le lecteur pour le regarder, puis ajoutez-le en favori sur la page du clip.',
   'mvUnavailable': 'Ce clip a des données incomplètes et ne peut pas être lu pour le moment',
   'downloadFolderFallback': 'Chemin copié — collez-le dans votre gestionnaire de fichiers pour y accéder',
+  'mvCollectAdd': 'Ajouter aux favoris',
+  'mvCollectRemove': 'Retirer des favoris',
+  'mvCollectSuccess': 'Clip ajouté aux favoris — visible dans « Bibliothèque »',
+  'mvCollectRemoved': 'Retiré des favoris',
+  'mvCollectLoginFirst': 'Connectez-vous pour ajouter des clips aux favoris',
+  'rankParamsInvalid': 'Paramètres du classement invalides',
+  'goHome': 'Aller à l\'accueil',
+  'mvNoSource': 'Ce clip n\'a aucune source lisible et ne peut pas être téléchargé',
+  'downloadMvUnavailable': 'Cette chanson n\'a pas de clip téléchargeable',
 };
 
 const _strings_ja = <String, String>{
@@ -1618,6 +1658,7 @@ const _strings_ja = <String, String>{
   'qualitySwitchFailed': '画質の切り替えに失敗しました',
   'downloadOpenFileFailed': '開けません：このファイルを扱えるアプリがありません',
   'downloadFallbackHint': 'アプリ専用ディレクトリ（Android/data）に保存されました。一部のファイルマネージャーでは表示されません',
+  'downloadFolderOpenFailed': 'フォルダを開けませんでした（ファイルはシステムメディアライブラリ内）。パスをコピーしました',
   'logoutConfirm': '現在のアカウントからログアウトしますか？',
   'logoutSuccess': 'ログアウトしました',
   'logoutFailed': 'ログアウトに失敗しました：{error}',
@@ -1657,6 +1698,15 @@ const _strings_ja = <String, String>{
   'mvCollectGuide': 'お気に入りの MV はまだありません。再生ページの「MV」から視聴し、MV ページでお気に入りに追加するとここに表示されます。',
   'mvUnavailable': 'この MV はデータが不完全で、現在再生できません',
   'downloadFolderFallback': 'パスをコピーしました。ファイルマネージャーに貼り付けて開いてください',
+  'mvCollectAdd': 'MV をお気に入り',
+  'mvCollectRemove': 'お気に入り解除',
+  'mvCollectSuccess': 'MV をお気に入りに追加しました（「ライブラリ」で確認できます）',
+  'mvCollectRemoved': 'お気に入りを解除しました',
+  'mvCollectLoginFirst': 'MV のお気に入りにはログインが必要です',
+  'rankParamsInvalid': 'ランキングのパラメータが無効です',
+  'goHome': 'ホームへ戻る',
+  'mvNoSource': 'この MV は再生可能なソースがなくダウンロードできません',
+  'downloadMvUnavailable': 'この曲にはダウンロードできる MV がありません',
 };
 
 const _strings_ko = <String, String>{
@@ -1949,6 +1999,7 @@ const _strings_ko = <String, String>{
   'qualitySwitchFailed': '화질 전환 실패',
   'downloadOpenFileFailed': '열기 실패: 이 파일을 처리할 앱이 없습니다',
   'downloadFallbackHint': '앱 전용 디렉터리(Android/data)에 저장되었습니다. 일부 파일 관리자에서는 보이지 않습니다',
+  'downloadFolderOpenFailed': '폴더를 열 수 없습니다(파일이 시스템 미디어 라이브러리에 있음). 경로가 복사되었습니다',
   'logoutConfirm': '현재 계정에서 로그아웃하시겠습니까?',
   'logoutSuccess': '로그아웃되었습니다',
   'logoutFailed': '로그아웃 실패: {error}',
@@ -1988,6 +2039,15 @@ const _strings_ko = <String, String>{
   'mvCollectGuide': '즐겨찾는 MV가 아직 없습니다. 재생 페이지에서 "MV"를 눌러 시청하고 MV 페이지에서 즐겨찾기하면 여기에 표시됩니다.',
   'mvUnavailable': '이 MV는 데이터가 불완전하여 지금 재생할 수 없습니다',
   'downloadFolderFallback': '경로가 복사되었습니다. 파일 관리자에 붙여넣어 이동하세요',
+  'mvCollectAdd': 'MV 즐겨찾기',
+  'mvCollectRemove': '즐겨찾기 해제',
+  'mvCollectSuccess': 'MV를 즐겨찾기에 추가했습니다(보관함에서 확인 가능)',
+  'mvCollectRemoved': '즐겨찾기를 해제했습니다',
+  'mvCollectLoginFirst': 'MV 즐겨찾기는 로그인이 필요합니다',
+  'rankParamsInvalid': '차트 파라미터가 잘못되었습니다',
+  'goHome': '홈으로 이동',
+  'mvNoSource': '이 MV는 재생 가능한 소스가 없어 다운로드할 수 없습니다',
+  'downloadMvUnavailable': '이 곡에는 다운로드 가능한 MV가 없습니다',
 };
 
 const _strings_pt = <String, String>{
@@ -2280,6 +2340,7 @@ const _strings_pt = <String, String>{
   'qualitySwitchFailed': 'Falha ao mudar a qualidade',
   'downloadOpenFileFailed': 'Falha ao abrir: nenhum app compatível',
   'downloadFallbackHint': 'Salvo no diretório específico do app (Android/data), invisível para alguns gerenciadores de arquivos',
+  'downloadFolderOpenFailed': 'Não foi possível abrir a pasta (o arquivo está na biblioteca de mídia do sistema). Caminho copiado',
   'logoutConfirm': 'Sair da conta atual?',
   'logoutSuccess': 'Sessão encerrada',
   'logoutFailed': 'Falha ao sair: {error}',
@@ -2319,6 +2380,15 @@ const _strings_pt = <String, String>{
   'mvCollectGuide': 'Nenhum MV favorito ainda. Toque em "MV" no player para assistir e favorite na página do MV — aparecerá aqui.',
   'mvUnavailable': 'Este MV tem dados incompletos e não pode ser reproduzido agora',
   'downloadFolderFallback': 'Caminho copiado — cole-o no seu gerenciador de arquivos para navegar até lá',
+  'mvCollectAdd': 'Favoritar MV',
+  'mvCollectRemove': 'Remover dos favoritos',
+  'mvCollectSuccess': 'MV favoritado — veja em «Biblioteca»',
+  'mvCollectRemoved': 'Removido dos favoritos',
+  'mvCollectLoginFirst': 'Entre para favoritar MVs',
+  'rankParamsInvalid': 'Parâmetros do ranking inválidos',
+  'goHome': 'Ir para o início',
+  'mvNoSource': 'Este MV não tem fonte reproduzível e não pode ser baixado',
+  'downloadMvUnavailable': 'Esta música não tem MV para baixar',
 };
 
 const _strings_ru = <String, String>{
@@ -2611,6 +2681,7 @@ const _strings_ru = <String, String>{
   'qualitySwitchFailed': 'Не удалось изменить качество',
   'downloadOpenFileFailed': 'Не удалось открыть: нет подходящего приложения',
   'downloadFallbackHint': 'Сохранено в каталог приложения (Android/data), невидим для некоторых файловых менеджеров',
+  'downloadFolderOpenFailed': 'Не удалось открыть папку (файл в системной медиатеке). Путь скопирован',
   'logoutConfirm': 'Выйти из текущего аккаунта?',
   'logoutSuccess': 'Вы вышли из аккаунта',
   'logoutFailed': 'Не удалось выйти: {error}',
@@ -2650,6 +2721,15 @@ const _strings_ru = <String, String>{
   'mvCollectGuide': 'Избранных клипов пока нет. Нажмите «MV» на странице плеера, посмотрите и добавьте в избранное на странице клипа.',
   'mvUnavailable': 'У этого клипа неполные данные, воспроизведение сейчас невозможно',
   'downloadFolderFallback': 'Путь скопирован — вставьте его в файловый менеджер для перехода',
+  'mvCollectAdd': 'В избранное',
+  'mvCollectRemove': 'Убрать из избранного',
+  'mvCollectSuccess': 'Клип добавлен в избранное — смотрите в «Библиотеке»',
+  'mvCollectRemoved': 'Удалено из избранного',
+  'mvCollectLoginFirst': 'Чтобы добавлять клипы в избранное, войдите',
+  'rankParamsInvalid': 'Недопустимые параметры чарта',
+  'goHome': 'На главную',
+  'mvNoSource': 'У этого клипа нет доступного источника, загрузка невозможна',
+  'downloadMvUnavailable': 'У этой песни нет загружаемого клипа',
 };
 
 const _strings_zh = <String, String>{
@@ -2942,6 +3022,7 @@ const _strings_zh = <String, String>{
   'qualitySwitchFailed': '切换清晰度失败',
   'downloadOpenFileFailed': '打开文件失败',
   'downloadFallbackHint': '文件位于应用私有目录（Android/data），部分文件管理器可能无法访问',
+  'downloadFolderOpenFailed': '未能打开所在文件夹（该文件位于系统媒体库），路径已复制',
   'logoutConfirm': '确定要退出当前账号吗？',
   'logoutSuccess': '已退出登录',
   'logoutFailed': '退出登录失败：{error}',
@@ -2981,6 +3062,15 @@ const _strings_zh = <String, String>{
   'mvCollectGuide': '还没有收藏的 MV。在歌曲播放页点「MV」观看，并在 MV 页收藏，就会出现在这里',
   'mvUnavailable': '该 MV 数据不完整，暂时无法播放',
   'downloadFolderFallback': '路径已复制，请在文件管理器中粘贴导航',
+  'mvCollectAdd': '收藏 MV',
+  'mvCollectRemove': '取消收藏',
+  'mvCollectSuccess': '已收藏 MV，可在「我的」页查看',
+  'mvCollectRemoved': '已取消收藏',
+  'mvCollectLoginFirst': '收藏 MV 需要先登录',
+  'rankParamsInvalid': '排行榜参数无效',
+  'goHome': '返回首页',
+  'mvNoSource': '该 MV 暂无可用播放地址，无法下载',
+  'downloadMvUnavailable': '当前歌曲没有可下载的 MV',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -3273,6 +3363,7 @@ const _strings_zh_CN = <String, String>{
   'qualitySwitchFailed': '切换清晰度失败',
   'downloadOpenFileFailed': '打开失败，未找到可用的应用',
   'downloadFallbackHint': '已保存到应用专属目录（Android/data），部分文件管理器不可见',
+  'downloadFolderOpenFailed': '未能打开所在文件夹（该文件位于系统媒体库），路径已复制',
   'logoutConfirm': '确定要退出当前账号吗？',
   'logoutSuccess': '已退出登录',
   'logoutFailed': '退出登录失败：{error}',
@@ -3312,6 +3403,15 @@ const _strings_zh_CN = <String, String>{
   'mvCollectGuide': '还没有收藏的 MV。在歌曲播放页点「MV」观看，并在 MV 页收藏，就会出现在这里',
   'mvUnavailable': '该 MV 数据不完整，暂时无法播放',
   'downloadFolderFallback': '路径已复制，请在文件管理器中粘贴导航',
+  'mvCollectAdd': '收藏 MV',
+  'mvCollectRemove': '取消收藏',
+  'mvCollectSuccess': '已收藏 MV，可在「我的」页查看',
+  'mvCollectRemoved': '已取消收藏',
+  'mvCollectLoginFirst': '收藏 MV 需要先登录',
+  'rankParamsInvalid': '排行榜参数无效',
+  'goHome': '返回首页',
+  'mvNoSource': '该 MV 暂无可用播放地址，无法下载',
+  'downloadMvUnavailable': '当前歌曲没有可下载的 MV',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3604,6 +3704,7 @@ const _strings_zh_TW = <String, String>{
   'qualitySwitchFailed': '切換清晰度失敗',
   'downloadOpenFileFailed': '開啟失敗，未找到可用的應用',
   'downloadFallbackHint': '已儲存到應用專屬目錄（Android/data），部分檔案管理器不可見',
+  'downloadFolderOpenFailed': '無法開啟所在資料夾（該檔案位於系統媒體庫），路徑已複製',
   'logoutConfirm': '確定要登出目前帳號嗎？',
   'logoutSuccess': '已登出',
   'logoutFailed': '登出失敗：{error}',
@@ -3643,6 +3744,15 @@ const _strings_zh_TW = <String, String>{
   'mvCollectGuide': '還沒有收藏的 MV。在歌曲播放頁點「MV」觀看，並在 MV 頁收藏，就會出現在這裡',
   'mvUnavailable': '該 MV 資料不完整，暫時無法播放',
   'downloadFolderFallback': '路徑已複製，請在檔案管理員中貼上導航',
+  'mvCollectAdd': '收藏 MV',
+  'mvCollectRemove': '取消收藏',
+  'mvCollectSuccess': '已收藏 MV，可在「我的」頁查看',
+  'mvCollectRemoved': '已取消收藏',
+  'mvCollectLoginFirst': '收藏 MV 需要先登入',
+  'rankParamsInvalid': '排行榜參數無效',
+  'goHome': '返回首頁',
+  'mvNoSource': '該 MV 暫無可用播放位址，無法下載',
+  'downloadMvUnavailable': '目前歌曲沒有可下載的 MV',
 };
 
 const _template = _strings_zh_CN;
@@ -3991,6 +4101,7 @@ class AppLocalizations {
   String get qualitySwitchFailed => _t('qualitySwitchFailed');
   String get downloadOpenFileFailed => _t('downloadOpenFileFailed');
   String get downloadFallbackHint => _t('downloadFallbackHint');
+  String get downloadFolderOpenFailed => _t('downloadFolderOpenFailed');
   String get logoutConfirm => _t('logoutConfirm');
   String get logoutSuccess => _t('logoutSuccess');
   String logoutFailed(String error) => _t('logoutFailed').r({'error': error});
@@ -4030,6 +4141,15 @@ class AppLocalizations {
   String get mvCollectGuide => _t('mvCollectGuide');
   String get mvUnavailable => _t('mvUnavailable');
   String get downloadFolderFallback => _t('downloadFolderFallback');
+  String get mvCollectAdd => _t('mvCollectAdd');
+  String get mvCollectRemove => _t('mvCollectRemove');
+  String get mvCollectSuccess => _t('mvCollectSuccess');
+  String get mvCollectRemoved => _t('mvCollectRemoved');
+  String get mvCollectLoginFirst => _t('mvCollectLoginFirst');
+  String get rankParamsInvalid => _t('rankParamsInvalid');
+  String get goHome => _t('goHome');
+  String get mvNoSource => _t('mvNoSource');
+  String get downloadMvUnavailable => _t('downloadMvUnavailable');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

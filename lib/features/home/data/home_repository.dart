@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/kugou_api_client.dart';
@@ -99,7 +100,9 @@ class HomeRepository {
           .map((e) => HomeBanner.fromJson(Map<String, dynamic>.from(e)))
           .where((b) => b.imageUrl.isNotEmpty)
           .toList();
-    } catch (_) {
+    } catch (e) {
+      // V37-03（B2 P3，第 9 条）：Banner 失败静默置空必须留痕（第 6 条）。
+      debugPrint('[home] /yueku/banner 失败，Banner 置空: $e');
       return const [];
     }
   }
@@ -122,7 +125,10 @@ class HomeRepository {
           .whereType<Map>()
           .map((e) => HomeSong.fromJson(Map<String, dynamic>.from(e)))
           .toList();
-    } catch (_) {
+    } catch (e) {
+      // V37-03（B2 P3，第 9 条）：未登录/失败统一返回 null，必须留痕
+      // 否则「每日推荐消失」线上无法定位是登录态还是接口故障。
+      debugPrint('[home] /everyday/recommend 失败，返回 null 隐藏入口: $e');
       return null;
     }
   }
@@ -140,7 +146,9 @@ class HomeRepository {
             .map((e) => HomeSong.fromJson(Map<String, dynamic>.from(e)))
             .toList();
       }
-    } catch (_) {
+    } catch (e) {
+      // V37-03（B2 P3，第 9 条）：回落必须留痕。
+      debugPrint('[home] /top/song 失败，回落 /yueku 新歌: $e');
       // 回落
     }
     return fetchYuekuSongs();
@@ -177,6 +185,19 @@ class HomeRepository {
     final daily = results[4] as List<HomeSong>?;
 
     if (songs.isEmpty && playlists.isEmpty && ranks.isEmpty && banners.isEmpty) {
+      throw Exception('首页数据加载失败，请检查网络后重试');
+    }
+
+    return HomeData(
+      banners: banners,
+      songs: songs,
+      playlists: playlists,
+      ranks: ranks,
+      dailyRecommend: daily,
+    );
+  }
+}
+sEmpty) {
       throw Exception('首页数据加载失败，请检查网络后重试');
     }
 
