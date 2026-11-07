@@ -87,8 +87,11 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
       });
     } catch (e) {
       if (!mounted) return;
+      // V37-01（QUALITY_STANDARD 第 9 条 + v34_review_2/A3/C2 报告）：'$e' 不直出给用户，
+      // 完整异常留日志便于排查。
+      debugPrint('[captcha] getVerifyInfo failed: $e');
       setState(() {
-        _error = '获取验证信息失败：$e';
+        _error = context.l10n.captchaLoadFailed;
         _loading = false;
       });
     }
@@ -295,10 +298,11 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
           Icon(Icons.sms_outlined,
               size: 64, color: theme.colorScheme.primary),
           const SizedBox(height: 16),
-          Text('短信验证', textAlign: TextAlign.center,
+          // V37-01：硬编码中文 → arb 键
+          Text(context.l10n.captchaSmsTitle, textAlign: TextAlign.center,
               style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
-          Text('请输入接收到的验证码完成验证',
+          Text(context.l10n.captchaSmsHint,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -307,9 +311,9 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
           TextField(
             controller: _smsCodeCtrl,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '验证码',
-              hintText: '6 位数字',
+            decoration: InputDecoration(
+              labelText: context.l10n.captchaSmsCodeLabel,
+              hintText: context.l10n.captchaSmsCodeHint,
             ),
             maxLength: 8,
           ),
@@ -376,11 +380,12 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
           Icon(Icons.help_outline,
               size: 56, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
           const SizedBox(height: 16),
-          Text('未知验证类型（v_type=${s.vType}）',
+          // V37-01：硬编码中文 → arb 键
+          Text(context.l10n.captchaUnknownType('${s.vType}'),
               style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           Text(
-            s.verifyUrl ?? '服务端未返回验证 url',
+            s.verifyUrl ?? context.l10n.captchaNoVerifyUrl,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
