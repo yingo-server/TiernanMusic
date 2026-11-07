@@ -1,6 +1,5 @@
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/cache/cache_manager.dart';
-import '../../../core/config/app_config.dart';
 
 class MvRepository {
   MvRepository(this._api);
@@ -39,18 +38,66 @@ class MvRepository {
     return result;
   }
 
+  /// V3990-1（P0）：hash → video_id 会话级缓存（有上限，第 25 条）。
+  /// 同一 hash 的反查结果在会话内不变，MemoryCache 的 /video/detail 键
+  /// 只覆盖 video_id 形态，这里单独缓存互转结果避免每次进页都打 /search。
+  static final Map<String, String> _hashToVideoId = {};
+
   /// 视频详情
   ///
   /// 实测：`/video/detail` 的 `data` 是**数组**（不是对象），首项为视频信息；
   /// 清晰度 hash 平铺在顶层（`hd_hash` / `sd_hash` / `qhd_hash` / `fhd_hash`
   /// / `ld_hash`），mkv 容器的 hash 另名为 `mkv_sd_hash` / `mkv_qhd_hash`。
-  Future<MvDetail> fetchDetail(String videoId) async {
+  ///
+  /// V3990-1（P0，用户日志实锤 20010）：`/v1/video` 载荷只认 video_id
+  /// （kg_direct_api_client._videoDetail 固定发 `{'video_id': id}`），
+  /// 传 hash 上游返回 `error_code=20010 invalid param`。而搜索 MV / 榜单 MV /
+  /// 收藏 MV 等调用方手里只有 hash（MvHash / video_hash），从未做转换。
+  /// 在 repository 入口统一收口：纯数字 = video_id 直用；hash 形态先经
+  /// `/search`（type=mv）用 MvHash 反查响应里的 `MvID` 字段换算 video_id。
+  /// 调用方不需要各自转换（与 resolvePlayUrl 的互转兜底同一思路，
+  /// 方向相反：那边 video_id → hash，这边 hash → video_id）。
+  Future<MvDetail> fetchDetail(String videoIdOrHash) async {
+    var videoId = videoIdOrHash;
+    if (_looksLikeHash(videoId)) {
+      videoId = _hashToVideoId[videoId] ?? await _resolveVideoIdByHash(videoId);
+    }
     final cacheKey = MemoryCache.keyOf('/video/detail', {'id': videoId});
     final cached = MemoryCache.instance.get<Map<String, dynamic>>(cacheKey);
     final data =
         cached ?? await _api.get('/video/detail', query: {'id': videoId});
     if (cached == null) MemoryCache.instance.set(cacheKey, data);
     return MvDetail.fromJson(data);
+  }
+
+  /// 用 hash 反查 video_id（/search type=mv 实测返回 `MvHash` + `MvID`）。
+  ///
+  /// 查不到（MV 已下架 / hash 失效）明确抛 ApiException（第 9 条：
+  /// 失败必须可观测），不得静默降级成空详情。
+  Future<String> _resolveVideoIdByHash(String hash) async {
+    final json = await _api.get('/search', query: {
+      'keywords': hash,
+      'type': 'mv',
+      'page': '1',
+      'pagesize': '30',
+    });
+    final data = json['data'];
+    final raw = data is Map
+        ? (data['lists'] ?? data['info'] ?? const [])
+        : (data is List ? data : const []);
+    for (final e in raw) {
+      if (e is! Map) continue;
+      final h = '${e['MvHash'] ?? e['mv_hash'] ?? ''}';
+      if (h.toUpperCase() != hash.toUpperCase()) continue;
+      final id = '${e['MvID'] ?? e['mv_id'] ?? e['id'] ?? ''}';
+      // video_id 必须是数字（/v1/video 载荷按数字 id 处理），脏数据不收
+      if (id.isNotEmpty && int.tryParse(id) != null) {
+        if (_hashToVideoId.length > 128) _hashToVideoId.clear();
+        _hashToVideoId[hash] = id;
+        return id;
+      }
+    }
+    throw ApiException(-1, '无法将 MV hash 换算为 video_id（MV 可能已下架）');
   }
 
   /// 解析播放地址（HTTP → 代理 HTTPS）
@@ -227,6 +274,7 @@ class MvDetail {
     required this.cover,
     required this.duration,
     required this.hashes,
+    this.containers = const <String, String>{},
   });
   final String videoId;
   final String name;
@@ -234,6 +282,11 @@ class MvDetail {
   final String cover;
   final int duration; // 秒
   final Map<String, String> hashes; // quality -> hash
+
+  /// V3990-2：quality → 容器类型（'mp4' / 'mkv'）。
+  /// mkv 档在 UI 上要标注（部分设备 ExoPlayer 对 mkv 解码差，知情选择）；
+  /// 未列出的档按 mp4 处理（上游 h264/h265 均为 mp4 容器）。
+  final Map<String, String> containers;
 
   /// 最高画质的 hash（用于首次播放）。
   String? get bestHash {
@@ -319,6 +372,20 @@ class MvDetail {
     // 直接换算秒（MvInfo.fromJson 同此口径）；备用字段 duration 同为毫秒口径。
     final duration = durationMs <= 0 ? 0 : durationMs ~/ 1000;
 
+    // V3990-2：记录每个画质档的容器类型（mp4 / mkv）。
+    // mkv_* 是另一套容器（实测 ExoPlayer 对部分 mkv 档解码差），
+    // UI 需要把 mkv 档标注出来供用户知情选择。
+    final containers = <String, String>{};
+    for (final key in ['hd', 'sd', 'qhd', 'fhd', 'ld', 'sq']) {
+      if (hashes.containsKey(key)) containers[key] = 'mp4';
+    }
+    for (final key in ['sd', 'qhd']) {
+      final mkvHash = '${data['mkv_${key}_hash'] ?? ''}';
+      if (mkvHash.isNotEmpty && hashes[key] == mkvHash) {
+        containers[key] = 'mkv';
+      }
+    }
+
     return MvDetail(
       videoId: '${data['video_id'] ?? data['id'] ?? ''}',
       name:
@@ -327,6 +394,7 @@ class MvDetail {
       cover: cover,
       duration: duration,
       hashes: hashes,
+      containers: containers,
     );
   }
 }

@@ -578,5 +578,11 @@
   "qualityMagicSurnay": "魔法環繞",
   "qualityMagicSubwoofer": "魔法低音",
   "qualityMagicAncient": "魔法復古",
-  "storageProbeFailed": "寫入探測失敗"
+  "storageProbeFailed": "寫入探測失敗",
+  "mvNotExist": "該 MV 不存在或已下架",
+  "mvDetailLoadFailed": "MV 資訊載入失敗",
+  "mvMkvContainer": "MKV 容器",
+  "audioPausedForMv": "已暫停音樂播放",
+  "mvPlayError": "播放出錯",
+  "mvBuffering": "緩衝中…"
 }

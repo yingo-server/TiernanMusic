@@ -361,6 +361,12 @@ const _strings_de = <String, String>{
   'qualityMagicSubwoofer': 'Magischer Bass',
   'qualityMagicAncient': 'Magisch Vintage',
   'storageProbeFailed': 'Schreibtest fehlgeschlagen',
+  'mvNotExist': 'Dieses MV existiert nicht oder wurde entfernt',
+  'mvDetailLoadFailed': 'MV-Infos konnten nicht geladen werden',
+  'mvMkvContainer': 'MKV-Container',
+  'audioPausedForMv': 'Musik für MV-Wiedergabe pausiert',
+  'mvPlayError': 'Wiedergabefehler',
+  'mvBuffering': 'Puffern…',
 };
 
 const _strings_en = <String, String>{
@@ -720,6 +726,12 @@ const _strings_en = <String, String>{
   'qualityMagicSubwoofer': 'Magic Bass',
   'qualityMagicAncient': 'Magic Vintage',
   'storageProbeFailed': 'Write probe failed',
+  'mvNotExist': 'This MV doesn\'t exist or has been removed',
+  'mvDetailLoadFailed': 'Failed to load MV info',
+  'mvMkvContainer': 'MKV container',
+  'audioPausedForMv': 'Music paused for MV playback',
+  'mvPlayError': 'Playback error',
+  'mvBuffering': 'Buffering…',
 };
 
 const _strings_es = <String, String>{
@@ -1079,6 +1091,12 @@ const _strings_es = <String, String>{
   'qualityMagicSubwoofer': 'Bajos mágicos',
   'qualityMagicAncient': 'Vintage mágico',
   'storageProbeFailed': 'Prueba de escritura fallida',
+  'mvNotExist': 'Este MV no existe o fue eliminado',
+  'mvDetailLoadFailed': 'Error al cargar la información del MV',
+  'mvMkvContainer': 'Contenedor MKV',
+  'audioPausedForMv': 'Música pausada para reproducir el MV',
+  'mvPlayError': 'Error de reproducción',
+  'mvBuffering': 'Almacenando búfer…',
 };
 
 const _strings_fr = <String, String>{
@@ -1438,6 +1456,12 @@ const _strings_fr = <String, String>{
   'qualityMagicSubwoofer': 'Basses magiques',
   'qualityMagicAncient': 'Vintage magique',
   'storageProbeFailed': 'Test d\'écriture échoué',
+  'mvNotExist': 'Ce MV n\'existe pas ou a été retiré',
+  'mvDetailLoadFailed': 'Échec du chargement des infos du MV',
+  'mvMkvContainer': 'Conteneur MKV',
+  'audioPausedForMv': 'Musique en pause pour la lecture du MV',
+  'mvPlayError': 'Erreur de lecture',
+  'mvBuffering': 'Mise en mémoire tampon…',
 };
 
 const _strings_ja = <String, String>{
@@ -1797,6 +1821,12 @@ const _strings_ja = <String, String>{
   'qualityMagicSubwoofer': '魔法低音',
   'qualityMagicAncient': '魔法レトロ',
   'storageProbeFailed': '書き込み検出失敗',
+  'mvNotExist': 'このMVは存在しないか、削除されました',
+  'mvDetailLoadFailed': 'MV 情報の読み込みに失敗しました',
+  'mvMkvContainer': 'MKV コンテナ',
+  'audioPausedForMv': 'MV 再生のため音楽を一時停止しました',
+  'mvPlayError': '再生エラー',
+  'mvBuffering': 'バッファリング中…',
 };
 
 const _strings_ko = <String, String>{
@@ -2156,6 +2186,12 @@ const _strings_ko = <String, String>{
   'qualityMagicSubwoofer': '매직 베이스',
   'qualityMagicAncient': '매직 빈티지',
   'storageProbeFailed': '쓰기 탐지 실패',
+  'mvNotExist': '해당 MV가 없거나 삭제되었습니다',
+  'mvDetailLoadFailed': 'MV 정보 로드 실패',
+  'mvMkvContainer': 'MKV 컨테이너',
+  'audioPausedForMv': 'MV 재생을 위해 음악을 일시정지했습니다',
+  'mvPlayError': '재생 오류',
+  'mvBuffering': '버퍼링 중…',
 };
 
 const _strings_pt = <String, String>{
@@ -2515,6 +2551,12 @@ const _strings_pt = <String, String>{
   'qualityMagicSubwoofer': 'Graves mágicos',
   'qualityMagicAncient': 'Vintage mágico',
   'storageProbeFailed': 'Teste de gravação falhou',
+  'mvNotExist': 'Este MV não existe ou foi removido',
+  'mvDetailLoadFailed': 'Falha ao carregar informações do MV',
+  'mvMkvContainer': 'Contêiner MKV',
+  'audioPausedForMv': 'Música pausada para reproduzir o MV',
+  'mvPlayError': 'Erro de reprodução',
+  'mvBuffering': 'Armazenando buffer…',
 };
 
 const _strings_ru = <String, String>{
@@ -2874,6 +2916,12 @@ const _strings_ru = <String, String>{
   'qualityMagicSubwoofer': 'Волшебные басы',
   'qualityMagicAncient': 'Волшебный ретро',
   'storageProbeFailed': 'Ошибка проверки записи',
+  'mvNotExist': 'Этого MV нет или оно удалено',
+  'mvDetailLoadFailed': 'Не удалось загрузить данные MV',
+  'mvMkvContainer': 'Контейнер MKV',
+  'audioPausedForMv': 'Музыка приостановлена для просмотра MV',
+  'mvPlayError': 'Ошибка воспроизведения',
+  'mvBuffering': 'Буферизация…',
 };
 
 const _strings_zh = <String, String>{
@@ -3233,6 +3281,12 @@ const _strings_zh = <String, String>{
   'qualityMagicSubwoofer': '魔法低音',
   'qualityMagicAncient': '魔法复古',
   'storageProbeFailed': '写入探测失败',
+  'mvNotExist': '該 MV 不存在或已下架',
+  'mvDetailLoadFailed': 'MV 資訊載入失敗',
+  'mvMkvContainer': 'MKV 容器',
+  'audioPausedForMv': '已暫停音樂播放',
+  'mvPlayError': '播放出錯',
+  'mvBuffering': '緩衝中…',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -3592,6 +3646,12 @@ const _strings_zh_CN = <String, String>{
   'qualityMagicSubwoofer': '魔法低音',
   'qualityMagicAncient': '魔法复古',
   'storageProbeFailed': '写入探测失败',
+  'mvNotExist': '该 MV 不存在或已下架',
+  'mvDetailLoadFailed': 'MV 信息加载失败',
+  'mvMkvContainer': 'MKV 容器',
+  'audioPausedForMv': '已暂停音乐播放',
+  'mvPlayError': '播放出错',
+  'mvBuffering': '缓冲中…',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3951,6 +4011,12 @@ const _strings_zh_TW = <String, String>{
   'qualityMagicSubwoofer': '魔法低音',
   'qualityMagicAncient': '魔法復古',
   'storageProbeFailed': '寫入探測失敗',
+  'mvNotExist': '該 MV 不存在或已下架',
+  'mvDetailLoadFailed': 'MV 資訊載入失敗',
+  'mvMkvContainer': 'MKV 容器',
+  'audioPausedForMv': '已暫停音樂播放',
+  'mvPlayError': '播放出錯',
+  'mvBuffering': '緩衝中…',
 };
 
 const _template = _strings_zh_CN;
@@ -4366,6 +4432,12 @@ class AppLocalizations {
   String get qualityMagicSubwoofer => _t('qualityMagicSubwoofer');
   String get qualityMagicAncient => _t('qualityMagicAncient');
   String get storageProbeFailed => _t('storageProbeFailed');
+  String get mvNotExist => _t('mvNotExist');
+  String get mvDetailLoadFailed => _t('mvDetailLoadFailed');
+  String get mvMkvContainer => _t('mvMkvContainer');
+  String get audioPausedForMv => _t('audioPausedForMv');
+  String get mvPlayError => _t('mvPlayError');
+  String get mvBuffering => _t('mvBuffering');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

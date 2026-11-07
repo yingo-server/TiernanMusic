@@ -578,5 +578,11 @@
   "qualityMagicSurnay": "Magischer Surround",
   "qualityMagicSubwoofer": "Magischer Bass",
   "qualityMagicAncient": "Magisch Vintage",
-  "storageProbeFailed": "Schreibtest fehlgeschlagen"
+  "storageProbeFailed": "Schreibtest fehlgeschlagen",
+  "mvNotExist": "Dieses MV existiert nicht oder wurde entfernt",
+  "mvDetailLoadFailed": "MV-Infos konnten nicht geladen werden",
+  "mvMkvContainer": "MKV-Container",
+  "audioPausedForMv": "Musik für MV-Wiedergabe pausiert",
+  "mvPlayError": "Wiedergabefehler",
+  "mvBuffering": "Puffern…"
 }

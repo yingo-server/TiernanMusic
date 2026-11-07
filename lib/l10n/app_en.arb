@@ -578,5 +578,11 @@
   "qualityMagicSurnay": "Magic Surround",
   "qualityMagicSubwoofer": "Magic Bass",
   "qualityMagicAncient": "Magic Vintage",
-  "storageProbeFailed": "Write probe failed"
+  "storageProbeFailed": "Write probe failed",
+  "mvNotExist": "This MV doesn't exist or has been removed",
+  "mvDetailLoadFailed": "Failed to load MV info",
+  "mvMkvContainer": "MKV container",
+  "audioPausedForMv": "Music paused for MV playback",
+  "mvPlayError": "Playback error",
+  "mvBuffering": "Buffering…"
 }

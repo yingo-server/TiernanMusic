@@ -578,5 +578,11 @@
   "qualityMagicSurnay": "Surround mágico",
   "qualityMagicSubwoofer": "Graves mágicos",
   "qualityMagicAncient": "Vintage mágico",
-  "storageProbeFailed": "Teste de gravação falhou"
+  "storageProbeFailed": "Teste de gravação falhou",
+  "mvNotExist": "Este MV não existe ou foi removido",
+  "mvDetailLoadFailed": "Falha ao carregar informações do MV",
+  "mvMkvContainer": "Contêiner MKV",
+  "audioPausedForMv": "Música pausada para reproduzir o MV",
+  "mvPlayError": "Erro de reprodução",
+  "mvBuffering": "Armazenando buffer…"
 }

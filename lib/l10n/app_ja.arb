@@ -578,5 +578,11 @@
   "qualityMagicSurnay": "魔法サラウンド",
   "qualityMagicSubwoofer": "魔法低音",
   "qualityMagicAncient": "魔法レトロ",
-  "storageProbeFailed": "書き込み検出失敗"
+  "storageProbeFailed": "書き込み検出失敗",
+  "mvNotExist": "このMVは存在しないか、削除されました",
+  "mvDetailLoadFailed": "MV 情報の読み込みに失敗しました",
+  "mvMkvContainer": "MKV コンテナ",
+  "audioPausedForMv": "MV 再生のため音楽を一時停止しました",
+  "mvPlayError": "再生エラー",
+  "mvBuffering": "バッファリング中…"
 }

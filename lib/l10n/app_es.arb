@@ -578,5 +578,11 @@
   "qualityMagicSurnay": "Sonido envolvente mágico",
   "qualityMagicSubwoofer": "Bajos mágicos",
   "qualityMagicAncient": "Vintage mágico",
-  "storageProbeFailed": "Prueba de escritura fallida"
+  "storageProbeFailed": "Prueba de escritura fallida",
+  "mvNotExist": "Este MV no existe o fue eliminado",
+  "mvDetailLoadFailed": "Error al cargar la información del MV",
+  "mvMkvContainer": "Contenedor MKV",
+  "audioPausedForMv": "Música pausada para reproducir el MV",
+  "mvPlayError": "Error de reproducción",
+  "mvBuffering": "Almacenando búfer…"
 }

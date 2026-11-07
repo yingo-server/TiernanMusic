@@ -578,5 +578,11 @@
   "qualityMagicSurnay": "Волшебный объёмный звук",
   "qualityMagicSubwoofer": "Волшебные басы",
   "qualityMagicAncient": "Волшебный ретро",
-  "storageProbeFailed": "Ошибка проверки записи"
+  "storageProbeFailed": "Ошибка проверки записи",
+  "mvNotExist": "Этого MV нет или оно удалено",
+  "mvDetailLoadFailed": "Не удалось загрузить данные MV",
+  "mvMkvContainer": "Контейнер MKV",
+  "audioPausedForMv": "Музыка приостановлена для просмотра MV",
+  "mvPlayError": "Ошибка воспроизведения",
+  "mvBuffering": "Буферизация…"
 }

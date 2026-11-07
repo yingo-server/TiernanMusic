@@ -607,5 +607,11 @@
   "qualityMagicSurnay": "魔法环绕",
   "qualityMagicSubwoofer": "魔法低音",
   "qualityMagicAncient": "魔法复古",
-  "storageProbeFailed": "写入探测失败"
+  "storageProbeFailed": "写入探测失败",
+  "mvNotExist": "该 MV 不存在或已下架",
+  "mvDetailLoadFailed": "MV 信息加载失败",
+  "mvMkvContainer": "MKV 容器",
+  "audioPausedForMv": "已暂停音乐播放",
+  "mvPlayError": "播放出错",
+  "mvBuffering": "缓冲中…"
 }

@@ -578,5 +578,11 @@
   "qualityMagicSurnay": "매직 서라운드",
   "qualityMagicSubwoofer": "매직 베이스",
   "qualityMagicAncient": "매직 빈티지",
-  "storageProbeFailed": "쓰기 탐지 실패"
+  "storageProbeFailed": "쓰기 탐지 실패",
+  "mvNotExist": "해당 MV가 없거나 삭제되었습니다",
+  "mvDetailLoadFailed": "MV 정보 로드 실패",
+  "mvMkvContainer": "MKV 컨테이너",
+  "audioPausedForMv": "MV 재생을 위해 음악을 일시정지했습니다",
+  "mvPlayError": "재생 오류",
+  "mvBuffering": "버퍼링 중…"
 }
