@@ -296,14 +296,6 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
                   : controller.play();
               setState(() {});
             },
-                ? Icons.pause_circle
-                : Icons.play_circle),
-            onPressed: () {
-              controller.value.isPlaying
-                  ? controller.pause()
-                  : controller.play();
-              setState(() {});
-            },
           ),
           // 进度条
           Positioned(
