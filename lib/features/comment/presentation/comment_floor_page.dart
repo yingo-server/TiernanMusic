@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
 import '../../../core/utils/toast.dart';
+import '../../../core/utils/friendly_error.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../../auth/data/auth_providers.dart';

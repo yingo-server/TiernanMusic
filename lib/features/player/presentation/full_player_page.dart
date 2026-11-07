@@ -404,6 +404,9 @@ class _EntryButtonsRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // V39-CI-1：入口行持有的是 song，albumAudioId 需从 song 取（代理重写
+    // 时误用了局部变量名）；抽成局部常量保持后续分支一致。
+    final albumAudioId = song.albumAudioId;
     final mvAsync = albumAudioId.isEmpty
         ? null
         : ref.watch(songMvProvider(albumAudioId));
