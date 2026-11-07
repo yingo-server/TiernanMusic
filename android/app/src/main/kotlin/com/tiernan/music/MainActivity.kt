@@ -7,7 +7,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
@@ -18,7 +18,7 @@ import java.io.File
  * Android 10+ (API 29+) 通过 MediaStore + IS_PENDING 写入公共目录，无需存储权限；
  * Android 9 及以下由 Dart 侧直接写公共目录路径（需 WRITE_EXTERNAL_STORAGE 运行时权限）。
  */
-class MainActivity : FlutterActivity() {
+class MainActivity : AudioServiceActivity() {
 
     private val channelName = "com.tiernan.music/storage"
 
