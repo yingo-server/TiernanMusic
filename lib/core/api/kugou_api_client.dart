@@ -1,37 +1,14 @@
 
 import 'package:dio/dio.dart';
+import '../foundation/errors.dart';
+export '../foundation/errors.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
 
-class ApiException implements Exception {
-  ApiException(
-    this.errorCode,
-    this.message, {
-    this.ssaCode,
-    this.verifyUrl,
-    this.body,
-  });
 
-  final int errorCode;
-  final String message;
-
-  /// 20028 时携带的验证事件 id（body.ssaCode 或响应头 ssa-code）
-  final String? ssaCode;
-
-  /// /get/verify/info 返回的 url，前缀决定验证码类型（KGCodeTX| / KGCodeGT| …）
-  final String? verifyUrl;
-
-  /// 原始错误响应体，便于上层判断 fail_process 等
-  final Map<String, dynamic>? body;
-
-  bool get needsVerification => errorCode == 20028;
-
-  @override
-  String toString() => 'ApiException($errorCode): $message';
-}
 
 class KugouApiClient {
   /// [cookieStoragePath] 必须是**可写**的 App 私有目录（如 documents/cookies）。
