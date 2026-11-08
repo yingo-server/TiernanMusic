@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/lyric/data/lyric_repository.dart';
+import '../core/api/kugou_api_client.dart' show KugouApiClient;
 import '../core/api/translate_api.dart';
 import '../core/direct/kg_providers.dart';
 import '../core/net/music_api.dart';

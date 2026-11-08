@@ -27,7 +27,7 @@ enum NetworkPhase {
 
 /// 一次阶段切换事件。
 class NetworkPhaseEvent {
-  const NetworkPhaseEvent(this.phase, {this.detail = ''});
+  NetworkPhaseEvent(this.phase, {this.detail = ''}) : at = DateTime.now();
 
   final NetworkPhase phase;
 
@@ -35,7 +35,7 @@ class NetworkPhaseEvent {
   final String detail;
 
   /// 事件时刻（本地时钟，仅诊断用）。
-  final DateTime at = DateTime.now();
+  final DateTime at;
 }
 
 /// 全局阶段播报器。
@@ -47,7 +47,8 @@ class NetworkPhaseTracker {
   NetworkPhaseTracker._();
   static final NetworkPhaseTracker instance = NetworkPhaseTracker._();
 
-  final _controller = StreamController<NetworkPhaseEvent>.broadcast();
+  StreamController<NetworkPhaseEvent> _controller =
+      StreamController<NetworkPhaseEvent>.broadcast();
 
   /// 阶段事件流（broadcast：多组件订阅互不影响）。
   Stream<NetworkPhaseEvent> get events => _controller.stream;
@@ -61,7 +62,7 @@ class NetworkPhaseTracker {
   /// 进入某阶段（重复 begin 同阶段安全，计数递增）。
   void begin(NetworkPhase phase, {String detail = ''}) {
     if (phase == NetworkPhase.idle) return;
-    _bump(phase, +1);
+    _bump(phase, 1);
     _push(phase, detail);
   }
 
@@ -101,8 +102,7 @@ class NetworkPhaseTracker {
   /// 对称释放（第 20 条）；仅测试场景调用，随后可重新使用。
   Future<void> dispose() async {
     final c = _controller;
-    _controller =
-        StreamController<NetworkPhaseEvent>.broadcast();
+    _controller = StreamController<NetworkPhaseEvent>.broadcast();
     _resolvingDepth = 0;
     _bufferingDepth = 0;
     _current = NetworkPhase.idle;

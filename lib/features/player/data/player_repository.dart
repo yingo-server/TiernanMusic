@@ -47,6 +47,12 @@ class PlayerRepository {
   final CachedApiCall _cached;
   final Ref? _ref;
 
+  /// v5.3 R1 重写恢复：设备注册并发收敛字段（CI 报 undefined——
+  /// 状态机重写覆盖本文件时丢失声明）。
+  bool _registering = false;
+  Future<void>? _registeringFuture;
+  int _registerRetries = 0;
+
   /// 动态获取直连播放接口（异步 provider，可能尚未就绪）
   KgPlayApi? get _directPlay => _ref?.read(kgPlayApiProvider);
 
@@ -216,18 +222,20 @@ class PlayerRepository {
 
   Future<PlayableResult> _resolveUrlInner(Song song,
       {AudioQuality? preferred}) async {
+    final preferredQuality = preferred ?? song.quality;
     if (_directPlay != null) {
       try {
         final direct =
-            await _resolveViaDirect(song, preferred: preferred);
+            await _resolveViaDirect(song, preferred: preferredQuality);
         if (direct != null) return direct;
         // 直连无结果且是特殊档：不回退 kapi，明确报因（第 11 条降级有界）
-        if (preferred.isSpecial) {
-          throw ApiException(-1, '音质 ${preferred.value} 直连未返回播放地址');
+        if (preferredQuality.isSpecial) {
+          throw ApiException(
+              -1, '音质 ${preferredQuality.value} 直连未返回播放地址');
         }
       } on ApiException catch (e) {
         // 20028/权益错误直接上抛，不再回退（回退也会被同样拦截）
-        if (requiresVerification(e) || preferred.isSpecial) rethrow;
+        if (requiresVerification(e) || preferredQuality.isSpecial) rethrow;
         // 其它错误回退 kapi 再试
       } catch (e) {
         // V34-02（v3.4 审查①，P1）：直连的**网络异常**（DioException/
@@ -240,10 +248,10 @@ class PlayerRepository {
         // v5.3 B-05：保留原始异常形态——非 ApiException 的网络异常包装
         // 时把原文放进 message（上游 KgClient 若带 ssaCode 的包装形态，
         // 由 requiresVerification 判定链处理），不再抹平丢失。
-        throw ApiException(-1, '音质 ${preferred.value} 解析失败：$e');
+        throw ApiException(-1, '音质 ${preferredQuality.value} 解析失败：$e');
       }
     }
-    return _resolveViaKapi(song, preferred: preferred);
+    return _resolveViaKapi(song, preferred: preferredQuality);
   }
 
   /// 直连解析：按音质降级，命中权益不足才抛错。
