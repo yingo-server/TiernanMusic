@@ -984,3 +984,10 @@ CI 终验与 release 产出由定时任务 660af9b0 处理。
 - 版本 5.0.0+50 与 tag 同名；main/tag CI 双绿；架构断言 PASS
 - 七步重构 M1–M7 全部完成并随本发布交付
 - 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v5.0.0/app-arm64-v8a-release.apk
+
+## v5.1 全功能交叉审查启动（8 批 × 3 代理 = 24）
+
+- 机制：同批三代理**同范围不同视角**（A 功能正确性 / B 鲁棒与质量 / C 用户路径与一致性），主代理合并为共识报告并裁决矛盾
+- 规范：docs/TASK_v51_cross_common.md（33 条原则、完整 file_read、实时落盘、只报问题不修复、逐文件 analyze 贴结果、禁装 SDK/改 pubspec）
+- 批次：docs/TASK_v51_batches.md（B1 foundation/domain/api → B8 UI/i18n）
+- 节奏：批间串行、批内 3 并发；一批三份齐 → 合并 → P0/P1 亲修 → 下一批；8 批完成发 v5.1.0
