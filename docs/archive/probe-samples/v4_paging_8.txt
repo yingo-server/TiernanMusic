@@ -1,0 +1,431 @@
+参数: pagesize=10, 485首→49页(末页5首), 请求页 1,2,3,4,5,44,45,46,47,48,49 (共11次)
+页长度: p1=10, p2=10, p3=10, p4=10, p5=10, p44=10, p45=10, p46=10, p47=10, p48=10, p49=5
+页状态: p1:status=1,err=0,count=485, p2:status=1,err=0,count=485, p3:status=1,err=0,count=485, p4:status=1,err=0,count=485, p5:status=1,err=0,count=485, p44:status=1,err=0,count=485, p45:status=1,err=0,count=485, p46:status=1,err=0,count=485, p47:status=1,err=0,count=485, p48:status=1,err=0,count=485, p49:status=1,err=0,count=485
+
+===== 前50 × 正正 （页序正 + 页内正）=====
+ 1. 一只白羊 - 坠落.mp3
+ 2. TheFatRat - Xenogenesis.mp3
+ 3. XloveSF - Sea Of Problems.mp3
+ 4. 鹭起Herons - The Change.mp3
+ 5. Alan Walker、Noah Cyrus、Digital Farm Animals、Juliander - All Falls Down.mp3
+ 6. Key Sounds Label - Bloom of Youth.mp3
+ 7. creamy、Martin Arteta、11:11 Music Group - Past Lives.mp3
+ 8. 阿南亮子 - Refrain.mp3
+ 9. Oh The Larceny - This Is It.mp3
+10. dylanf - 天气之子幻 (钢琴版).mp3
+11. AEC - 副本即将崩塌.mp3
+12. Lizz Robinett - Senbonzakura.mp3
+13. 指尖笑 - 名利场.mp3
+14. TypeD - 天气之子·幻.mp3
+15. Yulyna - 破旧世界 (高燃钢琴版).mp3
+16. 羽肿 - Windy Hill (风之谷).mp3
+17. Thomas Bergersen - Victory.mp3
+18. Two Steps From Hell、Thomas Bergersen - Star Sky.mp3
+19. DJ铁柱 - 终焉之地.mp3
+20. Lazer Boomerang - Time to Pretend.mp3
+21. Two Steps From Hell - For The Win.mp3
+22. Dion Timmer、The Arcturians - The Best Of Me.mp3
+23. Jordan Lee - windows redzone.mp3
+24. Delta Heavy - S.T.A.Y. (Delta Heavy Tribute).mp3
+25. 网络歌手 - Take Me Hand.mp3
+26. 陈粒 - 虚拟.mp3
+27. 芳冽、不是黑籽儿、正版Devil、车厘子小七、青山怀竹 - 寂灭终日(《十日终焉》原创群像曲).mp3
+28. 喵酱油 - 十日终焉 (《十日终焉》同名纪念曲).mp3
+29. Fall Out Boy - My Songs Know What You Did In The Dark Light Em Up.mp3
+30. 花粥、王胜娚 - 出山.mp3
+31. Kelly Clarkson - Catch My Breath.mp3
+32. DJ OKAWARI - Luv Letter (情书).mp3
+33. Approaching Nirvana - You.mp3
+34. 顾书心 - 月光奏鸣曲 第一乐章 (升C小调第十四号奏鸣曲).mp3
+35. 鹭起Herons - 風の記憶 (风的记忆)(Reproduced).mp3
+36. Yue Li Mei、The Soul of Wind - The History (Flute).mp3
+37. K-391、Alan Walker、Julie Bergan、胜利 - Ignite.mp3
+38. Nick Strand、Hoaprox、Mio - With You (Ngẫu Hứng).mp3
+39. NAWZAT、HMHK、Bagrax - Space Drive.mp3
+40. Zella Day - East of Eden.mp3
+41. Ava Max - Salt.mp3
+42. Bemax - Sea of Tranquility.mp3
+43. Nebula - SuNian (手碟空灵版).mp3
+44. Mono Inc.、Martin Engler - Children of the Dark(2021).mp3
+45. TypeD、Veysigz - My Way (风可以越过荆棘).mp3
+46. 卢润泽 - 土坡上的狗尾草.mp3
+47. TheFatRat - Unity.mp3
+48. 欧美群星 & Ola - Sustain (宿命感).mp3
+49. Martins Garix - X-GALACTICO (超燃人类进化小曲).mp3
+50. 小曲儿、oneone晚晚 - 嘲 (小说(我不是戏神)有声书官方推广曲).mp3
+条数=50 去重=50 重复=0 首=一只白羊 - 坠落.mp3 末=小曲儿、oneone晚晚 - 嘲 (小说(我不是戏神)有声书官方推广曲).mp3
+
+===== 前50 × 正反 （页序正 + 页内倒）=====
+ 1. dylanf - 天气之子幻 (钢琴版).mp3
+ 2. Oh The Larceny - This Is It.mp3
+ 3. 阿南亮子 - Refrain.mp3
+ 4. creamy、Martin Arteta、11:11 Music Group - Past Lives.mp3
+ 5. Key Sounds Label - Bloom of Youth.mp3
+ 6. Alan Walker、Noah Cyrus、Digital Farm Animals、Juliander - All Falls Down.mp3
+ 7. 鹭起Herons - The Change.mp3
+ 8. XloveSF - Sea Of Problems.mp3
+ 9. TheFatRat - Xenogenesis.mp3
+10. 一只白羊 - 坠落.mp3
+11. Lazer Boomerang - Time to Pretend.mp3
+12. DJ铁柱 - 终焉之地.mp3
+13. Two Steps From Hell、Thomas Bergersen - Star Sky.mp3
+14. Thomas Bergersen - Victory.mp3
+15. 羽肿 - Windy Hill (风之谷).mp3
+16. Yulyna - 破旧世界 (高燃钢琴版).mp3
+17. TypeD - 天气之子·幻.mp3
+18. 指尖笑 - 名利场.mp3
+19. Lizz Robinett - Senbonzakura.mp3
+20. AEC - 副本即将崩塌.mp3
+21. 花粥、王胜娚 - 出山.mp3
+22. Fall Out Boy - My Songs Know What You Did In The Dark Light Em Up.mp3
+23. 喵酱油 - 十日终焉 (《十日终焉》同名纪念曲).mp3
+24. 芳冽、不是黑籽儿、正版Devil、车厘子小七、青山怀竹 - 寂灭终日(《十日终焉》原创群像曲).mp3
+25. 陈粒 - 虚拟.mp3
+26. 网络歌手 - Take Me Hand.mp3
+27. Delta Heavy - S.T.A.Y. (Delta Heavy Tribute).mp3
+28. Jordan Lee - windows redzone.mp3
+29. Dion Timmer、The Arcturians - The Best Of Me.mp3
+30. Two Steps From Hell - For The Win.mp3
+31. Zella Day - East of Eden.mp3
+32. NAWZAT、HMHK、Bagrax - Space Drive.mp3
+33. Nick Strand、Hoaprox、Mio - With You (Ngẫu Hứng).mp3
+34. K-391、Alan Walker、Julie Bergan、胜利 - Ignite.mp3
+35. Yue Li Mei、The Soul of Wind - The History (Flute).mp3
+36. 鹭起Herons - 風の記憶 (风的记忆)(Reproduced).mp3
+37. 顾书心 - 月光奏鸣曲 第一乐章 (升C小调第十四号奏鸣曲).mp3
+38. Approaching Nirvana - You.mp3
+39. DJ OKAWARI - Luv Letter (情书).mp3
+40. Kelly Clarkson - Catch My Breath.mp3
+41. 小曲儿、oneone晚晚 - 嘲 (小说(我不是戏神)有声书官方推广曲).mp3
+42. Martins Garix - X-GALACTICO (超燃人类进化小曲).mp3
+43. 欧美群星 & Ola - Sustain (宿命感).mp3
+44. TheFatRat - Unity.mp3
+45. 卢润泽 - 土坡上的狗尾草.mp3
+46. TypeD、Veysigz - My Way (风可以越过荆棘).mp3
+47. Mono Inc.、Martin Engler - Children of the Dark(2021).mp3
+48. Nebula - SuNian (手碟空灵版).mp3
+49. Bemax - Sea of Tranquility.mp3
+50. Ava Max - Salt.mp3
+条数=50 去重=50 重复=0 首=dylanf - 天气之子幻 (钢琴版).mp3 末=Ava Max - Salt.mp3
+
+===== 前50 × 反正 （页序倒 + 页内正）=====
+ 1. Ava Max - Salt.mp3
+ 2. Bemax - Sea of Tranquility.mp3
+ 3. Nebula - SuNian (手碟空灵版).mp3
+ 4. Mono Inc.、Martin Engler - Children of the Dark(2021).mp3
+ 5. TypeD、Veysigz - My Way (风可以越过荆棘).mp3
+ 6. 卢润泽 - 土坡上的狗尾草.mp3
+ 7. TheFatRat - Unity.mp3
+ 8. 欧美群星 & Ola - Sustain (宿命感).mp3
+ 9. Martins Garix - X-GALACTICO (超燃人类进化小曲).mp3
+10. 小曲儿、oneone晚晚 - 嘲 (小说(我不是戏神)有声书官方推广曲).mp3
+11. Kelly Clarkson - Catch My Breath.mp3
+12. DJ OKAWARI - Luv Letter (情书).mp3
+13. Approaching Nirvana - You.mp3
+14. 顾书心 - 月光奏鸣曲 第一乐章 (升C小调第十四号奏鸣曲).mp3
+15. 鹭起Herons - 風の記憶 (风的记忆)(Reproduced).mp3
+16. Yue Li Mei、The Soul of Wind - The History (Flute).mp3
+17. K-391、Alan Walker、Julie Bergan、胜利 - Ignite.mp3
+18. Nick Strand、Hoaprox、Mio - With You (Ngẫu Hứng).mp3
+19. NAWZAT、HMHK、Bagrax - Space Drive.mp3
+20. Zella Day - East of Eden.mp3
+21. Two Steps From Hell - For The Win.mp3
+22. Dion Timmer、The Arcturians - The Best Of Me.mp3
+23. Jordan Lee - windows redzone.mp3
+24. Delta Heavy - S.T.A.Y. (Delta Heavy Tribute).mp3
+25. 网络歌手 - Take Me Hand.mp3
+26. 陈粒 - 虚拟.mp3
+27. 芳冽、不是黑籽儿、正版Devil、车厘子小七、青山怀竹 - 寂灭终日(《十日终焉》原创群像曲).mp3
+28. 喵酱油 - 十日终焉 (《十日终焉》同名纪念曲).mp3
+29. Fall Out Boy - My Songs Know What You Did In The Dark Light Em Up.mp3
+30. 花粥、王胜娚 - 出山.mp3
+31. AEC - 副本即将崩塌.mp3
+32. Lizz Robinett - Senbonzakura.mp3
+33. 指尖笑 - 名利场.mp3
+34. TypeD - 天气之子·幻.mp3
+35. Yulyna - 破旧世界 (高燃钢琴版).mp3
+36. 羽肿 - Windy Hill (风之谷).mp3
+37. Thomas Bergersen - Victory.mp3
+38. Two Steps From Hell、Thomas Bergersen - Star Sky.mp3
+39. DJ铁柱 - 终焉之地.mp3
+40. Lazer Boomerang - Time to Pretend.mp3
+41. 一只白羊 - 坠落.mp3
+42. TheFatRat - Xenogenesis.mp3
+43. XloveSF - Sea Of Problems.mp3
+44. 鹭起Herons - The Change.mp3
+45. Alan Walker、Noah Cyrus、Digital Farm Animals、Juliander - All Falls Down.mp3
+46. Key Sounds Label - Bloom of Youth.mp3
+47. creamy、Martin Arteta、11:11 Music Group - Past Lives.mp3
+48. 阿南亮子 - Refrain.mp3
+49. Oh The Larceny - This Is It.mp3
+50. dylanf - 天气之子幻 (钢琴版).mp3
+条数=50 去重=50 重复=0 首=Ava Max - Salt.mp3 末=dylanf - 天气之子幻 (钢琴版).mp3
+
+===== 前50 × 反反 （页序倒 + 页内倒）=====
+ 1. 小曲儿、oneone晚晚 - 嘲 (小说(我不是戏神)有声书官方推广曲).mp3
+ 2. Martins Garix - X-GALACTICO (超燃人类进化小曲).mp3
+ 3. 欧美群星 & Ola - Sustain (宿命感).mp3
+ 4. TheFatRat - Unity.mp3
+ 5. 卢润泽 - 土坡上的狗尾草.mp3
+ 6. TypeD、Veysigz - My Way (风可以越过荆棘).mp3
+ 7. Mono Inc.、Martin Engler - Children of the Dark(2021).mp3
+ 8. Nebula - SuNian (手碟空灵版).mp3
+ 9. Bemax - Sea of Tranquility.mp3
+10. Ava Max - Salt.mp3
+11. Zella Day - East of Eden.mp3
+12. NAWZAT、HMHK、Bagrax - Space Drive.mp3
+13. Nick Strand、Hoaprox、Mio - With You (Ngẫu Hứng).mp3
+14. K-391、Alan Walker、Julie Bergan、胜利 - Ignite.mp3
+15. Yue Li Mei、The Soul of Wind - The History (Flute).mp3
+16. 鹭起Herons - 風の記憶 (风的记忆)(Reproduced).mp3
+17. 顾书心 - 月光奏鸣曲 第一乐章 (升C小调第十四号奏鸣曲).mp3
+18. Approaching Nirvana - You.mp3
+19. DJ OKAWARI - Luv Letter (情书).mp3
+20. Kelly Clarkson - Catch My Breath.mp3
+21. 花粥、王胜娚 - 出山.mp3
+22. Fall Out Boy - My Songs Know What You Did In The Dark Light Em Up.mp3
+23. 喵酱油 - 十日终焉 (《十日终焉》同名纪念曲).mp3
+24. 芳冽、不是黑籽儿、正版Devil、车厘子小七、青山怀竹 - 寂灭终日(《十日终焉》原创群像曲).mp3
+25. 陈粒 - 虚拟.mp3
+26. 网络歌手 - Take Me Hand.mp3
+27. Delta Heavy - S.T.A.Y. (Delta Heavy Tribute).mp3
+28. Jordan Lee - windows redzone.mp3
+29. Dion Timmer、The Arcturians - The Best Of Me.mp3
+30. Two Steps From Hell - For The Win.mp3
+31. Lazer Boomerang - Time to Pretend.mp3
+32. DJ铁柱 - 终焉之地.mp3
+33. Two Steps From Hell、Thomas Bergersen - Star Sky.mp3
+34. Thomas Bergersen - Victory.mp3
+35. 羽肿 - Windy Hill (风之谷).mp3
+36. Yulyna - 破旧世界 (高燃钢琴版).mp3
+37. TypeD - 天气之子·幻.mp3
+38. 指尖笑 - 名利场.mp3
+39. Lizz Robinett - Senbonzakura.mp3
+40. AEC - 副本即将崩塌.mp3
+41. dylanf - 天气之子幻 (钢琴版).mp3
+42. Oh The Larceny - This Is It.mp3
+43. 阿南亮子 - Refrain.mp3
+44. creamy、Martin Arteta、11:11 Music Group - Past Lives.mp3
+45. Key Sounds Label - Bloom of Youth.mp3
+46. Alan Walker、Noah Cyrus、Digital Farm Animals、Juliander - All Falls Down.mp3
+47. 鹭起Herons - The Change.mp3
+48. XloveSF - Sea Of Problems.mp3
+49. TheFatRat - Xenogenesis.mp3
+50. 一只白羊 - 坠落.mp3
+条数=50 去重=50 重复=0 首=小曲儿、oneone晚晚 - 嘲 (小说(我不是戏神)有声书官方推广曲).mp3 末=一只白羊 - 坠落.mp3
+
+===== 后50 × 正正 （页序正 + 页内正）=====
+ 1. The Hubbub - Love Is Gone (Remix).mp3
+ 2. Dxrk ダーク - RAVE (锐舞).mp3
+ 3. Lightscape - Collapsing World.mp3
+ 4. Sean Lennon - Elsinore Revisited.mp3
+ 5. 南瓜饼 - 山海皆可平.mp3
+ 6. 三亩地 - 城南花已开.mp3
+ 7. Yi Chou - Call of Silence (钢琴版).mp3
+ 8. 纯音乐 - 浮光 (笛子版).mp3
+ 9. 森林 - 安妮的仙境.mp3
+10. 如履薄冰 - void.mp3
+11. m-taku - Komorebi (叶隙间洒落的阳光).mp3
+12. 魔鬼花园_李安健 - 破旧世界 (片段).mp3
+13. MDP - Fake Love (Orchestral Version|No Choir).mp3
+14. 曲婉婷 - Jar Of Love (Album Version).mp3
+15. Reach Me - Flower Dance (纯钢琴).mp3
+16. Professor Green - In The Shadow Of The Sun.mp3
+17. 路灰气球 - 北冥.mp3
+18. 周柃Kapito - 万物起舞.mp3
+19. 徐梦圆 - China-P.mp3
+20. Ludovico Einaudi、Daniel Hope、I Virtuosi Italiani - Experience (经验).mp3
+21. 攸 - Masquerade.mp3
+22. Backing Business - Masquerade (Originally Performed by Lindsey Stirling)(Instrumental Version).mp3
+23. The xx - Intro.mp3
+24. 小少焱 - 李太白.mp3
+25. Max Elto - Shadow of the Sun.mp3
+26. 徐梦圆 - China-X.mp3
+27. 黑鸭子演唱组 - 山楂树.mp3
+28. 赖美云 - 萱草花.mp3
+29. Alan Walker - Faded.mp3
+30. 旺仔小乔 - 雾里 (女版).mp3
+31. Sounds Effects Wav Files Studio - Sound Effect of Nuclear Alarm.mp3
+32. 李常超（Lao乾妈） - 盗墓笔记·十年人间.mp3
+33. DarioVan - Ryukyuvania (DrVan's tk).mp3
+34. 徐梦圆 - color-X.mp3
+35. Darin - Be What You Wanna Be.mp3
+36. hanser - 白衣被告.mp3
+37. 徐梦圆 - CHINA-春风.mp3
+38. 吕嘉慧 - 乌鸦坐神台.mp3
+39. 指尖笑 - 不问别离.mp3
+40. 牛尾憲輔 - Night Crusing(夜间巡航) (纯音乐版).mp3
+41. 徐梦圆 - ninelie (Easylistening).mp3
+42. Fitz and The Tantrums - HandClap.mp3
+43. HOYO-MiX - 月宫试云衣 The Lunar Palace Draped in Clouds.mp3
+44. Çeşitli Sanatçılar - L'internationale.mp3
+45. 周深 - 大鱼.mp3
+46. 中国人民解放军军乐团 - 国际歌 (合唱版).mp3
+47. HOYO-MiX - 子不语 Wordless.mp3
+48. Blanke、Luma、Luma - Survive.mp3
+49. 尚雯婕、HOYO-MiX - 轻涟 La vaguelette.mp3
+50. HOYO-MiX - 翦玉令·燕辞归 Tune: "Sheared Jade" - Return of the Swallow.mp3
+条数=50 去重=50 重复=0 首=The Hubbub - Love Is Gone (Remix).mp3 末=HOYO-MiX - 翦玉令·燕辞归 Tune: "Sheared Jade" - Return of the Swallow.mp3
+
+===== 后50 × 正反 （页序正 + 页内倒）=====
+ 1. 南瓜饼 - 山海皆可平.mp3
+ 2. Sean Lennon - Elsinore Revisited.mp3
+ 3. Lightscape - Collapsing World.mp3
+ 4. Dxrk ダーク - RAVE (锐舞).mp3
+ 5. The Hubbub - Love Is Gone (Remix).mp3
+ 6. Reach Me - Flower Dance (纯钢琴).mp3
+ 7. 曲婉婷 - Jar Of Love (Album Version).mp3
+ 8. MDP - Fake Love (Orchestral Version|No Choir).mp3
+ 9. 魔鬼花园_李安健 - 破旧世界 (片段).mp3
+10. m-taku - Komorebi (叶隙间洒落的阳光).mp3
+11. 如履薄冰 - void.mp3
+12. 森林 - 安妮的仙境.mp3
+13. 纯音乐 - 浮光 (笛子版).mp3
+14. Yi Chou - Call of Silence (钢琴版).mp3
+15. 三亩地 - 城南花已开.mp3
+16. Max Elto - Shadow of the Sun.mp3
+17. 小少焱 - 李太白.mp3
+18. The xx - Intro.mp3
+19. Backing Business - Masquerade (Originally Performed by Lindsey Stirling)(Instrumental Version).mp3
+20. 攸 - Masquerade.mp3
+21. Ludovico Einaudi、Daniel Hope、I Virtuosi Italiani - Experience (经验).mp3
+22. 徐梦圆 - China-P.mp3
+23. 周柃Kapito - 万物起舞.mp3
+24. 路灰气球 - 北冥.mp3
+25. Professor Green - In The Shadow Of The Sun.mp3
+26. Darin - Be What You Wanna Be.mp3
+27. 徐梦圆 - color-X.mp3
+28. DarioVan - Ryukyuvania (DrVan's tk).mp3
+29. 李常超（Lao乾妈） - 盗墓笔记·十年人间.mp3
+30. Sounds Effects Wav Files Studio - Sound Effect of Nuclear Alarm.mp3
+31. 旺仔小乔 - 雾里 (女版).mp3
+32. Alan Walker - Faded.mp3
+33. 赖美云 - 萱草花.mp3
+34. 黑鸭子演唱组 - 山楂树.mp3
+35. 徐梦圆 - China-X.mp3
+36. 周深 - 大鱼.mp3
+37. Çeşitli Sanatçılar - L'internationale.mp3
+38. HOYO-MiX - 月宫试云衣 The Lunar Palace Draped in Clouds.mp3
+39. Fitz and The Tantrums - HandClap.mp3
+40. 徐梦圆 - ninelie (Easylistening).mp3
+41. 牛尾憲輔 - Night Crusing(夜间巡航) (纯音乐版).mp3
+42. 指尖笑 - 不问别离.mp3
+43. 吕嘉慧 - 乌鸦坐神台.mp3
+44. 徐梦圆 - CHINA-春风.mp3
+45. hanser - 白衣被告.mp3
+46. HOYO-MiX - 翦玉令·燕辞归 Tune: "Sheared Jade" - Return of the Swallow.mp3
+47. 尚雯婕、HOYO-MiX - 轻涟 La vaguelette.mp3
+48. Blanke、Luma、Luma - Survive.mp3
+49. HOYO-MiX - 子不语 Wordless.mp3
+50. 中国人民解放军军乐团 - 国际歌 (合唱版).mp3
+条数=50 去重=50 重复=0 首=南瓜饼 - 山海皆可平.mp3 末=中国人民解放军军乐团 - 国际歌 (合唱版).mp3
+
+===== 后50 × 反正 （页序倒 + 页内正）=====
+ 1. 中国人民解放军军乐团 - 国际歌 (合唱版).mp3
+ 2. HOYO-MiX - 子不语 Wordless.mp3
+ 3. Blanke、Luma、Luma - Survive.mp3
+ 4. 尚雯婕、HOYO-MiX - 轻涟 La vaguelette.mp3
+ 5. HOYO-MiX - 翦玉令·燕辞归 Tune: "Sheared Jade" - Return of the Swallow.mp3
+ 6. hanser - 白衣被告.mp3
+ 7. 徐梦圆 - CHINA-春风.mp3
+ 8. 吕嘉慧 - 乌鸦坐神台.mp3
+ 9. 指尖笑 - 不问别离.mp3
+10. 牛尾憲輔 - Night Crusing(夜间巡航) (纯音乐版).mp3
+11. 徐梦圆 - ninelie (Easylistening).mp3
+12. Fitz and The Tantrums - HandClap.mp3
+13. HOYO-MiX - 月宫试云衣 The Lunar Palace Draped in Clouds.mp3
+14. Çeşitli Sanatçılar - L'internationale.mp3
+15. 周深 - 大鱼.mp3
+16. 徐梦圆 - China-X.mp3
+17. 黑鸭子演唱组 - 山楂树.mp3
+18. 赖美云 - 萱草花.mp3
+19. Alan Walker - Faded.mp3
+20. 旺仔小乔 - 雾里 (女版).mp3
+21. Sounds Effects Wav Files Studio - Sound Effect of Nuclear Alarm.mp3
+22. 李常超（Lao乾妈） - 盗墓笔记·十年人间.mp3
+23. DarioVan - Ryukyuvania (DrVan's tk).mp3
+24. 徐梦圆 - color-X.mp3
+25. Darin - Be What You Wanna Be.mp3
+26. Professor Green - In The Shadow Of The Sun.mp3
+27. 路灰气球 - 北冥.mp3
+28. 周柃Kapito - 万物起舞.mp3
+29. 徐梦圆 - China-P.mp3
+30. Ludovico Einaudi、Daniel Hope、I Virtuosi Italiani - Experience (经验).mp3
+31. 攸 - Masquerade.mp3
+32. Backing Business - Masquerade (Originally Performed by Lindsey Stirling)(Instrumental Version).mp3
+33. The xx - Intro.mp3
+34. 小少焱 - 李太白.mp3
+35. Max Elto - Shadow of the Sun.mp3
+36. 三亩地 - 城南花已开.mp3
+37. Yi Chou - Call of Silence (钢琴版).mp3
+38. 纯音乐 - 浮光 (笛子版).mp3
+39. 森林 - 安妮的仙境.mp3
+40. 如履薄冰 - void.mp3
+41. m-taku - Komorebi (叶隙间洒落的阳光).mp3
+42. 魔鬼花园_李安健 - 破旧世界 (片段).mp3
+43. MDP - Fake Love (Orchestral Version|No Choir).mp3
+44. 曲婉婷 - Jar Of Love (Album Version).mp3
+45. Reach Me - Flower Dance (纯钢琴).mp3
+46. The Hubbub - Love Is Gone (Remix).mp3
+47. Dxrk ダーク - RAVE (锐舞).mp3
+48. Lightscape - Collapsing World.mp3
+49. Sean Lennon - Elsinore Revisited.mp3
+50. 南瓜饼 - 山海皆可平.mp3
+条数=50 去重=50 重复=0 首=中国人民解放军军乐团 - 国际歌 (合唱版).mp3 末=南瓜饼 - 山海皆可平.mp3
+
+===== 后50 × 反反 （页序倒 + 页内倒）=====
+ 1. HOYO-MiX - 翦玉令·燕辞归 Tune: "Sheared Jade" - Return of the Swallow.mp3
+ 2. 尚雯婕、HOYO-MiX - 轻涟 La vaguelette.mp3
+ 3. Blanke、Luma、Luma - Survive.mp3
+ 4. HOYO-MiX - 子不语 Wordless.mp3
+ 5. 中国人民解放军军乐团 - 国际歌 (合唱版).mp3
+ 6. 周深 - 大鱼.mp3
+ 7. Çeşitli Sanatçılar - L'internationale.mp3
+ 8. HOYO-MiX - 月宫试云衣 The Lunar Palace Draped in Clouds.mp3
+ 9. Fitz and The Tantrums - HandClap.mp3
+10. 徐梦圆 - ninelie (Easylistening).mp3
+11. 牛尾憲輔 - Night Crusing(夜间巡航) (纯音乐版).mp3
+12. 指尖笑 - 不问别离.mp3
+13. 吕嘉慧 - 乌鸦坐神台.mp3
+14. 徐梦圆 - CHINA-春风.mp3
+15. hanser - 白衣被告.mp3
+16. Darin - Be What You Wanna Be.mp3
+17. 徐梦圆 - color-X.mp3
+18. DarioVan - Ryukyuvania (DrVan's tk).mp3
+19. 李常超（Lao乾妈） - 盗墓笔记·十年人间.mp3
+20. Sounds Effects Wav Files Studio - Sound Effect of Nuclear Alarm.mp3
+21. 旺仔小乔 - 雾里 (女版).mp3
+22. Alan Walker - Faded.mp3
+23. 赖美云 - 萱草花.mp3
+24. 黑鸭子演唱组 - 山楂树.mp3
+25. 徐梦圆 - China-X.mp3
+26. Max Elto - Shadow of the Sun.mp3
+27. 小少焱 - 李太白.mp3
+28. The xx - Intro.mp3
+29. Backing Business - Masquerade (Originally Performed by Lindsey Stirling)(Instrumental Version).mp3
+30. 攸 - Masquerade.mp3
+31. Ludovico Einaudi、Daniel Hope、I Virtuosi Italiani - Experience (经验).mp3
+32. 徐梦圆 - China-P.mp3
+33. 周柃Kapito - 万物起舞.mp3
+34. 路灰气球 - 北冥.mp3
+35. Professor Green - In The Shadow Of The Sun.mp3
+36. Reach Me - Flower Dance (纯钢琴).mp3
+37. 曲婉婷 - Jar Of Love (Album Version).mp3
+38. MDP - Fake Love (Orchestral Version|No Choir).mp3
+39. 魔鬼花园_李安健 - 破旧世界 (片段).mp3
+40. m-taku - Komorebi (叶隙间洒落的阳光).mp3
+41. 如履薄冰 - void.mp3
+42. 森林 - 安妮的仙境.mp3
+43. 纯音乐 - 浮光 (笛子版).mp3
+44. Yi Chou - Call of Silence (钢琴版).mp3
+45. 三亩地 - 城南花已开.mp3
+46. 南瓜饼 - 山海皆可平.mp3
+47. Sean Lennon - Elsinore Revisited.mp3
+48. Lightscape - Collapsing World.mp3
+49. Dxrk ダーク - RAVE (锐舞).mp3
+50. The Hubbub - Love Is Gone (Remix).mp3
+条数=50 去重=50 重复=0 首=HOYO-MiX - 翦玉令·燕辞归 Tune: "Sheared Jade" - Return of the Swallow.mp3 末=The Hubbub - Love Is Gone (Remix).mp3
+
+前50 四种拼法集合相同: True
+后50 四种拼法集合相同: True
+前50∩后50 交集: 0 (应为0)

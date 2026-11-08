@@ -1,0 +1,149 @@
+{
+ "user_1": {
+  "listid": "1",
+  "gid": "collection_3_1666835066_1_0",
+  "name": "默认收藏",
+  "pages": [
+   {
+    "page": 1,
+    "status": 1,
+    "error_code": 0,
+    "count": 18,
+    "total": null,
+    "hashes": [
+     "936C261D93A6A66F481C9D09EBBA4C14",
+     "B0A907B0B67F3282B190D601FFC4D24B",
+     "E04E470030E0378A4778674BFCCC9941",
+     "A66D0ADADD6E2477D246366F2716D751",
+     "F0AE7CF4274AC4B51D3A27A0AE1491B5"
+    ]
+   },
+   {
+    "page": 2,
+    "status": 1,
+    "error_code": 0,
+    "count": 18,
+    "total": null,
+    "hashes": [
+     "61FC5D846FFD3860DB8AD84DFD9A3359",
+     "76BABB57AB736A8922E14B663DA6F356",
+     "3BBE66E41A9360517266DC7F307E9C8B",
+     "6D8CF63DEAED91872604BFFB02117C39",
+     "F28AE2729797DBC066D007CE36686713"
+    ]
+   },
+   {
+    "page": 3,
+    "status": 1,
+    "error_code": 0,
+    "count": 18,
+    "total": null,
+    "hashes": [
+     "5BD1301B44C93F71F90D832CB17C6448",
+     "70380255FE5DF8DC1D450759F21BE294",
+     "75068329A57630BA9B68DA386EEE54A1",
+     "04C03E21B15769C341E65D464325925A",
+     "4B88DC5603F0705A9F413DA27508F3D7"
+    ]
+   }
+  ]
+ },
+ "user_2": {
+  "listid": "2",
+  "gid": "collection_3_1666835066_2_0",
+  "name": "我喜欢",
+  "pages": [
+   {
+    "page": 1,
+    "status": 1,
+    "error_code": 0,
+    "count": 485,
+    "total": null,
+    "hashes": [
+     "CF296F8D04B705614465E7769833D93D",
+     "3312ACD9DBD16788D5ABCA9D8BE4BD2E",
+     "FDA717745535633DC57CD01118519CCC",
+     "BF579E1031A68EC7CF5CCF8F2932CB76",
+     "2A82C1BE44CCEF00FA0C83975FC8FF27"
+    ]
+   },
+   {
+    "page": 2,
+    "status": 1,
+    "error_code": 0,
+    "count": 485,
+    "total": null,
+    "hashes": [
+     "B950D223F69F57C58052B7B8C430B0BE",
+     "1DEE52F2407F106802143DE97249C32B",
+     "97EBD3C92C677D6B6AB5E80F42248C66",
+     "11F8A7E8640D6EC656D60B46EE054943",
+     "EA1F48B8DA601D2582AE4A04BF726D0F"
+    ]
+   },
+   {
+    "page": 3,
+    "status": 1,
+    "error_code": 0,
+    "count": 485,
+    "total": null,
+    "hashes": [
+     "F4E465BEDC3DEC1D19F13BB94ABFDB6D",
+     "BB908D4459D3223081741FF3B02F974D",
+     "3D59A8BA8BA6E1C65AAF2CD8568B60B8",
+     "5AB0EE1383ECE201B96A0B92234B40FC",
+     "46F91255740404C40E1CFB68CA5192F3"
+    ]
+   }
+  ]
+ },
+ "user_25": {
+  "listid": "25",
+  "gid": "collection_3_1666835066_25_0",
+  "name": "原神-皎月云间之梦 Jade Moon Upon a Sea of Clouds",
+  "pages": [
+   {
+    "page": 1,
+    "status": 1,
+    "error_code": 0,
+    "count": 50,
+    "total": null,
+    "hashes": [
+     "79CD9FFC0C8468D47A2E2F715BD3E3E1",
+     "6FF81BC366C3E5B2A625DD69D380BEE0",
+     "C14C5ADD03C312162DD293377E94E523",
+     "202343331D27B21A7BB04CFC2D170238",
+     "CF7475840A5F848BA996AEC819164D57"
+    ]
+   },
+   {
+    "page": 2,
+    "status": 1,
+    "error_code": 0,
+    "count": 50,
+    "total": null,
+    "hashes": [
+     "0D68B60CAA2EC05030EE8E45DEC1643B",
+     "945B6758F5D7DE82AD9FC8D0FE714C5D",
+     "B83511C2EA838901A17A8CFF3E949F8C",
+     "371E3BBA0C82FF1D4C61FFCEB8A0F40E",
+     "27C07971F7597B90E435C9E7A7158609"
+    ]
+   },
+   {
+    "page": 3,
+    "status": 1,
+    "error_code": 0,
+    "count": 50,
+    "total": null,
+    "hashes": [
+     "5F5C7271C3201A191C68D331B9B15B18",
+     "6EE7BDA8FA2979C8A828D18906B01054",
+     "643A8515002435078891141909349C80",
+     "EF18C39F74EDA7DE2BC9A2631F6ED04A",
+     "C676D62080CFB82271FE829F4E0FF6ED"
+    ]
+   }
+  ]
+ }
+}

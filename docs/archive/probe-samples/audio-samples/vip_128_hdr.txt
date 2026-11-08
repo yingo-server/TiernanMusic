@@ -1,0 +1,20 @@
+HTTP/1.1 206 Partial Content
+Date: Sat, 07 Nov 2026 02:45:01 GMT
+Content-Type: audio/mpeg
+Content-Length: 65536
+Connection: keep-alive
+Server: openresty
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET,POST,PUT,OPTIONS,HEAD,DELETE
+Access-Control-Allow-Headers: Keep-Alive,User-Agent,If-Modified-Since,If-None-Match,Cache-Control,Content-Type,Authorization,Content-Length,Range,Host
+Allow: GET,POST,PUT,OPTIONS,HEAD,DELETE
+Access-Control-Allow-Credentials: true
+Access-Control-Expose-Headers: Content-Length,Content-Range
+Last-Modified: Thu, 23 Oct 2025 14:58:48 GMT
+Accept-Ranges: bytes
+Cache-Control: max-age=31536000
+x-via: 1.1 sx63:1 (Cdn Cache Server V2.0), 1.1 PS-NTG-01z9g171:6 (Cdn Cache Server V2.0), 1.1 PS-TNA-01CZl232:10 (Cdn Cache Server V2.0), 1.1 CS-FUO-01EfX29:8 (Cdn Cache Server V2.0)
+x-ws-request-id: 6aee90ad_CS-FUO-01EfX29_19623-14340
+Age: 13561510
+Content-Range: bytes 0-65535/4317292
+
