@@ -183,7 +183,7 @@ class _EngineErrorBanner extends ConsumerWidget {
                     minimumSize: const Size(48, 48),
                     visualDensity: VisualDensity.compact,
                     foregroundColor: theme.colorScheme.onErrorContainer),
-                onPressed: () => context
+                onPressed: () => ref
                     .read(playerControllerProvider)
                     .retry(),
                 child: Text(context.l10n.retry),
