@@ -1,4 +1,4 @@
-export '../../../../../core/domain/quality.dart';
+export '../../../core/domain/quality.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
