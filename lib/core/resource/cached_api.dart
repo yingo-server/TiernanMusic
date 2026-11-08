@@ -1,53 +1,22 @@
 import '../api/kugou_api_client.dart' show KugouApiClient;
 import '../cache/cache_keys.dart';
-import 'resource_cache.dart';
+import '../cache/resource_gateway.dart';
 
-/// v5.0 M3：Bridge-N 前置——API 调用聚合入口。
+/// v5.1 B3 三视角共识修复：**唯一读实现**。
 ///
-/// 全部键由 [cacheKey] 生成（唯一事实源），含 ns/userid/排序 query/schemaVer；
-/// POST 键补请求体摘要（此前 POST 只按 query 分键，不同 body 串数据）；
-/// 写操作禁止走本类（防重与异常翻译另有语义）。
+/// 此前 CachedApiCall 与 RepositoryReads 各自拼键/TTL/ns/失效，预加载键
+/// 永不命中、写后失效只清一侧。现在全部经 [ResourceGateway.json]，
+/// 键由 cache_keys.cacheKey 生成，TTL 由 cacheTtl(scope) 决定，
+/// 失效由 invalidateNs(ns) 精确删除（含内存层）。
+///
+/// 写操作禁止走本类（防重与异常契约另有语义）。
 class CachedApiCall {
   CachedApiCall(this._api, {this.ns = 'common'});
 
   final KugouApiClient _api;
-
-  /// 命名空间：写后失效按 ns 批量清理（第 23 条）。
   final String ns;
 
-  String _keyOf(String path, Map<String, dynamic>? query,
-      {Object? body, CacheScope? scope}) {
-    return cacheKey(
-      ns: ns,
-      scope: scope ?? CacheScope.json,
-      path: path,
-      query: query,
-      userid: _api.userid.isEmpty ? '0' : _api.userid,
-      extra: body == null ? null : _bodyDigest(body),
-    );
-  }
-
-  /// 请求体摘要：稳定 JSON 字符串（Map 键排序）取 FNV 短哈希，
-  /// 避免把 token/正文直接写进缓存键（第 14 条：缓存键不含凭证）。
-  String _bodyDigest(Object body) {
-    final s = body is String ? body : _stableJson(body);
-    var h = 0x811c9dc5;
-    for (final c in s.codeUnits) {
-      h ^= c & 0xff;
-      h = (h * 0x01000193) & 0xFFFFFFFF;
-    }
-    return h.toRadixString(16);
-  }
-
-  String _stableJson(Object v) {
-    if (v is Map) {
-      final keys = v.keys.map((k) => '$k').toList()..sort();
-      return '{${keys.map((k) => '"$k":${_stableJson(v[k] ?? '')}').join(',')}}';
-    }
-    if (v is Iterable) return '[${v.map((e) => _stableJson(e)).join(',')}]';
-    if (v is String) return '"$v"';
-    return '$v';
-  }
+  String get _userid => _api.userid.isEmpty ? '0' : _api.userid;
 
   Future<Map<String, dynamic>> get(
     String path, {
@@ -55,12 +24,18 @@ class CachedApiCall {
     Duration? ttl,
     bool stale = true,
   }) {
-    final scope = ttl == kListTtl ? CacheScope.list : CacheScope.json;
-    final key = _keyOf(path, query, scope: scope);
-    return ResourceCache.instance.json(
-      key,
-      () => _api.get(path, query: query),
-      ttl: ttl ?? kJsonTtl,
+    // ttl 参数保留兼容旧调用方；scope 由 ttl 是否为 90s 判定，
+    // 但**最终 TTL 仍取 cacheTtl(scope)**，不允许第二套数值口径。
+    final scope = ttl == cacheTtl(CacheScope.list)
+        ? CacheScope.list
+        : CacheScope.json;
+    return ResourceGateway.instance.json(
+      ns: ns,
+      scope: scope,
+      path: path,
+      query: query,
+      userid: _userid,
+      fetch: () => _api.get(path, query: query),
       staleOnError: stale,
     );
   }
@@ -72,13 +47,35 @@ class CachedApiCall {
     Duration? ttl,
     bool stale = true,
   }) {
-    final scope = ttl == kListTtl ? CacheScope.list : CacheScope.json;
-    final key = _keyOf(path, query, body: data, scope: scope);
-    return ResourceCache.instance.json(
-      key,
-      () => _api.post(path, data, query: query),
-      ttl: ttl ?? kJsonTtl,
+    final scope = ttl == cacheTtl(CacheScope.list)
+        ? CacheScope.list
+        : CacheScope.json;
+    return ResourceGateway.instance.json(
+      ns: ns,
+      scope: scope,
+      path: path,
+      query: query,
+      userid: _userid,
+      // POST 身份摘要：与 RepositoryReads 统一为 body 字符串（同一事实源）；
+      // 请求体不含凭证，缓存键不写敏感原文。
+      extra: data == null ? null : bodyIdentity(data),
+      fetch: () => _api.post(path, data, query: query),
       staleOnError: stale,
     );
+  }
+
+  /// 写后失效（与 RepositoryReads.invalidate 完全同一路径）。
+  Future<void> invalidate() => ResourceGateway.instance.invalidateNs(ns);
+
+  /// 稳定请求体身份：Map 键排序、Iterable 保序、字符串带类型标记。
+  /// 公开给 RepositoryReads 复用，保证 POST 读键完全一致（第 5 条）。
+  static String bodyIdentity(Object v) {
+    if (v is Map) {
+      final keys = v.keys.map((k) => '$k').toList()..sort();
+      return '{${keys.map((k) => '$k=${bodyIdentity(v[k] ?? '')}').join(',')}}';
+    }
+    if (v is Iterable) return '[${v.map((e) => bodyIdentity(e)).join(',')}]';
+    if (v is String) return 's:$v';
+    return '$v';
   }
 }

@@ -5,6 +5,8 @@
 /// 内部按 [CacheScope] 分派到 内存 / 磁盘 JSON / 永久文件三层。
 library;
 
+import 'dart:async';
+
 import '../resource/resource_cache.dart';
 import 'cache_keys.dart';
 
@@ -41,12 +43,19 @@ class ResourceGateway {
       userid: userid,
       extra: extra,
     );
+    // v5.1 B3-A：L1 内存层真正参与命中（此前声明三级实为两级）。
+    final mem = memoryGet<Map<String, dynamic>>(key);
+    if (mem != null) return Future<Map<String, dynamic>>.value(mem);
     return ResourceCache.instance.json(
       key,
       fetch,
       ttl: cacheTtl(scope),
       staleOnError: staleOnError,
-    );
+    ).then((body) {
+      // 失效回退打标（__stale）不进 L1：降级数据应每次尝试刷新。
+      if (body['__stale'] != true) memoryPut(key, body);
+      return body;
+    });
   }
 
   /// L3 永久文件：身份=(URL,声明字节数)，校验在 ResourceCache 内四道。
@@ -61,8 +70,16 @@ class ResourceGateway {
   }
 
   /// 切号/登出：用户维度整体失效（缓存键含 u=，旧账号数据不再命中）。
+  /// v5.1 B3-A：L1 立即清；L2 由键内 u= 维度保证不再命中，
+  /// 并异步清掉旧账号的磁盘条目，避免箱体长期膨胀（第 23/25 条）。
   void onUserChanged() {
     _memory.clear();
+    unawaited(_clearUserDimensions());
+  }
+
+  Future<void> _clearUserDimensions() async {
+    await ResourceCache.instance.clearJson();
+    await ResourceCache.instance.clearLists();
   }
 
   /// 清缓存设置页：只清 JSON/列表与内存，**永久文件不动**。

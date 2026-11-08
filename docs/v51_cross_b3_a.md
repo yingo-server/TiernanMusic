@@ -135,6 +135,13 @@
 
 - 待跨文件核对：`CachedApiCall` 的键格式/TTL/ns 默认值、`ResourceCache.cacheUrlFile` 四道校验、`clearTransient` 是否回调预加载引擎。
 
+### lib/core/prefetch/prefetch_engine.dart:23 `../net/music_api.dart` 为未使用导入（dart analyze 实锤）
+- 级别：P3
+- 违反：QUALITY_STANDARD 第 32 条
+- 依据：第 23 行 `import '../net/music_api.dart';`，本文件 211 行内无任何该库符号引用；`dart analyze lib/core/prefetch/prefetch_engine.dart` 报告 `warning - prefetch_engine.dart:23:8 - Unused import: '../net/music_api.dart'`。
+- 影响：无运行时后果，属死代码/整洁度与依赖误导（读者会误以为预热与 MusicApi 有契约）。
+- 证据等级：实锤（静态分析器输出）
+
 ### 文件 5/9 `lib/core/resource/cached_api.dart`（84 行，完整读）
 
 - 结构：`CachedApiCall(api, {ns='common'})`；`_keyOf`（cacheKey，userid 取 `_api.userid`，POST 补 `_bodyDigest`）、`_bodyDigest`（FNV 低 8 位哈希）、`_stableJson`、`get`/`post`（scope 由 `ttl == kListTtl` 反推，转调 `ResourceCache.json`）。
@@ -352,3 +359,238 @@
 8. **预加载只请求 JSON 不下载文件**：`_prefetchOne` 三次调用均为 `CachedApiCall.get`（JSON）；`onPlaybackCompleted` 是独立 hook，正常预热路径不下载实际文件 ✅（复核通过项）。但预热键 ns='prefetch' 与播放侧不同键、且 URL 预热只覆盖 kapi 路径。→ 问题 4-1、4-4。
 9. **StoragePermission 下沉后 resolveRoot 唯一性**：`StoragePermissionService.resolveRoot()` 在本范围内确实是唯一根解析器（`ResourceCache._dirOf` 每次调用），但该方法自身有三条可能返回不同根的分支，且 `resolveRootMode`/`currentStrategy`/`resolveStrategy` 各自独立判定，权限态变化会使永久文件层整体失联。→ 问题 9-1、9-2、9-3、9-5。
 
+---
+
+## 问题清单（按级别排序）
+
+共 **39 条**：P0 = 1 / P1 = 13 / P2 = 24 / P3 = 1。
+
+### P0（1 条）
+1. `cached_api.dart:59-81` / `repository_reads.dart:26-58` — CachedApiCall 与 RepositoryReads 两套并行读实现，scope/TTL/POST extra/ns/失效路径全不一致（第 5/23/3 条）；写后失效只清一侧，旧数据长期可见。（实锤·静态推演）
+
+### P1（13 条）
+1. `resource_gateway.dart:16-22` — L1 内存层无 TTL/上限/命中顺序，`json()` 从不调用 `memoryGet/memoryPut`，门面三级实为两级（第 25/5 条）。
+2. `resource_gateway.dart:58-62` — `onUserChanged()` 只清 L1，L2/L3 用户维度数据不失效（第 23/5 条）。
+3. `cache_manager.dart:119-125` — `MemoryCache.keyOf` 第二套键工厂，无 ns/userid/schemaVer/scope（第 23 条）。
+4. `cached_api.dart:59-61,73-75` — scope 由 `ttl == kListTtl` 反推，TTL 与作用域不是同一事实源（第 23/15 条）。
+5. `cached_api.dart:31-40,42-54` — `_bodyDigest` 低 8 位 + `_stableJson` 不转义，POST 键系统性碰撞（第 23/14 条）。
+6. `resource_cache.dart:67-70,76-77` — `json:`/`list:` 前缀由 ttl 反推，与键内 `scope` 段重复且可错配（第 23/5 条）。
+7. `resource_cache.dart:78-88` — in-flight 以裸 `key` 合并、finally 无条件 remove，不同 TTL 的同键请求被错误复用（第 18/22/19 条）。
+8. `resource_cache.dart:107-130,126-129` — `__stale` 打标后全链路无消费方，网络失败时旧数据当最新渲染（第 9/11/16 条）。
+9. `resource_cache.dart:181-193,196-226` — `putFile/file/filePath` 固定 `(key,0)` 身份，与 `cacheUrlFile` 的 `(url,bytes)` 互不兼容（第 23/3 条）。
+10. `resource_cache.dart:302-331` — `invalidateNs`/`clearJson`/`clearLists` 语义重叠且不清 L1、`_inFlight`、旧 Hive 箱（第 23/5 条）。
+11. `secure_storage.dart:70-94` — 清凭证不与缓存层联动，且 dfid 保留/删除两处语义冲突（第 5/23 条）。
+12. `storage_permission.dart:158-183` — `resolveRoot` 三条根分支，权限态变化使永久文件层整体失联（第 23/5 条）。
+13. `prefetch_engine.dart:121-130,170-197` — 预热 ns='prefetch' 与播放侧不同键，预热结果永不复用（第 23/3 条）。
+
+### P2（24 条）
+1. `cache_keys.dart:36-42` — query/extra 值不转义，含 `& = :` 的键碰撞（第 23 条）。
+2. `cache_keys.dart:44-48` — `fileIdentity` 不执行 bytes<=0 不可判定契约（第 3/14 条）。
+3. `cache_manager.dart:82-85` — `MemoryCache` 默认 TTL 取 AppConfig，与 cacheTtl 不联动（第 23/15 条）。
+4. `cache_manager.dart:38-49` — `getWithStale` stale 返回值不受 storedAt/ttl 约束，坏 Map 不删除（第 11/14 条）。
+5. `cache_manager.dart:143-150` — `LyricTranslationCache` 键缺维度、`\t/\n` 裸分隔 + `int.parse` 无校验（第 23/14 条）。
+6. `resource_gateway.dart:25-47` — `json()` 可传 `scope=file`，36500d TTL 进 JSON 层（第 3/15 条）。
+7. `resource_gateway.dart:48-50` — `file()` 默认 `declaredBytes=0` 放行（第 3/14 条）。
+8. `prefetch_engine.dart:114-119` — `onPlaybackCompleted` 不拦截 declaredBytes<=0（第 14/3 条）。
+9. `prefetch_engine.dart:81-88` — 清缓存/ns 失效不重置 `_requested`，本进程不再预请求（第 5/11 条）。
+10. `prefetch_engine.dart:165-167,173-180` — 预热 URL JSON 只覆盖 kapi `/song/url`（第 27 条）。
+11. `cached_api.dart:68-81` — `post()` 默认 `stale=true`，写类 POST 网络失败可返回旧「成功」响应（第 3/21 条）。
+12. `cached_api.dart:56-66,69-81` — 不暴露 userid/schemaVer/extra 覆盖参数（第 23/2 条）。
+13. `resource_gateway.dart:25-47` / `repository_reads.dart:13-14` / `cached_api.dart:59-80` — TTL 两套数值口径 + 未使用的 readXxxTtl（第 23/15 条）。
+14. `lyric_translation_stream.dart:8-12,18-27` — 补丁无世代/用户维度，本类与缓存层无连接（第 23/18 条）。
+15. `lyric_translation_stream.dart:33-35` — `dispose()` 关闭单例控制器后无重建（第 20 条）。
+16. `resource_cache.dart:181-193` — `_hashName` 32 位 FNV + 扩展名取自 query（第 14/17 条）。
+17. `resource_cache.dart:240-296` — 四道校验缺口：cl==0 放行、HEAD 失败整体 catch、Dio 未 close（第 11/14/6 条）。
+18. `resource_cache.dart:14-16,39-49` — `kFilePermanent=null` 死常量；openBox 失败静默无缓存（第 32/9 条）。
+19. `secure_storage.dart:25-39,99-106` — `acct_token_` 用 userid 原文，与缓存键 userid 归一不一致（第 23/14 条）。
+20. `secure_storage.dart:66-93` — `clearCredentials` 只删指定账号 token，其它账号残留（第 5/20 条）。
+21. `storage_permission.dart:172-176` — 探测失败仍返回不可写 candidate（第 11/9 条）。
+22. `storage_permission.dart:183-193` — `resolveRootMode` 与 `resolveRoot` 判定条件不同（第 31/5 条）。
+23. `storage_permission.dart:240-249` — Android 9 及以下返回版本号当 API level（第 15/17 条）。
+24. `storage_permission.dart:18-21,333-353` — 策略方法不调用 `isPublicDirWritable` 实测（第 11/29 条）。
+
+### P3（1 条）
+1. `prefetch_engine.dart:23` — 未使用导入 `../net/music_api.dart`（第 32 条；dart analyze 实锤）。
+
+
+---
+
+## 复核通过项（本范围确认到位的设计）
+
+1. **cache_keys 四维键模型本身完整**：`cacheKey()`（cache_keys.dart:26-42）确实把 ns / `u=$userid` / 排序 query / `v$schemaVer` / `scope.name` / `extra` 全部拼进键；`CacheScope` 三值与 `cacheTtl`（168h / 90s / 36500d）在同一文件定义，模型自洽。
+2. **168h / 90s 数值当前一致**：`cacheTtl(json)=168h`、`cacheTtl(list)=90s`（cache_keys.dart:18-20）与 `kJsonTtl=168h`、`kListTtl=90s`（resource_cache.dart:14-15）与 `AppConfig.memoryCacheSeconds=90`（app_config.dart:29）当前数值一致；`RepositoryReads` 的便捷常量直接取 `cacheTtl(...)`（repository_reads.dart:13-14）。问题仅在「多套定义、无联动」，非当前数值错。
+3. **永久文件身份的声明式契约与 3/4 道校验落地**：cache_keys.dart:47-48 定义 `(URL,声明字节数)`；`cacheUrlFile`（resource_cache.dart:243-283）确实实现「declaredBytes<=0 拒绝」「HEAD Content-Length 不符放弃」「下载后实际长度不符删除 .part」「复用前长度校验」四道，且失败全部留 debugPrint 后返回 null 不抛，主路径降级语义明确。
+4. **预加载不下载实际文件**：`_prefetchOne`（prefetch_engine.dart:165-197）三次调用均为 `CachedApiCall.get`（纯 JSON），无任何 `dio.download`/`cacheUrlFile`；文件下载只在独立 hook `onPlaybackCompleted`（第 114-130 行）中出现，职责分离清晰。
+5. **失效回退的触发/次优/恢复三条件齐备**：`_doFetch`（resource_cache.dart:96-131）触发条件=「fetch 失败且存在旧值且 staleOnError」，次优行为=旧值副本 + `__stale` + ErrorLogger 留痕，恢复条件=下次 fetch 成功覆盖；无旧值时 `rethrow`，未吞异常。
+6. **损坏缓存按未命中处理**：`_readStored`（resource_cache.dart:135-150）与 `LyricPersistentCache.getWithStale`（cache_manager.dart:30-38）对 jsonDecode 失败/形态不符都会删除或忽略，不把坏数据当有效数据。
+7. **in-flight 合并存在且有上限意识**：`_inFlight`（resource_cache.dart:38、66-68、84-88）实现同 key 并发只发一次 fetch；`try/finally` 保证移除；`MemoryCache._maxEntries=200` 与 `_evict()` FIFO（cache_manager.dart:88-107）有常量上限。
+8. **StoragePermission 下沉后根路径解析唯一**：本范围内 `ResourceCache._dirOf`（resource_cache.dart:154-160）是唯一调用 `StoragePermissionService.instance.resolveRoot()` 的位置，未在缓存层硬编码 `/storage/emulated/0`；注释明确「每次实测可写性，此处不缓存路径」。
+9. **写探针可观测性**：`_probeWritable`（storage_permission.dart:122-152）写→读回→删除三步并留 `lastProbeError`，且注释明确禁止经 ErrorLogger 留痕以避开递归，属有记录的并发前提（第 22 条）。
+10. **生命周期对称**：`PrefetchEngine` 的 `_startDrain`/`_disposeTimer`/`dispose`（prefetch_engine.dart:131-137、198-210）配对，`_disposed` 在入队/消费/回调处逐处校验（第 18/20 条）。
+11. **凭证切号防串号**：`saveCredentials`（secure_storage.dart:18-40）对 t1/auth/dfid 的 null 分支执行 delete 而非跳过，避免 A 账号票据配 B 账号 token；`readCredentials` 五键并行读取。
+12. **门面失效按 ns 精确、清缓存不动永久文件**：`ResourceGateway.invalidateNs`（第 51-55 行）用 `:$ns:u=` 子串而非全清；`clearTransient`（第 65-69 行）明确不调用 L3 文件清除，符合「永久文件不因清缓存丢失」意图。
+
+---
+
+## 逐文件 dart analyze 结果
+
+命令：`export PATH=$PATH:/opt/dart/bin && dart analyze <file>`（Dart SDK 3.13.7 stable，未装 Flutter、未 pub get、未编译）。
+噪音过滤口径：`uri_does_not_exist`（hive / dio / flutter / flutter_secure_storage / permission_handler 等三方包缺失）及其级联的 `undefined_class` / `undefined_identifier` / `undefined_method` / `const_initialized_with_non_constant_value` 均为预期噪音；**项目自有类报错 = 0** 记为通过。
+
+| # | 文件 | 原始输出 | 过滤后项目自有类错误 | 结论 |
+|---|---|---|---|---|
+| 1 | `lib/core/cache/cache_keys.dart` | `No issues found!`（exit 0） | 0 | 通过 |
+| 2 | `lib/core/cache/cache_manager.dart` | `5 issues found`：1×`uri_does_not_exist`(hive)，2×`undefined_class Box`，2×`undefined_identifier Hive` | 0 | 通过（全为 hive 缺失噪音） |
+| 3 | `lib/core/cache/resource_gateway.dart` | `No issues found!`（exit 0） | 0 | 通过 |
+| 4 | `lib/core/prefetch/prefetch_engine.dart` | `7 issues found`：1×`uri_does_not_exist`(flutter/foundation)、5×`debugPrint` undefined_method、1×`warning unused_import ../net/music_api.dart` | 0 错误；**1 条真实 warning（已记为 P3 问题）** | 通过（含 1 项已报 P3） |
+| 5 | `lib/core/resource/cached_api.dart` | `No issues found!`（exit 0） | 0 | 通过 |
+| 6 | `lib/core/resource/lyric_translation_stream.dart` | `No issues found!`（exit 0） | 0 | 通过 |
+| 7 | `lib/core/resource/resource_cache.dart` | `23 issues found`：3×`uri_does_not_exist`(dio/flutter/foundation/hive)、5×`undefined_class Box`、3×`undefined_identifier Hive`、10×`debugPrint` undefined_method、1×`Dio`+1×`BaseOptions` undefined_method | 0 | 通过（全为三方包缺失噪音） |
+| 8 | `lib/core/storage/secure_storage.dart` | `4 issues found`：1×`uri_does_not_exist`(flutter_secure_storage)、1×`const_initialized_with_non_constant_value`、1×`FlutterSecureStorage` undefined_method、1×`AndroidOptions` undefined_method | 0 | 通过（const 报错由包未解析级联） |
+| 9 | `lib/core/storage/storage_permission.dart` | `34 issues found`：3×`uri_does_not_exist`(flutter/foundation, flutter/services, permission_handler)、7×`Permission` undefined_identifier、2×`PermissionStatus` undefined_class、1×`MethodChannel` undefined_class、1×`MethodChannel` undefined_method、1×`const_initialized_with_non_constant_value`、2×`openAppSettings` undefined_method、17×`debugPrint` undefined_method | 0 | 通过（全为三方包缺失噪音） |
+
+**汇总**：9/9 文件均已单独执行 `dart analyze`；4 文件零问题，5 文件仅有三方包缺失噪音，`prefetch_engine.dart` 额外 1 条项目自有 unused_import warning（已计入问题清单 P3）。项目自有类错误合计 **0**，静态语法检查通过。
+
+---
+
+## 执行边界说明
+
+- 范围内 9 文件 / 1444 行全部 `file_read` 从头到尾完整读取，未使用 grep/正则筛选源码（仅对报告自身标题与目录清单做统计，符合通用规范允许的统计用途）。
+- 为完成「CachedApiCall 与 RepositoryReads 是否双实现/键规则一致」判据，额外完整读取范围外对照文件 `lib/core/net/repository_reads.dart`（63 行）与 `lib/core/config/app_config.dart`（56 行）；二者不计入 9 文件范围，未在问题清单中单独作为被审对象，也未对其跑 analyze。
+- 未修改任何代码文件；唯一写入为 `docs/v51_cross_b3_a.md`。未安装 SDK、未 `dart pub get`、未编译、未跑测试、未启动服务、未读任何 `docs/v51_cross_b*_merged.md` 或历史审查报告。
+- 证据等级标注：凡「本范围代码事实 + 对照结论」标实锤；由代码事实推导运行期后果标静态推演；涉及上层调用点/真机/CDN 行为且本范围无法验证者标「未实测」，均在对应条目内注明。
+---
+
+## 逐文件 dart analyze 原始输出（逐字贴录）
+
+以下为 `export PATH=$PATH:/opt/dart/bin && dart analyze <file>` 的逐文件原始 stdout/stderr（合并），按文件顺序原样贴录；表格中的「过滤」判定见上一节，此处不删改任何输出行。
+
+```
+----- lib/core/cache/cache_keys.dart -----
+Analyzing cache_keys.dart...
+No issues found!
+[exit=0]
+
+----- lib/core/cache/cache_manager.dart -----
+Analyzing cache_manager.dart...
+
+  error - cache_manager.dart:3:8 - Target of URI doesn't exist: 'package:hive/hive.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist. - uri_does_not_exist
+  error - cache_manager.dart:17:3 - Undefined class 'Box'. Try changing the name to the name of an existing class, or creating a class with the name 'Box'. - undefined_class
+  error - cache_manager.dart:20:20 - Undefined name 'Hive'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - cache_manager.dart:143:3 - Undefined class 'Box'. Try changing the name to the name of an existing class, or creating a class with the name 'Box'. - undefined_class
+  error - cache_manager.dart:146:20 - Undefined name 'Hive'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+
+5 issues found.
+[exit=3]
+
+----- lib/core/cache/resource_gateway.dart -----
+Analyzing resource_gateway.dart...
+No issues found!
+[exit=0]
+
+----- lib/core/prefetch/prefetch_engine.dart -----
+Analyzing prefetch_engine.dart...
+
+  error - prefetch_engine.dart:25:8 - Target of URI doesn't exist: 'package:flutter/foundation.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist. - uri_does_not_exist
+  error - prefetch_engine.dart:124:7 - The method 'debugPrint' isn't defined for the type 'PrefetchEngine'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - prefetch_engine.dart:158:7 - The method 'debugPrint' isn't defined for the type 'PrefetchEngine'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - prefetch_engine.dart:171:7 - The method 'debugPrint' isn't defined for the type 'PrefetchEngine'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - prefetch_engine.dart:178:7 - The method 'debugPrint' isn't defined for the type 'PrefetchEngine'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - prefetch_engine.dart:192:7 - The method 'debugPrint' isn't defined for the type 'PrefetchEngine'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+warning - prefetch_engine.dart:23:8 - Unused import: '../net/music_api.dart'. Try removing the import directive. - unused_import
+
+7 issues found.
+[exit=3]
+
+----- lib/core/resource/cached_api.dart -----
+Analyzing cached_api.dart...
+No issues found!
+[exit=0]
+
+----- lib/core/resource/lyric_translation_stream.dart -----
+Analyzing lyric_translation_stream.dart...
+No issues found!
+[exit=0]
+
+----- lib/core/resource/resource_cache.dart -----
+Analyzing resource_cache.dart...
+
+  error - resource_cache.dart:5:8 - Target of URI doesn't exist: 'package:dio/dio.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist. - uri_does_not_exist
+  error - resource_cache.dart:6:8 - Target of URI doesn't exist: 'package:flutter/foundation.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist. - uri_does_not_exist
+  error - resource_cache.dart:7:8 - Target of URI doesn't exist: 'package:hive/hive.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist. - uri_does_not_exist
+  error - resource_cache.dart:40:3 - Undefined class 'Box'. Try changing the name to the name of an existing class, or creating a class with the name 'Box'. - undefined_class
+  error - resource_cache.dart:46:14 - Undefined name 'Hive'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - resource_cache.dart:47:13 - Undefined name 'Hive'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - resource_cache.dart:48:19 - Undefined name 'Hive'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - resource_cache.dart:50:7 - The method 'debugPrint' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - resource_cache.dart:55:3 - Undefined class 'Box'. Try changing the name to the name of an existing class, or creating a class with the name 'Box'. - undefined_class
+  error - resource_cache.dart:96:5 - Undefined class 'Box'. Try changing the name to the name of an existing class, or creating a class with the name 'Box'. - undefined_class
+  error - resource_cache.dart:113:11 - The method 'debugPrint' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - resource_cache.dart:121:9 - The method 'debugPrint' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - resource_cache.dart:139:44 - Undefined class 'Box'. Try changing the name to the name of an existing class, or creating a class with the name 'Box'. - undefined_class
+  error - resource_cache.dart:201:7 - The method 'debugPrint' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - resource_cache.dart:213:7 - The method 'debugPrint' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - resource_cache.dart:225:7 - The method 'debugPrint' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - resource_cache.dart:245:7 - The method 'debugPrint' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - resource_cache.dart:258:19 - The method 'Dio' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'Dio'. - undefined_method
+  error - resource_cache.dart:258:23 - The method 'BaseOptions' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'BaseOptions'. - undefined_method
+  error - resource_cache.dart:268:9 - The method 'debugPrint' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - resource_cache.dart:275:9 - The method 'debugPrint' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - resource_cache.dart:281:7 - The method 'debugPrint' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - resource_cache.dart:284:7 - The method 'debugPrint' isn't defined for the type 'ResourceCache'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+
+23 issues found.
+[exit=3]
+
+----- lib/core/storage/secure_storage.dart -----
+Analyzing secure_storage.dart...
+
+  error - secure_storage.dart:1:8 - Target of URI doesn't exist: 'package:flutter_secure_storage/flutter_secure_storage.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist. - uri_does_not_exist
+  error - secure_storage.dart:7:27 - Const variables must be initialized with a constant value. Try changing the initializer to be a constant expression. - const_initialized_with_non_constant_value
+  error - secure_storage.dart:7:27 - The method 'FlutterSecureStorage' isn't defined for the type 'SecureStorage'. Try correcting the name to the name of an existing method, or defining a method named 'FlutterSecureStorage'. - undefined_method
+  error - secure_storage.dart:8:15 - The method 'AndroidOptions' isn't defined for the type 'SecureStorage'. Try correcting the name to the name of an existing method, or defining a method named 'AndroidOptions'. - undefined_method
+
+4 issues found.
+[exit=3]
+
+----- lib/core/storage/storage_permission.dart -----
+Analyzing storage_permission.dart...
+
+  error - storage_permission.dart:3:8 - Target of URI doesn't exist: 'package:flutter/foundation.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist. - uri_does_not_exist
+  error - storage_permission.dart:4:8 - Target of URI doesn't exist: 'package:flutter/services.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist. - uri_does_not_exist
+  error - storage_permission.dart:5:8 - Target of URI doesn't exist: 'package:permission_handler/permission_handler.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist. - uri_does_not_exist
+  error - storage_permission.dart:67:20 - Undefined name 'Permission'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - storage_permission.dart:70:7 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:82:28 - Undefined name 'Permission'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - storage_permission.dart:85:7 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:91:7 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:117:9 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:125:9 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:133:7 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:157:7 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:166:9 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:171:7 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:190:16 - Undefined class 'MethodChannel'. Try changing the name to the name of an existing class, or creating a class with the name 'MethodChannel'. - undefined_class
+  error - storage_permission.dart:191:7 - Const variables must be initialized with a constant value. Try changing the initializer to be a constant expression. - const_initialized_with_non_constant_value
+  error - storage_permission.dart:191:7 - The method 'MethodChannel' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'MethodChannel'. - undefined_method
+  error - storage_permission.dart:203:7 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:243:11 - Undefined class 'PermissionStatus'. Try changing the name to the name of an existing class, or creating a class with the name 'PermissionStatus'. - undefined_class
+  error - storage_permission.dart:245:22 - Undefined name 'Permission'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - storage_permission.dart:248:7 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:255:15 - The method 'openAppSettings' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'openAppSettings'. - undefined_method
+  error - storage_permission.dart:258:9 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:263:26 - Undefined name 'Permission'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - storage_permission.dart:274:11 - Undefined class 'PermissionStatus'. Try changing the name to the name of an existing class, or creating a class with the name 'PermissionStatus'. - undefined_class
+  error - storage_permission.dart:276:22 - Undefined name 'Permission'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - storage_permission.dart:279:7 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:286:15 - The method 'openAppSettings' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'openAppSettings'. - undefined_method
+  error - storage_permission.dart:288:9 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:293:26 - Undefined name 'Permission'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - storage_permission.dart:316:26 - Undefined name 'Permission'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - storage_permission.dart:328:7 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:345:9 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+  error - storage_permission.dart:350:7 - The method 'debugPrint' isn't defined for the type 'StoragePermissionService'. Try correcting the name to the name of an existing method, or defining a method named 'debugPrint'. - undefined_method
+
+34 issues found.
+[exit=3]
+```

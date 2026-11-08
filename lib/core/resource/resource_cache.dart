@@ -66,11 +66,12 @@ class ResourceCache {
     Duration ttl = kJsonTtl,
     bool staleOnError = true,
   }) async {
-    final pending = _inFlight[key];
-    if (pending != null) return pending;
-
+    // v5.1 B3-A：in-flight 以 **fullKey**（含 scope 前缀）分键，
+    // 避免同一业务键不同 TTL 的两个请求互相复用错误 TTL 的结果。
     final isList = ttl == kListTtl;
     final fullKey = '${isList ? _listPrefix : _jsonPrefix}$key';
+    final pending = _inFlight[fullKey];
+    if (pending != null) return pending;
     await init();
     final box = _safeBox;
     final stored = _readStored(box, fullKey);
@@ -82,11 +83,11 @@ class ResourceCache {
 
     final fut = _doFetch(fullKey, fetch, box,
         staleOnError: staleOnError, staleBody: stored?.$2);
-    _inFlight[key] = fut;
+    _inFlight[fullKey] = fut;
     try {
       return await fut;
     } finally {
-      _inFlight.remove(key);
+      _inFlight.remove(fullKey);
     }
   }
 
