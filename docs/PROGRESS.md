@@ -1025,3 +1025,13 @@ CI 终验与 release 产出由定时任务 660af9b0 处理。
 
 ## v5.3 重写批启动（R1 状态机 / R2 布局权限 / R3 延迟歌词文案，并行60min）
 审查第1轮三份报告已合并定稿重写方案（v53_r1_a/b/c.md）。B-10 预热死代码已修（86affeb）。
+
+
+## v5.3.0 封版（6cf7a38 / tag v5.3.0，版本 5.3.0+54）
+
+播放器体系化二次重构完成：
+- PlayerStateMachine（867行 sealed class，44处世代）+ SwitchAudioHandler 统一双 Handler（A-00 定案）
+- NetworkPhase 阶段化延迟捕获 + 慢请求告警 + 超时分级（8s/12s）
+- 存储诊断页 + MV按钮三态 + 入口行唯一化 48dp + 歌词三态视图
+- 译文 lineIndices 契约重写 + preload 键对齐 + fr notPlaying 修复
+- l10n 385键x11语。待办：kg_client 直连超时 3s 档、歌词正文预热、11语长度失衡翻译批。
