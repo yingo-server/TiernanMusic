@@ -15,7 +15,7 @@ import 'core/direct/kg_client.dart';
 import 'core/direct/kg_providers.dart';
 import 'app/di.dart' show kugouApiClientProvider;
 import 'app/bootstrap.dart' show openHiveBoxes;
-import 'features/settings/font_manager.dart' show appFontProvider;
+import 'features/settings/font_manager.dart' show appFontProvider, CustomFontStore;
 import 'core/prefetch/prefetch_engine.dart';
 import 'core/cache/resource_gateway.dart';
 import 'core/resource/resource_cache.dart';

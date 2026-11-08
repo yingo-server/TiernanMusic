@@ -36,6 +36,10 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   path_provider: ^2.1.4
+  path: ^1.9.0
+
+  # v5.2 字体管理：URL 下载导入私有字体
+  http: ^1.2.0
 
   # WebView (人机验证)
   flutter_inappwebview: ^6.1.5

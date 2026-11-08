@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 import '../storage/storage_permission.dart';
+import '../cache/cache_keys.dart';
 import '../utils/error_logger.dart';
 
 /// TTL 常量（v4.0 冻结契约，TASK_v400_arch.md）。
