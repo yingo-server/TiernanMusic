@@ -991,3 +991,10 @@ CI 终验与 release 产出由定时任务 660af9b0 处理。
 - 规范：docs/TASK_v51_cross_common.md（33 条原则、完整 file_read、实时落盘、只报问题不修复、逐文件 analyze 贴结果、禁装 SDK/改 pubspec）
 - 批次：docs/TASK_v51_batches.md（B1 foundation/domain/api → B8 UI/i18n）
 - 节奏：批间串行、批内 3 并发；一批三份齐 → 合并 → P0/P1 亲修 → 下一批；8 批完成发 v5.1.0
+
+
+## v5.1 交叉审查收官 + push 恢复
+
+- push 故障（代理网关拒绝 push POST）经 direct 通道解决：9d5a36c..243b5bd 已推上
+- CI 42501435331（243b5bd，含 B4/B5 共识修复+docs 归档）构建中
+- B1-B5 五批合并报告全部落盘；P0×3 全亲修
