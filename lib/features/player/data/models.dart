@@ -1,15 +1,8 @@
 export '../../core/domain/quality.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 /// 播放器数据模型。
-
-/// 音质等级，按从高到低排序（super > high > flac > 320 > 128）。
-///
-/// V399-B3：扩展蝰蛇三档（VIP 态真实返回 URL，v37_cripple_report 实测）
-/// 与魔法音效六档（匿名也可用）。蝰蛇/魔法是**特殊音源档**：
-///  - 不进 [fallbackOrder] 通用降级链——普通音质不可降为魔法档，反之亦然；
-///  - 降级只在各自族内进行（见 [viperOrder] / [magicOrder]）。
-
-}
 
 /// 单曲信息。
 class Song {

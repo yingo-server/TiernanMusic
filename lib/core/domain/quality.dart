@@ -2,8 +2,7 @@ import 'package:flutter/foundation.dart';
 
 /// 音质等级枚举（v5.0 M1：上移 core/domain，依据 REFACTOR_PLAN §1.1——
 /// 音质属领域概念，core/audio 不应依赖 features/player）。
-///
-/// 排序：super > high > flac > 320 > 128（quality.dart 序位）。
+/// 排序：super > high > flac > 320 > 128。
 
 enum AudioQuality {
   q128('128', '标准'),
@@ -101,4 +100,3 @@ enum AudioQuality {
     return q128;
   }
 }
-
