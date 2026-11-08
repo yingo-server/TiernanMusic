@@ -10,6 +10,8 @@
 library;
 
 import 'kg_client.dart';
+import '../domain/response_policy.dart';
+import '../foundation/errors.dart';
 import 'kg_crypto.dart';
 import '../domain/quality.dart';
 
@@ -326,6 +328,16 @@ class PlayUrlResult {
   bool get hasUrl => bestUrl != null && bestUrl!.isNotEmpty;
 
   factory PlayUrlResult.fromResponse(KgResponse res) {
+    // v5.1 B2 三视角共识：失败/风控/网络异常响应不得伪装成「无 URL 成功结果」。
+    // 统一走 evaluateResponse（B1 单点策略）；20028 等带 ssaCode 的异常
+    // 由调用方的验证重试链接住，不再静默跳歌。
+    final outcome = evaluateResponse(res.body, ssaCode: res.ssaCode);
+    if (!outcome.isOk) throw outcome.failure!;
+    // HTTP 层异常（kg_client 把 DioException 折成 502 假响应）同样不得放行。
+    if (res.status < 200 || res.status >= 300) {
+      throw ApiException(-1, '播放地址请求失败（HTTP ${res.status}）',
+          body: res.body);
+    }
     final b = res.body;
     List<String> toList(dynamic v) {
       if (v is List) return v.map((e) => '$e').where((s) => s.isNotEmpty).toList();

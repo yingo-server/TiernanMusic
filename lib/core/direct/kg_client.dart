@@ -298,9 +298,22 @@ class KgClient {
         errorCode: e.message ?? e.type.name,
         requestPreview: bodyStr,
       );
+      // v5.1 B2 三视角共识：网络异常折成假响应时**必须**带 error_code
+      // 与 ssaCode，否则 evaluateResponse 会把 {status:0} 判成「无错误码
+      // 的失败」并丢掉类型信息，播放层再被 fromResponse 当成空结果。
+      // 请求失败时响应对象可能未赋值，ssaCode 只从异常携带的响应取。
+      final er = e.response;
+      final ssa = er == null
+          ? null
+          : (er.headers.value('ssa-code') ?? er.headers.value('ssa_code'));
       return KgResponse(
         status: 502,
-        body: {'status': 0, 'error': '${e.message}'},
+        body: {
+          'status': 0,
+          'error_code': -1,
+          'error': '${e.message}',
+          if (ssa != null && ssa.isNotEmpty) 'ssaCode': ssa,
+        },
       );
     }
 

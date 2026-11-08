@@ -46,7 +46,10 @@ class KgEndpointPlaylist {
         },
         data: aes.str);
 
-    // 响应是 AES 加密二进制，用同一 seed 解密
+    // 响应是 AES 加密二进制，用同一 seed 解密。
+    // v5.1 B2 三视角共识：写操作（删除/取消收藏）解密失败**不得静默吞**——
+    // 请求可能已执行，必须让上层拿到「结果未知，请勿直接重试」语义
+    // （第 6/9/21 条），否则用户会重复点击造成重复删除。
     try {
       final bytes = res.rawBytes;
       if (bytes != null && bytes.isNotEmpty) {
@@ -59,10 +62,13 @@ class KgEndpointPlaylist {
           );
         }
       }
-    } catch (_) {
-      // 解密失败不影响判定
+      // 有响应体却解不出 status：结果不可判定。
+      throw ApiException(-1, '歌单删除结果不可判定（解密失败或响应畸形），请刷新确认',
+          body: res.body);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(-1, '歌单删除响应解密失败：$e', body: res.body);
     }
-    return res;
   }
 
   /// 收藏/新建歌单（module/playlist_add.js，需登录）

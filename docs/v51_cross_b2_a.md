@@ -362,3 +362,146 @@
 - 影响：注册成功后立刻退出/切号，下次冷启动拿到旧/空 dfid 覆盖新值，播放与登录签名用错设备标识，出现 20028 或试听降权。
 - 证据等级：静态推演（异步链 + 恢复链；未实测）
 
+
+---
+
+## 复核校正（本节结论覆盖上文对应条目）
+
+逐条回读上层调用链（`player_repository.dart`、`auth_repository.dart`、`auth_providers.dart`、`verification_service.dart`、`home_repository.dart`、`lyric_repository.dart`、`krc_decoder.dart`、`rank_repository.dart`、`playlist_repository.dart`、`mv_collection_repository.dart`、`cached_api.dart`、`repository_reads.dart`、`app/di.dart`、`response_policy.dart`、`kugou_api_client.dart`、`secure_storage.dart`）后，对上文条目作如下校正。只保留有代码事实支撑者，其余撤回或降级。
+
+- **保留 P1（4 条）**：`kg_direct_api_client.dart:84-88` 与 `kg_endpoints_comment.dart:43-64`（同一根因的两处落点，均保留）；`kg_client.dart:405-419` 验证链断；`kg_endpoints_auth.dart:393-418` 登录成功码形态。
+- **新增 P1（1 条）**：`kg_crypto.dart:165-205` 二进制 MV 收藏端点误选无填充 RSA（下详，见「补充问题」）。
+- **降级 P1→P3**：`kg_endpoints_search.dart:136-147`「KRC 未解密」——Node `module/lyric.js` 在 `contenttype != 0` 时同样只做 Base64 解码，Dart 行为一致；`contenttype == 0` 时 Dart 不写 `decodeContent`，但 `LyricRepository._fetchLyricByFormat` 会回退到 `KrcDecoder.decodeDetailed(raw)`（`krc_decoder.dart:33-84`，跳过 krc1 头 + 16 字节 XOR + zlib），与 Node `decodeLyrics` 等价。链路闭环，撤回用户可见后果，仅记为契约表述差异。
+- **降级 P1→P3**：`kg_media_direct.dart:15-49`、`kg_media_direct.dart:19-31` —— `KgMediaDirect` 全仓仅 1 个文件引用（即声明文件本身），`images()`/`videoDetail()` 无调用方，参数差异当前不可达用户路径，合并为一条死代码问题。
+- **降级 P1→P2**：`kg_endpoints_playlist.dart:18-65`「二进制响应解密已损坏」的表述自相矛盾，重写为「字符串 body 的 Content-Type 与 Node 不一致」（`rawBytes` 实际保留原字节，解密本身可工作）。
+- **降级 P1→P3**：`kg_client.dart:227-243`「Uint8List 签名 data 为空串」——当前唯一二进制 body 调用方 `mv_collection_repository.dart:118-130` 传 `notSignature: true`，签名分支不执行，缺陷不可达；保留为潜在契约缺陷。
+- **降级 P1→P2**：`kg_direct_api_client.dart:299-366`「post 分派表缺路径」——核对后当前 POST 调用方仅 `rank/audio`（`rank_repository.dart`）、`login`、`verify/user/info`、评论写三件套，全部在 post 表内；`CachedApiCall.post`/`MusicApi.write` 无调用方。无当前用户可见故障，降为契约缺口。
+- **降级 P2→撤回**：`kg_endpoints_media.dart:97-111`「空 hash 错误文案丢失」——`response_policy.msgOf()` 优先读 `body['error']`，`'缺少歌曲 hash'` 会被完整带进 `ApiException.message`，无后果。
+- **降级 P2→撤回**：`kg_endpoints_playlist.dart:204-226`「裸 ApiException 破坏契约」——异常在 `direct()` 工厂调用时抛出，处于 `_directOrFallback` 的 `try` 内，被 `on ApiException` 包装为 DioException，形态一致。
+- **降级 P2→撤回**：`kg_direct_api_client.dart:304-315`「write:true 未覆盖 captcha/sent 等」——`fallbackToKapi=false` 且这些端点均未用 `requestWithVerify`，不存在重复提交路径；转入「复核通过项」。
+- **降级 P2→P3**：`kg_endpoints_home.dart:83-122`「top/playlist 无兜底」——`HomeRepository.fetchTopPlaylists` 捕获异常后回落原生 `/yueku`，并非无数据；仅剩实测记录未同步。
+- **降级 P2→P3**：`kg_endpoints_home.dart:154-158`「banner 常驻错误」——`HomeRepository.fetchBanners` 捕获全部异常并 `debugPrint` 后返回空列表，行为符合设计；仅注释失真。
+- **降级 P2→P3**：`kg_endpoints_media.dart:69-85`「song/url 20028 无兜底」——`PlayerRepository._resolveViaDirect` 在 20028 时 `break` 并抛带 ssaCode 的 ApiException 交 UI 验证流程；仅注释失真。
+- **降级 P2→P3**：`kg_endpoints_auth.dart:86-91`「lite 盐」——全仓 `kg.lite` 无任何写入方，恒为 false，分支不可达（lite 相关分支同时为死代码）。
+- **降级 P2→P3**：`kg_endpoints_artist_album.dart:108-118`、`:121-139`「is_buy 形态」——`AlbumRepository.fetchDetail/fetchSongs` 均不传 `is_buy`，差异不可达。
+- **降级 P2→P3**：`kg_endpoints_playlist.dart:69-101`「playlistAdd type 归一」——`PlaylistRepository.collectPlaylist` 传 int 0/1 且不传 `is_pri/source`，差异不可达；但 `uid` 字符串问题（`:18-65`）保留 P2。
+- **降级 P2→P3**：`kg_play_api.dart:82-94`「privilege 输出顺序」——`KgPlayApi.privilege` 在 `lib/features` 无调用方（`kgPlayApiProvider` 只用于 `songUrl`），结果不可达；与 `:215-252` 合并为死代码/契约项。
+- **降级 P2→P3**：`kg_crypto.dart:213-243`「显式 key/iv 返回空 key」——B2 范围内三处 `aesEncryptHex` 调用均不传 key/iv，分支不可达。
+- **降级 P2→P3**：`kg_providers.dart:91-97`「fire-and-forget」——`PlayerRepository.ensureDfid` 与 `AuthRepository.getDfid/_handleLoginSuccess` 都会显式 `await` 写 SecureStorage，回调里的写入是冗余二次写；残留风险降为整洁度。
+- **降级 P2→P2（保留，措辞校正）**：`kg_endpoints_auth.dart:37-51`、`kg_providers.dart:85-99` dfid 三写——承认 `AuthRepository.restoreSession`/`_handleLoginSuccess` 会调 `KgDirectApiClient.setCredentials` 补齐 `kg.dfid`+`device.dfid`+CookieJar；问题收窄为「直接调用 `/register/dev` 的那一次会话内，直到下一次 setCredentials 之前，`kg.dfid` 与 CookieJar 仍是旧值」。
+- **撤回**：`kg_endpoints_search.dart:121-124`（原文已标注「不构成契约破坏」，不计入问题清单）。
+- **补充**：`edt_generator.dart` 与 `KuGouMusicApi/util/generate_simulate.js`（351 行完整读）逐行对照结论：明文格式、固定 IV、AES-128-CBC/PKCS7、RSA-OAEP SHA-256/MGF1-SHA256、哨兵 `0xffffffff - floor(random*20)`、贝塞尔 n+1 点、抖动 `max(0.5, 3-t*2.5)`、`_randomString` 的 `ceil((len-1)*random())` 偏斜、`ts=Date.now()` 毫秒均一致；唯一差异是 Node 对 webglHash 缺省调 `generateWebGLHash()`，Dart 由调用方必传（`verification_service.dart:41-49` 传 `_api.webglHash`，常量 `11664606328242161144`）。本文件无问题。
+
+## 补充问题（复核后新增）
+
+### `lib/core/direct/kg_crypto.dart:165-205` 二进制 MV 收藏端点误选无填充 RSA
+- 级别：P1
+- 违反：QUALITY_STANDARD 第 28 条（RSA 填充形态须逐一实测对照）、第 3 条（跨层契约）
+- 依据：`KgCrypto` 同时提供 `rsaEncryptPkcs1`（`PKCS1Encoding(RSAEngine())`，对应 Node `rsaEncrypt2`）与 `rsaEncryptRawHex`（右补零 `modPow`，对应 Node `cryptoRSAEncrypt`）。B2 内 `kg_client._registerDeviceOnce` 与 `kg_endpoints_playlist.playlistDel` 都正确选了 `rsaEncryptPkcs1`；但唯一发二进制 body 的调用方 `mv_collection_repository.dart:108-112` 用 `KgCrypto.rsaEncryptRawHex(...).toUpperCase()` 生成 query `p`，而 Node `module/mv_collect_del.js:16` 用 `rsaEncrypt2(...).toUpperCase()`（PKCS1-v1_5）。同一加密协议族内填充形态不一致，服务端无法解出 `{aes,uid,token}`。
+- 影响：收藏/取消收藏 MV 的直连请求被拒；该仓库在 `setCollected` 解密失败后以 `res.status == 200` 兜底返回 true，用户看到「已收藏/已取消」但服务端状态未变。
+- 证据等级：静态推演（Node 源码 + 调用方填充选择 + 本文件两个函数实现；未实测原生网关）
+
+### `lib/core/direct/kg_client.dart:302-317` `KgResponse` 对二进制响应只给 rawBytes，不校验解密后的业务状态
+- 级别：P2
+- 违反：QUALITY_STANDARD 第 29 条（返回结构须实测留样，成功判定逐端点确认）、第 3 条
+- 依据：`request()` 对非 JSON 二进制响应生成 `body={'status':0,'error':'响应解析失败',...}` 并把原字节放 `rawBytes`，不解析业务体。B2 内 `kg_endpoints_playlist.playlistDel` 解密后要求 `decoded.containsKey('status')` 才替换 body（第 54–60 行）；但 `mv_collection_repository.dart:134-145` 只判断「解密不抛异常」即 `return true`，不看 `decrypted['status']`，且失败时以 HTTP 200 兜底为成功。同一二进制返回契约在两个写端点上语义不一致。
+- 影响：MV 收藏在服务端返回 `status=0` 的业务失败时仍被判成功，UI 收藏态与服务端不一致且不会提示重试。
+- 证据等级：静态推演（本文件 + 两处调用方分支；未实测原生存留样）
+
+### `lib/core/direct/kg_endpoints_home.dart:180-197` / `lib/core/direct/kg_direct_api_client.dart:445-472` 两份 `videoDetail` 均为未接线实现
+- 级别：P3
+- 违反：QUALITY_STANDARD 第 32 条（死代码零容忍）、第 1 条（单一职责）
+- 依据：`KgDirectApiClient.get/post` 的 `case 'video/detail'` 调用主类自实现 `_videoDetail(q)`；`KgEndpointHome.videoDetail` 与 `KgMediaDirect.videoDetail` 各自再写一份同构实现，均无调用点。`dart analyze` 对 `kg_direct_api_client.dart` 另报 6 个 `unused_element/unused_field` 警告（见下）。
+- 影响：三份实现未来单独修改会行为分叉；当前不产生用户可见故障。
+- 证据等级：静态推演（分派表 + 方法定义 + analyze 输出）
+
+### `lib/core/direct/kg_media_direct.dart:15-87` 整个 `KgMediaDirect` 扩展无调用方
+- 级别：P3
+- 违反：QUALITY_STANDARD 第 32 条
+- 依据：全仓仅本文件出现 `KgMediaDirect`；`images()` 无任何 `.images(` 调用点，`videoDetail()` 亦无。其 `images` 与 Node `module/images_audio.js` 的参数集差异（`{hash,album_id,album_audio_id}` vs `{audio_id,hash,album_audio_id,filename}`）与 `Uri(queryParameters:)` / `encodeURIComponent` 编码差异因此不可达。
+- 影响：无当前用户可见后果；死实现会在后续被误接入时直接产生封面空白。
+- 证据等级：静态推演（调用点统计 + Node 源码对照）
+
+## 问题清单（按级别排序，共 30 条：P0=0 / P1=5 / P2=13 / P3=12）
+
+### P1（5）
+1. `kg_direct_api_client.dart:84-88` — `_wrap`→`evaluateResponse` 后无 `status` 裸 Map 必判失败（迁移行为不等价）。
+2. `kg_endpoints_comment.dart:43-64` — `/comment/count` 原生实测裸 Map `{"hash":710442}` 因此恒失败。
+3. `kg_client.dart:405-419` — `submitFingerprintVerification` 把 sid/edt 发给「取验证信息」端点，验证重试链断在第一步。
+4. `kg_endpoints_auth.dart:393-418` — `_afterLogin` 只认 `int 1`，字符串/浮点成功码不落 token/t1/VIP。
+5. `kg_crypto.dart:165-205` — 二进制 MV 收藏误用无填充 RSA（对照 Node `rsaEncrypt2`）。
+
+### P2（13）
+6. `kg_client.dart:408` — 验证请求 `clientver=20489/11440`，Node `verify_user_info.js` 为 11510。
+7. `kg_client.dart:266-277` — `Uint8List` 分支 `contentType` 与调用方声明的 `application/json` 并存，Node 只发 `application/json`。
+8. `kg_client.dart:281-289` — `DioException` 折成 502 业务体，网络异常与业务失败不可区分。
+9. `kg_client.dart:302-317` — 二进制响应只给 rawBytes，MV 收藏以「解密不抛异常」当业务成功。
+10. `kg_crypto.dart:61-69` — `KgSignature.android/web` 对 Map/List 值的序列化与 Node `JSON.stringify` 不保证一致。
+11. `kg_direct_api_client.dart:299-366` — post 分派表缺 get 表中 20+ 路径，当前无调用方命中但契约不完整。
+12. `kg_endpoints_comment.dart:91-195` — 评论写端点 `clienttime` 头来自 `kg_client` 第二次取时，与 query/key 的 clienttime 不同源。
+13. `kg_endpoints_search.dart:92-108` — `/search`（歌词）路径与固定参数集偏离 Node，仓库内原生实测留样不完整。
+14. `kg_endpoints_playlist.dart:18-65` — `playlistDel` 字符串 AES body 的 Content-Type 与 Node 不一致。
+15. `kg_endpoints_playlist.dart:18-65` — `playlistDel` 的 `p` 里 `uid` 为字符串 `'0'`，Node 为数值 0。
+16. `kg_endpoints_playlist.dart:252-288` — 自造 `specialid` 分支，Node 与仓库实测记录均无依据。
+17. `kg_endpoints_auth.dart:37-51` + `kg_providers.dart:85-99` — 原生注册只写 `device.dfid`/Hive/SecureStorage，`kg.dfid` 与 CookieJar 要等下一次 `setCredentials` 才同步。
+18. `kg_endpoints_auth.dart:286-302` — 二维码 `status=4` 只写 token/userid，不写 t1/vipType/vipToken（上层 `loginByQrToken` 再走 `/login/token` 只能部分补齐）。
+
+### P3（12）
+19. `kg_client.dart:227-243` — `Uint8List` 签名 data 为空串（当前二进制调用方 `notSignature:true`，不可达）。
+20. `kg_crypto.dart:213-243` — `aesEncryptHex(key:,iv:)` 返回 `key:''`，且函数名与实际 Base64 输出不符。
+21. `kg_direct_api_client.dart:91-98` — 迁移后遗留 `_hasData`（analyze: unused_element）。
+22. `kg_play_api.dart:38-58` — `/v5/url` 保留 signature 的实测依据指向禁止阅读的历史报告，可追溯性缺口。
+23. `kg_play_api.dart:82-94,215-252` — `KgPlayApi.privilege` 无调用方，`qualities` 入参在 `KgSharedParams.privilege` 中完全未被读取。
+24. `kg_endpoints_artist_album.dart:108-139,157-165` — `is_buy` 形态归一与 `rank_cid` 透传与 Node 不一致（当前调用方不传，不可达）。
+25. `kg_endpoints_home.dart:83-122` — `top/playlist` 直连可用/恒 200101 两份原生记录冲突且注释引用历史报告。
+26. `kg_endpoints_home.dart:98-104` — `topPlaylist` 丢弃 `q['userid']`，`??` 与 Node `||` 空值语义不同。
+27. `kg_endpoints_home.dart:154-158` / `kg_endpoints_media.dart:69-85` — 两处注释仍描述「回退 kapi」，而 `fallbackToKapi=false` 已使该路径不可达。
+28. `kg_endpoints_comment.dart:265-300` — `commentFloor` 下发空 `mixsongid`、忽略显式 `code`。
+29. `kg_endpoints_media.dart:20-38` — `kmrAudioMv` 过滤空 id，Node 保留空对象项。
+30. `kg_endpoints_playlist.dart:69-101` / `kg_endpoints_auth.dart:86-91` / `kg_providers.dart:91-97` / `kg_endpoints_home.dart:180-197` / `kg_media_direct.dart:15-87` — 归一差异与死代码/重复实现（含 lite 恒 false 分支、fire-and-forget 冗余写、`videoDetail` 三份实现、整个 `KgMediaDirect` 扩展）。
+
+## 复核通过项（本范围确认到位的设计，共 14 项）
+
+1. **原生网关唯一**：`lib/core/direct` 14 文件内 `344977` 出现 0 次；所有 `baseUrl` 字面量均为 `*.kugou.com`（gateway / userservice / verifyservice / login-user / loginserviceretry / trackercdn / trackermv / openapi / pubsongs / complexsearch / lyrics / msearch / ocean / musicadservice / expendablekmr / collectservice 路由），`h5.kugou.com` 仅作二维码 URL 内容不是请求基址。`KgConfig.gateway/registerGateway` 无 kapi 域。
+2. **kapi 仅参考**：`fallbackToKapi = false` 使 `super.get/post`（`AppConfig.kugouApiBase`）在所有分派与未分派路径都不可达；未移植路径显式抛 `-404`，并写明「kapi 仅作参考，运行期不调用」。第 27 条满足。
+3. **三盐与签名位置**：android `OIlwieks28dk2k092lksi2UIkp`、lite `LnT6xpN3khm36zse0QzvmgTZ3waWdRSA`、web `NVPh5oo715z5DIWAeQlhMDsWXXQV4hwt`、register `1014` 齐全；`signature` 统一进 `allParams` → `queryParameters`（非 header）；`signParamsKey = md5(appid+salt+clientver+data)`，`clienttime` 全为 `~/1000` 秒级。
+4. **clearDefaultParams 白名单**：仅 `/index.php`×3（评论写）、`/v1/video`、`/search`（歌词）、`images` 使用；`artistAudios`/`rankAudio` 明确不开，与 `docs/api_verified.md`「签名需 defaultParams+body 合并」一致。
+5. **edt_generator 与 Node 逐行一致**：AES-128-CBC 固定 IV `kugousecurity123`、PKCS7、RSA-OAEP SHA-256/MGF1-SHA256、哨兵、行为事件序列、毫秒 ts、webgl 由调用方注入。M2 下沉后无行为漂移。
+6. **`/v5/url` 参数完整**：`hash` 小写、`key=signKey(hash,mid,userid,appid)`、`IsFreePart`、`page_id/pid/ppage_id` 按 lite 分流、`version/clientver=11430`、`quality` 魔法档补 `magic_` 前缀而蝰蛇档原样、`need_hash_offset` 在 privilege body 中恒为 1；`PlayUrlResult` 完整读取 `hash_offset{start_ms,end_ms,clip_hash,start_byte,end_byte,offset_hash}`，试听判定用区间时长 ≤65s 或 `/p_0_`，单位标注为 ms/byte。与 `module/song_url.js`、`privilege_lite.js` 逐字段一致。
+7. **7 个端点域文件的域/路径/头**：artist_detail/audios 落 `openapi.kugou.com` 且 audios 保持 v1 + `kg-tid:220`；rank/audio 保持 `/openapi/kmr/v2/rank/audio` + `kg-tid:369`；pubsongs 去掉 gateway 前缀；search 走 complexsearch v3/song；lyrics `/download` 带 `ver:1&charset=utf8`；评论走 `x-router: m.comment.service.kugou.com`，计数走 `sum.comment.service.kugou.com` + web 签名；均与 Node module 与 `docs/api_verified.md` 一致。
+8. **二进制 body 与 RSA 填充（主路径）**：`KgClient` 有 `Uint8List` 直传分支并保留 `rawBytes`；设备注册响应 `base64.encode(raw)` → `aesDecryptPlaylistB64(base64, aes.key)`，`md5(seed)[:16]/[16:32]` 派生与 Node `playlistAesEncrypt/Decrypt` 一致；`_registerDeviceOnce` 与 `playlistDel` 均用 PKCS1-v1_5（`rsaEncryptPkcs1`），登录 `pk` 用无填充 `rsaEncryptRawHex` 与 Node `cryptoRSAEncrypt` 一致；注册 `p` 为小写 hex、`uid` 为字符串 `"0"`、`platid=2`、签名含 body。
+9. **写操作防重**：所有评论写与歌单写在 `get/post` 分派中均 `write: true`；`_directOrFallback` 对 `write` 与 `needsVerification`/`20034` 直接抛包装异常，不回退；本范围所有写端点都直接 `kg.request()`，无一使用 `requestWithVerify`，验证自动重发不会重复提交；`PlaylistRepository._write` 另有 `_inFlight` 进程内去重与 `maybeSucceeded` 语义。
+10. **dfid 三写在主链路闭合**：`KgDirectApiClient.setCredentials` 同时写 `kg.dfid`、`kg.device.dfid` 与父类 CookieJar；`kgClientProvider.onDfidRegistered` 写 Hive `device` box 并同步 SecureStorage；`PlayerRepository.ensureDfid` 写 SecureStorage + `device.dfid` + Hive；`AuthRepository.restoreSession/_handleLoginSuccess` 再经 `setCredentials` 补齐；`SecureStorage.clearCredentials` 有意保留 dfid（设备级而非账号级）。
+11. **`_wrap` 迁移单点**：`KgDirectApiClient._wrap` 与 `KugouApiClient` 响应拦截器都只调 `evaluateResponse`，成功/失败/20028 判定统一；`ApiException` 定义与 `kVerificationRequired` 收敛在 `core/foundation`，`requiresVerification` 为全仓唯一出口。
+12. **异常契约**：`_directOrFallback` 把直连/回退异常统一包装为 `DioException(error: ApiException)`，`TypeError/NoSuchMethodError` 明确 rethrow；`KgDirectApiClient.get/post` 未命中分派也走同一包装；`AuthRepository`/`verification_service` 的 `DioException.error` 读取链成立。
+13. **装配注入**：`kgPlayApiProvider`/`kgDirectApiProvider` 都 `ref.watch(kgClientProvider)`，`app/di.dart` 的 `kugouApiClientProvider` 返回 `kgDirectApiProvider`；B2 范围内无 `new KugouApiClient()`；`AppConfig.kugouApiBase` 未在 direct 中出现。
+14. **第 33 条遵守**：本报告全部判定依据为 Dart 源码、`docs/QUALITY_STANDARD.md`/`REVIEW_SPEC.md`/`api_verified.md`（原生 curl 记录）与 Node `module/*.js`/`util/*.js` 源码；未读取任何 kapi 返回、未启动 kapi/Node 服务、未据 kapi 包装结果修改任何参数结论。
+
+## 逐文件 `dart analyze` 结果
+
+环境：`export PATH=$PATH:/opt/dart/bin`（Dart SDK 3.13.7 stable），命令 `dart analyze lib/core/direct/<file>`，逐文件独立执行。项目无 `.dart_tool/package_config.json`，故 `package:dio/*`、`package:flutter/*`、`package:qr_flutter/*`、`package:hive/*`、`package:flutter_riverpod/*`、`package:pointycastle/*` 全部报 `uri_does_not_exist` 及其派生的 `undefined_*`/`non_type_*`，属任务书允许的「Flutter/三方包符号缺失预期噪音」。下表「项目自有类错误」均为 0。
+
+| # | 文件 | 原始输出 | 噪音（三方包缺失及派生） | 项目自有类错误 | 结论 |
+|---|---|---|---|---|---|
+| 1 | `edt_generator.dart` | 25 issues | 25（`pointycastle/asn1.dart`、`export.dart` + MD5Digest/OAEPEncoding/RSAPublicKey 等派生） | 0 | 通过 |
+| 2 | `kg_client.dart` | 12 issues | 12（`dio/dio.dart` + Dio/BaseOptions/Response/Options/DioException 派生） | 0 | 通过 |
+| 3 | `kg_crypto.dart` | 55 issues | 55（pointycastle 两个 URI + ASN1/PaddedBlockCipher/PKCS1Encoding 等派生） | 0 | 通过 |
+| 4 | `kg_direct_api_client.dart` | 15 issues | 8 error（dio/flutter/qr_flutter 三个 URI + debugPrint/DioException/RequestOptions 派生）；7 warning 为项目自有告警：`_hasData`/`_commentCodeOf`/`_maskMobile`/`_qrPngBase64`/`_afterLogin` unused、`_qrSrcappid` unused_field、`:166` dead_code | 0 | 通过（告警已计入 P3 第 21 条） |
+| 5 | `kg_endpoints_artist_album.dart` | 2 issues | 0（2 条均为项目自有 `unused_import`：`dart:convert`、`kg_direct_api_client.dart`） | 0 | 通过 |
+| 6 | `kg_endpoints_auth.dart` | 5 issues | 5（flutter/foundation、qr_flutter URI + debugPrint/QrPainter/QrVersions 派生） | 0 | 通过 |
+| 7 | `kg_endpoints_comment.dart` | 1 issue | 0（1 条项目自有 `unused_import`：kg_direct_api_client.dart） | 0 | 通过 |
+| 8 | `kg_endpoints_home.dart` | 2 issues | 0（2 条项目自有 `unused_import`：dart:convert、kg_direct_api_client.dart） | 0 | 通过 |
+| 9 | `kg_endpoints_media.dart` | 2 issues | 0（2 条项目自有 `unused_import`：dart:convert、kg_direct_api_client.dart） | 0 | 通过 |
+| 10 | `kg_endpoints_playlist.dart` | 1 issue | 0（1 条项目自有 `unused_import`：kg_direct_api_client.dart） | 0 | 通过 |
+| 11 | `kg_endpoints_search.dart` | 1 issue | 0（1 条项目自有 `unused_import`：kg_direct_api_client.dart） | 0 | 通过 |
+| 12 | `kg_media_direct.dart` | `No issues found!` | 0 | 0 | 通过 |
+| 13 | `kg_play_api.dart` | 1 issue | 0（1 条项目自有 `unused_import`：`../domain/quality.dart`） | 0 | 通过 |
+| 14 | `kg_providers.dart` | 14 issues | 14（flutter/foundation、flutter_riverpod、hive 三个 URI + Box/Hive/Provider/debugPrint 派生） | 0 | 通过 |
+
+合计：14/14 文件已逐文件执行并贴出结果；过滤三方包噪音后**项目自有类错误 0**（任务书判定为通过）；项目自有 warning 共 16 条（15 条 unused/1 条 dead_code，均为 `dart analyze` 静态告警，不计为错误）。
+
+## 未做项与证据边界
+
+- 未做原生 `probe` 三态 cookie 实打与真机日志核对：任务书禁止启动服务/构建/跑测试，且第 33 条禁止以 kapi 返回作依据；凡涉及「上游实际返回形态」的结论一律标注「静态推演 / 未实测」，未把任何推测写成实测。
+- 未读 `docs/batch*`、`docs/v3*review*`、`docs/v4*review*`、`docs/v37*` 及其它批报告（通用规则 7），因此 `kg_play_api.dart:38-58`、P3 第 25 条所指的历史实测记录无法复核，已按「可追溯性缺口」如实标注。
+- 未修改任何代码文件、未执行 `pub get`/flutter/构建/测试；唯一写入文件为 `docs/v51_cross_b2_a.md`。
