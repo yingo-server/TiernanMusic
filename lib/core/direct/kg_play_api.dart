@@ -1,4 +1,5 @@
 /// 播放与权益相关接口（直连版）
+import domain/quality.dart;
 ///
 /// 移植自：
 ///   module/song_url.js      → KgPlayApi.songUrl

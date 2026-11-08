@@ -1,4 +1,5 @@
 import 'dart:async';
+import core/domain/quality.dart;
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
