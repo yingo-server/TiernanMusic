@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/net/repository_reads.dart';
 
 import '../../../core/api/kugou_api_client.dart' show KugouApiClient;
 import '../../../app/di.dart' show kugouApiClientProvider;
@@ -126,18 +127,19 @@ class AlbumRepository {
   AlbumRepository(this._api);
 
   final KugouApiClient _api;
+  final RepositoryReads _reads = RepositoryReads(_api, 'album');
 
   Future<AlbumInfo> fetchDetail(String id) async {
     // V37-06（C1 ALB-R2，第 13 条）：裸强转改 is Map 分支校验（对齐
     // 同文件 fetchSongs 口径）——上游异常形态时给空数据而非 TypeError。
-    final raw = await _api.get('/album/detail', query: {'id': id});
+    final raw = await _reads.get('/album/detail', query: {'id': id}, json: true);
     final res = raw is Map<String, dynamic> ? raw : const <String, dynamic>{};
     return AlbumInfo.fromJson(res);
   }
 
   Future<AlbumSongsPage> fetchSongs(String id, {int page = 1}) async {
     // V37-06（C1 ALB-R2，第 13 条）：入口强转改 is 校验。
-    final raw = await _api.get('/album/songs', query: {
+    final raw = await _reads.get('/album/songs', query: {
       'id': id,
       'page': page,
       'pagesize': 50,

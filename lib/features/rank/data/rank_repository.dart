@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/net/repository_reads.dart';
 
 import '../../../core/api/kugou_api_client.dart';
 import '../../../app/di.dart' show kugouApiClientProvider;
@@ -97,6 +98,7 @@ class RankSongsPage {
 
 class RankRepository {
   RankRepository(this._api);
+  final RepositoryReads _reads = RepositoryReads(_api, 'rank');
   final KugouApiClient _api;
 
   /// 榜单歌曲（分页）
@@ -105,7 +107,7 @@ class RankRepository {
     int page = 1,
     int pageSize = 30,
   }) async {
-    final res = await _api.post('/rank/audio', const <String, dynamic>{}, query: {
+    final res = await _reads.post('/rank/audio', const <String, dynamic>{}, query: {
       'rankid': rankId,
       'page': page,
       'pagesize': pageSize,

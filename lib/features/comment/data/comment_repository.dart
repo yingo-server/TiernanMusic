@@ -1,9 +1,11 @@
 import '../../../core/api/kugou_api_client.dart';
+import '../../../core/net/repository_reads.dart';
 
 enum CommentResourceType { song, playlist, album }
 
 class CommentRepository {
   CommentRepository(this._api);
+  final RepositoryReads _reads = RepositoryReads(_api, 'comment');
   final KugouApiClient _api;
 
   /// 当前登录用户 userid（来自 API 客户端 cookie 上下文），用于 isMine 判定
@@ -28,13 +30,13 @@ class CommentRepository {
         },
       _ => {'id': id, 'page': page, 'pagesize': pageSize},
     };
-    final data = await _api.get(path, query: query);
+    final data = await _reads.get(path, query: query);
     return CommentPage.fromJson(data, currentUserId: _currentUserId);
   }
 
   /// 按歌曲 hash 查询评论数。
   Future<int> fetchCount(String hash) async {
-    final data = await _api.get('/comment/count', query: {'hash': hash});
+    final data = await _reads.get('/comment/count', query: {'hash': hash});
     final value = data[hash] ?? data[hash.toUpperCase()] ?? data[hash.toLowerCase()];
     return value is num ? value.toInt() : int.tryParse('$value') ?? 0;
   }
@@ -47,7 +49,7 @@ class CommentRepository {
     String? mixsongid,
     int page = 1,
   }) async {
-    final data = await _api.get('/comment/floor', query: {
+    final data = await _reads.get('/comment/floor', query: {
       'special_id': specialId,
       'tid': tid,
       // ⚠️ 必须传 resource_type：直连层据此选择「端点 + comment code」，

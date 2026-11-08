@@ -1,4 +1,5 @@
 import '../../../core/api/kugou_api_client.dart';
+import '../../../core/net/music_api.dart';
 import '../../../core/resource/cached_api.dart';
 
 class MvRepository {
