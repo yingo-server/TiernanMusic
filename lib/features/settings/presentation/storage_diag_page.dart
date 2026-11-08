@@ -176,7 +176,7 @@ class _StorageDiagPageState extends ConsumerState<StorageDiagPage>
                           ? theme.colorScheme.primary
                           : theme.colorScheme.error,
                     ),
-                    title: Text(l.storageDiag),
+                    title: Text(l.permissionDenied),
                     subtitle: Text(granted
                         ? l.permissionGranted
                         : '${l.permissionDenied} · ${l.goGrant}'),

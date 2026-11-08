@@ -102,7 +102,7 @@ class LyricVisibleController extends StateNotifier<bool> {
   void toggle() => state = !state;
 }
 
-/// 全屏播放页。
+/// 全屏播放页（V39 完全重写；v5.3-R2 P4 布局重排）。
 class FullPlayerPage extends ConsumerWidget {
   const FullPlayerPage({super.key});
 
@@ -333,7 +333,7 @@ class _PlayerTopBar extends ConsumerWidget {
                   albumAudioId: s.albumAudioId,
                 ),
               );
-            } else if (v == 'queue') {
+            } else if (v == 'queue' && s != null) {
               showQueueSheet(context);
             }
           },
@@ -360,6 +360,7 @@ class _PlayerTopBar extends ConsumerWidget {
             ),
             PopupMenuItem<String>(
               value: 'queue',
+              enabled: song != null, // v5.3-R2（修 C-45）：空态下队列不可点
               child: Row(children: [
                 Icon(Icons.queue_music_rounded,
                     size: 20, color: theme.colorScheme.onSurfaceVariant),
@@ -490,9 +491,9 @@ class _QualityBadge extends StatelessWidget {
   }
 }
 
-/// 功能入口行：评论 + MV（有才显示）+ 歌词切换。
+/// 功能入口行：评论 + MV（三态）+ 歌词切换。
 ///
-/// v5.3-R2 P4 语义唯一化（PLAN 质量要求 3，修 C-37/C-38）：
+/// v5.3-R2 P4 语义唯一化（PLAN 质量要求 3，修 C-37/C-38/C-42/C-43）：
 ///  - 「收藏到歌单」与「播放队列」收敛到顶栏「更多」菜单，入口行不再重复；
 ///  - 歌词切换从封面右下角 40dp 悬浮按钮迁入入口行（≥48dp、有 active 态），
 ///    与 _CoverOrLyric 的 _showLyric 状态共用 [lyricVisibleProvider]；
@@ -570,13 +571,18 @@ class _EntryButtonsRow extends ConsumerWidget {
                   ref.read(lyricVisibleProvider.notifier).toggle(),
             ),
           ),
-          if (hasMv) ...[
+          // v5.3-R2（修 C-43）：MV 按钮三态——loading 禁用占位（入口行宽度
+          // 稳定不跳变）/ 无 MV 隐藏 / 有 MV 可点。不再「加载中整个按钮消失」。
+          if (mvAsync != null || hasMv) ...[
             const SizedBox(width: 8),
             Expanded(
               child: entryButton(
                 icon: Icons.movie_outlined,
                 label: context.l10n.playMv,
-                onPressed: () {
+                // loading（mvAsync 无值）时禁用占位，防止 3→4 列宽度跳变
+                onPressed: !hasMv
+                    ? null
+                    : () {
                   // /video/url 只认视频 hash，path 用 hash；
                   // videoId 走 query 供清晰度列表使用（mv_repository 契约）
                   final hash = mv.bestHash ?? mv.sdHash ?? '';
