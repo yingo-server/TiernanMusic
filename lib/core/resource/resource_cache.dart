@@ -10,9 +10,12 @@ import '../storage/storage_permission.dart';
 import '../utils/error_logger.dart';
 
 /// TTL 常量（v4.0 冻结契约，TASK_v400_arch.md）。
-const kJsonTtl = Duration(hours: 168); // 一切 API 返回的 JSON
-const kListTtl = Duration(seconds: 90); // 本次启动的首页/歌单列表
-const kFilePermanent = null; // 实际资源文件永久（占位常量，按契约保留）
+const kFilePermanent = null; // 实际资源文件永久（占位常量，按契约保留；实际由 cacheUrlFile 的「已存在直接返回」保证）
+
+/// TTL 唯一事实源在 cache_keys.cacheTtl；此处仅保留契约兼容的别名。
+/// v5.1 B3-C：数值必须与 cacheTtl 一致，禁止再出现第二套 TTL 口径。
+const kJsonTtl = Duration(hours: 168); // == cacheTtl(CacheScope.json)
+const kListTtl = Duration(seconds: 90); // == cacheTtl(CacheScope.list)
 
 /// 统一缓存（v4.0-B，V400-B-01）。
 ///
@@ -36,6 +39,8 @@ class ResourceCache {
   static const _listPrefix = 'list:';
   /// 内存中同 key 的 in-flight 请求（第 22 条：Dart 单 isolate，Map 即互斥点）
   final _inFlight = <String, Future<Map<String, dynamic>>>{};
+  /// v5.1 B3-C：文件下载的 in-flight 合并（同名 .part 并发损坏防护）
+  final _fileInFlight = <String, Future<String?>>{};
 
   Box<String>? _box;
 
@@ -173,7 +178,7 @@ class ResourceCache {
   /// 试听/全曲、CDN 截断即使复用同一 URL，只要声明字节数不同就是不同资源，
   /// 绝不互相覆盖/误复用（第 3/23 条）。bytes=0（未声明）由调用方禁止入库。
   static String _hashName(String url, {int bytes = 0}) {
-    final identity = '$url|$bytes';
+    final identity = fileIdentity(url, bytes);
     var h = 0x811c9dc5;
     for (final c in identity.codeUnits) {
       h ^= c & 0xff;
@@ -192,42 +197,6 @@ class ResourceCache {
     return '${h.toRadixString(16)}_${url.length}_$bytes$suffix';
   }
 
-  /// 写入字节永久缓存（契约签名）。写失败留痕不抛（缓存可重建）。
-  Future<void> putFile(String key, List<int> bytes) async {
-    try {
-      final dir = await _dirOf('raw');
-      final f = File('${dir.path}/${_hashName(key)}');
-      await f.writeAsBytes(bytes, flush: true);
-    } catch (e) {
-      debugPrint('[resource] putFile($key) failed: $e');
-    }
-  }
-
-  /// 读字节永久缓存（契约签名，永久不淘汰）。
-  Future<List<int>?> file(String key) async {
-    try {
-      final dir = await _dirOf('raw');
-      final f = File('${dir.path}/${_hashName(key)}');
-      if (!await f.exists()) return null;
-      return await f.readAsBytes();
-    } catch (e) {
-      debugPrint('[resource] file($key) failed: $e');
-      return null;
-    }
-  }
-
-  /// 内部缓存目录绝对路径（契约签名）。文件不存在返回 null。
-  Future<String?> filePath(String key) async {
-    try {
-      final dir = await _dirOf('raw');
-      final f = File('${dir.path}/${_hashName(key)}');
-      return await f.exists() ? f.path : null;
-    } catch (e) {
-      debugPrint('[resource] filePath($key) failed: $e');
-      return null;
-    }
-  }
-
   /// 从 URL 下载并永久缓存（V402：`(url, declaredBytes)` 身份严格校验）。
   ///
   /// 规则（用户 2026-11-08 口径）：
@@ -240,12 +209,42 @@ class ResourceCache {
     String url,
     String kind, {
     int declaredBytes = 0,
+    bool allowPreview = false,
   }) async {
     if (url.isEmpty) return null;
     if (declaredBytes <= 0) {
       debugPrint('[resource] cacheUrlFile($kind) rejected: no declared bytes');
       return null;
     }
+    // v5.1 B3-C：缓存层自身强制「试听片段绝不入库」，不依赖调用方闸门。
+    // 试听/高潮 URL 形态（区间片段路径 / p_0_ 前缀）在此直接拒绝。
+    if (!allowPreview && _looksLikePreview(url)) {
+      debugPrint('[resource] cacheUrlFile($kind) rejected: preview/clip URL');
+      return null;
+    }
+    // 同一 (url,bytes) 并发只允许一个下载，共用结果（第 18/22 条）。
+    final flightKey = '$kind|$url|$declaredBytes';
+    final pending = _fileInFlight[flightKey];
+    if (pending != null) return pending;
+    final fut = _cacheUrlFileInner(url, kind, declaredBytes);
+    _fileInFlight[flightKey] = fut;
+    try {
+      return await fut;
+    } finally {
+      _fileInFlight.remove(flightKey);
+    }
+  }
+
+  /// 试听/高潮片段 URL 形态判定（缓存层防御点，第 14 条）。
+  static bool _looksLikePreview(String url) =>
+      url.contains('/p_0_') || url.contains('/hash_offset/') ||
+      url.contains('IsFreePart=1');
+
+  Future<String?> _cacheUrlFileInner(
+    String url,
+    String kind,
+    int declaredBytes,
+  ) async {
     try {
       final dir = await _dirOf(kind);
       final name = _hashName(url, bytes: declaredBytes);
@@ -261,10 +260,16 @@ class ResourceCache {
         receiveTimeout: const Duration(minutes: 10),
       ));
       final part = File('${target.path}.part');
-      final head = await dio.head(url);
-      final cl = int.tryParse(
-          '${head.headers.value('content-length') ?? ''}') ??
-          0;
+      // v5.1 B3-C：HEAD 405/403/超时不得让永久缓存整体失效——
+      // 降级为「未知长度，靠下载后实际长度校验」（第 11 条）。
+      int cl = 0;
+      try {
+        final head = await dio.head(url);
+        cl = int.tryParse(
+            '${head.headers.value('content-length') ?? ''}') ?? 0;
+      } catch (e) {
+        debugPrint('[resource] HEAD unavailable ($e), rely on final length check');
+      }
       if (cl > 0 && cl != declaredBytes) {
         debugPrint('[resource] cacheUrlFile($kind) rejected: '
             'Content-Length=$cl != declared=$declaredBytes');

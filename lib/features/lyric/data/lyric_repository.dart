@@ -20,9 +20,9 @@ class LyricRepository {
   final TranslateApi _translate;
   final CachedApiCall _cached;
 
-  /// 歌词缓存 TTL。歌词内容与登录态无关、变化极慢，
-  /// 90 秒的全局 TTL 会导致同一首歌每轮播放都重新走网络。
-  static const Duration _lyricCacheTtl = Duration(minutes: 30);
+  /// 歌词缓存 TTL = 168h（用户 v4.0 口径：歌曲/歌词/封面 JSON 均缓存 168h）。
+  /// 歌词内容与登录态无关、变化极慢；30min 是迁移期临时值，已纠正。
+  static const Duration _lyricCacheTtl = Duration(hours: 168);
 
   /// 搜索歌词候选
   Future<LyricCandidate?> findCandidate({

@@ -1,9 +1,10 @@
 # v5.1 交叉审查 B3 · 视角 B（鲁棒与代码质量）
 
-- 范围：`lib/core/cache/**`、`lib/core/resource/**`、`lib/core/prefetch/**`、`lib/core/storage/**`（9 个 .dart 文件 / 1444 行）
+- 范围：`lib/core/cache/**`、`lib/core/resource/**`、`lib/core/prefetch/**`、`lib/core/storage/**`（9 个 .dart 文件；初读 1444 行，最终快照 1464 行）。
 - 判据：`docs/QUALITY_STANDARD.md` 32 条（任务书重点第 1/6/9/11/13/14/18/19/20/21/23/25/28/29/31/32 条），冲突时以 QUALITY_STANDARD 为准。
 - 工作方式：逐文件 `file_read` 完整读、读完即落盘；只读源码，不改代码；末尾问题清单 + 复核通过项 + 逐文件 `dart analyze`。
 - 特别核对：`ResourceCache.json` 的 `_inFlight` 键维度、stale 副本是否污染箱内原值、`cacheUrlFile` 失败路径半截文件、`PrefetchEngine.dispose` 后回调门禁。
+- **基线快照说明**：审查期间本批主代理并发修改了 `resource_gateway.dart`（74→91 行）、`cached_api.dart`（84→81 行）、`resource_cache.dart`（331→337 行）。本报告的这三个文件章节已按**最终磁盘状态重新完整阅读并重写**，行号、结论与 `dart analyze` 结果均以最终快照为准；初读版本（1444 行）的部分现象在正文中标注为「初读时」，便于主代理区分。最终 9 文件 SHA-256 与逐文件 `dart analyze` 全文均贴在文末。
 
 ---
 
@@ -145,27 +146,20 @@
 
 ---
 
-## 4. `lib/core/resource/resource_cache.dart`（332 行，完整读）
+## 4. `lib/core/resource/resource_cache.dart`（337 行，最终快照重新完整读）
 
-### resource_cache.dart:69-91 `_inFlight` 读/删用 `fullKey`、写仍用调用方 `key`，并发合并在当前磁盘状态下完全失效
-- 级别：P0
-- 违反：QUALITY_STANDARD 第 19 条（互斥闸门必须成对且归属于同一所有者）、第 18 条（异步结果必须校验世代）、第 22 条（并发假设必须写明并保护）、第 23 条（缓存键维度）
-- 依据：当前磁盘 `:69-74` 为 `final isList = ttl == kListTtl; final fullKey = ...; final pending = _inFlight[fullKey]; if (pending != null) return pending;`，读侧用 `fullKey`；而 `:86` 仍为 `_inFlight[key] = fut;`（**调用方裸 key**），`:90` 的清理又是 `_inFlight.remove(fullKey);`。三处键不一致：写入的条目键为 `key`，查表键为 `fullKey`，因此 `pending` 永远查不到刚写入的 `fut`，`finally` 的 `remove(fullKey)` 也永远删不掉它，`_inFlight` 中残留一个**永不过期**的 `Future<Map>` 条目。注释 `:69-70` 明确声称「in-flight 以 **fullKey**（含 scope 前缀）分键」，与 `:86` 的实现矛盾（第 31 条）。这是本轮并发编辑新引入的状态，已按当前磁盘逐行复核。
-- 影响：同 key 的并发请求不再合并（每次都发真实网络请求，歌词/首页重复请求回归），且每个未命中缓存的请求都在进程内永久泄漏一个 Future + 其闭包/响应 Map；长时间使用后内存单调增长直至被系统杀进程，用户表现为应用越用越卡、最终闪退回桌面。
-- 证据等级：实锤（`:73` / `:86` / `:90` 三处键表达式在同一函数体内逐行确认）
-
-### resource_cache.dart:86-91 `finally` 无条件 `remove`、不校验自己是否仍是持有者
+### resource_cache.dart:71-93 / 236-250 JSON 与文件两套 in-flight 的 `finally` 都无条件 `remove`、不校验持有者身份
 - 级别：P1
-- 违反：QUALITY_STANDARD 第 19 条（互斥闸门必须成对且关闸时判断「我是否仍是当前持有者」）、第 18 条（异步结果必须校验世代）
-- 依据：`_inFlight[key] = fut; try { return await fut; } finally { _inFlight.remove(fullKey); }`（`:86-90`），`remove` 前没有 `if (identical(_inFlight[fullKey], fut))` 之类的身份判断，且如上条所述读/写/删三者的键本身就不一致。即使把键统一，无条件 `remove` 仍会在「`fut` 已完成、首个调用方的 `finally` 尚未执行」的窗口内让新调用 `return pending` 拿到一个**已经结束（可能失败）的旧 Future**；若另一路已用同一键放入新的 `fut`，无条件 `remove` 还会把后来者的 in-flight 提前清掉，造成真正并发同时发出两个 fetch。
-- 影响：切歌/切页后一次新请求可能直接抛上一次请求的错误，或复用上一世代的旧数据；并发合并偶发失效导致同一资源重复请求。
+- 违反：QUALITY_STANDARD 第 19 条（互斥闸门必须成对且关闸时判断「我是否仍是当前持有者」）、第 18 条（异步结果必须校验世代）、第 22 条（并发假设必须写明）
+- 依据：JSON 侧 `:75-76` 查 `_inFlight[fullKey]`、`:88` 写 `_inFlight[fullKey] = fut`、`:92` `finally { _inFlight.remove(fullKey); }`；文件侧 `:241-243` 查 `_fileInFlight[flightKey]`、`:245` 写、`:249` `finally { _fileInFlight.remove(flightKey); }`。两处 `remove` 前都没有 `if (identical(map[key], fut))` 之类的身份判断，注释 `:36` 与 `:39` 也只声明「Dart 单 isolate，Map 即互斥点」，未声明 `await`/`finally` 调度窗口的并发前提。`fut` 已完成但首个调用方的 `finally` 尚未执行的窗口内，新调用 `pending != null` 会 `return pending` 拿到**已经结束（可能失败）的旧 Future**；若另一路已放入新的 `fut`，无条件 `remove` 还会把后来者的 in-flight 提前清掉，使真正并发同时发出两个 fetch/下载。最终快照已把 `_inFlight` 的读写删三处统一为 `fullKey`（初读版本曾用调用方 `key`、中间版本一度读写键不一致），故本节按当前状态记录剩余的第 19 条问题。
+- 影响：切歌/切页后一次新请求可能直接抛上一次请求的错误或复用上一世代的旧数据；并发合并偶发失效导致同一资源重复请求/重复下载。
 - 证据等级：静态推演（Dart 事件循环下 `await` + `finally` 的调度窗口为语言语义；代码无身份判断为实锤）
 
-### resource_cache.dart:73-74 / 116 / 132 合并后的调用方共享同一个可变 `Map` 实例，异常对象也原样共享
+### resource_cache.dart:75-76 / 116 / 132 合并后的调用方共享同一个可变 `Map` 实例，异常对象也原样共享
 - 级别：P2
 - 违反：QUALITY_STANDARD 第 22 条（并发假设必须写明）、第 8 条（异常契约必须单一且稳定）、第 18 条（世代校验）
-- 依据：`final _inFlight = <String, Future<Map<String, dynamic>>>{};`（`:38`）与 `if (pending != null) return pending;`（`:74`）。`_doFetch` 的 `return data;`（`:116`）与回退分支 `return Map<String, dynamic>.from(staleBody)..['__stale'] = true;`（`:132`）都只产生**一个对象**，所有等待者拿到同一引用；`Future` 完成时携带的异常对象与栈也是同一个。代码没有对合并调用方说明「返回值共享、不可变更」的契约，也没有按等待者复制。任一消费方（包括 `ResourceGateway.json:56` 把同一 Map 存进 L1）对返回 Map 做原地增删，其它调用方立即看到被污染的结果。
-- 影响：两个页面合并到同一次请求时，一处对结果做加工会让另一处显示错字段；失败时后加入的调用方拿到别的请求的异常与日志栈，线上无法定位本次失败。
+- 依据：`final _inFlight = <String, Future<Map<String, dynamic>>>{};`（`:37`）与 `if (pending != null) return pending;`（`:76`）。`_doFetch` 的 `return data;`（`:116`）与回退分支 `return Map<String, dynamic>.from(staleBody)..['__stale'] = true;`（`:132`）都只产生**一个对象**，所有等待者拿到同一引用；`Future` 完成时携带的异常对象与栈也是同一个。代码没有对合并调用方说明「返回值共享、不可变更」的契约，也没有按等待者复制；`ResourceGateway.json:56` 又把同一个 Map 直接存进 L1。
+- 影响：两个页面合并到同一次请求时，一处对结果做加工会让另一处（及 L1 后续命中）显示错字段；失败时后加入的调用方拿到别的请求的异常与日志栈，线上无法定位本次失败。
 - 证据等级：静态推演（返回值共享为 Dart Future 语义 + 本文件代码事实）
 
 ### resource_cache.dart:101-136 `catch (e)` 捕获一切异常后进入 stale 降级，违反「编程错误绝不进入业务降级」，且 `staleOnError` 由首个调用方决定
@@ -196,12 +190,12 @@
 - 影响：半截 `.part` 文件长期占盘且永久文件缓存无清理入口；后续同 URL 请求可能读到被污染/残留长度的文件，用户听到截断音频或看到损坏封面，且日志无清理失败记录。
 - 证据等级：静态推演（早退分支与唯一清理点在本文件内成对确认；Dio 对既有 `.part` 的写入语义未实测）
 
-### resource_cache.dart:239-293 `cacheUrlFile` 无 in-flight 合并、无下载并发上限、Dio 不可取消
+### resource_cache.dart:236-250 / 253-330 文件下载仍无并发数上限、Dio 不可取消；`_looksLikePreview` 用 URL 子串黑名单判身份
 - 级别：P1
-- 违反：QUALITY_STANDARD 第 22 条（并发假设必须写明并保护）、第 25 条（并发请求数必须有上限）、第 20 条（句柄必须对称释放）、第 18 条（异步结果校验世代）
-- 依据：方法内没有 `_inFlight` 或任何按 `(url,declaredBytes)` 的互斥表，只有 `target`/`part` 两个由确定性文件名派生的路径。`final dio = Dio(BaseOptions(... receiveTimeout: const Duration(minutes: 10)));` 每次新建、无 `CancelToken`、无 `dio.close()`；`await dio.download(url, part.path)` 期间没有任何取消或世代判断。两个并发调用（例如快速切歌同一 URL、预取与播放同时触发）会对**同一个 `.part` 路径**同时写入，随后各自 `await part.length()`、`await part.rename(target.path)`：先 rename 者把文件移走，后者的 `rename` 抛错进 catch，catch 里还会去 `delete` 同名 `.part`（可能是另一路正在写的那个）。同时先完成者仅靠「长度 == declaredBytes」就 `rename`，内容可能是两路交错写入的损坏字节。`receiveTimeout: 10 分钟` 且无取消令牌，页面销毁后下载仍在后台跑满超时。
-- 影响：同一资源并发下载时写入损坏文件并永久缓存，之后每次播放都命中这份坏文件（用户听到杂音/无法播放）；后台下载在退出页面后仍长驻并占用带宽与磁盘。
-- 证据等级：静态推演（并发写同一路径、无互斥/取消/上限在本文件内实锤；损坏字节为时序推演，未实测）
+- 违反：QUALITY_STANDARD 第 25 条（并发请求数必须有上限）、第 20 条（句柄必须对称释放）、第 18 条（异步结果校验世代）、第 14 条（所有数据边界必须校验）、第 11 条（降级触发条件）
+- 依据：`_fileInFlight` 只按 `flightKey = '$kind|$url|$declaredBytes'` 合并**同一资源**的并发（`:240-248`），对不同 URL 的并发下载没有任何总量上限、队列或信号量；`final dio = Dio(BaseOptions(... receiveTimeout: const Duration(minutes: 10)));`（`:270-273`）每次新建、无 `CancelToken`、无 `dio.close()`，`await dio.download(url, part.path)` 期间无取消或世代判断，页面销毁后下载仍可跑满 10 分钟。`_looksLikePreview(url)`（`:252-254`）只匹配 `/p_0_`、`/hash_offset/`、`IsFreePart=1` 三个子串，`allowPreview` 默认 false 且由调用方可无条件置 true（`cacheUrlFile` 的公开参数 `:218`）；URL 是外部数据，黑名单之外的试听片段仍会以「声明字节数」被当作完整文件永久入库。`_cacheUrlFileInner` 的 HEAD 失败降级（`:277-283`）虽有明确留痕，但把 `cl` 置 0 后完全依赖下载后长度，HEAD 403/405 与真实不可写目录之间无区分（第 11 条恢复条件仍缺）。
+- 影响：快速切歌触发多个不同 URL 下载时带宽被预取占满、正在播放的音频卡顿；退出页面后后台下载长驻；未命中的试听片段被永久缓存后，用户下次播放误用 30 秒片段当作全曲。
+- 证据等级：静态推演（并发上限/取消缺失与黑名单分支在本文件内实锤；具体片段 URL 形态不在本范围、未实测）
 
 ### resource_cache.dart:175-193 / 264-280 文件身份只校验长度，未校验内容/签名；FNV-32 哈希无碰撞处理
 - 级别：P2
@@ -210,12 +204,12 @@
 - 影响：CDN 返回错版/被替换但长度相同的文件会被当作正确资源永久复用；query 含特殊字符时缓存写入失败（用户看到资源反复下载）；哈希碰撞时两份不同资源互相覆盖。
 - 证据等级：静态推演（校验条件与文件名构造在本文件内确认；碰撞/特殊字符未实测）
 
-### resource_cache.dart:196-229 `putFile`/`file`/`filePath` 用 `_hashName(key)`（bytes 默认 0），与 `cacheUrlFile` 的身份维度不一致
-- 级别：P1
-- 违反：QUALITY_STANDARD 第 23 条（缓存键必须覆盖全部影响结果的维度）、第 3 条（契约先行）、第 31 条（注释与行为一致）
-- 依据：`putFile` 写 `File('${dir.path}/${_hashName(key)}')`、`file` 与 `filePath` 同样以 `_hashName(key)` 定位（默认 `bytes = 0`），而 `cacheUrlFile` 用 `_hashName(url, bytes: declaredBytes)` 且拒绝 `declaredBytes <= 0`。二者落在 `raw/` 目录，但同一个 URL 在两条路径下得到不同文件名，因此 `file(url)`/`filePath(url)` **永远找不到** `cacheUrlFile` 写入的文件；反过来 `putFile` 写入的文件也没有 declaredBytes 校验、没有原子 rename、直接 `f.writeAsBytes(bytes, flush: true)`，中途失败即留下半截正式文件，且后续 `file()` 不校验长度会直接读出半截内容。类注释第 28-29 行仍写「文件键由 URL 全文哈希 + kind 构成」，与实现（URL+bytes 哈希、kind 只是目录）不符。
-- 影响：新旧两套字节缓存 API 互不兼容，一方写另一方读永远 miss；`putFile` 写入被中断后永久返回损坏字节给播放器，用户遇到播放失败/杂音且缓存不会自愈。
-- 证据等级：实锤（两处文件名构造与拒绝条件在同一文件内成对确认；实际调用方配对关系在后续文件核对）
+### resource_cache.dart:13-17 / 178-180 最终快照删除了 `putFile`/`file`/`filePath`，但仍引用未导入的 `fileIdentity`，且 `kFilePermanent` 仍为无引用占位常量
+- 级别：P0
+- 违反：QUALITY_STANDARD 第 32 条（死代码零容忍）、第 3 条（契约先行）、第 31 条（注释与行为一致）、第 8 条（异常契约稳定）
+- 依据：最终快照 `_hashName` 内 `:180` 为 `final identity = fileIdentity(url, bytes);`，但文件头 `:1-10` 的 import 列表只有 `dart:convert`/`dart:async`/`dart:io`/`dio`/`flutter/foundation`/`hive`/`storage_permission`/`error_logger`，**没有 `import '../cache/cache_keys.dart'`**；`dart analyze lib/core/resource/resource_cache.dart` 明确报 `error - resource_cache.dart:181:22 - The method 'fileIdentity' isn't defined for the type 'ResourceCache' - undefined_method`（项目自有符号缺失，非三方包噪音）。`const kFilePermanent = null;`（`:13`）仍全文件无引用，注释自称「按契约保留；实际由 cacheUrlFile 的『已存在直接返回』保证」；`kJsonTtl`/`kListTtl`（`:16-17`）虽注释「TTL 唯一事实源在 cache_keys.cacheTtl；此处仅保留契约兼容的别名」，但 `cache_keys.dart:16-20` 的 `cacheTtl` 与本处两个 `Duration` 仍是两份独立常量，靠注释约束数值相等（第 5 条）。同时被删除的 `putFile`/`file`/`filePath` 是公开契约签名（初读版本 `:195-228`），类注释 `:20-29` 仍写「实际资源文件永久缓存」却未说明字节级 API 已移除。
+- 影响：`resource_cache.dart` 在当前状态下**无法通过分析/编译**，`cacheUrlFile` 调用 `_hashName` 时 `fileIdentity` 解析失败，所有永久文件缓存路径（播放完成后的离线复用）整体不可用；用户表现为已缓存音频每次仍重新下载、离线不可用，且该错误不属于允许忽略的 Flutter/三方包噪音。
+- 证据等级：实锤（逐文件 `dart analyze` 输出 + 最终快照 import 列表逐行确认；未执行编译/测试，按纪律不允许）
 
 ### resource_cache.dart:297-331 永久文件层没有任何清理入口，注释声称的「设置页 clear*」不存在
 - 级别：P1
@@ -473,22 +467,18 @@
 ### cache_keys.dart:45 / 47-48 `cacheNsPrefix()` 与 `fileIdentity()` 在本范围 9 个文件内无任何调用点
 - 级别：P3
 - 违反：QUALITY_STANDARD 第 32 条（死代码零容忍：仅供"以后可能用"的抽象必须删除）、第 5 条（状态单一来源）
-- 依据：逐文件完整读 + 仅用于核对 import/引用关系的符号对照：`resource_gateway.dart:59` 与 `resource_cache.dart:300` 都各自硬编码 `':$ns:u='` / `':${ns}:u='`，没有调用 `cacheNsPrefix(ns)`；`resource_cache.dart:175` 自行拼接 `final identity = '$url|$bytes'`，没有调用 `fileIdentity(url, bytes)`。`resource_cache.dart:15` 的 `const kFilePermanent = null;` 同样无引用。文件自称「缓存键唯一事实源」，但两个导出函数均无消费方，实际存在三套重复的键/身份拼接。
+- 依据：逐文件完整读 + 仅用于核对 import/引用关系的符号对照：`resource_gateway.dart:59` 与 `resource_cache.dart:300` 都各自硬编码 `':$ns:u='` / `':${ns}:u='`，没有调用 `cacheNsPrefix(ns)`；`resource_cache.dart:175` 自行拼接 `final identity = '$url|$bytes'`，没有调用 `fileIdentity(url, bytes)`。`resource_cache.dart:15` 的 `const kFilePermanent = null;` 同样无引用。此外 `:86` 写入 `_inFlight[key]` 的条目因 `:90` 只按 `fullKey` 删除而永久滞留，属运行期不可回收状态（第 32/25 条，另见本轮 P0 条）。此外 `:86` 写入 `_inFlight[key]` 的条目因 `:90` 只按 `fullKey` 删除而永久滞留，属运行期不可回收状态（第 32/25 条，另见本轮 P0 条）。文件自称「缓存键唯一事实源」，但两个导出函数均无消费方，实际存在三套重复的键/身份拼接。
 - 影响：无直接用户可见后果；维护者改动 `fileIdentity` 或 `cacheNsPrefix` 时不会改变任何实际行为，导致「以为已统一修复」的误判（与前述失效漏清/身份维度不一致的问题叠加）。
 - 证据等级：实锤（本范围 9 文件全文枚举 + 引用对照；范围外调用方按纪律未读、未实测）
 
 ---
 
-## 特别核对结论（任务书点名的四项）
+## 特别核对结论（任务书点名的四项，按当前磁盘状态复核）
 
-1. **`ResourceCache.json` 的 `_inFlight` 以 fullKey 还是调用方 key 分键**：以**调用方 key** 分键。`resource_cache.dart:69` 为 `final pending = _inFlight[key];`，`:84` 为 `_inFlight[key] = fut;`，而箱内键 `fullKey` 在 `:72` 才由 `_jsonPrefix`/`_listPrefix` 拼出并只用于 `_readStored`/`box.put`。因此 `ttl`/`scope` 不同但 `key` 相同的调用被合并为同一 Future；`finally` 的 `_inFlight.remove(key)` 也无持有者身份判断。已记为 P1（第 18/19/22/23 条）。
-2. **stale 副本是否污染箱内原值**：**未污染箱内原值**。`_doFetch` 回退分支为 `return Map<String, dynamic>.from(staleBody)..['__stale'] = true;`（`resource_cache.dart:132`），`staleBody` 来自 `_readStored` 的 `jsonDecode` 新对象，`from` 是浅拷贝，箱内保存的是 JSON 字符串，写入 `__stale` 只作用于返回副本；箱内 `put` 只在 `fetch` 成功分支执行。需注意浅拷贝的嵌套 Map/List 仍与本次解码对象共享引用，多个合并调用方拿到的是同一个返回 Map（已记为 P2，第 22/8 条）。此项列为复核通过项。
-3. **`cacheUrlFile` 失败路径是否清理半截文件**：**不对称，存在漏清理**。唯一的 `.part` 删除在末尾 `catch (e)`（`:283-290`），而 `cl > 0 && cl != declaredBytes` 的 `return null`（`:267-271`）、`url.isEmpty`/`declaredBytes <= 0` 早退、`await target.delete()` 后 HEAD 不符返回，都不经过该清理；`dio.download` 前也不删既有 `.part`；catch 内重算 `_dirOf`/`_hashName` 且内层 `catch (_) {}` 空体吞掉删除失败。已记为 P1（第 20/14/6 条）。
-4. **`PrefetchEngine.dispose` 后回调门禁**：**仅入口有门禁，在途回调无门禁**。`enqueueSongs`/`updateUpcoming`/`onPlaybackCompleted`/`_startDrain`/`_drainOne` 开头都有 `if (_disposed) return;`，但 `_prefetchOne` 在 `final cached = _cached;` 之后的三个 `await cached.get(...)` 之间、以及 `onPlaybackCompleted` 的 `catchError` 回调里都没有 `_disposed` 检查；dispose 只清 Timer/队列/集合/客户端字段，不取消在途 Future。已记为 P1（第 18/20/22/31 条）。
-
----
-
----
+1. **`ResourceCache.json` 的 `_inFlight` 以 fullKey 还是调用方 key 分键**：当前磁盘为**混用**，比初读状态更严重。`resource_cache.dart:73` 查表 `final pending = _inFlight[fullKey];`（fullKey）、`:86` 写入 `_inFlight[key] = fut;`（**调用方裸 key**）、`:90` 清理 `_inFlight.remove(fullKey);`（fullKey）。因此 in-flight 合并**完全失效**且条目永久泄漏；注释 `:69-70` 声称「以 fullKey 分键」与 `:86` 矛盾。已记为 P0（第 19/18/22/23 条）。初读时（331 行版本）三处统一用调用方 key，问题表现为「不同 TTL 共用同一 Future」；并发编辑后变为读写键不一致。
+2. **stale 副本是否污染箱内原值**：**未污染箱内原值**。`_doFetch` 回退分支为 `return Map<String, dynamic>.from(staleBody)..['__stale'] = true;`（`resource_cache.dart:132`），`staleBody` 来自 `_readStored` 的 `jsonDecode` 新对象，`from` 是浅拷贝，箱内保存的是 JSON 字符串，写入 `__stale` 只作用于返回副本；箱内 `put` 只在 `fetch` 成功分支执行。需注意浅拷贝的嵌套 Map/List 仍共享引用，且 `ResourceGateway.json:56` 会把同一个返回 Map 存进 L1（第 22 条，已记为 P2）。此项列为复核通过项。
+3. **`cacheUrlFile` 失败路径是否清理半截文件**：**不对称，存在漏清理**。唯一的 `.part` 删除在末尾 `catch (e)`（`:284-291`），而 `cl > 0 && cl != declaredBytes` 的 `return null`（`:268-271`）、`url.isEmpty`/`declaredBytes <= 0` 早退、`await target.delete()` 后 HEAD 不符返回，都不经过该清理；`dio.download` 前也不删既有 `.part`；catch 内重算 `_dirOf`/`_hashName` 且内层 `catch (_) {}` 空体吞掉删除失败。已记为 P1（第 20/14/6 条）。
+4. **`PrefetchEngine.dispose` 后回调门禁**：**仅入口有门禁，在途回调无门禁**。5 个入口（含 2 个私有）都有 `if (_disposed) return;`，但 `_prefetchOne` 在 `final cached = _cached;` 之后的三个 `await cached.get(...)` 之间、以及 `onPlaybackCompleted` 的 `catchError` 回调里都没有 `_disposed` 检查；dispose 只清 Timer/队列/集合/客户端字段，不取消在途 Future。已记为 P1（第 18/20/22/31 条）。
 
 ## 逐文件 `dart analyze` 结果（贴原文）
 
@@ -639,33 +629,35 @@ Analyzing storage_permission.dart...
 
 ---
 
-## 问题清单（按级别排序，共 60 条：P0 1 / P1 21 / P2 30 / P3 8）
+## 问题清单（按级别排序，共 62 条：P0 2 / P1 22 / P2 30 / P3 8）
 
-### P0（1 条）
+### P0（2 条）
 1. `secure_storage.dart:26-42` `saveCredentials` 5 个写/删并发提交，`Future.wait` 无事务/回滚/世代锁 —— 切号串号、凭证持久损坏（第 5/18/21/9 条）。
+2. `resource_cache.dart:69-91` `_inFlight` 查表/清理用 `fullKey`、写入用调用方 `key`，并发合并完全失效且每个请求永久泄漏一个 Future —— 重复请求回归 + 内存无界增长（第 19/18/22/23 条）—— **任务书特别核对①，当前磁盘状态**。
 
-### P1（21 条）
+### P1（22 条）
 1. `cache_manager.dart:19-21 / 145-147` 两个 `init()` 的 `openBox` 无并发合并、无失败处理（第 22/18/6 条）。
 2. `cache_manager.dart:42-49` JSON 形态只验最外层 `is Map`，畸形体不清理、可抛类型错误（第 13/14 条）。
 3. `cache_manager.dart:81-84` `MemoryCache.get<T>` 的 `as T?` 裸强转抛 TypeError（第 13/10/8 条）。
 4. `cache_manager.dart:154-175` 翻译缓存文本无转义，`int.parse` 未捕获、坏行静默丢弃（第 14/13/9 条）。
-5. `resource_cache.dart:69-91` `_inFlight` 以调用方 key 分键而箱内以 fullKey 分键，不同 TTL 共享同一 Future（第 18/22/23 条）—— **任务书特别核对①**。
-6. `resource_cache.dart:86-90` `finally` 无条件 `remove`、不校验持有者身份（第 19/18 条）。
-7. `resource_cache.dart:100-129` `catch (e)` 全捕获后 stale 降级，`staleOnError` 由首个调用方决定（第 10/7/11/8 条）—— **失效回退异常契约**。
-8. `resource_cache.dart:243-290` `cacheUrlFile` 早退分支不清 `.part`、清理不对称（第 20/14/6 条）—— **任务书特别核对③**。
-9. `resource_cache.dart:238-292` `cacheUrlFile` 无 in-flight/并发上限/取消令牌，同路径并发写可产生损坏正式文件（第 22/25/20/18 条）。
-10. `resource_cache.dart:195-228` `putFile`/`file`/`filePath` 的身份维度与 `cacheUrlFile` 不兼容、写非原子（第 23/3/31 条）。
-11. `resource_cache.dart:296-330` 永久文件层无任何清理入口与容量上限（第 25/31/32 条）。
-12. `cached_api.dart:52-83` 任意自定义 `ttl` 一律按 `CacheScope.json` 生成键，与下层层级判定不一致（第 23/3/15 条）。
-13. `cached_api.dart:30-52` `_bodyDigest` 32 位 FNV + `_stableJson` 不转义，POST 不同 body 可同键（第 23/14/31 条）。
-14. `lyric_translation_stream.dart:17-34` 单例 `dispose()` 后控制器不可重建、补丁静默丢弃（第 20/18 条）。
-15. `lyric_translation_stream.dart:28-31` 补丁契约无切歌世代，`emit` 不校验 lyricId/startIndex（第 18/23 条）。
-16. `prefetch_engine.dart:117-127 / 155-194 / 204-210` dispose 后三个 `await` 之间无 `_disposed` 门禁、在途请求继续以旧客户端写缓存（第 18/20/22/31 条）—— **任务书特别核对④**。
-17. `prefetch_engine.dart:40 / 72-85 / 92-110` `_requested` 无上限、不随失败/失效回收，切号/换音质后预热永久跳过（第 25/11/23 条）。
-18. `secure_storage.dart:45-66` `readCredentials` 只判 null，空串即登录态；平台异常未包装（第 14/16/8 条）。
-19. `storage_permission.dart:151-176` `resolveRoot()` 探测失败仍返回该路径、最终兜底零探测（第 11/14/9 条）。
-20. `storage_permission.dart:218-225 / 271-273` 版本名→API 映射在 Android 13+ 少 1，导致通知权限不申请（第 17/15/28/31 条）。
-21. `storage_permission.dart:301-320` `resolveStrategy()` 只看授权态，与 `resolveRoot()` 的实测降级口径冲突（第 5/11/31 条）。
+5. `resource_gateway.dart:47-58` L1 命中后完全绕过 L2 TTL/in-flight/失效回退，旧值无过期退出条件（第 18/11/23/8 条）。
+6. `resource_gateway.dart:75-83` `onUserChanged()` 用 `unawaited` 全量清箱，异常无人接管、切号竞态无世代校验（第 6/9/18/20 条）。
+7. `resource_cache.dart:86-91` `finally` 无条件 `remove`、不校验持有者身份（第 19/18 条）。
+8. `resource_cache.dart:101-136` `catch (e)` 全捕获后 stale 降级，`staleOnError` 由首个调用方决定（第 10/7/11/8 条）—— **失效回退异常契约**。
+9. `resource_cache.dart:244-291` `cacheUrlFile` 早退分支不清 `.part`、清理不对称（第 20/14/6 条）—— **任务书特别核对③**。
+10. `resource_cache.dart:239-293` `cacheUrlFile` 无 in-flight/并发上限/取消令牌，同路径并发写可产生损坏正式文件（第 22/25/20/18 条）。
+11. `resource_cache.dart:196-229` `putFile`/`file`/`filePath` 的身份维度与 `cacheUrlFile` 不兼容、写非原子（第 23/3/31 条）。
+12. `resource_cache.dart:297-331` 永久文件层无任何清理入口与容量上限（第 25/31/32 条）。
+13. `cached_api.dart:21-65` `ttl` 参数被静默丢弃，除 90s 外任何值都按 168h 生效（第 3/15/31 条）。
+14. `cached_api.dart:72-80` `bodyIdentity` 全文进缓存键、无转义无长度上限，不同 POST body 可同键（第 23/14/25/3 条）。
+15. `lyric_translation_stream.dart:17-34` 单例 `dispose()` 后控制器不可重建、补丁静默丢弃（第 20/18 条）。
+16. `lyric_translation_stream.dart:28-31` 补丁契约无切歌世代，`emit` 不校验 lyricId/startIndex（第 18/23 条）。
+17. `prefetch_engine.dart:117-127 / 155-194 / 204-210` dispose 后三个 `await` 之间无 `_disposed` 门禁、在途请求继续以旧客户端写缓存（第 18/20/22/31 条）—— **任务书特别核对④**。
+18. `prefetch_engine.dart:40 / 72-85 / 92-110` `_requested` 无上限、不随失败/失效回收，切号/换音质后预热永久跳过（第 25/11/23 条）。
+19. `secure_storage.dart:45-66` `readCredentials` 只判 null，空串即登录态；平台异常未包装（第 14/16/8 条）。
+20. `storage_permission.dart:151-176` `resolveRoot()` 探测失败仍返回该路径、最终兜底零探测（第 11/14/9 条）。
+21. `storage_permission.dart:218-225 / 271-273` 版本名→API 映射在 Android 13+ 少 1，导致通知权限不申请（第 17/15/28/31 条）。
+22. `storage_permission.dart:301-320` `resolveStrategy()` 只看授权态，与 `resolveRoot()` 的实测降级口径冲突（第 5/11/31 条）。
 
 ### P2（30 条）
 1. `cache_keys.dart:31-41` 键字段未转义分隔符、键非单射（第 23 条）。
@@ -673,19 +665,19 @@ Analyzing storage_permission.dart...
 3. `cache_manager.dart:124-131` `MemoryCache.keyOf` 绕开唯一键源自行拼键（第 23/5/31 条）。
 4. `cache_manager.dart:52-70 / 168-180` 两个 Hive 盒无条目/体积上限、过期不淘汰（第 25 条）。
 5. `cache_manager.dart:19-21 / 145-147` 关箱后 `_box!` 无世代校验、无对称 close（第 18/20 条）。
-6. `resource_gateway.dart:16-23` L1 内存 Map 无容量上限、无 TTL（第 25 条）。
-7. `resource_gateway.dart:18-23 / 58-60` 门面不强制 L1 键形态，`invalidateNs` 可漏清（第 23/3/5 条）。
-8. `resource_gateway.dart:63-66` `onUserChanged()` 只清内存，A→B→A 命中旧账号 L2 值（第 18/23/31 条）。
-9. `resource_gateway.dart:29-45` `json()` 允许 `CacheScope.file` 把 36500 天 TTL 写进 L2（第 3/23 条）。
-10. `resource_gateway.dart:52-55` `file()` 默认 `declaredBytes = 0` 与身份契约冲突（第 23/3 条）。
-11. `resource_cache.dart:68-70` 合并调用方共享同一可变 Map 与同一异常对象（第 22/8/18 条）。
-12. `resource_cache.dart:121-131` `unawaited(ErrorLogger.log)` 失败无人接管（第 9/6 条）。
-13. `resource_cache.dart:139-155` 形态错误体只读不删、`delete` 未 await、无日志（第 13/14/9/6 条）。
-14. `resource_cache.dart:174-192 / 263-279` 身份只校验长度，FNV-32 无碰撞处理、suffix 未做字符白名单（第 14/23 条）。
+6. `resource_gateway.dart:18-25` L1 内存 Map 无容量上限、无 TTL（第 25 条）。
+7. `resource_gateway.dart:47-48 / 54-58` L1 与调用方共享同一可变 Map，`__stale` 只查顶层字段（第 22/13/5 条）。
+8. `resource_gateway.dart:20-25 / 66-70` 门面不强制 L1 键形态，`invalidateNs` 可漏清（第 23/3/5 条）。
+9. `resource_gateway.dart:28-58` `json()` 允许 `CacheScope.file` 把 36500 天 TTL 写进 L2（第 3/23 条）。
+10. `resource_gateway.dart:61-64` `file()` 默认 `declaredBytes = 0` 与身份契约冲突（第 23/3 条）。
+11. `resource_cache.dart:73-74 / 116 / 132` 合并调用方共享同一可变 Map 与同一异常对象（第 22/8/18 条）。
+12. `resource_cache.dart:122-132` `unawaited(ErrorLogger.log)` 失败无人接管（第 9/6 条）。
+13. `resource_cache.dart:140-156` 形态错误体只读不删、`delete` 未 await、无日志（第 13/14/9/6/8 条）。
+14. `resource_cache.dart:175-193 / 264-280` 身份只校验长度，FNV-32 无碰撞处理、suffix 未做字符白名单（第 14/23 条）。
 15. `resource_cache.dart:43-55` `init()` 吞开箱异常、无并发合并、失败不记账（第 22/5/11 条）。
-16. `resource_cache.dart:296-318` 失效只处理 String 键，且被在途 `_doFetch` 回灌（第 18/25/23 条）—— **写后失效维度**。
-17. `cached_api.dart:52-83` `stale` 在合并路径失效，本类不消费 `__stale`（第 8/9/11 条）。
-18. `cached_api.dart:16-28` 键只含 userid，缺 token/音质/语言/区域维度（第 23 条）。
+16. `resource_cache.dart:297-319` 失效只处理 String 键，且被在途 `_doFetch` 回灌（第 18/25/23 条）—— **写后失效维度**。
+17. `cached_api.dart:19 / 32-40` 键只含 userid，缺 token/音质/语言/区域维度（第 23/18 条）。
+18. `cached_api.dart:21-65` `stale` 在 L1 命中/合并路径失效，本类不消费 `__stale`（第 8/9/11 条）。
 19. `prefetch_engine.dart:76-84` 上限算术在 `_pending.length > 60` 时提前 break（第 25/11 条）。
 20. `prefetch_engine.dart:117-127` `onPlaybackCompleted` 的 `catchError` 接不住 `return null` 路径、无门禁、不等待（第 9/20/1 条）。
 21. `prefetch_engine.dart:63-65` `attach()` 不判 `_disposed`，可造出僵死单例（第 18/20/31 条）。
@@ -696,18 +688,19 @@ Analyzing storage_permission.dart...
 26. `secure_storage.dart:89-108` 账号 token 键拼接无校验、四处重复拼接（第 14/23/5 条）。
 27. `storage_permission.dart:109-140 / 99` 探针早退不清理、`lastProbeError` 全局并发共享、内层 `catch (_) {}` 空体（第 20/22/5/6 条）。
 28. `storage_permission.dart:263 / 293 / 316` `request()` 与 `currentStrategy()` 裸平台调用，异常契约不一致（第 8/6/9 条）。
-29. `storage_permission.dart:196-215 / 182-188` `apiLevel()` 缓存无失效/并发合并，`resolveRootMode()` 重复磁盘探测（第 22/18/24 条）。
+29. `storage_permission.dart:196-215 / 182-188` `apiLevel()` 缓存无失效/并发合并、`resolveRootMode()` 重复磁盘探测（第 22/18/24 条）。
 30. `storage_permission.dart:48-54` `subDirOf` 未知类型静默落 audio（第 16/23/9 条）。
 
 ### P3（8 条）
 1. `cache_keys.dart:47` `fileIdentity` 注释声明 bytes<=0 语义但函数无对应行为（第 31 条）。
 2. `cache_manager.dart:90-97` 覆写已有键也先淘汰一条无关条目（第 25 条）。
-3. `cached_api.dart:5-9` 「唯一事实源」注释与实际多处拼键不符（第 31/5 条）。
-4. `lyric_translation_stream.dart:22-26` 「缓存命中也 emit 一次」在本类无实现（第 31/9 条）。
-5. `resource_cache.dart:13-15 / 174-192` TTL 表与 `cache_keys.dart:16-20` 重复、靠值相等隐式耦合（第 5/31 条）。
+3. `cached_api.dart:5-12` 「唯一读实现/唯一事实源」注释与实际多处拼键不符（第 31/5 条）。
+4. `lyric_translation_stream.dart:11-15 / 26-32` 「缓存命中也 emit 一次」在本类无实现（第 31/9 条）。
+5. `resource_cache.dart:13-14 / 66-73` TTL 表与 `cache_keys.dart:16-20` 重复、靠值相等隐式耦合（第 5/31 条）。
 6. `storage_permission.dart:32-38 / 56-59` 根目录常量两种大小写，授权前后落进两个目录（第 5/31 条）。
 7. `prefetch_engine.dart:23` `unused_import: '../net/music_api.dart'`（analyze 实锤，第 32/31 条）。
-8. `cache_keys.dart:45 / 47-48`、`resource_cache.dart:15` `cacheNsPrefix` / `fileIdentity` / `kFilePermanent` 无调用点（第 32/5 条）。
+8. `cache_keys.dart:45 / 47-48`、`resource_cache.dart:15` `cacheNsPrefix` / `fileIdentity` / `kFilePermanent` 无调用点（第 32/5/25 条）。
+
 
 ---
 
