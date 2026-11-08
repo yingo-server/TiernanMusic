@@ -70,6 +70,9 @@ ApiOutcome evaluateResponse(
     if (c != 0) return fail(c);
   }
 
+  // `status` 缺失（裸 Map 响应）必须用 hasStatus 区分，不能把 null 归一成 0
+  // 再走失败分支（v5.1 B2-A 抓到的回归：comment/count 恒失败）。
+  final hasStatus = body.containsKey('status') && body['status'] != null;
   final status = _codeOf(body['status']) ?? -1;
   final ec = _codeOf(body['error_code'] ?? body['errcode']);
   // error_code/errcode 存在但不可解析 → 视为失败（不静默当 0）。
@@ -80,7 +83,7 @@ ApiOutcome evaluateResponse(
 
   // 3) status == 1：无错误码成功；警告码且**确实有数据**才成功；
   //    其余非零错误码一律失败（不再被「存在任意其它键」放行）。
-  if (status == 1) {
+  if (hasStatus && status == 1) {
     if (ec == 0) return ApiOutcome.ok(body);
     if (_warningCodes.contains(ec) && _hasData(body)) {
       return ApiOutcome.ok(body);
@@ -89,20 +92,21 @@ ApiOutcome evaluateResponse(
   }
 
   // 4) 歌词类：status == 200 + errcode 200 是正常码；其它非零码失败。
-  if (status == 200) {
+  if (hasStatus && status == 200) {
     if (_warningCodes.contains(ec)) return ApiOutcome.ok(body);
     return fail(ec);
   }
 
-  // 5) 明确失败状态；错误码为 0 时保留业务码 -1 但把 status 写进 body 便于追溯。
-  if (status == 0 || status == 2 || ec != 0) return fail(ec);
+  // 5) **有明确 status** 时的失败状态；缺失 status 的裸 Map 走第 6/7 步。
+  if (hasStatus && (status == 0 || status == 2)) return fail(ec);
+  if (ec != 0) return fail(ec);
 
   // 6) 无 status 且空响应体 = 风控/网关空包，不得当成功。
   if (body.isEmpty) {
     return ApiOutcome.fail(ApiException(-1, '空响应体（可能被风控拦截）',
         ssaCode: ssa, body: body));
   }
-  // 7) 无 status 但带数据：保持旧语义（裸 Map 成功响应，如 comment/count）。
+  // 7) 无 status 但带数据：裸 Map 成功响应（comment/count 等，实测口径）。
   return ApiOutcome.ok(body);
 }
 

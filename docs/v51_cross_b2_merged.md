@@ -1,10 +1,15 @@
 # v5.1 B2 合并裁决（三视角交叉·进行中）
 
 基线：B1 修复后主线 `ffe9d33`。范围：`lib/core/direct/**` 全部 14 文件 / 4316 行。
-视角报告：
-- `v51_cross_b2_a.md`（功能正确性 / 原生网关与签名，运行中）
+视角报告（**三份齐，共 187 条，P0 全 0**）：
+- `v51_cross_b2_a.md`（功能正确性 / 原生网关与签名，**已到**：30 条：P1×5 / P2×13 / P3×12，复核通过 14 项）
 - `v51_cross_b2_b.md`（鲁棒与质量，**已到**：76 条：P1×12 / P2×40 / P3×24，复核通过 18 项）
 - `v51_cross_b2_c.md`（用户路径与一致性，**已到**：81 条：P1×14 / P2×38 / P3×29，复核通过 15 项）
+
+## A 视角追加的真 P1（主代理已修）
+- **B1 重写 `evaluateResponse` 引入的回归**：`_codeOf(body['status'])` 对**缺失 status** 的裸 Map 返回 0，随后 `status==0` 判失败 → `/comment/count` 等实测裸 Map 成功响应恒失败、`fallbackToKapi=false` 下直接抛错。**修**：加 `hasStatus` 守卫（5 处分支），无 status 但带数据走第 7 步成功；空包仍失败。
+- **死代码 `_hasData`**（`kg_direct_api_client.dart:89`）与过时注释「成功判定看 status==1」→ 已删并改注。
+- A 的其余 P1（`clearDefaultParams` 端点的 clienttime 不同源、home 注释与 `fallbackToKapi=false` 冲突、topPlaylist 忽略 userid）→ 归 P2/P3 后续批（B6/B8 范围）处理，不在本批修。
 
 ## B+C 双视角共识（A 到达后升为三视角）
 1. **`kg_play_api` 播放响应绕过成功判定**：B 第 10 条（两处 `requestWithVerify` 不判 status）、C 第 8/10 条（`PlayUrlResult.fromResponse` 不调 `evaluateResponse`、两条播放路径 20028 语义分裂）→ 网络异常/20028 被伪装成「无 URL 空结果」，点播验证闭环断链。**真 P1，优先修**。

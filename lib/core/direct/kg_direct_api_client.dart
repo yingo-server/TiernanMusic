@@ -85,14 +85,6 @@ class KgDirectApiClient extends KugouApiClient {
     return outcome.body;
   }
 
-  /// 响应里是否带有有效数据（用于判断 151/152 警告码是否可忽略）
-  static bool _hasData(Map<String, dynamic> body) {
-    final d = body['data'];
-    if (d == null) return false;
-    if (d is List) return d.isNotEmpty;
-    if (d is Map) return d.isNotEmpty;
-    return true;
-  }
 
   /// 是否允许回退 kapi 中转。
   ///
