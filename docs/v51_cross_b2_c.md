@@ -613,7 +613,7 @@
 
 ## 问题清单（按级别排序）
 
-共 81 条：P0 0 / P1 15 / P2 37 / P3 29。逐条详情见上方「逐文件审查记录」。
+共 81 条：P0 0 / P1 14 / P2 38 / P3 29。逐条详情见上方「逐文件审查记录」。
 
 - [P1] kg_client.dart:340-385 `requestWithVerify` 的 20028 闭环只在直连内部重试一次，失败不上抛为带 `ssaCode` 的 `ApiException`
 - [P1] kg_client.dart:394-399 `_needsVerify` 对字符串型 status 与 `status==2` 不识别，且未复用 `requiresVerification`
@@ -621,7 +621,6 @@
 - [P1] kg_direct_api_client.dart:57-63 `clearCredentials()` 未清空 `kg.dfid` 与 `kg.device.dfid`，切号后仍带上一账号设备指纹
 - [P1] kg_endpoints_auth.dart:385 `_afterLogin` 严格 `body['status'] != 1` 判成功，与 B1 `evaluateResponse` 归一不一致
 - [P1] kg_endpoints_comment.dart:64-118 评论写端点未使用 `requestWithVerify`，20028 时抛出后由 UI 决定是否重试，但 `write:true` 且无提交锁
-- [P1] kg_endpoints_media.dart:82-85 `songUrl` 注释声称「直连仍可能遇 20028，_directOrFallback 已兜底回退 kapi」，与实际永久关闭的回退冲突
 - [P1] kg_endpoints_playlist.dart:48-59 `playlistDel` 解密失败被空 catch 吞掉，回退到未解密的二进制响应体
 - [P1] kg_endpoints_playlist.dart:65-95 `playlistAdd` 的 `type` 缺省 0 且 `type==1` 分支 query 为空，写操作无防重键
 - [P1] kg_endpoints_search.dart:98-101 `searchLyric` 把 `duration` 当秒又乘 1000，变量名 `durationSec` 与注释「duration 传毫秒」自相矛盾
@@ -654,6 +653,7 @@
 - [P2] kg_endpoints_home.dart:169-197 与主类 `kg_direct_api_client.dart:555-573` 存在两份 `videoDetail` 实现
 - [P2] kg_endpoints_media.dart:36-62 `videoUrl` 不做 `hash` 空值/形态校验，直接以空 hash 请求 `trackermv.kugou.com`
 - [P2] kg_endpoints_media.dart:75-80 `songUrl` 把 `quality` 默认硬编码 `'128'`，与 B1 `AudioQuality` 九档/设置页来源无对接校验
+- [P2] kg_endpoints_media.dart:82-85 `songUrl` 注释声称「直连仍可能遇 20028，_directOrFallback 已兜底回退 kapi」，与实际永久关闭的回退冲突
 - [P2] kg_endpoints_playlist.dart:196-214 `playlistDetail` 的越界/缺参抛裸 `ApiException`，被 `_directOrFallback` 泛 catch 二次包装
 - [P2] kg_endpoints_playlist.dart:265-287 `_parseTracksResource` 把 `timelen` 固定为 0，且 `bitrate/size` 全 0，单位无显式标注
 - [P2] kg_endpoints_search.dart:120-124 `lyric` 缺参抛裸 `ApiException` 且文案硬编码中文
@@ -696,6 +696,7 @@
 - [P3] kg_media_direct.dart:56-62 注释引用的证书实测结论无三态留样（与 home/主类注释三处重复）
 - [P3] kg_play_api.dart:48-53,130-135 多处「实测」结论引用 `docs/batch4_fix_1_network.md` 等历史审查报告，且无三态留样
 - [P3] kg_providers.dart:2-4,17 `KgDeviceStore.save`/`openBox`/`loadSync` 的 Hive 写入无返回检查，且 `save` 与 `saveSync` 语义重复
+
 
 ## 复核通过项（本范围确认到位的设计）
 
