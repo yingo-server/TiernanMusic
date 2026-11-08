@@ -23,23 +23,39 @@ class SecureStorage {
   }) async {
     // C-03（审查②）：null 必须**删除**旧键——切号时新响应常不带 t1/auth，
     // 保留旧值会造成 A 账号票据配 B 账号 token 的串号。
-    final ops = <Future<void>>[
-      _storage.write(key: _kToken, value: token),
-      _storage.write(key: _kUserId, value: userId),
-      if (t1 != null)
-        _storage.write(key: _kT1, value: t1)
-      else
-        _storage.delete(key: _kT1),
-      if (auth != null)
-        _storage.write(key: _kAuth, value: auth)
-      else
-        _storage.delete(key: _kAuth),
-      if (dfid != null)
-        _storage.write(key: _kDfid, value: dfid)
-      else
-        _storage.delete(key: _kDfid),
-    ];
-    await Future.wait(ops);
+    //
+    // v5.1 B3-B P1-12：并发 Future.wait 会让 5 键**部分落盘**成混合凭证
+    // （Keystore 故障机型更易发生）。改为**顺序写 + 失败回滚**：
+    // 任一写入失败即把已写的键删回，保证「要么全新要么全无」。
+    final keys = <String, String?>{
+      _kToken: token,
+      _kUserId: userId,
+      _kT1: t1,
+      _kAuth: auth,
+      _kDfid: dfid,
+    };
+    final written = <String>[];
+    try {
+      for (final entry in keys.entries) {
+        final v = entry.value;
+        if (v != null) {
+          await _storage.write(key: entry.key, value: v);
+        } else {
+          await _storage.delete(key: entry.key);
+        }
+        written.add(entry.key);
+      }
+    } catch (e) {
+      // 回滚：把本次已写的键删掉，避免半套凭证被当有效登录态读出
+      for (final k in written.reversed) {
+        try {
+          await _storage.delete(key: k);
+        } catch (_) {
+          // 回滚失败不再抛（原始错误更重要）
+        }
+      }
+      rethrow;
+    }
   }
 
   /// V399-B1：readCredentials 四键读取并行化——此前四个 await 串行，
@@ -56,6 +72,9 @@ class SecureStorage {
     final token = results[0];
     final userId = results[1];
     if (token == null || userId == null) return null;
+    // v5.1 B3-B P1-18：空串凭证（Keystore 解密失败的产物）视同未登录，
+    // 否则 restoreSession 会拿空 token 走 /login/token 必败路径。
+    if (token.isEmpty || userId.isEmpty) return null;
     return Credentials(
       token: token,
       userId: userId,

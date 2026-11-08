@@ -143,8 +143,11 @@ class LyricRepository {
   Future<KrcLyric> ensureTranslation(
     KrcLyric lyric,
     String lyricId,
-    String targetLanguage,
-  ) async {
+    String targetLanguage, {
+    /// v5.1 B3-C P1-10：歌曲世代键——随补丁广播，UI 按 (songHash, lyricId)
+    /// 双键校验，切歌后旧译文不得插入新歌词。
+    String songHash = '',
+  }) async {
     if (lyric.lines.isEmpty) return lyric;
 
     // F4-30（审查②-B，P2）：旧实现只要「任意一行」带内嵌翻译就整体跳过，
@@ -176,6 +179,7 @@ class LyricRepository {
           lyricId,
           missing.first,
           [for (final i in missing) lyric.lines[i].translation ?? ''],
+          songHash: songHash,
         ));
       }
       return lyric;
@@ -229,6 +233,7 @@ class LyricRepository {
             lyricId,
             missing[i],
             [for (var j = 0; j < n; j++) translated[j]],
+            songHash: songHash,
           ));
         }
       } catch (e) {

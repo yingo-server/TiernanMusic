@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// 公共目录写入策略。
 enum StorageStrategy {
@@ -164,15 +165,36 @@ class StoragePermissionService {
         final candidate = '$base/$fallbackRootDirName';
         if (await _probeWritable(Directory(candidate))) return candidate;
         debugPrint('[perm] download root probe failed: ${lastProbeError ?? '-'}');
-        return candidate; // 通道给了真实路径：即使探测失败也返回（调用方各有降级）
+        // v5.1 B3-B P1-14：原生通道给了路径但探测失败——**不再直接返回
+        // 不可写路径**（调用方会拿到一个写不进去的目录）。落到应用私有
+        // 目录兜底（一定能写），并留痕说明原因（第 9 条可观测）。
+        lastProbeError = 'Download 根不可写: ${lastProbeError ?? '-'}';
       }
     } catch (e) {
       // V399-B2：原生通道失败必须留痕，禁止裸 catch 吞掉（第 6/9 条）
       debugPrint('[perm] publicDir(downloads) channel failed: $e');
       lastProbeError = '原生通道 publicDir 失败: $e';
     }
-    // 原生通道不可用时的保守兜底（标准 Android 路径）
-    return '/storage/emulated/0/Download/$fallbackRootDirName';
+    // 兜底一：标准 Android Download 路径（探测通过才用）
+    const stdFallback = '/storage/emulated/0/Download/$fallbackRootDirName';
+    if (await _probeWritable(Directory(stdFallback))) return stdFallback;
+    // 兜底二：应用私有目录——必然可写（第 9 条：失败必须可观测）
+    final priv = '${(await _appSupportDir()).path}/$fallbackRootDirName';
+    debugPrint('[perm] falling back to app-private dir: $priv');
+    lastProbeError = '公共目录均不可写，已降级到应用私有目录';
+    return priv;
+  }
+
+  /// 应用私有支持目录（拿不到时退回临时目录——必定可写）。
+  Future<Directory> _appSupportDir() async {
+    try {
+      final dir = await getApplicationSupportDirectory();
+      if (!dir.existsSync()) await dir.create(recursive: true);
+      return dir;
+    } catch (e) {
+      debugPrint('[perm] getApplicationSupportDirectory failed: $e');
+      return Directory.systemTemp;
+    }
   }
 
   /// 存储模式名（设置页展示用）：'root' = 根目录模式，'download' = Download 模式。

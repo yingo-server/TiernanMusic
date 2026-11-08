@@ -37,7 +37,23 @@ class PrefetchEngine {
   /// 已入队（预热 + upcoming 共用）的 hash 去重集（第 5 条：单一事实源）。
   /// 同一 hash 本进程只预请求一轮；in-flight 合并由 ResourceCache 内部
   /// （_inFlight）兜底，这里是「不再二次入队」的上游闸门。
+  /// 已预取过的 hash（去重闸门）。
+  ///
+  /// v5.1 B3-C P1-9：一次性集合永不回收 → 长时间使用内存单调上涨。
+  /// 改为 **有界 LRU**（上限 512），超出按插入顺序淘汰最旧。
   final _requested = <String>{};
+  final _requestedOrder = <String>[];
+
+  static const int _maxRequested = 512;
+
+  void _markRequested(String hash) {
+    if (_requested.add(hash)) {
+      _requestedOrder.add(hash);
+      while (_requestedOrder.length > _maxRequested) {
+        _requested.remove(_requestedOrder.removeAt(0));
+      }
+    }
+  }
 
   /// 待处理队列：逐个按 spacing 消费（第 25 条：有界，enqueueSongs 截断）。
   final _pending = <Song>[];
@@ -76,7 +92,7 @@ class PrefetchEngine {
     for (final song in songs) {
       if (taken >= _maxEnqueuePerCall - _pending.length) break;
       if (song.hash.isEmpty) continue;
-      if (!_requested.add(song.hash)) continue; // 已命中缓存/已入队：跳过
+      if (!_requested.contains(song.hash)) continue; // 已命中缓存/已入队：跳过
       _pending.add(song);
       taken++;
     }
@@ -100,7 +116,7 @@ class PrefetchEngine {
     for (var i = start; i < queue.length && upcoming.length < window; i++) {
       final song = queue[i];
       if (song.hash.isEmpty) continue;
-      if (!_requested.add(song.hash)) continue;
+      if (!_requested.contains(song.hash)) continue;
       upcoming.add(song);
     }
     if (upcoming.isEmpty) return;
@@ -159,6 +175,8 @@ class PrefetchEngine {
       return;
     }
     try {
+      // v5.1 B3-C P1-10：dispose 后不得再写缓存（await 之后必须复查存活）。
+      if (_disposed) return;
       // 1) 播放地址 JSON（kapi /song/url，含音质参数；直连 /v5/url 不经
       //    kapi 也无 JSON 可缓存，预热只覆盖 kapi 路径，直连由播放时解析）。
       await cached.get('/song/url', query: {
@@ -170,6 +188,7 @@ class PrefetchEngine {
     } catch (e) {
       debugPrint('[prefetch] url json failed (${song.name}): $e');
     }
+    if (_disposed) return;
     try {
       // 2) 歌词候选 JSON（/search/lyric；歌词正文 /lyric 依赖候选里的
       //    id/accesskey，候选 JSON 命中后正文在播放时一并命中缓存）。
@@ -177,6 +196,7 @@ class PrefetchEngine {
     } catch (e) {
       debugPrint('[prefetch] lyric json failed (${song.name}): $e');
     }
+    if (_disposed) return;
     try {
       // 3) 封面：song.cover 已是解析好的图片 URL（models 解析阶段完成），
       //    项目无独立的「封面 JSON」接口（api_verified.md 实测只有

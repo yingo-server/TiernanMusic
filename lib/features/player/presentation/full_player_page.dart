@@ -70,7 +70,8 @@ final currentLyricProvider = FutureProvider.autoDispose<
     return (lyric: lyric, error: null, lyricId: lyricId, songHash: songHash);
   }
   final translated =
-      await repo.ensureTranslation(lyric, candidate.id, targetLang);
+      await repo.ensureTranslation(lyric, candidate.id, targetLang,
+          songHash: song.hash);
   // 原则 18（世代校验）：翻译 await 期间用户可能已切歌——当前歌曲
   // 与发起时不一致则本次结果作废（不 yield 旧歌译文/歌词）。
   final now = ref.read(currentSongProvider).valueOrNull;
