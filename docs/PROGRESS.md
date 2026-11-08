@@ -998,3 +998,10 @@ CI 终验与 release 产出由定时任务 660af9b0 处理。
 - push 故障（代理网关拒绝 push POST）经 direct 通道解决：9d5a36c..243b5bd 已推上
 - CI 42501435331（243b5bd，含 B4/B5 共识修复+docs 归档）构建中
 - B1-B5 五批合并报告全部落盘；P0×3 全亲修
+
+
+## v5.2.0 封版（f3520c8 / tag 5.2.0+53）
+
+- v5.1 B1-B5 交叉审查（24 代理）收官：740 条发现，P0×3+P1 共识全部亲修
+- v5.2 新特性：权限网关四重检测+五级回退、Android 5.1(API22) 兼容（minSdk22/multidex/desugaring/自带LE证书TlsCompat）、Ubuntu Mono 全局字体+私有字体管理器（本地/URL 导入，FontLoader 运行时挂载）
+- CI r1-r5 试错：font_manager 相对路径/ByteData/unwrapApi null/hint 非空（analyze 噪音过滤盲区的连续暴露，已逐个修正）
