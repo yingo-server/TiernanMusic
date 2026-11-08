@@ -1005,3 +1005,10 @@ CI 终验与 release 产出由定时任务 660af9b0 处理。
 - v5.1 B1-B5 交叉审查（24 代理）收官：740 条发现，P0×3+P1 共识全部亲修
 - v5.2 新特性：权限网关四重检测+五级回退、Android 5.1(API22) 兼容（minSdk22/multidex/desugaring/自带LE证书TlsCompat）、Ubuntu Mono 全局字体+私有字体管理器（本地/URL 导入，FontLoader 运行时挂载）
 - CI r1-r5 试错：font_manager 相对路径/ByteData/unwrapApi null/hint 非空（analyze 噪音过滤盲区的连续暴露，已逐个修正）
+
+
+## ✅ v5.2.0 正式发布确认
+
+- release 438428083（draft=False），3 APK + 截图包齐全
+- tag f3520c8 CI 42508061896 success；main f78988c / f3520c8 全绿
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v5.2.0/app-arm64-v8a-release.apk
