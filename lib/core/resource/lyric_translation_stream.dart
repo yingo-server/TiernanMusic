@@ -1,30 +1,17 @@
 import 'dart:async';
 
-/// 翻译增量补丁（v4.0 冻结契约）。
+/// 翻译增量补丁（v4.0 冻结契约；v5.3 B-14 契约重写）。
 class LyricTranslationPatch {
-  const LyricTranslationPatch(
-      this.lyricId, this.startIndex, this.values, {this.songHash = ''});
+  LyricTranslationPatch(
+      this.lyricId, this.startIndex, this.values, {this.songHash = ''})
+      : lineIndices = const <int>[];
 
-  final String lyricId;
-
-  /// v5.3 P5（B-14 重写）：「起始行号 + 稠密补零」改为**按行号直写**。
-  ///
-  /// 旧契约 `startIndex + index` 隐含「values 对应连续行」假设；F4-30 的
-  /// 逐行缺译判定让 missing 天然非连续（如缺译行 = 2、8），缓存命中路径
-  /// 会把第 8 行译文写到第 3 行。新语义：[values] 与 [lineIndices] 等长，
-  /// `values[j]` 属于行 `lineIndices[j]`；消费端按行号写回，不再做连续性
-  /// 推断（契约显式化，第 3/22 条）。
-  ///
-  /// 兼容：[lineIndices] 为空时退回旧语义（startIndex 起连续），供旧
-  /// 调用点与测试平滑迁移——本仓内所有调用点已迁移，仅防御保留。
-  const LyricTranslationPatch.indexed(this.lyricId, this.values,
+  LyricTranslationPatch.indexed(this.lyricId, this.values,
       {required List<int> lineIndices, this.songHash = ''})
       : lineIndices = List<int>.unmodifiable(lineIndices),
         startIndex = lineIndices.isNotEmpty ? lineIndices.first : -1;
 
-  const LyricTranslationPatch(
-      this.lyricId, this.startIndex, this.values, {this.songHash = ''})
-      : lineIndices = const <int>[];
+  final String lyricId;
   final List<int> lineIndices;
   final int startIndex;
   final List<String> values;
@@ -32,6 +19,7 @@ class LyricTranslationPatch {
   /// v5.1 B3-C P1-10：歌曲世代键——歌词页按 (songHash, lyricId) 双键校验，
   /// 切歌后旧歌的译文补丁不得插入新歌词。
   final String songHash;
+}
 }
 
 /// 翻译增量广播（v4.0-B，V400-B-03）。
