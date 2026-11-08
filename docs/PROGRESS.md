@@ -970,3 +970,9 @@ C-2 代理（332b329a）同样超时零产出 → 主代理亲自接线：
 - V402-R1/R2/R3/R4/R5/R6/R7: 20028 假验证页/交接世代/stale 可观测/超大歌单末尾页/探测跳过/空队列清态/手动切歌清挂起
 - 复核③剩余 2 条 P2 已记录归 v4.0.3（写操作后 Riverpod invalidate、越界起始页）
 - 下一步：v5.0 完全重构（docs/REFACTOR_PLAN_V5.md，七步迁移）
+
+## v5.0.0 LTS 重构完成（tag ab0fb82，版本 5.0.0+50）
+
+七步全部落地：M1 domain/foundation 上移、M2 存储/桥接下沉（core→features=0）、M3 cache_keys+ResourceGateway、M4 response_policy+MusicApi、M5 RepositoryReads 读路径统一、M6 app/bootstrap、M7 CI 架构断言。
+全库 analyze 0 真错误、相对 import 0 无效、括号平衡、arb 362×11、pubspec=tag 同名。
+CI 终验与 release 产出由定时任务 660af9b0 处理。
