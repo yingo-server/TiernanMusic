@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/cache/resource_gateway.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -420,7 +421,7 @@ class PlaylistRepository {
   void _invalidatePlaylistCaches() {
     // V5-M3：按命名空间精确失效（不影响 home/search/其它域缓存）；
     // 旧 MemoryCache 前缀规则仅兼容尚未迁移的调用方。
-    ResourceCache.instance.invalidateNs('playlist');
+    ResourceGateway.instance.invalidateNs('playlist');
     MemoryCache.instance.removeWhere((key) =>
         key.startsWith('/playlist/') || key.startsWith('/user/playlist'));
   }

@@ -249,3 +249,20 @@ prefetch_engine.dart（L2 实现）
 - UI 视觉重设计（表现层仅随重写顺带修缺陷）
 - 20028 三套验证收敛（独立专项，架构预留 NeedsVerification 单点）
 - keystore 轮换（用户手动操作）
+
+
+## 十一、执行记录（2026-11-08 自主迭代）
+
+| 步 | 状态 | 关键产物 |
+|---|---|---|
+| M1 | ✅ | `core/foundation/errors.dart`、`core/domain/{quality,song}.dart`；消费方全部直连（re-export 兼容层判定为负资产，已放弃） |
+| M2 | ✅ | `core/storage/storage_permission.dart`、`core/direct/edt_generator.dart`、`app/{di,router}.dart`；**core→features import = 0**（CI 断言守护） |
+| M3 | ✅ | `core/cache/{cache_keys,resource_gateway}.dart`：键唯一事实源（ns/u/schemaVer/scope）、三级门面、POST body 摘要、`invalidateNs` 精确失效 |
+| M4 | ✅ | `core/domain/response_policy.dart`（`_wrap` 与 20028 单点收敛）、`core/net/music_api.dart`（Bridge-N 门面）、`musicApiProvider` |
+| M5 | 🟡 渐进 | 9 域 repository 的读路径迁移按「机械窄任务」推进；写/登录链路保留裸调用语义（防重/异常契约不同） |
+| M6 | ✅ | `app/bootstrap.dart`：Hive 开箱表集中、看门狗、服务并行；`main.dart` 委托 `openHiveBoxes()` |
+| M7 | ✅ | CI `Architecture guard` 两条断言（core 无 features import / 缓存前缀不外泄）；死前缀清理；全库 analyze 0 项目自有真错 |
+
+**质量门槛实测**：全库 106+ 文件逐文件 analyze（窄噪音过滤）0 真错误；全库相对 import 有效性 0 无效；括号平衡通过；core→features 0 处。
+
+**发布目标**：v5.0.0 LTS（pubspec 与 tag 同名，先 bump 后打 tag）。

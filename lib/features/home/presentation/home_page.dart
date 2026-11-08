@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../core/cache/resource_gateway.dart';
 
 import '../../../core/image/app_image_cache.dart';
 import '../../../core/utils/toast.dart';
@@ -35,10 +36,10 @@ class HomePage extends ConsumerWidget {
           ),
           data: (data) => RefreshIndicator(
             // refresh.future 保留旧数据等待新结果（不闪回骨架屏），指示器跟随真实完成。
-            onRefresh: () {
-              // 清掉首页相关接口的 MemoryCache，避免 90s TTL 内"刷新无效果"。
-              MemoryCache.instance
-                  .removeWhere((k) => k.startsWith('/yueku') || k.startsWith('/top/playlist') || k.startsWith('/rank/list'));
+            onRefresh: () async {
+              // v5.0 M7：按命名空间精确失效（不再按路径前缀猜谜），
+              // 下拉刷新后立即重取首页数据。
+              await ResourceGateway.instance.invalidateNs('home');
               return ref.refresh(homeDataProvider.future);
             },
             child: CustomScrollView(

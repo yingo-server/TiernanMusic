@@ -38,6 +38,18 @@ jobs:
       - name: Generate i18n
         run: flutter gen-l10n
 
+      - name: Architecture guard (v5.0 M7)
+        run: |
+          # 依赖铁律：core/ 禁止 import features/（违者构建失败）
+          if rg -n "import .*features/" lib/core --glob '*.dart'; then
+            echo "::error::core/ must not import features/"; exit 1
+          fi
+          # 缓存键唯一事实源：禁止其它文件自行拼 list:/json: 前缀
+          if rg -n "'list:'|'json:'" lib --glob '*.dart' | rg -v 'lib/core/resource/resource_cache.dart'; then
+            echo "::error::cache prefixes must live in ResourceCache"; exit 1
+          fi
+          echo "architecture guards passed"
+
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
