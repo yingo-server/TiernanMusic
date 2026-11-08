@@ -1012,3 +1012,12 @@ CI 终验与 release 产出由定时任务 660af9b0 处理。
 - release 438428083（draft=False），3 APK + 截图包齐全
 - tag f3520c8 CI 42508061896 success；main f78988c / f3520c8 全绿
 - 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v5.2.0/app-arm64-v8a-release.apk
+
+
+## v5.3 第1轮审查（三视角全齐：A 27条 / B 27条 / C 66条 = 120条）
+
+- A 状态机：v53_r1_a.md
+- B 延迟歌词：v53_r1_b.md（B-10 预热死代码已修 86affeb；译文错行已记录）
+- C 权限布局：v53_r1_c.md（P1x12，含 L5 假契约/门卫恒真/双入口/诊断页缺失）
+
+状态机重写批：主代理亲自。布局/权限/文案：代理并行。完成后 v5.3.0。
