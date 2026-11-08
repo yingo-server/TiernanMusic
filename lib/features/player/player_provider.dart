@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../app/di.dart' show kugouApiClientProvider;
+import '../../core/api/kugou_api_client.dart' show KugouApiClient;
 import '../../core/audio/audio_service_bootstrap.dart';
 import '../../core/direct/kg_providers.dart' show kgClientProvider;
 import '../../core/domain/quality.dart';

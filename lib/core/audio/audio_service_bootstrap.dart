@@ -88,9 +88,11 @@ class AudioServiceBootstrap {
   static Future<bool> _init() async {
     try {
       // 与旧 JustAudioBackground.init 逐项对齐的通知配置。
+      // （const_eval_throws_exception：AudioServiceConfig 构造内有
+      // 非 const 断言逻辑，CI 环境会抛——去掉 const。）
       final switcher = await AudioService.init<SwitchAudioHandler>(
         builder: () => SwitchAudioHandler(BaseAudioHandler()),
-        config: const AudioServiceConfig(
+        config: AudioServiceConfig(
           androidNotificationChannelId: 'com.tiernan.music.channel.audio',
           androidNotificationChannelName: '汀澜音乐播放',
           androidNotificationChannelDescription: '后台播放控制与通知',

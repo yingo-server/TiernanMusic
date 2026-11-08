@@ -150,13 +150,13 @@ class FullPlayerPage extends ConsumerWidget {
 /// v5.3-R2（修 C-35 横幅不可操作）：追加「重试」按钮——横幅 = 发生了什么
 ///（message）+ 下一步（点击重试，togglePlay 内部会先 ensureEngineReady）。
 /// message 为 null 时不渲染（空态契约上移到调用方）。
-class _EngineErrorBanner extends StatelessWidget {
+class _EngineErrorBanner extends ConsumerWidget {
   const _EngineErrorBanner({required this.message});
 
   final String message;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Material(
       color: theme.colorScheme.errorContainer,
