@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/cache/cache_manager.dart';
 import '../../../core/resource/resource_cache.dart';
+import '../../../core/cache/resource_gateway.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/image/app_image_cache.dart';
 import '../../../core/storage/secure_storage.dart';
@@ -214,12 +215,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     if (!confirm) return;
 
     try {
-      MemoryCache.instance.clear();
-      await LyricTranslationCache.instance.clear();
+      await ResourceGateway.instance.clearTransient();
       // V401-C2：v4.0 统一缓存——清 JSON 与 90s 列表；
       // 实际资源文件（音频/MV/KRC/封面）按用户要求永久缓存，不随清缓存删。
-      ResourceCache.instance.clearJson();
-      ResourceCache.instance.clearLists();
       // 清空 Hive 缓存类 box（不动 settings box、不动 resource 文件目录）
       for (final name in ['api_cache', 'image_cache', 'lyric_translations', LyricPersistentCache.boxName]) {
         if (Hive.isBoxOpen(name)) {

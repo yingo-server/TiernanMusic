@@ -15,6 +15,7 @@ import 'core/direct/kg_client.dart';
 import 'core/direct/kg_providers.dart';
 import 'app/di.dart' show kugouApiClientProvider;
 import 'core/prefetch/prefetch_engine.dart';
+import 'core/cache/resource_gateway.dart';
 import 'core/resource/resource_cache.dart';
 import 'core/audio/audio_service_bootstrap.dart';
 import 'app/router.dart';
@@ -263,7 +264,7 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
   @override
   void didHaveMemoryPressure() {
     // 系统内存告警：清空进程内内存缓存
-    MemoryCache.instance.clear();
+    ResourceGateway.instance.onUserChanged();
   }
 
   /// 播放错误提示（引擎未就绪 / 权益不足 / 播放失败）
@@ -310,7 +311,7 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
         // V34-C-03（v3.4 审查③，P1）：切号/登出必须清 MemoryCache——
         // 缓存键不含用户身份维度（B-15 同根），不清则 90 秒内跨账号串
         // 数据（A 的歌单/每日推荐显示给 B）。登录/登出/切号都走这里。
-        MemoryCache.instance.clear();
+        ResourceGateway.instance.onUserChanged();
         if (user == null) {
           client.t1 = '';
         } else {
