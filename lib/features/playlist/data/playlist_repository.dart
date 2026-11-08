@@ -42,7 +42,7 @@ class PlaylistWriteException implements Exception {
 }
 
 class PlaylistRepository {
-  PlaylistRepository(this._api) : _cached = CachedApiCall(_api);
+  PlaylistRepository(this._api) : _cached = CachedApiCall(_api, ns: 'playlist');
   final KugouApiClient _api;
   final CachedApiCall _cached;
 
@@ -418,9 +418,9 @@ class PlaylistRepository {
   /// 否则加歌/删歌后 90 秒内再次进入歌单页仍显示旧列表，用户以为没生效，
   /// 重复点击进一步放大重复提交风险。
   void _invalidatePlaylistCaches() {
-    // V400-B-04：90 秒列表缓存已迁至 ResourceCache（resource_json 箱
-    // list: 前缀），写后失效同步清 MemoryCache（兼容未迁移调用方）。
-    ResourceCache.instance.clearLists();
+    // V5-M3：按命名空间精确失效（不影响 home/search/其它域缓存）；
+    // 旧 MemoryCache 前缀规则仅兼容尚未迁移的调用方。
+    ResourceCache.instance.invalidateNs('playlist');
     MemoryCache.instance.removeWhere((key) =>
         key.startsWith('/playlist/') || key.startsWith('/user/playlist'));
   }

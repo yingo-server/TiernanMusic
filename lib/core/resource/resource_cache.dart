@@ -291,6 +291,20 @@ class ResourceCache {
     }
   }
 
+  /// v5.0 M3：按命名空间精确失效（替代「按 scope 全清」的粗放策略）。
+  /// 键格式见 cache_keys.dart；shared 域（无 ns）由 clearJson 兜底。
+  Future<void> invalidateNs(String ns) async {
+    await init();
+    final box = _safeBox;
+    if (box == null) return;
+    final needle = ':$ns:u=';
+    final keys = box.keys
+        .whereType<String>()
+        .where((k) => k.contains(needle))
+        .toList();
+    await box.deleteAll(keys);
+  }
+
   /// 清全部 JSON 缓存（设置页清缓存入口，C 接入）。
   Future<void> clearJson() async {
     await init();

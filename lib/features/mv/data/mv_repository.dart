@@ -2,7 +2,7 @@ import '../../../core/api/kugou_api_client.dart';
 import '../../../core/resource/cached_api.dart';
 
 class MvRepository {
-  MvRepository(this._api) : _cached = CachedApiCall(_api);
+  MvRepository(this._api) : _cached = CachedApiCall(_api, ns: 'mv');
   final KugouApiClient _api;
   final CachedApiCall _cached;
 

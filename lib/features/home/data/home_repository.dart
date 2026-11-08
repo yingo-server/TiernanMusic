@@ -20,7 +20,7 @@ final homeDataProvider = FutureProvider<HomeData>((ref) {
 /// 首页数据仓库：聚合 /yueku + /top/playlist + /rank/list，
 /// banner 与每日推荐独立容错（失败置 null / 空）。
 class HomeRepository {
-  HomeRepository(this._api) : _cached = CachedApiCall(_api);
+  HomeRepository(this._api) : _cached = CachedApiCall(_api, ns: 'home');
 
   final KugouApiClient _api;
   final CachedApiCall _cached;

@@ -37,7 +37,7 @@ class PlayableResult {
 /// 内容接口仍走 kapi；只有受风控影响的播放/权益链路直连。
 class PlayerRepository {
   PlayerRepository(this._api, [this._ref])
-      : _cached = CachedApiCall(_api);
+      : _cached = CachedApiCall(_api, ns: 'player');
 
   final KugouApiClient _api;
   final CachedApiCall _cached;

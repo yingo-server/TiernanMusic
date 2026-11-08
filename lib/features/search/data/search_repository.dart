@@ -58,7 +58,7 @@ class HotSearchKeyword {
 
 /// 搜索仓库：搜索 / 热搜 / 建议 / 历史（Hive）
 class SearchRepository {
-  SearchRepository(this._api) : _cached = CachedApiCall(_api);
+  SearchRepository(this._api) : _cached = CachedApiCall(_api, ns: 'search');
 
   final KugouApiClient _api;
   final CachedApiCall _cached;

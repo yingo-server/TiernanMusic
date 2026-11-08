@@ -60,7 +60,7 @@ class PrefetchEngine {
   CachedApiCall? _cached;
 
   void attach(KugouApiClient api) {
-    _cached = CachedApiCall(api);
+    _cached = CachedApiCall(api, ns: 'prefetch');
   }
 
   /// 启动预热：按 [spacing] 逐个入队（冻结契约签名）。

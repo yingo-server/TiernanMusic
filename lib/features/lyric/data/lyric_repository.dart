@@ -12,7 +12,7 @@ import 'krc_parser.dart';
 
 class LyricRepository {
   LyricRepository(this._api, this._translate)
-      : _cached = CachedApiCall(_api);
+      : _cached = CachedApiCall(_api, ns: 'lyric');
 
   // ignore: unused_field — 恒等字段：构造契约保留 _api 引用（调用方可直查 userid 等状态）
   final KugouApiClient _api;
