@@ -103,11 +103,23 @@ jobs:
           echo "$KS_B64" | base64 -d > android/app/tiernan.jks
 
       - name: Build APK (debug)
-        run: flutter build apk --debug --split-per-abi
+        # v5.1：GitHub Releases 侧 Gradle/Kotlin 依赖偶发 504，重试 3 次
+        # （外部依赖故障，非代码问题；避免整条 CI 因瞬时网络红）
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 25
+          max_attempts: 3
+          retry_wait_seconds: 60
+          command: flutter build apk --debug --split-per-abi
 
       - name: Build APK (release)
         if: github.ref_type == 'tag'
-        run: flutter build apk --release --split-per-abi --build-number="$GITHUB_RUN_NUMBER"
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 25
+          max_attempts: 3
+          retry_wait_seconds: 60
+          command: flutter build apk --release --split-per-abi --build-number="$GITHUB_RUN_NUMBER"
 
       - name: Upload mapping
         if: github.ref_type == 'tag'
