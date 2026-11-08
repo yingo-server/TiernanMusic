@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FontLoader;
@@ -138,7 +139,9 @@ class CustomFontStore {
   Future<void> _registerRuntime(CustomFont font) async {
     final f = File(font.filePath);
     if (!await f.exists()) return;
-    final loader = FontLoader(font.id)..addFont(Future.value(f.readAsBytesSync()));
+    final loader = FontLoader(font.id)
+      ..addFont(Future<ByteData>.value(
+          ByteData.view(Uint8List.fromList(f.readAsBytesSync()))));
     await loader.load();
   }
 
