@@ -1,8 +1,8 @@
-/// 全屏播放页（V39 完全重写）。
+/// 全屏播放页（V39 完全重写；v5.3-R2 P4 布局重排）。
 ///
-/// 分区：错误横幅 → 顶栏 → 封面/歌词切换区 → 歌曲信息 → 功能入口
-/// → 进度条 → 控制区。四态明确分离：
-/// 引擎失败 / 未播放空态（含返回首页动作）/ 加载中 / 正常。
+/// 分区：网络阶段条 → 错误横幅 → 顶栏 → 封面/歌词切换区 → 歌曲信息（三层）
+/// → 功能入口（语义唯一）→ 进度条 → 控制区。四态明确分离：
+/// 引擎失败 / 未播放空态（含返回首页动作）/ 加载中（阶段条可见）/ 正常。
 ///
 /// 状态单一来源（第 5 条）：只 watch player_provider.dart 已有 provider；
 /// 页面不自行构造 Repository、不触网。
@@ -20,15 +20,15 @@ import '../../../core/theme/settings_provider.dart'
     show LyricDisplayMode, lyricModeProvider;
 import '../../../core/widgets/empty_state.dart';
 import '../../../l10n/l10n.dart';
-import '../../auth/presentation/login_guard.dart';
+import '../../download/presentation/download_sheet.dart';
 import '../../lyric/data/krc_parser.dart';
 import '../../lyric/presentation/lyric_view.dart';
-import '../../download/presentation/download_sheet.dart';
 import '../../mv/mv_provider.dart';
 import '../../playlist/data/playlist_repository.dart';
 import '../../playlist/presentation/add_to_playlist_sheet.dart';
 import '../../../core/domain/song.dart';
 import '../player_provider.dart';
+import 'network_phase_indicator.dart';
 import 'queue_sheet.dart';
 
 /// 歌词 Provider（当前歌曲）。
@@ -87,6 +87,21 @@ String _fmt(Duration d) {
   return '$m:$s';
 }
 
+/// 歌词/封面切换状态（v5.3-R2 P4，修 C-38）。
+///
+/// 从 _CoverOrLyricState 的私有 bool 提升为 provider：入口行按钮与
+/// 封面区视图共用同一状态（语义唯一、两处入口同步），切歌时保留用户偏好。
+/// 页面级 UI 状态，非全局业务状态，autoDispose 随页面释放。
+final lyricVisibleProvider =
+    StateNotifierProvider.autoDispose<LyricVisibleController, bool>(
+        (ref) => LyricVisibleController());
+
+class LyricVisibleController extends StateNotifier<bool> {
+  LyricVisibleController() : super(false);
+
+  void toggle() => state = !state;
+}
+
 /// 全屏播放页。
 class FullPlayerPage extends ConsumerWidget {
   const FullPlayerPage({super.key});
@@ -97,6 +112,12 @@ class FullPlayerPage extends ConsumerWidget {
     // 依据 audio_handler.ensureEngineReady：引擎初始化失败时 engineError
     // 非空（audio_handler.dart:60），此态与「未播放」必须区分（第 16 条）。
     final engineError = ref.watch(audioHandlerProvider).engineError;
+    // v5.3-R2（修 C-34 UI 侧）：播放链路错误（resolveUrl 超时/权益不足等）
+    // 最近一条也渲染为横幅——有歌曲残留时此前完全没有失败可见面。
+    // engineError 优先；横幅语义「发生了什么 + 下一步（重试按钮见下方横幅）」。
+    // audio_handler 不动（范围硬约束），只读 playerErrorProvider 现有流。
+    final playerError = ref.watch(playerErrorProvider).valueOrNull;
+    final banner = engineError ?? playerError;
 
     return Scaffold(
       body: SafeArea(
@@ -104,8 +125,9 @@ class FullPlayerPage extends ConsumerWidget {
         // 封面/歌词区用 Expanded 吃掉剩余空间，其余分区自适应高度。
         child: Column(
           children: [
-            if (engineError != null)
-              _EngineErrorBanner(message: engineError),
+            // v5.3 P2：网络阶段指示器（>500ms 的解析/缓冲必须可见，原则 34）。
+            const NetworkPhaseIndicator(),
+            if (banner != null) _EngineErrorBanner(message: banner),
             _PlayerTopBar(song: song),
             Expanded(
               child: engineError != null && song == null
@@ -121,7 +143,11 @@ class FullPlayerPage extends ConsumerWidget {
   }
 }
 
-/// 引擎错误横幅（V37-PLAY-03 契约保留：失败必须常驻可见，第 9 条）。
+/// 引擎/播放错误横幅（V37-PLAY-03 契约保留：失败必须常驻可见，第 9 条）。
+///
+/// v5.3-R2（修 C-35 横幅不可操作）：追加「重试」按钮——横幅 = 发生了什么
+///（message）+ 下一步（点击重试，togglePlay 内部会先 ensureEngineReady）。
+/// message 为 null 时不渲染（空态契约上移到调用方）。
 class _EngineErrorBanner extends StatelessWidget {
   const _EngineErrorBanner({required this.message});
 
@@ -135,7 +161,7 @@ class _EngineErrorBanner extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
             children: [
               Icon(Icons.error_outline,
@@ -143,9 +169,22 @@ class _EngineErrorBanner extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(message,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                         color: theme.colorScheme.onErrorContainer,
                         fontSize: 13)),
+              ),
+              TextButton(
+                // ≥48dp 触控（质量要求 3）
+                style: TextButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: theme.colorScheme.onErrorContainer),
+                onPressed: () => context
+                    .read(playerControllerProvider)
+                    .togglePlay(),
+                child: Text(context.l10n.retry),
               ),
             ],
           ),
@@ -207,6 +246,11 @@ class _EmptyPlayerView extends StatelessWidget {
 }
 
 /// 正常播放态：封面/歌词 + 信息 + 入口 + 进度 + 控制。
+///
+/// v5.3-R2（修 C-40）：固定分区包滚动兜底——正常竖屏下 Expanded 封面区
+/// 行为不变（LayoutBuilder maxHeight 足够时仍用 Column+Expanded）；高度
+/// 不足（横屏/大字号 2 行歌名）时切换为 SingleChildScrollView，固定区
+/// 总高可超出视口而不再 RenderFlex overflow / 封面被压没。
 class _PlayerContent extends ConsumerWidget {
   const _PlayerContent({required this.song});
 
@@ -214,9 +258,9 @@ class _PlayerContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
+    final fixed = Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(child: _CoverOrLyric(song: song)),
         _SongInfoHeader(song: song),
         _EntryButtonsRow(song: song),
         const _ProgressBar(),
@@ -224,6 +268,30 @@ class _PlayerContent extends ConsumerWidget {
         const SizedBox(height: 12),
       ],
     );
+    return LayoutBuilder(builder: (context, constraints) {
+      // 经验阈值：固定区约 320dp（信息 90 + 入口 58 + 进度 66 + 控制 92），
+      // 剩余高度不足以展示封面（<180dp）时进入滚动模式。
+      final canFitCover = constraints.maxHeight > 500;
+      if (canFitCover) {
+        return Column(
+          children: [
+            Expanded(child: _CoverOrLyric(song: song)),
+            fixed,
+          ],
+        );
+      }
+      return SingleChildScrollView(
+        child: Column(
+          children: [
+            SizedBox(
+              height: 260,
+              child: _CoverOrLyric(song: song),
+            ),
+            fixed,
+          ],
+        ),
+      );
+    });
   }
 }
 
@@ -306,7 +374,11 @@ class _PlayerTopBar extends ConsumerWidget {
   }
 }
 
-/// 歌名 / 歌手 / 试听角标 / 实际音质。大字号窄屏用 LayoutBuilder 降级。
+/// 歌名 / 歌手 / 徽标：三层信息层级（v5.3-R2 P4，PLAN「歌名(大)/歌手(中)/
+/// 音质+试听徽标(小)」，修 C-36）——不再把徽标与歌手塞进同一 Row 抢宽：
+///   L1 歌名：titleLarge，大字号/窄屏允许 2 行
+///   L2 歌手：bodyMedium，独立一行（永远完整可读，不与徽标竞争）
+///   L3 徽标行：试听 + 实际音质，独立 Row（无徽标时整行不占高度）
 class _SongInfoHeader extends ConsumerWidget {
   const _SongInfoHeader({required this.song});
 
@@ -323,8 +395,10 @@ class _SongInfoHeader extends ConsumerWidget {
         // 大字号（可访问性字号 ≥1.3 倍）时标题允许两行，不再截断
         final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
         final largeText = scale > 1.3 || constraints.maxWidth < 320;
+        final hasBadges = isPreview || quality != null;
         return Column(
           children: [
+            // L1 歌名（大）
             Text(
               song.name,
               maxLines: largeText ? 2 : 1,
@@ -333,35 +407,35 @@ class _SongInfoHeader extends ConsumerWidget {
               style: theme.textTheme.titleLarge
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (isPreview) ...[
-                  _Badge(
-                    text: context.l10n.previewOnly,
-                    foreground: theme.colorScheme.onTertiaryContainer,
-                    background: theme.colorScheme.tertiaryContainer,
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                if (quality != null) ...[
-                  Flexible(
-                    child: _QualityBadge(quality: quality.label),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Flexible(
-                  child: Text(
-                    song.artist,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 4),
+            // L2 歌手（中）：独立一行，不与徽标抢宽
+            Text(
+              song.artist,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
+            // L3 徽标行（小）：试听/音质；无徽标时不渲染，不占高度
+            if (hasBadges) ...[
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (isPreview) ...[
+                    _Badge(
+                      text: context.l10n.previewOnly,
+                      foreground: theme.colorScheme.onTertiaryContainer,
+                      background: theme.colorScheme.tertiaryContainer,
+                    ),
+                  ],
+                  if (isPreview && quality != null) const SizedBox(width: 8),
+                  if (quality != null)
+                    _QualityBadge(quality: quality.label),
+                ],
+              ),
+            ],
           ],
         );
       }),
@@ -416,7 +490,13 @@ class _QualityBadge extends StatelessWidget {
   }
 }
 
-/// 功能入口行：评论 + MV + 队列。
+/// 功能入口行：评论 + MV（有才显示）+ 歌词切换。
+///
+/// v5.3-R2 P4 语义唯一化（PLAN 质量要求 3，修 C-37/C-38）：
+///  - 「收藏到歌单」与「播放队列」收敛到顶栏「更多」菜单，入口行不再重复；
+///  - 歌词切换从封面右下角 40dp 悬浮按钮迁入入口行（≥48dp、有 active 态），
+///    与 _CoverOrLyric 的 _showLyric 状态共用 [lyricVisibleProvider]；
+///  - 按钮高度 48dp，label maxLines 1 + ellipsis。
 ///
 /// V39-PLAYER-03（P1，契约保留）：评论入口必须无条件可达——只要歌曲有
 /// album_audio_id 就渲染，绝不与 MV 有无绑定。路由契约：
@@ -436,72 +516,66 @@ class _EntryButtonsRow extends ConsumerWidget {
         : ref.watch(songMvProvider(albumAudioId));
     final mv = mvAsync?.value;
     final hasMv = mv != null && mv.videoId.isNotEmpty;
+    final showLyric = ref.watch(lyricVisibleProvider);
+    final theme = Theme.of(context);
+
+    OutlinedButton entryButton({
+      required IconData icon,
+      required String label,
+      required VoidCallback? onPressed,
+      bool selected = false,
+    }) {
+      return OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 48), // 质量要求 3：≥48dp 触控
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          visualDensity: VisualDensity.compact,
+          foregroundColor:
+              selected ? theme.colorScheme.primary : null,
+        ),
+        icon: Icon(icon, size: 18),
+        label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        onPressed: onPressed,
+      );
+    }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 12, 28, 4),
+      padding: const EdgeInsets.fromLTRB(28, 10, 28, 4),
       child: Row(
         children: [
           // 评论入口：只要能定位资源就显示；无 album_audio_id 时降级为
           // 禁用态（保证入口可发现，不静默消失）。
           Expanded(
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 40),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                visualDensity: VisualDensity.compact,
-              ),
-              icon: const Icon(Icons.comment_outlined, size: 18),
-              label: Text(context.l10n.comments,
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
+            child: entryButton(
+              icon: Icons.comment_outlined,
+              label: context.l10n.comments,
               onPressed: albumAudioId.isEmpty
                   ? null
                   : () => context.push(
                       '/comments/song/${Uri.encodeComponent(albumAudioId)}'),
             ),
           ),
-          // V399-A1（P1）：播放页功能入口行此前只有评论/MV/队列，收藏到
-          // 歌单只能绕到顶栏「更多」菜单（可达性差）。在此补直达入口：
-          // 未登录先走 ensureLoggedIn（现有模式），已登录用当前 Song 构造
-          // TrackRef（hash/albumId/albumAudioId 直接取 Song 同名字段）。
+          const SizedBox(width: 8),
+          // 歌词切换入口（v5.3-R2：从封面右下角悬浮按钮迁入，语义唯一）。
           Expanded(
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 40),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                visualDensity: VisualDensity.compact,
-              ),
-              icon: const Icon(Icons.playlist_add_rounded, size: 18),
-              label: Text(context.l10n.addToPlaylist,
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
-              onPressed: () {
-                if (!ensureLoggedIn(context, ref,
-                    action: context.l10n.addToPlaylist)) {
-                  return;
-                }
-                showAddToPlaylistSheet(
-                  context,
-                  TrackRef(
-                    name: song.name,
-                    hash: song.hash,
-                    albumId: song.albumId,
-                    albumAudioId: song.albumAudioId,
-                  ),
-                );
-              },
+            child: entryButton(
+              icon: showLyric
+                  ? Icons.album_outlined
+                  : Icons.lyrics_outlined,
+              label: showLyric
+                  ? context.l10n.showCover
+                  : context.l10n.showLyrics,
+              selected: showLyric,
+              onPressed: () =>
+                  ref.read(lyricVisibleProvider.notifier).toggle(),
             ),
           ),
           if (hasMv) ...[
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  visualDensity: VisualDensity.compact,
-                ),
-                icon: const Icon(Icons.movie_outlined, size: 18),
-                label: Text(context.l10n.playMv,
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
+              child: entryButton(
+                icon: Icons.movie_outlined,
+                label: context.l10n.playMv,
                 onPressed: () {
                   // /video/url 只认视频 hash，path 用 hash；
                   // videoId 走 query 供清晰度列表使用（mv_repository 契约）
@@ -520,17 +594,6 @@ class _EntryButtonsRow extends ConsumerWidget {
               ),
             ),
           ],
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: IconButton(
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.queue_music_rounded, size: 20),
-              tooltip: context.l10n.playQueue,
-              onPressed: () => showQueueSheet(context),
-            ),
-          ),
         ],
       ),
     );
@@ -549,7 +612,8 @@ class _CoverOrLyric extends ConsumerStatefulWidget {
 
 class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
     with SingleTickerProviderStateMixin {
-  bool _showLyric = false;
+  // v5.3-R2（修 C-38）：切换状态提升为 lyricVisibleProvider——入口行
+  // 「歌词」按钮与本视图共用同一状态（此前悬浮按钮 40dp 且与封面重叠）。
 
   // V39-PLAYER-04（第 20 条资源对称）：控制器与曲线在 State 创建一次、
   // dispose 对称释放（继承旧实现的掉帧修复，不复制旧结构）。
@@ -573,11 +637,6 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
     super.dispose();
   }
 
-  void _toggleLyric() {
-    setState(() => _showLyric = !_showLyric);
-    if (_showLyric) _fadeCtrl.forward(from: 0);
-  }
-
   @override
   Widget build(BuildContext context) {
     // V39-CI-2：build 内使用 theme 前必须先声明（代理重写漏项）。
@@ -589,13 +648,16 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
     // V400-A-04：歌词 id + 所属歌曲 hash 透传（匹配翻译补丁 / 世代校验）
     final lyricId = lyricAsync.value?.lyricId;
     final songHash = lyricAsync.value?.songHash;
+    final showLyric = ref.watch(lyricVisibleProvider);
+    // 切到歌词视图时重放淡入动画（原 _toggleLyric 行为）。
+    if (showLyric) _fadeCtrl.forward(from: 0);
 
     return Stack(
       fit: StackFit.expand,
       children: [
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
-          child: _showLyric
+          child: showLyric
               ? _LyricPhaseView(
                   key: const ValueKey('lyric'),
                   lyricAsync: lyricAsync,
@@ -612,25 +674,8 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
                 )
               : _CoverView(song: widget.song),
         ),
-        // 明确的切换入口（不只靠「点封面」隐藏手势）
-        Positioned(
-          right: 16,
-          bottom: 8,
-          child: TextButton.icon(
-            onPressed: _toggleLyric,
-            style: TextButton.styleFrom(
-              foregroundColor: theme.colorScheme.onSurfaceVariant,
-              minimumSize: const Size(48, 40),
-            ),
-            icon: Icon(
-              _showLyric ? Icons.album_outlined : Icons.lyrics_outlined,
-              size: 18,
-            ),
-            label: Text(_showLyric
-                ? context.l10n.showCover
-                : context.l10n.showLyrics),
-          ),
-        ),
+        // v5.3-R2：移除右下角 40dp 悬浮歌词切换按钮（修 C-38）——入口行
+        // 已有 ≥48dp 且带 active 态的「歌词/封面」按钮，此处属语义重复。
       ],
     );
   }
@@ -704,9 +749,13 @@ class _ProgressBarState extends ConsumerState<_ProgressBar> {
     final controller = ref.read(playerControllerProvider);
 
     final maxMs =
-        total.inMilliseconds > 0 ? total.inMilliseconds.toDouble() : 1.0;
+        total.inMilliseconds > 0 ? total.inMilliseconds.toDouble() : 0.0;
     final posMs = position.inMilliseconds.clamp(0, total.inMilliseconds).toDouble();
     final bufMs = buffered.inMilliseconds.clamp(0, total.inMilliseconds).toDouble();
+    // v5.3-R2（修 C-44）：未取到时长前禁用滑块——此前用假上界 1ms 可拖可 seek。
+    final enabled = total.inMilliseconds > 0;
+    // 拖动期间左下角时间跟随拇指值（松手前不回跳 position）。
+    final shownPos = Duration(milliseconds: (_dragMs ?? posMs).round());
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
@@ -724,18 +773,22 @@ class _ProgressBarState extends ConsumerState<_ProgressBar> {
             ),
             child: Slider(
               // 夹取上界防切歌瞬间断言
-              value: (_dragMs ?? posMs).clamp(0.0, maxMs),
-              max: maxMs,
+              value: (_dragMs ?? posMs).clamp(0.0, maxMs > 0 ? maxMs : 0.0),
+              max: maxMs > 0 ? maxMs : 1.0,
               secondaryTrackValue: bufMs,
-              onChangeStart: (v) => setState(() => _dragMs = v),
-              onChanged: (v) => setState(() => _dragMs = v),
-              onChangeEnd: (v) {
-                // 第 20 条：异步/延迟回调先确认对象仍存活
-                if (mounted) {
-                  controller.seekTo(Duration(milliseconds: v.round()));
-                  setState(() => _dragMs = null);
-                }
-              },
+              onChanged: enabled
+                  ? (v) => setState(() => _dragMs = v)
+                  : null, // disabled：duration 未知时不可拖（质量要求 3 三态）
+              onChangeStart: enabled ? (v) => setState(() => _dragMs = v) : null,
+              onChangeEnd: enabled
+                  ? (v) {
+                      // 第 20 条：异步/延迟回调先确认对象仍存活
+                      if (mounted) {
+                        controller.seekTo(Duration(milliseconds: v.round()));
+                        setState(() => _dragMs = null);
+                      }
+                    }
+                  : null,
             ),
           ),
           Padding(
@@ -743,7 +796,7 @@ class _ProgressBarState extends ConsumerState<_ProgressBar> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(_fmt(position), style: theme.textTheme.labelSmall),
+                Text(_fmt(shownPos), style: theme.textTheme.labelSmall),
                 Text(_fmt(total), style: theme.textTheme.labelSmall),
               ],
             ),

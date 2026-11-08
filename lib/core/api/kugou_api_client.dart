@@ -7,6 +7,10 @@ import 'package:cookie_jar/cookie_jar.dart';
 import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
+import '../utils/error_logger.dart';
+
+/// v5.3 P2：慢请求告警阈值（PLAN P2 定值 3s）。
+const int kSlowRequestWarnMs = 3000;
 
 
 
@@ -21,8 +25,12 @@ class KugouApiClient {
             : _createCookieJar(cookieStoragePath),
         _dio = Dio(BaseOptions(
           baseUrl: baseUrl ?? AppConfig.kugouApiBase,
-          connectTimeout: const Duration(seconds: 20),
-          receiveTimeout: const Duration(seconds: 30),
+          // v5.3 B-24：分级超时（PLAN P2：解析类接口 8s）。kapi 是 JSON
+          // 网关，连接 8s / 响应 12s 足够覆盖慢网；此前的 20s/30s 让
+          // resolveUrl 逐档降级链最坏挂 5 分钟以上。上传/下载大文件的
+          // 路径不走本 client（ResourceCache 另有 dio）。
+          connectTimeout: const Duration(seconds: 8),
+          receiveTimeout: const Duration(seconds: 12),
           headers: {'User-Agent': 'TiernanMusic/1.0.0 Android'},
         )) {
     _dio.interceptors.add(CookieManager(_cookieJar));
@@ -33,6 +41,8 @@ class KugouApiClient {
           options.queryParameters['timestamp'] =
               DateTime.now().millisecondsSinceEpoch.toString();
         }
+        // v5.3 P2：慢请求观测——每个请求记录起始时间（PLAN P2 拦截器要求）。
+        options.extra['__tsStart'] = DateTime.now().millisecondsSinceEpoch;
         handler.next(options);
       },
       onResponse: (response, handler) {
@@ -59,10 +69,46 @@ class KugouApiClient {
             error: ApiException(-1, '空响应体', body: const {}),
           ));
           return;
+        } else if (data is! Map<String, dynamic>) {
+          // v5.3 B-27：数组/其它形态的 2xx 响应不得放行到 `res.data ?? {}`
+          // 折成空 Map 或类型断言崩溃——显式拒绝并留痕（第 13/14 条）。
+          handler.reject(DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            error: ApiException(-1,
+                '响应形态异常（${data.runtimeType}，预期 Map）', body: const {}),
+          ));
+          return;
         }
         handler.next(response);
       },
+      onError: (e, handler) {
+        _logSlowRequest(e.requestOptions, ok: false);
+        handler.next(e);
+      },
     ));
+  }
+
+  /// v5.3 P2：慢请求告警（阈值 3s，PLAN P2）——响应与错误两个出口都过
+  /// 这里，release 也可检索（用 ErrorLogger 而非 debugPrint，第 9 条）。
+  void _logSlowRequest(RequestOptions options, {required bool ok}) {
+    final start = options.extra['__tsStart'];
+    if (start is! int) return;
+    final elapsed = DateTime.now().millisecondsSinceEpoch - start;
+    final path = options.path;
+    if (elapsed >= kSlowRequestWarnMs) {
+      ErrorLogger.instance.log(
+        'slow request ${elapsed}ms ${ok ? '' : '[ERR] '}$path',
+        StackTrace.current,
+        source: 'kugou_api_client',
+        context: 'slow-request',
+      );
+    } else if (elapsed >= 500) {
+      ErrorLogger.instance.verbose(
+        'net: ${elapsed}ms $path',
+        tag: 'net',
+      );
+    }
   }
 
   final Dio _dio;

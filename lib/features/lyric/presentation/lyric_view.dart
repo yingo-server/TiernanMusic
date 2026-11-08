@@ -107,18 +107,35 @@ class _LyricViewState extends State<LyricView> {
     final wantId = widget.lyricId;
     if (wantId != null && p.lyricId != wantId) return;
     final lines = lyric.lines;
-    if (p.startIndex < 0 || p.startIndex >= lines.length) return;
     var changed = false;
     final values = p.values;
-    for (var j = 0; j < values.length; j++) {
-      final i = p.startIndex + j;
-      if (i >= lines.length) break;
-      final v = values[j];
-      // 只接受非空译文；已有译文的行不覆盖（先到先得，避免抖动）
-      if (v.isEmpty) continue;
-      if ((lines[i].translation ?? '').isEmpty) {
-        lines[i].translation = v;
-        changed = true;
+    // v5.3 B-14 重写：补丁按行号直写（lineIndices 与 values 等长）。
+    // 旧契约 `startIndex + j` 连续写回在 missing 非连续时（F4-30 逐行
+    // 判定后是常态）把译文插错行且缓存命中时永久错。lineIndices 为空
+    // 的旧形态补丁退回连续写（防御，本仓调用点已全部迁移）。
+    if (p.lineIndices.isEmpty) {
+      if (p.startIndex < 0 || p.startIndex >= lines.length) return;
+      for (var j = 0; j < values.length; j++) {
+        final i = p.startIndex + j;
+        if (i >= lines.length) break;
+        final v = values[j];
+        if (v.isEmpty) continue;
+        if ((lines[i].translation ?? '').isEmpty) {
+          lines[i].translation = v;
+          changed = true;
+        }
+      }
+    } else {
+      final idx = p.lineIndices;
+      for (var j = 0; j < values.length && j < idx.length; j++) {
+        final i = idx[j];
+        if (i < 0 || i >= lines.length) continue; // 越界行丢弃，不中断整批
+        final v = values[j];
+        if (v.isEmpty) continue;
+        if ((lines[i].translation ?? '').isEmpty) {
+          lines[i].translation = v;
+          changed = true;
+        }
       }
     }
     if (changed) setState(() {});

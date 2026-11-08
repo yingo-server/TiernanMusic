@@ -71,7 +71,7 @@
   "myPlaylists": "我的歌单",
   "createPlaylist": "新建歌单",
   "playlistName": "歌单名称",
-  "addToPlaylist": "收藏",
+  "addToPlaylist": "收藏到歌单",
   "removeFromPlaylist": "从歌单移除",
   "mv": "MV",
   "playMv": "MV",
@@ -620,5 +620,51 @@
   "themeFontAdd": "添加字体",
   "themeFontFromLocal": "从本地文件",
   "themeFontFromUrl": "从链接下载",
-  "themeFontDownloading": "正在下载字体…"
+  "themeFontDownloading": "正在下载字体…",
+  "storageDiag": "存储状态",
+  "@storageDiag": {
+    "description": "设置 → 存储状态诊断页入口标题"
+  },
+  "storageReprobe": "重新探测",
+  "@storageReprobe": {
+    "description": "诊断页：一键重新探测按钮（loading 态禁点）"
+  },
+  "storageLevel": "生效级别",
+  "@storageLevel": {
+    "description": "诊断页：当前生效回退级别标签"
+  },
+  "storageProbeLog": "探测历史",
+  "@storageProbeLog": {
+    "description": "诊断页：五级探测历史区标题"
+  },
+  "storageProbeRunning": "正在探测…",
+  "@storageProbeRunning": {
+    "description": "诊断页：探测进行中文案"
+  },
+  "storageProbeFailedShort": "探测失败",
+  "@storageProbeFailedShort": {
+    "description": "诊断页：探测失败短文案（详情见日志）"
+  },
+  "goGrant": "去授权",
+  "@goGrant": {
+    "description": "诊断页/设置页：跳系统授权页按钮"
+  },
+  "errorRetryHint": "播放出错，可点重试",
+  "@errorRetryHint": {
+    "description": "播放页：错误横幅主文案（发生了什么+下一步）"
+  },
+  "loadingStream": "正在连接…",
+  "@loadingStream": {
+    "description": "播放页：resolve 阶段指示文案"
+  },
+  "bufferingStream": "缓冲中…",
+  "@bufferingStream": {
+    "description": "播放页：缓冲阶段指示文案"
+  },
+  "networkPhaseResolving": "正在解析播放地址…",
+  "networkPhaseBuffering": "正在缓冲…",
+  "playbackFailed": "播放失败，请重试或换一首",
+  "verifyRequiredHint": "需要完成人机验证后重试",
+  "translationInProgress": "正在翻译歌词…",
+  "translationFailedHint": "译文获取失败，稍后将自动重试"
 }

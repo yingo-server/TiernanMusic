@@ -3,9 +3,9 @@ import '../../../core/net/music_api.dart';
 
 import 'package:flutter/foundation.dart';
 
-import '../../../core/api/kugou_api_client.dart';
 import '../../../core/api/translate_api.dart';
 import '../../../core/cache/cache_manager.dart';
+import '../../../core/net/music_api.dart';
 import '../../../core/resource/cached_api.dart';
 import '../../../core/resource/lyric_translation_stream.dart';
 import 'krc_decoder.dart';
@@ -13,16 +13,22 @@ import 'krc_parser.dart';
 
 class LyricRepository {
   LyricRepository(this._api, this._translate)
-      : _cached = CachedApiCall(_api, ns: 'lyric');
+      : _cached = CachedApiCall(_api.transport, ns: 'lyric');
 
-  // ignore: unused_field — 恒等字段：构造契约保留 _api 引用（调用方可直查 userid 等状态）
-  final KugouApiClient _api;
+  // v5.3 B-15：原 `final KugouApiClient _api` 恒等字段已删除（第 32 条
+  // 死代码零容忍）。构造参数类型放宽为 MusicApi（读路径统一，v5.0 M5），
+  // userid 等状态经 _cached（CachedApiCall 持有 api）可得。
+  final MusicApi _api;
   final TranslateApi _translate;
+  final CachedApiCall _cached;
   final CachedApiCall _cached;
 
   /// 歌词缓存 TTL = 168h（用户 v4.0 口径：歌曲/歌词/封面 JSON 均缓存 168h）。
   /// 歌词内容与登录态无关、变化极慢；30min 是迁移期临时值，已纠正。
   static const Duration _lyricCacheTtl = Duration(hours: 168);
+
+  /// v5.3 B-16：翻译批失败重试退避间隔（PLAN P2 重试退避要求）。
+  static const Duration _retryBackoff = Duration(milliseconds: 1500);
 
   /// 搜索歌词候选
   Future<LyricCandidate?> findCandidate({
@@ -174,11 +180,12 @@ class LyricRepository {
         }
       }
       // V400-B-03：命中缓存也 emit 一次（UI 秒显，不等 FutureProvider 完成）。
+      // v5.3 B-14：按行号直写（missing 可非连续，连续性假设已废除）。
       if (hit > 0) {
-        LyricTranslationStream.instance.emit(LyricTranslationPatch(
+        LyricTranslationStream.instance.emit(LyricTranslationPatch.indexed(
           lyricId,
-          missing.first,
           [for (final i in missing) lyric.lines[i].translation ?? ''],
+          lineIndices: missing,
           songHash: songHash,
         ));
       }
@@ -199,7 +206,9 @@ class LyricRepository {
         TranslateResult tr = await _translate.translateLines(
             lines: batch, targetLanguage: targetLanguage);
         if (!tr.ok) {
-          debugPrint('[lyric] 翻译批次降级（${tr.reason}），重试一次');
+          // v5.3 B-16：重试一次但**先退避**（1.5s）——翻译服务整体故障时
+          // 旧实现无间隔连击（长歌词最多 6 连发），限流雪上加霜。
+          await Future<void>.delayed(_retryBackoff);
           tr = await _translate.translateLines(
               lines: batch, targetLanguage: targetLanguage);
         }
@@ -228,11 +237,14 @@ class LyricRepository {
           translations[missing[i + j]] = value;
         }
         // V400-B-03：本批成功即 emit patch（UI 实时插行，不等整批翻译完）。
+        // v5.3 B-14：本批行号 = missing[i..i+n-1]（可非连续），按行号直写。
         if (translated.length == batch.length && n > 0) {
-          LyricTranslationStream.instance.emit(LyricTranslationPatch(
+          LyricTranslationStream.instance.emit(LyricTranslationPatch.indexed(
             lyricId,
-            missing[i],
             [for (var j = 0; j < n; j++) translated[j]],
+            lineIndices: [
+              for (var j = 0; j < n; j++) missing[i + j]
+            ],
             songHash: songHash,
           ));
         }

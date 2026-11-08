@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../../../core/net/music_api.dart';
+import '../../../core/net/network_phase.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,35 +50,30 @@ class PlayerRepository {
   /// 动态获取直连播放接口（异步 provider，可能尚未就绪）
   KgPlayApi? get _directPlay => _ref?.read(kgPlayApiProvider);
 
-  bool _registering = false;
-
-  /// 复核①-15（第3批，P1）：当前注册事务的 Future——并发等待者挂在它
-  /// 上面而不是 300ms 轮询递归。
-  Future<void>? _registeringFuture;
-  int _registerRetries = 0;
-
-  /// 确保本地有 dfid，首次播放前自动注册设备。
+  /// v5.3 B-01 重写：等待者**复用首个注册者的最终结果**（成功直取 /
+  /// 失败共享失败态），只有首个注册者做重试循环，重试有界（≤3）。
+  /// 旧实现等待者各自递归 ensureDfid()，注册接口 hang 后网络恢复瞬间
+  /// 并发打注册接口（最多 N+3 次，无界于等待者数），风控概率上升。
   Future<String> ensureDfid() async {
     final cached = await SecureStorage.instance.readDfid();
     if (cached != null && cached.isNotEmpty) return cached;
-    if (_registering) {
-      // 复核①-15（第3批，P1）：旧实现是 300ms 轮询递归——注册接口 hang
-      // 时多请求无限轮询挂起（每次 +300ms 栈深），播放永久转圈。
-      // 改为等待「当前注册事务」的 Future，注册结束所有等待者同时返回。
-      final pending = _registeringFuture;
-      if (pending != null) {
-        try {
-          await pending;
-        } catch (_) {}
-        return ensureDfid(); // 重读一次缓存（成功则拿到；失败则再试一轮，有界）
+    final pending = _registeringFuture;
+    if (pending != null) {
+      // 等待者：挂首个注册者的事务上；成败与它完全一致，不再自旋重试
+      //（第 21 条：防重；重试责任收敛在首个注册者）。
+      try {
+        await pending;
+        final dfid = await SecureStorage.instance.readDfid();
+        if (dfid != null && dfid.isNotEmpty) return dfid;
+      } catch (_) {
+        // 首个注册者失败：与它共享同一失败结果，不再各自重试
       }
-      // 走到这里说明前一个注册者已失败落库，重试一轮（计入次数，防止无限）
-      if (_registerRetries >= 3) {
-        throw ApiException(-1, '设备注册多次失败，请检查网络后重试');
-      }
-      _registerRetries++;
+      throw ApiException(-1, '设备注册未完成，请稍后重试');
     }
-    _registering = true;
+    if (_registerRetries >= 3) {
+      throw ApiException(-1, '设备注册多次失败，请检查网络后重试');
+    }
+    _registerRetries++;
     final completer = Completer<void>();
     _registeringFuture = completer.future;
     try {
@@ -111,7 +107,6 @@ class PlayerRepository {
     } catch (e) {
       rethrow;
     } finally {
-      _registering = false;
       _registeringFuture = null;
       completer.complete();
     }
@@ -122,6 +117,9 @@ class PlayerRepository {
   /// V400-B-04：详情响应接入 ResourceCache（90 秒 + userid 维度键 +
   /// 失效回退 + in-flight 合并）；命中缓存不再重复打权益接口。
   Future<Song> fetchDetail(Song song) async {
+    // v5.3 P2：详情补全属于解析阶段，进入即播报（>500ms 必须可见）。
+    NetworkPhaseTracker.instance.begin(NetworkPhase.resolving,
+        detail: 'detail:${song.hash}');
     try {
       final res = await _cached.get('/privilege/lite', query: {
         'hash': song.hash,
@@ -189,6 +187,8 @@ class PlayerRepository {
         debugPrint('[player] fetchDetail 网络失败: $e');
       }
       // 详情查询失败不阻塞播放
+    } finally {
+      NetworkPhaseTracker.instance.end(NetworkPhase.resolving);
     }
     return song;
   }
@@ -204,6 +204,18 @@ class PlayerRepository {
   Future<PlayableResult> resolveUrl(Song song,
       {AudioQuality? preferred}) async {
     preferred ??= _preferredFromSettings();
+    // v5.3 P2：URL 解析全链路（直连+kapi）是一个用户可见的解析阶段。
+    NetworkPhaseTracker.instance.begin(NetworkPhase.resolving,
+        detail: 'resolve:${song.hash}');
+    try {
+      return await _resolveUrlInner(song, preferred: preferred);
+    } finally {
+      NetworkPhaseTracker.instance.end(NetworkPhase.resolving);
+    }
+  }
+
+  Future<PlayableResult> _resolveUrlInner(Song song,
+      {AudioQuality? preferred}) async {
     if (_directPlay != null) {
       try {
         final direct =
@@ -224,10 +236,11 @@ class PlayerRepository {
         // 回退触发条件应覆盖一切直连失败（第 8/11 条：回退路径异常
         // 形态一致、触发条件完整）。20028 之外的异常都值得一试 kapi。
         debugPrint('[player] direct resolve failed, fallback to kapi: $e');
-        // V399-B3：特殊音源档网络异常同样不落 kapi（第 11 条）
-        if (preferred.isSpecial) {
-          throw ApiException(-1, '音质 ${preferred.value} 解析失败：$e');
-        }
+        // V399-B3：特殊音源档网络异常同样不落 kapi（第 11 条）。
+        // v5.3 B-05：保留原始异常形态——非 ApiException 的网络异常包装
+        // 时把原文放进 message（上游 KgClient 若带 ssaCode 的包装形态，
+        // 由 requiresVerification 判定链处理），不再抹平丢失。
+        throw ApiException(-1, '音质 ${preferred.value} 解析失败：$e');
       }
     }
     return _resolveViaKapi(song, preferred: preferred);
@@ -418,8 +431,9 @@ class PlayerRepository {
             expectedBytes: _declaredBytes(data),
           );
         }
-      } catch (_) {
-        // 继续尝试下一档
+      } catch (e) {
+        // v5.3 B-04：空吞修复——试听兜底失败必须留痕（第 6/9 条）。
+        debugPrint('[player] kapi preview fallback failed (q=${q.value}): $e');
       }
     }
     throw lastError ?? ApiException(-1, '没有可尝试的播放音质');
@@ -427,9 +441,11 @@ class PlayerRepository {
 
   /// 将部署版 /privilege/lite 的真实权益字段转换为可播放性。
   /// privilege 的 8 位表示无版权；接口顶层 status=1 且非无版权时可播放。
+  /// v5.3 B-06：status 缺失按不可播处理（fail-closed，第 14 条）——
+  /// 上游字段裁剪/改名后宁可多报一次权益错误，也不误判无版权曲可播。
   static bool canPlay(Map<dynamic, dynamic> privilege) {
     final status = _int(privilege['status']);
-    if (status != null && status != 1) return false;
+    if (status == null || status != 1) return false;
     final value = _int(privilege['privilege']) ?? 0;
     return value & 8 == 0;
   }

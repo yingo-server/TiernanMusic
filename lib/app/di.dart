@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/lyric/data/lyric_repository.dart';
-import '../core/api/kugou_api_client.dart';
 import '../core/api/translate_api.dart';
 import '../core/direct/kg_providers.dart';
 import '../core/net/music_api.dart';
@@ -16,10 +15,10 @@ final kugouApiClientProvider = Provider<KugouApiClient>((ref) {
 /// 翻译 API 单例
 final translateApiProvider = Provider<TranslateApi>((ref) => TranslateApi());
 
-/// 歌词仓库
+/// 歌词仓库（v5.3 B-15：读路径统一走 MusicApi.transport，与 M5 一致）
 final lyricRepositoryProvider = Provider<LyricRepository>((ref) =>
     LyricRepository(
-        ref.watch(kugouApiClientProvider), ref.watch(translateApiProvider)));
+        ref.watch(musicApiProvider), ref.watch(translateApiProvider)));
 
 // 注意：不要在这里创建第二个顶层 ProviderContainer（旧的 globalContainer）。
 // 它没有 ProviderScope 的 override（尤其 kgDeviceProvider），一旦被读取会抛

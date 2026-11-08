@@ -21,7 +21,6 @@ import '../../../core/storage/secure_storage.dart';
 import '../../../core/theme/settings_provider.dart';
 import '../../../core/utils/error_logger.dart';
 import '../../../core/utils/friendly_error.dart';
-import '../../../core/utils/permission_gate.dart';
 import '../../../core/utils/toast.dart';
 import '../../../core/utils/update_checker.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -80,12 +79,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
   /// 存储写入权限状态（同上，必须提为字段避免无限重建）
   late Future<bool> _storageGranted;
 
-  /// V37-LOG-10：当前存储根路径与模式（'root'/'download'），
-  /// 必须是 State 字段（避免 build 内新建 Future → 无限重建，同 _logDirPath）
-  late Future<(String, String)> _storageRoot;
-
-  /// V5.2-A：完整探测结果（生效级别 + 全链探测历史），State 字段同上
-  late Future<StorageResolution?> _storageResolution;
+  // v5.3-R2（修 C-19）：删除 _storageRoot / _storageResolution 双 Future 副本——
+  // 两者都是 resolveRoot() 的重复探测（initState 里 :104 还重复赋值一次）。
+  // 存储根路径 / 生效级别 / 探测历史的展示统一收敛到 /settings/storage 诊断页
+  //（storage_diag_page.dart，单一数据源 StorageDiagController）；本页存储区
+  // 只保留「verbose 开关 + 诊断页入口 + 授权态」，授权态 Future 保留。
 
   /// 「检查更新」进行中（用于显示进度圈）
   bool _checkingUpdate = false;
@@ -97,11 +95,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     _loadVersion();
     _loadAccount();
     _logDirPath = ErrorLogger.instance.currentDirPath();
-    _storageGranted = PermissionGate.instance.hasStorageWriteAccess();
-    // V37-LOG-10：根路径 + 模式一次性读取
-    _storageRoot = _loadStorageRoot();
-    _storageResolution = _loadResolution();
-    _storageResolution = _loadResolution();
+    _storageGranted = _loadStorageGranted();
+    // v5.3-R2（修 C-19）：initState 不再重复跑 resolveRoot（原 3 次赋值、
+    // 2 次真实探测），路径/级别/历史全部延迟到诊断页按需探测。
     // V37-PERM-02：「授权所有文件访问」跳的是系统设置页（无弹窗回调），
     // 用户在系统侧授权/取消授权后回到 App，只能靠 resumed 事件重新查询。
     // 没有 resumed 刷新时，UI 会一直停留在授权前的旧状态——这正是
@@ -115,55 +111,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     // 查询是纯只读（hasStorageWriteAccess/resolveRoot 均不弹窗），开销可控。
     if (state == AppLifecycleState.resumed && mounted) {
       setState(() {
-        _storageGranted = PermissionGate.instance.hasStorageWriteAccess();
-        _storageRoot = _loadStorageRoot();
-        _storageResolution = _loadResolution();
+        _storageGranted = _loadStorageGranted();
       });
     }
   }
 
-  /// V37-LOG-10：读取当前生效存储根（路径, 模式）。
-  /// 失败时返回占位值，绝不抛异常打断设置页构建（第 11 条降级有界）。
-  /// V5.2-A：resolveRoot 返回 StorageResolution 单对象（mode 由 level
-  /// 推导），不再并行调 resolveRootMode（消除双探针不一致）。
-  Future<(String, String)> _loadStorageRoot() async {
-    try {
-      final res = await StoragePermissionService.instance.resolveRoot();
-      return (res.path, res.mode);
-    } catch (_) {
-      return ('-', 'download');
-    }
-  }
-
-  /// V5.2-A：读取完整 StorageResolution（含生效级别 + 全链探测历史）。
-  Future<StorageResolution?> _loadResolution() async {
-    try {
-      return await StoragePermissionService.instance.resolveRoot();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// V37-LOG-10：授权所有文件访问（跳系统授权页），返回后刷新状态。
-  Future<void> _requestAllFilesAccess() async {
-    // V37-PERM-02：permission_handler 对 MANAGE_EXTERNAL_STORAGE 的 request()
-    // 会先尝试直接跳转系统授权页（部分 ROM 成功），也可能静默失败不跳转
-    //（无返回跳转回调，直接落回当前态）。跳转失败时 fallback 到
-    // openAppSettings()，保证用户总能到达可授权的系统界面。
-    final ok = await StoragePermissionService.instance.requestAllFilesAccess();
-    if (!ok) await PermissionGate.instance.openSettings();
-    if (!mounted) return;
-    setState(() {
-      _storageRoot = _loadStorageRoot();
-      _storageResolution = _loadResolution();
-      _storageGranted = PermissionGate.instance.hasStorageWriteAccess();
-    });
-    // V37-PERM-03：request() 的返回值不是本次授权结果——系统授权页
-    // 跳转**没有结果回调**，request 立即返回当前态（未授权 false）。
-    // 若把它当「用户拒绝了」弹「未授权」，用户从系统页授权回来反而
-    // 看到失败提示（第 31 条：误导性反馈）。resumed 刷新（V37-PERM-02）
-    // 已负责回填真实状态，这里不再弹误导性提示。
-  }
+  /// v5.3-R2（修 C-22 恒真假刷新）：授权态改用真实授权查询
+  /// isAllFilesAccessGranted()——hasStorageWriteAccess() 在 Android 10+
+  /// 恒 true（C-11），resumed 刷新时同屏出现「已授权 + 生效 L2」矛盾。
+  Future<bool> _loadStorageGranted() =>
+      StoragePermissionService.instance.isAllFilesAccessGranted();
 
   @override
   void dispose() {
@@ -303,13 +260,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     );
   }
 
-  // ---------- 存储与日志（V37-LOG-10） ----------
+  // ---------- 存储与日志（V37-LOG-10；v5.3-R2 重写） ----------
+  //
+  // v5.3-R2（修 C-18/C-20/C-30/C-31）：原来把 path/mode/生效级别/探测历史
+  // 全塞进一个 ListTile 的多行 subtitle（两层 FutureBuilder + 硬编码中文），
+  // 展示不可读且与「诊断」区的存储权限条重复。本页只留：
+  //   verbose 开关 + 「存储状态」诊断页入口（/settings/storage）+ 授权条。
+  // 路径/级别/逐级 ✓✗/重新探测/复制路径全部在诊断页（单一数据源）。
   Widget _buildStorageAndLoggingSection() {
     final verbose = ref.watch(verboseLoggingProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(title: context.l10n.storageRootPath),
+        SectionHeader(title: context.l10n.storageDiag),
         // verbose 日志开关（settings_provider.verboseLoggingProvider，
         // 持久化 Hive settings box；main.dart watch 同步到 ErrorLogger）
         SwitchListTile(
@@ -319,69 +282,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
           value: verbose,
           onChanged: (v) => ref.read(verboseLoggingProvider.notifier).set(v),
         ),
-        // 当前存储根路径（实际生效路径 + 模式说明）
-        ListTile(
-          leading: const Icon(Icons.folder_outlined),
-          title: Text(context.l10n.storageRootPath),
-          subtitle: FutureBuilder<(String, String)>(
-            future: _storageRoot,
-            builder: (context, snap) {
-              final data = snap.data;
-              final path = data?.$1 ?? context.l10n.unknown;
-              // F4-46 同口径：界面只显示可读的路径与模式，完整路径可复制
-              final mode = data?.$2 == 'root'
-                  ? context.l10n.storageModeRoot
-                  : context.l10n.storageModeDownload;
-              // V399-B2（B2-d）：展示「探测到的实际可写路径」——
-              // resolveRoot 每次实测写入能力；探测失败时附失败原因，
-              // 不再把「声称的路径」当「实际可写」误导用户（第 31 条）。
-              final probeErr = StoragePermissionService.lastProbeError;
-              // V5.2-A：展示「生效级别 + 全链探测历史」
-              return FutureBuilder<StorageResolution?>(
-                future: _storageResolution,
-                builder: (context, resSnap) {
-                  final res = resSnap.data;
-                  final levelLine = res == null
-                      ? ''
-                      : '生效级别: L${res.level}（${res.mode == 'root' ? "根目录模式" : "Download 模式"}）';
-                  final history = res?.probeLogText ?? '';
-                  final lines = [
-                    path,
-                    mode,
-                    if (levelLine.isNotEmpty) levelLine,
-                    if (history.isNotEmpty) '探测历史:\n$history',
-                    if (probeErr != null)
-                      '${context.l10n.storageProbeFailed}: $probeErr',
-                  ];
-                  return Text(lines.join('\n'));
-                },
-              );
-            },
-          ),
-          isThreeLine: true,
-          trailing: IconButton(
-            icon: const Icon(Icons.copy_all_outlined),
-            tooltip: context.l10n.copyPath,
-            onPressed: () async {
-              final (path, _) = await _storageRoot;
-              if (!context.mounted) return;
-              await Toast.copy(context, path);
-            },
-          ),
-        ),
-        // 「授权所有文件访问」按钮：已授权时隐藏（无效入口，F4-45 同口径）
-        FutureBuilder<(String, String)>(
-          future: _storageRoot,
-          builder: (context, snap) {
-            if (snap.data?.$2 == 'root') return const SizedBox.shrink();
-            return ListTile(
-              leading: const Icon(Icons.security_outlined),
-              title: Text(context.l10n.grantAllFilesAccess),
-              subtitle: Text(context.l10n.storagePermissions),
-              trailing: const Icon(Icons.open_in_new),
-              onTap: _requestAllFilesAccess,
-            );
-          },
+        // 存储状态诊断页入口：生效级别 / 五级回退链 ✓✗ / 重新探测 /
+        // 跳授权 / 复制路径都在该页（PLAN P3 四要素）。
+        _navTile(
+          leading: Icons.folder_outlined,
+          title: context.l10n.storageDiag,
+          subtitle: context.l10n.storageLevel,
+          onTap: () => context.push('/settings/storage'),
         ),
       ],
     );
@@ -1073,6 +980,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
             if (path != null) await Toast.copy(context, path);
           },
         ),
+        // v5.3-R2（修 C-24/C-22）：原「申请权限」按钮走 ensureStorageWrite()
+        // 在 Android 10+ 恒 true，点击直接 Toast「已授权」是假反馈；
+        // 授权态改为真实 isAllFilesAccessGranted()，动作统一跳诊断页
+        //（诊断页有真实授权态 + 跳授权 + 自动重探测）。
         ListTile(
           leading: const Icon(Icons.storage_outlined),
           title: Text(context.l10n.storagePermissions),
@@ -1087,36 +998,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
               );
             },
           ),
-          trailing: FutureBuilder<bool>(
-            future: _storageGranted,
-            builder: (context, snap) {
-              // F4-45（审查③-B，P3）：已授权时不再给出「申请权限」按钮
-              // （点了会重复触发系统授权流程，属无效入口，第 30 条名称与行为一致）。
-              if (snap.data == true) {
-                return Text(
-                  context.l10n.permissionGranted,
-                  style: Theme.of(context).textTheme.labelMedium,
-                );
-              }
-              return TextButton(
-                onPressed: () async {
-                  final ok = await PermissionGate.instance.ensureStorageWrite();
-                  if (!context.mounted) return;
-                  // 重新查询状态并刷新展示
-                  final future = PermissionGate.instance
-                      .hasStorageWriteAccess();
-                  setState(() => _storageGranted = future);
-                  Toast.show(
-                    context,
-                    ok
-                        ? context.l10n.permissionGranted
-                        : context.l10n.permissionDenied,
-                  );
-                },
-                child: Text(context.l10n.requestPermission),
-              );
-            },
-          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push('/settings/storage'),
         ),
         ListTile(
           leading: const Icon(Icons.info_outline),

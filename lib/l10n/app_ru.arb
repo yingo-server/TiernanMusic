@@ -591,5 +591,21 @@
   "themeFontAdd": "Добавить шрифт",
   "themeFontFromLocal": "Из локального файла",
   "themeFontFromUrl": "По URL",
-  "themeFontDownloading": "Загрузка шрифта…"
+  "themeFontDownloading": "Загрузка шрифта…",
+  "storageDiag": "Состояние хранилища",
+  "storageReprobe": "Проверить снова",
+  "storageLevel": "Активный уровень",
+  "storageProbeLog": "Журнал проверок",
+  "storageProbeRunning": "Проверка…",
+  "storageProbeFailedShort": "Проверка не удалась",
+  "goGrant": "Разрешить доступ",
+  "errorRetryHint": "Ошибка воспроизведения. Нажмите «Повторить»",
+  "loadingStream": "Подключение…",
+  "bufferingStream": "Буферизация…",
+  "networkPhaseResolving": "Получение ссылки…",
+  "networkPhaseBuffering": "Буферизация…",
+  "playbackFailed": "Ошибка воспроизведения. Повторите или выберите другую песню.",
+  "verifyRequiredHint": "Требуется проверка, затем повторите.",
+  "translationInProgress": "Перевод текста…",
+  "translationFailedHint": "Перевод недоступен; повторится автоматически."
 }

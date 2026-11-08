@@ -76,7 +76,7 @@ const _strings_de = <String, String>{
   'myPlaylists': 'Meine Playlist',
   'createPlaylist': 'Neue Playlist erstellen',
   'playlistName': 'Playlist-Name',
-  'addToPlaylist': 'Merken',
+  'addToPlaylist': 'Zur Playlist hinzufügen',
   'removeFromPlaylist': 'Aus der Playlist entfernen',
   'mv': 'MV',
   'playMv': 'MV',
@@ -374,6 +374,22 @@ const _strings_de = <String, String>{
   'themeFontFromLocal': 'Aus lokaler Datei',
   'themeFontFromUrl': 'Von URL',
   'themeFontDownloading': 'Schriftart wird heruntergeladen…',
+  'storageDiag': 'Speicherstatus',
+  'storageReprobe': 'Erneut prüfen',
+  'storageLevel': 'Aktive Stufe',
+  'storageProbeLog': 'Prüfverlauf',
+  'storageProbeRunning': 'Wird geprüft…',
+  'storageProbeFailedShort': 'Prüfung fehlgeschlagen',
+  'goGrant': 'Zugriff erteilen',
+  'errorRetryHint': 'Wiedergabefehler. Zum Wiederholen tippen',
+  'loadingStream': 'Verbindung…',
+  'bufferingStream': 'Puffert…',
+  'networkPhaseResolving': 'Stream wird aufgelöst…',
+  'networkPhaseBuffering': 'Puffern…',
+  'playbackFailed': 'Wiedergabe fehlgeschlagen. Erneut versuchen oder anderen Titel spielen.',
+  'verifyRequiredHint': 'Verprüfung erforderlich, dann erneut versuchen.',
+  'translationInProgress': 'Liedtext wird übersetzt…',
+  'translationFailedHint': 'Übersetzung nicht verfügbar; wird automatisch wiederholt.',
 };
 
 const _strings_en = <String, String>{
@@ -448,7 +464,7 @@ const _strings_en = <String, String>{
   'myPlaylists': 'My Playlists',
   'createPlaylist': 'Create New Playlist',
   'playlistName': 'Playlist Name',
-  'addToPlaylist': 'Save',
+  'addToPlaylist': 'Add to playlist',
   'removeFromPlaylist': 'Remove from Playlist',
   'mv': 'MV',
   'playMv': 'MV',
@@ -746,6 +762,22 @@ const _strings_en = <String, String>{
   'themeFontFromLocal': 'From local file',
   'themeFontFromUrl': 'From URL',
   'themeFontDownloading': 'Downloading font…',
+  'storageDiag': 'Storage status',
+  'storageReprobe': 'Re-probe',
+  'storageLevel': 'Active level',
+  'storageProbeLog': 'Probe history',
+  'storageProbeRunning': 'Probing…',
+  'storageProbeFailedShort': 'Probe failed',
+  'goGrant': 'Grant access',
+  'errorRetryHint': 'Playback failed. Tap retry',
+  'loadingStream': 'Connecting…',
+  'bufferingStream': 'Buffering…',
+  'networkPhaseResolving': 'Resolving stream…',
+  'networkPhaseBuffering': 'Buffering…',
+  'playbackFailed': 'Playback failed. Retry or play another song.',
+  'verifyRequiredHint': 'Verification required, then retry.',
+  'translationInProgress': 'Translating lyrics…',
+  'translationFailedHint': 'Translation unavailable; will retry automatically.',
 };
 
 const _strings_es = <String, String>{
@@ -820,7 +852,7 @@ const _strings_es = <String, String>{
   'myPlaylists': 'Mis listas de reproducción',
   'createPlaylist': 'Crear nueva lista de reproducción',
   'playlistName': 'Nombre de la lista de reproducción',
-  'addToPlaylist': 'Guardar',
+  'addToPlaylist': 'Añadir a playlist',
   'removeFromPlaylist': 'Eliminar de la lista de reproducción',
   'mv': 'MV',
   'playMv': 'MV',
@@ -1118,6 +1150,22 @@ const _strings_es = <String, String>{
   'themeFontFromLocal': 'Desde archivo local',
   'themeFontFromUrl': 'Desde URL',
   'themeFontDownloading': 'Descargando fuente…',
+  'storageDiag': 'Estado del almacenamiento',
+  'storageReprobe': 'Volver a probar',
+  'storageLevel': 'Nivel activo',
+  'storageProbeLog': 'Historial de pruebas',
+  'storageProbeRunning': 'Probando…',
+  'storageProbeFailedShort': 'Prueba fallida',
+  'goGrant': 'Conceder acceso',
+  'errorRetryHint': 'Error de reproducción. Toca reintentar',
+  'loadingStream': 'Conectando…',
+  'bufferingStream': 'Almacenando en búfer…',
+  'networkPhaseResolving': 'Resolviendo la transmisión…',
+  'networkPhaseBuffering': 'Almacenando en búfer…',
+  'playbackFailed': 'Error de reproducción. Reintenta o reproduce otra canción.',
+  'verifyRequiredHint': 'Verificación requerida; luego reintenta.',
+  'translationInProgress': 'Traduciendo la letra…',
+  'translationFailedHint': 'Traducción no disponible; se reintentará automáticamente.',
 };
 
 const _strings_fr = <String, String>{
@@ -1192,7 +1240,7 @@ const _strings_fr = <String, String>{
   'myPlaylists': 'Mes playlists',
   'createPlaylist': 'Créer une nouvelle playlist',
   'playlistName': 'Nom de la playlist',
-  'addToPlaylist': 'Ajouter',
+  'addToPlaylist': 'Ajouter à la playlist',
   'removeFromPlaylist': 'Supprimer de la playlist',
   'mv': 'Clip vidéo',
   'playMv': 'Clip',
@@ -1244,7 +1292,7 @@ const _strings_fr = <String, String>{
   'refreshQr': 'Actualiser le code QR',
   'qrExpiredShort': 'Expiré',
   'unknownArtist': 'Artiste inconnu',
-  'notPlaying': 'En cours de lecture',
+  'notPlaying': 'Aucune lecture en cours',
   'noLyric': 'Aucun paroles disponible',
   'lyricParseFailed': 'Échec de l\'analyse des paroles',
   'calculating': 'Calcul en cours…',
@@ -1490,6 +1538,22 @@ const _strings_fr = <String, String>{
   'themeFontFromLocal': 'Depuis un fichier local',
   'themeFontFromUrl': 'Depuis une URL',
   'themeFontDownloading': 'Téléchargement de la police…',
+  'storageDiag': 'État du stockage',
+  'storageReprobe': 'Retester',
+  'storageLevel': 'Niveau actif',
+  'storageProbeLog': 'Historique des tests',
+  'storageProbeRunning': 'Test en cours…',
+  'storageProbeFailedShort': 'Test échoué',
+  'goGrant': 'Autoriser l’accès',
+  'errorRetryHint': 'Échec de lecture. Touchez Réessayer',
+  'loadingStream': 'Connexion…',
+  'bufferingStream': 'Mise en mémoire tampon…',
+  'networkPhaseResolving': 'Résolution du flux…',
+  'networkPhaseBuffering': 'Mise en mémoire tampon…',
+  'playbackFailed': 'Échec de la lecture. Réessayez ou lisez un autre titre.',
+  'verifyRequiredHint': 'Vérification requise, puis réessayez.',
+  'translationInProgress': 'Traduction des paroles…',
+  'translationFailedHint': 'Traduction indisponible ; nouvelle tentative automatique.',
 };
 
 const _strings_ja = <String, String>{
@@ -1564,7 +1628,7 @@ const _strings_ja = <String, String>{
   'myPlaylists': 'マイプレイリスト',
   'createPlaylist': 'プレイリストを新規作成',
   'playlistName': 'プレイリスト名',
-  'addToPlaylist': '保存',
+  'addToPlaylist': 'プレイリストに追加',
   'removeFromPlaylist': 'プレイリストから削除',
   'mv': 'MV',
   'playMv': 'MV',
@@ -1862,6 +1926,22 @@ const _strings_ja = <String, String>{
   'themeFontFromLocal': 'ローカルファイルから',
   'themeFontFromUrl': 'URLからダウンロード',
   'themeFontDownloading': 'フォントをダウンロード中…',
+  'storageDiag': 'ストレージ状態',
+  'storageReprobe': '再検出',
+  'storageLevel': '有効レベル',
+  'storageProbeLog': '検出履歴',
+  'storageProbeRunning': '検出中…',
+  'storageProbeFailedShort': '検出失敗',
+  'goGrant': '許可する',
+  'errorRetryHint': '再生エラー。再試行をタップ',
+  'loadingStream': '接続中…',
+  'bufferingStream': 'バッファ中…',
+  'networkPhaseResolving': '再生アドレスを解決中…',
+  'networkPhaseBuffering': 'バッファリング中…',
+  'playbackFailed': '再生に失敗しました。再試行するか別の曲をお試しください。',
+  'verifyRequiredHint': '認証を完了してから再試行してください。',
+  'translationInProgress': '歌詞を翻訳中…',
+  'translationFailedHint': '翻訳を取得できませんでした。後で自動的に再試行します。',
 };
 
 const _strings_ko = <String, String>{
@@ -1936,7 +2016,7 @@ const _strings_ko = <String, String>{
   'myPlaylists': '내 플레이리스트',
   'createPlaylist': '새 플레이리스트',
   'playlistName': '플레이리스트 이름',
-  'addToPlaylist': '담기',
+  'addToPlaylist': '재생목록에 추가',
   'removeFromPlaylist': '플레이리스트에서 제거',
   'mv': 'MV',
   'playMv': 'MV',
@@ -2234,6 +2314,22 @@ const _strings_ko = <String, String>{
   'themeFontFromLocal': '로컬 파일에서',
   'themeFontFromUrl': 'URL에서 다운로드',
   'themeFontDownloading': '글꼴 다운로드 중…',
+  'storageDiag': '저장소 상태',
+  'storageReprobe': '다시 검사',
+  'storageLevel': '활성 등급',
+  'storageProbeLog': '검사 기록',
+  'storageProbeRunning': '검사 중…',
+  'storageProbeFailedShort': '검사 실패',
+  'goGrant': '권한 부여',
+  'errorRetryHint': '재생 오류. 다시 시도를 누르세요',
+  'loadingStream': '연결 중…',
+  'bufferingStream': '버퍼링 중…',
+  'networkPhaseResolving': '재생 주소 확인 중…',
+  'networkPhaseBuffering': '버퍼링 중…',
+  'playbackFailed': '재생에 실패했습니다. 다시 시도하거나 다른 곡을 재생해 보세요.',
+  'verifyRequiredHint': '인증 완료 후 다시 시도하세요.',
+  'translationInProgress': '가사 번역 중…',
+  'translationFailedHint': '번역을 가져오지 못했습니다. 자동으로 다시 시도합니다.',
 };
 
 const _strings_pt = <String, String>{
@@ -2308,7 +2404,7 @@ const _strings_pt = <String, String>{
   'myPlaylists': 'Minhas playlists',
   'createPlaylist': 'Criar nova playlist',
   'playlistName': 'Nome da playlist',
-  'addToPlaylist': 'Salvar',
+  'addToPlaylist': 'Adicionar à playlist',
   'removeFromPlaylist': 'Remover da playlist',
   'mv': 'MV',
   'playMv': 'MV',
@@ -2606,6 +2702,22 @@ const _strings_pt = <String, String>{
   'themeFontFromLocal': 'De arquivo local',
   'themeFontFromUrl': 'De URL',
   'themeFontDownloading': 'Baixando fonte…',
+  'storageDiag': 'Estado do armazenamento',
+  'storageReprobe': 'Testar novamente',
+  'storageLevel': 'Nível ativo',
+  'storageProbeLog': 'Histórico de testes',
+  'storageProbeRunning': 'Testando…',
+  'storageProbeFailedShort': 'Falha no teste',
+  'goGrant': 'Conceder acesso',
+  'errorRetryHint': 'Falha na reprodução. Toque em tentar novamente',
+  'loadingStream': 'Conectando…',
+  'bufferingStream': 'Armazenando em buffer…',
+  'networkPhaseResolving': 'Resolvendo transmissão…',
+  'networkPhaseBuffering': 'Armazenando em buffer…',
+  'playbackFailed': 'Falha na reprodução. Tente novamente ou reproduza outra música.',
+  'verifyRequiredHint': 'Verificação necessária; depois tente novamente.',
+  'translationInProgress': 'Traduzindo a letra…',
+  'translationFailedHint': 'Tradução indisponível; será tentado novamente automaticamente.',
 };
 
 const _strings_ru = <String, String>{
@@ -2978,6 +3090,22 @@ const _strings_ru = <String, String>{
   'themeFontFromLocal': 'Из локального файла',
   'themeFontFromUrl': 'По URL',
   'themeFontDownloading': 'Загрузка шрифта…',
+  'storageDiag': 'Состояние хранилища',
+  'storageReprobe': 'Проверить снова',
+  'storageLevel': 'Активный уровень',
+  'storageProbeLog': 'Журнал проверок',
+  'storageProbeRunning': 'Проверка…',
+  'storageProbeFailedShort': 'Проверка не удалась',
+  'goGrant': 'Разрешить доступ',
+  'errorRetryHint': 'Ошибка воспроизведения. Нажмите «Повторить»',
+  'loadingStream': 'Подключение…',
+  'bufferingStream': 'Буферизация…',
+  'networkPhaseResolving': 'Получение ссылки…',
+  'networkPhaseBuffering': 'Буферизация…',
+  'playbackFailed': 'Ошибка воспроизведения. Повторите или выберите другую песню.',
+  'verifyRequiredHint': 'Требуется проверка, затем повторите.',
+  'translationInProgress': 'Перевод текста…',
+  'translationFailedHint': 'Перевод недоступен; повторится автоматически.',
 };
 
 const _strings_zh = <String, String>{
@@ -3052,7 +3180,7 @@ const _strings_zh = <String, String>{
   'myPlaylists': '我的歌单',
   'createPlaylist': '新建歌单',
   'playlistName': '歌单名称',
-  'addToPlaylist': '收藏',
+  'addToPlaylist': '收藏到歌单',
   'removeFromPlaylist': '从歌单移除',
   'mv': 'MV',
   'playMv': 'MV',
@@ -3350,6 +3478,22 @@ const _strings_zh = <String, String>{
   'themeFontFromLocal': '从本地文件',
   'themeFontFromUrl': '从链接下载',
   'themeFontDownloading': '正在下载字体…',
+  'storageDiag': '存储状态',
+  'storageReprobe': '重新探测',
+  'storageLevel': '生效级别',
+  'storageProbeLog': '探测历史',
+  'storageProbeRunning': '正在探测…',
+  'storageProbeFailedShort': '探测失败',
+  'goGrant': '去授权',
+  'errorRetryHint': '播放出错，可点重试',
+  'loadingStream': '正在连接…',
+  'bufferingStream': '缓冲中…',
+  'networkPhaseResolving': '正在解析播放地址…',
+  'networkPhaseBuffering': '正在缓冲…',
+  'playbackFailed': '播放失败，请重试或换一首',
+  'verifyRequiredHint': '需要完成人机验证后重试',
+  'translationInProgress': '正在翻译歌词…',
+  'translationFailedHint': '译文获取失败，稍后将自动重试',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -3424,7 +3568,7 @@ const _strings_zh_CN = <String, String>{
   'myPlaylists': '我的歌单',
   'createPlaylist': '新建歌单',
   'playlistName': '歌单名称',
-  'addToPlaylist': '收藏',
+  'addToPlaylist': '收藏到歌单',
   'removeFromPlaylist': '从歌单移除',
   'mv': 'MV',
   'playMv': 'MV',
@@ -3722,6 +3866,22 @@ const _strings_zh_CN = <String, String>{
   'themeFontFromLocal': '从本地文件',
   'themeFontFromUrl': '从链接下载',
   'themeFontDownloading': '正在下载字体…',
+  'storageDiag': '存储状态',
+  'storageReprobe': '重新探测',
+  'storageLevel': '生效级别',
+  'storageProbeLog': '探测历史',
+  'storageProbeRunning': '正在探测…',
+  'storageProbeFailedShort': '探测失败',
+  'goGrant': '去授权',
+  'errorRetryHint': '播放出错，可点重试',
+  'loadingStream': '正在连接…',
+  'bufferingStream': '缓冲中…',
+  'networkPhaseResolving': '正在解析播放地址…',
+  'networkPhaseBuffering': '正在缓冲…',
+  'playbackFailed': '播放失败，请重试或换一首',
+  'verifyRequiredHint': '需要完成人机验证后重试',
+  'translationInProgress': '正在翻译歌词…',
+  'translationFailedHint': '译文获取失败，稍后将自动重试',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -3796,7 +3956,7 @@ const _strings_zh_TW = <String, String>{
   'myPlaylists': '我的歌單',
   'createPlaylist': '建立新歌單',
   'playlistName': '歌單名稱',
-  'addToPlaylist': '收藏',
+  'addToPlaylist': '收藏到歌單',
   'removeFromPlaylist': '從歌單移除',
   'mv': 'MV',
   'playMv': 'MV',
@@ -4094,6 +4254,22 @@ const _strings_zh_TW = <String, String>{
   'themeFontFromLocal': '從本機檔案',
   'themeFontFromUrl': '從連結下載',
   'themeFontDownloading': '正在下載字體…',
+  'storageDiag': '儲存狀態',
+  'storageReprobe': '重新探測',
+  'storageLevel': '生效級別',
+  'storageProbeLog': '探測歷史',
+  'storageProbeRunning': '正在探測…',
+  'storageProbeFailedShort': '探測失敗',
+  'goGrant': '去授權',
+  'errorRetryHint': '播放出錯，可點重試',
+  'loadingStream': '正在連接…',
+  'bufferingStream': '緩衝中…',
+  'networkPhaseResolving': '正在解析播放地址…',
+  'networkPhaseBuffering': '正在緩衝…',
+  'playbackFailed': '播放失敗，請重試或換一首',
+  'verifyRequiredHint': '需要完成人機驗證後重試',
+  'translationInProgress': '正在翻譯歌詞…',
+  'translationFailedHint': '譯文取得失敗，稍後將自動重試',
 };
 
 const _template = _strings_zh_CN;
@@ -4522,6 +4698,22 @@ class AppLocalizations {
   String get themeFontFromLocal => _t('themeFontFromLocal');
   String get themeFontFromUrl => _t('themeFontFromUrl');
   String get themeFontDownloading => _t('themeFontDownloading');
+  String get storageDiag => _t('storageDiag');
+  String get storageReprobe => _t('storageReprobe');
+  String get storageLevel => _t('storageLevel');
+  String get storageProbeLog => _t('storageProbeLog');
+  String get storageProbeRunning => _t('storageProbeRunning');
+  String get storageProbeFailedShort => _t('storageProbeFailedShort');
+  String get goGrant => _t('goGrant');
+  String get errorRetryHint => _t('errorRetryHint');
+  String get loadingStream => _t('loadingStream');
+  String get bufferingStream => _t('bufferingStream');
+  String get networkPhaseResolving => _t('networkPhaseResolving');
+  String get networkPhaseBuffering => _t('networkPhaseBuffering');
+  String get playbackFailed => _t('playbackFailed');
+  String get verifyRequiredHint => _t('verifyRequiredHint');
+  String get translationInProgress => _t('translationInProgress');
+  String get translationFailedHint => _t('translationFailedHint');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

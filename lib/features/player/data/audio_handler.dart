@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/utils/error_logger.dart';
 import '../../../core/prefetch/prefetch_engine.dart';
+import '../../../core/net/network_phase.dart';
 
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/audio/audio_service_bootstrap.dart';
@@ -544,7 +545,15 @@ class TiernanAudioHandler extends BaseAudioHandler
   /// 「装载完成后我是否仍是当前有效请求」，不是就放弃后续 play()。
   Future<bool> _applySource(int token, AudioSource source) async {
     if (token != _playToken) return false;
-    await _player.setAudioSource(source);
+    // v5.3 P2：URL 已就绪、引擎装载到首帧可播属「缓冲阶段」——
+    // setAudioSource 不可取消，包裹播报让 UI 在装载期显示缓冲（原则 34）。
+    NetworkPhaseTracker.instance.begin(NetworkPhase.buffering,
+        detail: 'setSource');
+    try {
+      await _player.setAudioSource(source);
+    } finally {
+      NetworkPhaseTracker.instance.end(NetworkPhase.buffering);
+    }
     return token == _playToken;
   }
 

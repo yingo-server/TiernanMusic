@@ -11,6 +11,7 @@ import '../features/home/presentation/home_page.dart';
 import '../features/player/presentation/full_player_page.dart';
 import '../features/search/presentation/search_page.dart';
 import '../features/settings/presentation/settings_page.dart';
+import '../features/settings/presentation/storage_diag_page.dart';
 import '../features/playlist/presentation/playlist_detail_page.dart';
 import '../features/comment/presentation/comments_page.dart';
 import '../features/mv/presentation/mv_player_page.dart';
@@ -37,6 +38,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/settings', builder: (_, __) => const SettingsPage()),
+            // v5.3-R2 P3：存储状态诊断页（PLAN P3 四要素，见 storage_diag_page.dart）。
+            GoRoute(
+                path: '/settings/storage',
+                builder: (_, __) => const StorageDiagPage()),
           ]),
         ],
       ),
