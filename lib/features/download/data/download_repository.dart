@@ -10,7 +10,7 @@ import '../../lyric/data/lyric_repository.dart';
 import '../../mv/data/mv_repository.dart';
 import 'download_task.dart';
 import 'public_media_store.dart';
-import 'storage_permission_service.dart';
+import '../../../core/storage/storage_permission.dart';
 
 /// 下载执行器。
 ///

@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../features/download/data/storage_permission_service.dart';
+import '../storage/storage_permission.dart';
 
 /// 全局错误日志落盘。
 ///

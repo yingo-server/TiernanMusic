@@ -1,5 +1,4 @@
 import 'dart:async';
-import core/domain/quality.dart;
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
@@ -15,6 +14,7 @@ import '../../../core/api/kugou_api_client.dart';
 import '../../../core/audio/audio_service_bootstrap.dart';
 import 'models.dart';
 import 'player_repository.dart';
+import '../../../core/domain/quality.dart';
 
 /// 汀澜音乐后台音频处理器。
 ///

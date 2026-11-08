@@ -1,5 +1,4 @@
 import 'dart:io';
-import core/domain/quality.dart;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show compute;
@@ -27,9 +26,10 @@ import '../../../core/widgets/song_tile.dart' show SectionHeader;
 import '../../../l10n/l10n.dart';
 import '../../auth/data/account_manager.dart';
 import '../../auth/data/auth_providers.dart';
-import '../../download/data/storage_permission_service.dart';
+import '../../../core/storage/storage_permission.dart';
 import '../../player/data/models.dart';
 import 'settings_providers.dart';
+import '../../../core/domain/quality.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});

@@ -1,5 +1,4 @@
 import 'dart:async';
-import core/domain/quality.dart;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +12,7 @@ import '../../../core/storage/secure_storage.dart';
 import '../../../core/resource/cached_api.dart';
 import '../../../core/resource/resource_cache.dart';
 import 'models.dart';
+import '../../../core/domain/quality.dart';
 
 /// 一次成功解析出的播放结果。
 class PlayableResult {

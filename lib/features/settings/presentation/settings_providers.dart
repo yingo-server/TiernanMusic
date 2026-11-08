@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import core/domain/quality.dart;
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../core/domain/quality.dart';
 
 /// 安全获取 settings box：未打开时返回 null，绝不抛异常（否则会拖垮首帧/设置页 build）。
 Box<dynamic>? _box() {

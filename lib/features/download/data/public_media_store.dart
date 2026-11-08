@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'download_task.dart';
-import 'storage_permission_service.dart';
+import '../../../core/storage/storage_permission.dart';
 
 /// 公共媒体库封装（MediaStore）。
 ///

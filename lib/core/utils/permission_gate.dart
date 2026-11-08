@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../../features/download/data/storage_permission_service.dart';
+import '../storage/storage_permission.dart';
 import 'toast.dart';
 
 /// 权限门卫：UI 层入口。

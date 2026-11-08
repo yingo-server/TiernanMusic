@@ -1,5 +1,4 @@
 import 'package:audio_service/audio_service.dart';
-import core/domain/quality.dart;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -10,6 +9,7 @@ import '../library/data/recent_play_store.dart';
 import 'data/audio_handler.dart';
 import 'data/models.dart';
 import 'data/player_repository.dart';
+import '../../core/domain/quality.dart';
 
 /// API 客户端单例。
 ///

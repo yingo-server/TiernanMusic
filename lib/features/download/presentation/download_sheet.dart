@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import core/domain/quality.dart;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/preferred_quality.dart';
@@ -8,6 +7,7 @@ import '../../mv/mv_provider.dart';
 import '../../player/data/models.dart';
 import '../data/download_task.dart';
 import '../download_provider.dart';
+import '../../../core/domain/quality.dart';
 
 /// 打开单曲下载弹层。
 Future<void> showDownloadSheet(BuildContext context, Song song) async {

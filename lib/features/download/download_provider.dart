@@ -15,7 +15,7 @@ import 'data/download_repository.dart';
 import 'data/download_store.dart';
 import 'data/download_task.dart';
 import 'data/public_media_store.dart';
-import 'data/storage_permission_service.dart';
+import '../../core/storage/storage_permission.dart';
 
 /// 下载状态快照。
 class DownloadState {
