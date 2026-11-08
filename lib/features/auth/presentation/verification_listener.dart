@@ -51,7 +51,7 @@ class _VerificationListenerState extends ConsumerState<VerificationListener> {
       );
       if (ok == true && mounted) {
         // 验证通过，重试刚才被拦截的播放
-        await ref.read(audioHandlerProvider).retryPendingPlayback();
+        await ref.read(playerControllerProvider).retryPendingPlayback();
       }
     } finally {
       _handling = false;

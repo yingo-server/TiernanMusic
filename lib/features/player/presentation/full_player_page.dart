@@ -108,10 +108,12 @@ class FullPlayerPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final song = ref.watch(currentSongProvider).valueOrNull;
-    // 依据 audio_handler.ensureEngineReady：引擎初始化失败时 engineError
-    // 非空（audio_handler.dart:60），此态与「未播放」必须区分（第 16 条）。
-    final engineError = ref.watch(audioHandlerProvider).engineError;
+    // v5.3 P1：三处播放 UI 共用同一 PlayerState 映射；在这里固定「订阅点」，
+    // 保证 queue_sheet / mini_player / 全屏页的离散态同步（A-16）。
+    final playerState = ref.watch(playerStateProvider).valueOrNull;
+    final song = playerState?.currentSong;
+    // 引擎错误是 PlayerSnapshot 的一部分（成功后由 reducer 清除，A-09）。
+    final engineError = playerState?.engineError;
     // v5.3-R2（修 C-34 UI 侧）：播放链路错误（resolveUrl 超时/权益不足等）
     // 最近一条也渲染为横幅——有歌曲残留时此前完全没有失败可见面。
     // engineError 优先；横幅语义「发生了什么 + 下一步（重试按钮见下方横幅）」。
@@ -183,7 +185,7 @@ class _EngineErrorBanner extends StatelessWidget {
                     foregroundColor: theme.colorScheme.onErrorContainer),
                 onPressed: () => context
                     .read(playerControllerProvider)
-                    .togglePlay(),
+                    .retry(),
                 child: Text(context.l10n.retry),
               ),
             ],
@@ -221,7 +223,7 @@ class _EngineFailureView extends ConsumerWidget {
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: () =>
-                  ref.read(playerControllerProvider).togglePlay(),
+                  ref.read(playerControllerProvider).retry(),
               icon: const Icon(Icons.refresh),
               label: Text(context.l10n.retry),
             ),

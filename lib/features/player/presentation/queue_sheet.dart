@@ -30,10 +30,10 @@ class QueueSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final controller = ref.read(playerControllerProvider);
-    final current = ref.watch(currentSongProvider).valueOrNull;
-
-    // V39-AUX-10（第 16 条）：加载中 / 失败 / 空队列是三个不同事实，
-    // 不得把「流尚未发首值」和「确为空」合并成同一个空态。
+    // v5.3 P1：队列来自唯一 playerStateProvider 快照；该 watch 同时保证
+    // 弹层与 mini_player / 全屏页使用同一状态映射（A-16）。
+    final playerState = ref.watch(playerStateProvider).valueOrNull;
+    final current = playerState?.currentSong;
     final queueAsync = ref.watch(queueProvider);
 
     return Column(
@@ -131,43 +131,34 @@ class QueueSheet extends ConsumerWidget {
     );
   }
 
-  /// V39-AUX-09（第 18 条世代校验）：弹层里 watch 到的列表只是快照，
-  /// 停留期间队列可能被新的播放请求整体替换（audio_handler.playQueue
-  /// 清空重灌 `_songs`）。旧快照 index 直接播放会指向错歌——
-  /// `_playAt` 对越界只静默 return，用户表现为「点了没反应」。
-  /// 点击时以 handler **当前**队列为准：与快照一致才按 index 播，
-  /// 不一致则按 hash 在当前队列定位，定位不到给用户反馈。
+  /// v5.3 P1：弹层 watch 的队列来自 `playerStateProvider` 的同一快照；
+  /// 点击时以**当前快照**按 hash 重定位后只投递 `SkipToQueueItemRequested`
+  /// 事件（不再用 `playQueue(live, idx)` 整表替换，A-02 根因）。
   void _onTap(BuildContext context, WidgetRef ref,
       PlayerController controller, Song s, int snapshotIndex) {
-    final handler = ref.read(audioHandlerProvider);
-    final live = handler.songs;
+    final live = ref.read(playerStateProvider).valueOrNull?.queue.songs ??
+        const <Song>[];
     Navigator.of(context).pop();
-    if (s.hash.isEmpty) {
-      // 无 hash 的歌无法跨快照定位，按快照 index 播（快照一致时才有效）
-      _play(controller, live, snapshotIndex);
-      return;
-    }
     var idx = -1;
-    for (var i = 0; i < live.length; i++) {
-      if (live[i].hash == s.hash) {
-        idx = i;
-        break;
+    if (s.hash.isNotEmpty) {
+      for (var i = 0; i < live.length; i++) {
+        if (live[i].hash == s.hash) {
+          idx = i;
+          break;
+        }
       }
+    } else {
+      // 无 hash 的歌无法跨快照定位；仅当快照尚未变化时按原下标跳。
+      idx = snapshotIndex < live.length ? snapshotIndex : -1;
     }
     if (idx >= 0) {
-      _play(controller, live, idx);
+      controller.skipToIndex(idx);
     } else if (context.mounted) {
-      // 队列已变更且该歌不在新队列：可感知降级（第 9 条），不再静默
+      // 队列已变更且该歌不在新队列：可感知降级（第 9 条），不再静默。
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.queueChangedHint)),
       );
     }
-  }
-
-  /// 越界防御（第 12 条）：显式范围检查，不做非空断言。
-  void _play(PlayerController controller, List<Song> live, int idx) {
-    if (idx < 0 || idx >= live.length) return;
-    controller.playQueue(live, idx);
   }
 }
 

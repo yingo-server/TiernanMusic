@@ -80,7 +80,8 @@ class _MvPlayerPageState extends ConsumerState<MvPlayerPage> {
   }
 
   /// 进入 MV 播放前暂停音频队列（互斥）。
-  /// pause() 本身作废音频在途世代（audio_handler V3-02），不会自动续播。
+  /// 只投递 PauseRequested 事件；若在途解析以旧世代返回，reducer 会丢弃，
+  /// 不会自动续播（原则 18）。
   void _pauseAudioQueue() {
     try {
       ref.read(audioHandlerProvider).pause();

@@ -25,7 +25,10 @@ class MiniPlayer extends ConsumerStatefulWidget {
 class _MiniPlayerState extends ConsumerState<MiniPlayer> {
   @override
   Widget build(BuildContext context) {
-    final song = ref.watch(currentSongProvider).valueOrNull;
+    // v5.3 P1：mini_player 与全屏页共用同一 PlayerState 快照（A-16）；
+    // 高频 position/duration 仍由独立流渲染，避免每 tick 重建整棵树。
+    final playerState = ref.watch(playerStateProvider).valueOrNull;
+    final song = playerState?.currentSong;
     if (song == null) return const SizedBox.shrink();
 
     final isPlaying = ref.watch(isPlayingProvider).valueOrNull ?? false;

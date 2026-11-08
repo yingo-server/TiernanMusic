@@ -1,733 +1,565 @@
+/// v5.3 P1 重写：just_audio ↔ [PlayerStateMachine] 适配器。
+///
+/// ## 职责边界（PLAN §二）
+/// 本类是**唯一**注册到系统媒体会话的 `AudioHandler`（由
+/// `AudioServiceBootstrap.attach` 挂到 `SwitchAudioHandler.inner`，A-00 定案），
+/// 同时只做三件事：
+/// 1. 系统媒体会话指令 → 状态机事件；
+/// 2. 状态机快照 → mediaItem / queue / playbackState 单向投射；
+/// 3. just_audio 平台事件（completed / processingState）→ 状态机事件 + 世代校验。
+///
+/// 不再持有 `_songs / _index / _loading / _playToken / _pendingIndex /
+/// _pendingSongHash / _failureStreak / _isPreview / _last*` 等状态字段：
+/// 全部收进 `PlayerStateMachine`（单一事实源，原则 5）。
+///
+/// 不再 `with QueueHandler, SeekHandler`：所有队列方法显式 override，
+/// 避免 mixin 默认空实现吞掉系统指令（A-01）。
+library;
+
 import 'dart:async';
-import '../../../core/foundation/errors.dart' show ApiException;
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
-import 'package:dio/dio.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart';
 
-import '../../../core/utils/error_logger.dart';
-import '../../../core/prefetch/prefetch_engine.dart';
-import '../../../core/net/network_phase.dart';
-
-import '../../../core/api/kugou_api_client.dart';
 import '../../../core/audio/audio_service_bootstrap.dart';
-import '../../../core/domain/song.dart';
-import 'player_repository.dart';
 import '../../../core/domain/quality.dart';
+import '../../../core/domain/song.dart';
+import '../../../core/net/network_phase.dart';
+import '../../../core/player_state/player_state.dart';
+import '../../../core/prefetch/prefetch_engine.dart';
+import '../../../core/utils/error_logger.dart';
+import '../../../core/utils/friendly_error.dart' show unwrapApi;
+import 'player_repository.dart';
 
-/// 汀澜音乐后台音频处理器。
-///
-/// 封装 just_audio [AudioPlayer]，向系统广播 mediaItem / playbackState，
-/// 并维护歌曲队列与播放逻辑（含音质解析与失败自动降级）。
-class TiernanAudioHandler extends BaseAudioHandler
-    with QueueHandler, SeekHandler {
-  TiernanAudioHandler(this._repository);
+/// 单次装载成功的资源快照（绑定 sourceId，不再散落三个全局字段）。
+final class _ResolvedSource {
+  const _ResolvedSource({
+    required this.source,
+    required this.url,
+    required this.declaredBytes,
+    required this.isPreview,
+    required this.quality,
+  });
+
+  final AudioSource source;
+  final String url;
+  final int declaredBytes;
+  final bool isPreview;
+  final AudioQuality quality;
+}
+
+/// 汀澜音乐后台音频处理器（唯一注册实例）。
+class TiernanAudioHandler extends BaseAudioHandler {
+  TiernanAudioHandler(this._repository, this._machine);
 
   final PlayerRepository _repository;
+  final PlayerStateMachine _machine;
 
-  /// v5.1 B4-B P1-1：Handler 释放标记。audio_service 重建 Handler 时，
-  /// 旧实例的 8 个 StreamController + 3 条 player 流订阅 + AudioPlayer
-  /// 全部经此释放，不再累积（第 20 条对称释放）。
+  // ── 生命周期 ───────────────────────────────────────────────────────────
   bool _disposed = false;
-
-  /// 幂等释放：多次调用安全（第 21 条）。
-  Future<void> dispose() async {
-    if (_disposed) return;
-    _disposed = true;
-    await _playerOrNull?.dispose();
-    await super.stop();
-  }
-
-  /// 延迟创建：启动期不实例化 AudioPlayer / AudioSession，
-  /// 避免任何平台通道异常导致首屏卡死。
-  ///
-  /// 关键：**必须先等 just_audio_background 初始化完成**再创建 AudioPlayer，
-  /// 否则会抛 LateInitializationError: _audioHandler（真机实测必现）。
-  AudioPlayer? _playerInstance;
-  AudioPlayer get _player => _playerInstance!;
-
   bool _initialized = false;
-
-  /// 音频引擎是否可用（just_audio_background 已就绪且 AudioPlayer 已创建）。
-  bool get isEngineReady => _initialized;
-
-  /// 引擎初始化失败的原因（供 UI 展示；null = 未失败）
-  String? engineError;
-
-  /// V401-C2（主代理亲修）：本次装载成功的播放资源快照。
-  /// 播放完成回调（processingStateStream）拿不到 `_playAt` 的局部变量
-  /// `result.url`，必须把它存为字段，否则「完整播放后永久缓存实际文件」
-  /// 永远无法触发。
-  /// V402：`(url, declaredBytes)` 必须来自同一次播放 JSON；isPreview
-  /// 决定片段是否允许入库（试听/高潮片段永不永久缓存）。
-  String _lastPlayUrl = '';
-  int _lastDeclaredBytes = 0;
-  bool _lastIsPreview = true;
-
-  /// 等待音频后台服务就绪；失败返回 false（调用方给友好错误，不要播放）。
-  ///
-  /// v5.1 B4-B P1-2：加 in-flight 合并——初始化期间并发调用共用同一个
-  /// Future，避免 N 个并发播放请求各触发一轮 init 重试。
   Future<bool>? _engineInitFuture;
 
+  AudioPlayer? _playerInstance;
+  AudioPlayer? get player => _playerInstance;
+  bool get isEngineReady => _initialized;
+  String? get engineError => _machine.snapshot.engineError;
+
+  /// 引擎就绪事件（保留旧契约：audioPlayerProvider 靠它拿到惰性 AudioPlayer）。
+  final _engineReadyController = StreamController<AudioPlayer?>.broadcast();
+  Stream<AudioPlayer?> get engineReady => _engineReadyController.stream;
+
+  /// 播放真正开始（play() 已调用）→ 最近播放记录。
+  final _playedController = StreamController<Song>.broadcast();
+  Stream<Song> get onSongStarted => _playedController.stream;
+
+  StreamSubscription<PlayerSnapshot>? _stateSub;
+  StreamSubscription<PlaybackEvent>? _eventSub;
+  StreamSubscription<ProcessingState>? _processingSub;
+
+  /// 当前已装载资源（只由 [generation] 对应的装载写入，completed 回调双校验）。
+  _ResolvedSource? _loadedSource;
+  int _loadedGeneration = -1;
+
+  /// 快照变化订阅：系统媒体会话与业务状态同源投射。
+  void _bindStateStream() {
+    _stateSub ??= _machine.snapshots.listen(_project);
+  }
+
+  PlayerSnapshot get snapshot => _machine.snapshot;
+  int get generation => _machine.generation;
+
+  // ── 引擎初始化 ─────────────────────────────────────────────────────────
+  /// 等待音频后台服务就绪；失败返回 false（状态机转 Failure，不创建 Player）。
   Future<bool> ensureEngineReady() async {
     if (_initialized) return true;
     if (_engineInitFuture != null) return _engineInitFuture!;
     final fut = AudioServiceBootstrap.ensureReady();
     _engineInitFuture = fut;
     final ok = await fut;
+    if (_disposed) return false;
     if (!ok) {
-      // 失败后清除 in-flight，允许下次重试（B-33 语义保持一致）。
-      _engineInitFuture = null;
-      // 记录失败原因并同步播放态，避免 UI 停留在「播放中」假象
-      engineError ??= '音频服务未就绪，请稍后重试';
-      playbackState.add(playbackState.value.copyWith(
-        playing: false,
-        processingState: AudioProcessingState.idle,
-      ));
-      _errorController.add(engineError!);
-      // V37-DIAG（排查报告 H1）：引擎失败此前只走 debugPrint（release
-      // 不可见）——「播放失败且无日志」盲区的根因之一。接入 ErrorLogger
-      // 落盘（第 9 条失败可观测），并写入 AudioServiceBootstrap 的 _error。
-      ErrorLogger.instance.log(
-        AudioServiceBootstrap.error ?? engineError!,
+      _engineInitFuture = null; // 允许重试（原则 11）
+      final reason = friendlyEngineError(AudioServiceBootstrap.error);
+      _machine.dispatch(EngineReadyChanged(false, error: reason));
+      unawaited(ErrorLogger.instance.log(
+        AudioServiceBootstrap.error ?? reason,
         StackTrace.current,
         source: 'audio_handler',
         context: 'ensureEngineReady failed',
-      );
+      ));
       return false;
     }
     if (_initialized) return true;
     _initialized = true;
     final p = _playerInstance = AudioPlayer();
-    // 通知 UI：引擎已就绪，播放态流可以接上了
     _engineReadyController.add(p);
-    p.playbackEventStream.listen(_broadcastState);
-    p.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed) {
-        // V401-C2：完整播放完成后把实际音频文件永久缓存（ResourceCache）。
-        // URL 来自本曲装载成功时写入的 _lastPlayUrl；离线本地文件不重复缓存。
-        // V402：仅「完整播放 + JSON 声明字节数>0 + 非试听」才永久缓存。
-        // 试听/高潮片段即使播完也绝不入库（用户口径）；未声明字节数
-        // 时身份不可判定，ResourceCache 会拒绝。
-        if (_lastPlayUrl.startsWith('http') &&
-            !_lastIsPreview &&
-            _lastDeclaredBytes > 0) {
-          PrefetchEngine.instance.onPlaybackCompleted(
-            _lastPlayUrl, 'audio',
-            declaredBytes: _lastDeclaredBytes,
-          );
-        }
-        skipToNext();
-      }
+    _eventSub = p.playbackEventStream.listen(_broadcastPlaybackEvent);
+    // A-04：completed 必须携带 generation + sourceId 双校验。
+    _processingSub = p.processingStateStream.listen((state) {
+      if (_disposed || state != ProcessingState.completed) return;
+      final loaded = _loadedSource;
+      final gen = _machine.generation;
+      if (loaded == null || gen != _loadedGeneration) return;
+      final playing = _machine.snapshot.state;
+      if (playing is! PlayerPlaying) return;
+      _onCompleted(loaded, playing.sourceId, gen);
     });
-    _configureSession();
+    unawaited(_configureSession());
+    _bindStateStream();
+    _machine.dispatch(const EngineReadyChanged(true));
     return true;
   }
 
-  /// 兼容旧调用点：仅在引擎已就绪时返回 player，否则 null。
-  AudioPlayer? get _playerOrNull => _playerInstance;
-
-  final List<Song> _songs = [];
-  final _currentSongController = StreamController<Song?>.broadcast();
-  final _actualQualityController =
-      StreamController<AudioQuality?>.broadcast();
-
-  /// 播放错误（引擎未就绪 / 权益不足 / 验证失败等），供 UI 展示
-  final _errorController = StreamController<String>.broadcast();
-
-  /// 播放错误事件流
-  Stream<String> get errors => _errorController.stream;
-
-  /// 引擎就绪事件流。
-  ///
-  /// 关键：AudioPlayer 是在首次播放时才创建的（惰性），
-  /// 若 UI 只依赖一次性 getter 读取 player，会永久拿到缓存的 null，
-  /// 导致进度条/播放键/时长/随机/循环全部不更新。
-  /// 这里用广播流把「引擎何时可用」变成可观察事件。
-  final _engineReadyController = StreamController<AudioPlayer?>.broadcast();
-
-  /// 引擎就绪事件流（首次为 null，引擎就绪后推送真实 player）
-  Stream<AudioPlayer?> get engineReady => _engineReadyController.stream;
-
-  /// 是否 60 秒试听（VIP/付费曲走官方免费试听通道时置 true）
-  final _previewController = StreamController<bool>.broadcast();
-  Stream<bool> get previewStream => _previewController.stream;
-  bool _isPreview = false;
-  bool get isPreview => _isPreview;
-
-  /// 人机验证事件（播放命中 20028 时发出）
-  final _verificationController =
-      StreamController<ApiException>.broadcast();
-
-  Stream<ApiException> get verificationRequired => _verificationController.stream;
-
-  /// 播放真正开始（setAudioSource 成功且 play() 已调用）时发出，
-  /// 用于最近播放记录（自动切歌 / 手动上下一首同样覆盖）。
-  final _playedController = StreamController<Song>.broadcast();
-  Stream<Song> get onSongStarted => _playedController.stream;
-
-  int _index = -1;
-  bool _loading = false;
-  int _playToken = 0;
-
-  /// V37-LOG-05：上次记录的播放状态组合（去重，仅枚举变化时落盘）
-  String _lastLoggedStateCombo = '';
-
-  /// 对外暴露的 player：未就绪时返回 null（UI 需判空）。
-  AudioPlayer? get player => _playerOrNull;
-
-  /// 当前播放歌曲流。
-  Stream<Song?> get currentSongStream => _currentSongController.stream;
-
-  /// 实际播放音质流（可能因降级低于期望音质）。
-  Stream<AudioQuality?> get actualQualityStream =>
-      _actualQualityController.stream;
-
-  List<Song> get songs => List.unmodifiable(_songs);
-  int get currentIndex => _index;
-  Song? get currentSong =>
-      (_index >= 0 && _index < _songs.length) ? _songs[_index] : null;
+  String friendlyEngineError(Object? error) =>
+      '音频服务未就绪，请重启应用后重试';
 
   Future<void> _configureSession() async {
     try {
       final session = await AudioSession.instance;
       await session.configure(const AudioSessionConfiguration.music());
-    } catch (_) {}
+    } catch (e) {
+      // 第 6/9 条：音频会话配置失败不吞——留痕但不阻塞播放。
+      debugPrint('[audio] AudioSession.configure failed: $e');
+      unawaited(ErrorLogger.instance.log(
+        e,
+        StackTrace.current,
+        source: 'audio_handler',
+        context: 'AudioSession.configure',
+      ));
+    }
   }
 
-  void _broadcastState(PlaybackEvent event) {
-    final p = _playerOrNull;
-    if (p == null) return;
-    final playing = p.playing;
-    // V37-LOG-05（v3.7 日志批）：verbose 播放状态捕获——仅状态枚举
-    // （processingState/playing 组合）变化时记一行，不逐帧
-    // （第 26 条热路径零分配：verbose 关时仅一次布尔读 + 组合比较）。
-    final stateCombo = '${p.processingState}/$playing';
-    if (stateCombo != _lastLoggedStateCombo) {
-      _lastLoggedStateCombo = stateCombo;
-      ErrorLogger.instance.verbose(
-        'playback: processingState=${p.processingState} playing=$playing',
-        tag: 'audio',
+  void _onCompleted(_ResolvedSource loaded, String sourceId, int gen) {
+    // 完整播放 + 非试听 + 声明字节数>0 才永久缓存（V402 口径）。
+    if (loaded.url.startsWith('http') &&
+        !loaded.isPreview &&
+        loaded.declaredBytes > 0) {
+      PrefetchEngine.instance.onPlaybackCompleted(
+        loaded.url,
+        'audio',
+        declaredBytes: loaded.declaredBytes,
       );
     }
-    playbackState.add(playbackState.value.copyWith(
+    // 只投一次 Completed；reducer 负责 repeat/next，绝不在此直接跳歌。
+    _machine.dispatch(Completed(sourceId, gen));
+  }
+
+  // ── 媒体会话投射（单向：state → mediaItem / queue / playbackState） ──────
+  MediaItem _mediaItemOf(Song song) => MediaItem(
+        id: song.hash,
+        title: song.name,
+        artist: song.artist,
+        duration: song.duration > Duration.zero ? song.duration : null,
+        artUri: song.cover.isNotEmpty ? Uri.tryParse(song.cover) : null,
+        extras: {
+          'albumId': song.albumId,
+          'albumAudioId': song.albumAudioId,
+        },
+      );
+
+  void _project(PlayerSnapshot s) {
+    if (_disposed) return;
+    final q = s.queue;
+    queue.add([for (final song in q.songs) _mediaItemOf(song)]);
+    final cur = q.current;
+    mediaItem.add(cur == null ? null : _mediaItemOf(cur));
+    final st = s.state;
+    final processing = switch (st) {
+      PlayerIdle() => AudioProcessingState.idle,
+      PlayerLoading() => st.phase == NetworkPhase.buffering
+          ? AudioProcessingState.buffering
+          : AudioProcessingState.loading,
+      PlayerPlaying() => AudioProcessingState.ready,
+      PlayerPaused() => AudioProcessingState.ready,
+      PlayerSuspended() => AudioProcessingState.error,
+      PlayerFailure() => AudioProcessingState.error,
+    };
+    final playing = st is PlayerPlaying;
+    playbackState.add(PlaybackState(
       controls: [
         MediaControl.skipToPrevious,
         playing ? MediaControl.pause : MediaControl.play,
         MediaControl.skipToNext,
       ],
+      androidCompactActionIndices: const [0, 1, 2],
       systemActions: const {
         MediaAction.seek,
         MediaAction.seekForward,
         MediaAction.seekBackward,
+        MediaAction.skipToQueueItem,
+        MediaAction.setRepeatMode,
+        MediaAction.setShuffleMode,
       },
-      androidCompactActionIndices: const [0, 1, 2],
-      processingState: const {
-        ProcessingState.idle: AudioProcessingState.idle,
-        ProcessingState.loading: AudioProcessingState.loading,
-        ProcessingState.buffering: AudioProcessingState.buffering,
-        ProcessingState.ready: AudioProcessingState.ready,
-        ProcessingState.completed: AudioProcessingState.completed,
-      }[p.processingState]!,
+      processingState: processing,
       playing: playing,
-      updatePosition: p.position,
-      bufferedPosition: p.bufferedPosition,
-      speed: p.speed,
-      queueIndex: _index,
-      shuffleMode: p.shuffleModeEnabled
+      updatePosition: _playerInstance?.position ?? Duration.zero,
+      bufferedPosition: _playerInstance?.bufferedPosition ?? Duration.zero,
+      speed: _playerInstance?.speed ?? 1.0,
+      queueIndex: q.index < 0 ? null : q.index,
+      repeatMode: switch (q.repeat) {
+        PlayerRepeatMode.off => AudioServiceRepeatMode.none,
+        PlayerRepeatMode.one => AudioServiceRepeatMode.one,
+        PlayerRepeatMode.all => AudioServiceRepeatMode.all,
+      },
+      shuffleMode: q.shuffle
           ? AudioServiceShuffleMode.all
           : AudioServiceShuffleMode.none,
-      repeatMode: switch (p.loopMode) {
-        LoopMode.off => AudioServiceRepeatMode.none,
-        LoopMode.all => AudioServiceRepeatMode.all,
-        LoopMode.one => AudioServiceRepeatMode.one,
-      },
+      errorMessage: st is PlayerFailure ? st.whatHappened : null,
     ));
+    // PrefetchEngine 只认「队列/下标」；用新下标投递，修 A-03 预取错窗口。
+    if (q.songs.isNotEmpty) {
+      PrefetchEngine.instance.updateUpcoming(q.songs, q.index);
+    }
+    // 快照变化驱动装载/暂停/停止（generation 决定是否需要重新解析）。
+    unawaited(_applySnapshotSideEffect(s));
   }
 
-  void _emitMediaItem() {
-    final song = currentSong;
-    _currentSongController.add(song);
-    if (song == null) {
-      mediaItem.add(null);
+  /// 快照 → 引擎副作用。只有「本世代尚未装载」才走解析链。
+  Future<void> _applySnapshotSideEffect(PlayerSnapshot s) async {
+    final st = s.state;
+    if (st is PlayerLoading && st.generation == s.generation) {
+      await _loadGeneration(s.generation, st.song);
       return;
     }
-    mediaItem.add(MediaItem(
-      id: song.hash,
-      title: song.name,
-      artist: song.artist,
-      duration: song.duration > Duration.zero ? song.duration : null,
-      artUri: song.cover.isNotEmpty ? Uri.tryParse(song.cover) : null,
-      extras: {
-        'albumId': song.albumId,
-        'albumAudioId': song.albumAudioId,
-      },
-    ));
-  }
-
-  /// V402：原子写入本次播放资源快照（三个字段必须同批更新，
-  /// 防止 completed 回调读到「新 URL + 旧字节数」的拼接态，第 5 条）。
-  void _setLastSource(String url, int bytes, {required bool isPreview}) {
-    _lastPlayUrl = url;
-    _lastDeclaredBytes = bytes;
-    _lastIsPreview = isPreview;
-  }
-
-  void _emitQueue() {
-    queue.add(_songs
-        .map((s) => MediaItem(
-              id: s.hash,
-              title: s.name,
-              artist: s.artist,
-              duration: s.duration > Duration.zero ? s.duration : null,
-              artUri: s.cover.isNotEmpty ? Uri.tryParse(s.cover) : null,
-            ))
-        .toList());
-    // V401-C2：队列/切歌变化时补充未来 15 首的 URL/歌词 JSON 预请求。
-    // 已请求过的 hash 由 PrefetchEngine._requested 去重；不阻塞播放。
-    PrefetchEngine.instance.updateUpcoming(_songs, _index);
-  }
-
-  /// 设置队列并从 [index] 开始播放。
-  Future<void> playQueue(List<Song> songs, int index) async {
-    // V402-P3（主代理亲修）：作废世代必须在引擎初始化**之前**——
-    // 旧实现先 await ensureEngineReady()（首次可达数百 ms），窗口内
-    // 第二次 playQueue 不会作废第一次，两次队列可能同时装载。
-    final token = ++_playToken;
-    _pendingSongHash = null;
-    _pendingIndex = null;
-    _failureStreak = 0;
-    if (!await ensureEngineReady()) return;
-    if (token != _playToken) return; // 等待期间来了更新的播放请求
-    // V402-R6（复核① P2-3）：空队列是一个明确事实——清掉当前歌曲与
-    // 媒体会话，避免通知栏/播放页仍显示上一首的「假播放态」（第 16 条）。
-    if (songs.isEmpty) {
-      _songs.clear();
-      _index = -1;
-      _currentSongController.add(null);
-      mediaItem.add(null);
-      queue.add(const <MediaItem>[]);
-      _setLastSource('', 0, isPreview: true);
-      _pendingSongHash = null;
-      return;
-    }
-    // PLY-03（审查③）：队列被整体替换时**立即作废在途请求**——
-    // 旧 _playAt 恢复后按旧 index 写 _songs 会污染新队列（越界或覆盖错歌）。
-    // F4-14（审查②-B，P0）：队列替换时**不得**无条件 `_loading = false`。
-    // 旧 _playAt 仍在飞行，提前开闸会让新请求与旧请求真正并发
-    // （QUALITY_STANDARD 第 19 条：闸门必须由持有者成对开关）。
-    // 这里只作废旧请求的世代标记并把新下标排队，闸门由旧请求的 finally 释放，
-    // 释放后立即播放排队中的新下标。
-    // V3-04：换队列重置连续失败计数已在函数开头完成。
-    _songs
-      ..clear()
-      ..addAll(songs);
-    _emitQueue();
-    await _playAt(index);
-  }
-
-  /// 播放单曲（追加到队列或替换当前位置）。
-  Future<void> playSong(Song song) async {
-    // V402-P3：同 playQueue，世代前置消除首次引擎初始化窗口内并发。
-    final token = ++_playToken;
-    _pendingSongHash = null;
-    if (!await ensureEngineReady()) return;
-    if (token != _playToken) return;
-    final existing = _songs.indexOf(song);
-    if (existing >= 0) {
-      // PLY-17（审查③）：Song== 只比 hash。若传入歌带 localPath（下载页入口）
-      // 而队列里是同 hash 的在线版本，用本地源覆盖队列项，否则离线播放失效。
-      if ((song.localPath?.isNotEmpty ?? false) &&
-          (_songs[existing].localPath?.isNotEmpty != true)) {
-        _songs[existing] =
-            _songs[existing].copyWith(localPath: song.localPath);
-      }
-      await _playAt(existing);
-      return;
-    }
-    final insertAt = _index + 1;
-    _songs.insert(insertAt > _songs.length ? _songs.length : insertAt, song);
-    _emitQueue();
-    await _playAt(_songs.indexOf(song));
-  }
-
-  /// 加载中又收到的新播放请求（排队，保证"点了就有声音"）
-  int? _pendingIndex;
-  int _failureStreak = 0;
-
-  Future<void> _playAt(int index) async {
-    if (!await ensureEngineReady()) {
-      playbackState.add(playbackState.value.copyWith(
-        playing: false,
-        processingState: AudioProcessingState.error,
-        errorMessage: '音频服务启动失败，请重启应用',
-      ));
-      return;
-    }
-    if (index < 0 || index >= _songs.length) return;
-
-    if (_loading) {
-      // 不丢弃请求：记录待播下标，当前流程结束后立刻播它
-      _pendingIndex = index;
-      return;
-    }
-
-    _index = index;
-    _emitMediaItem();
-    final token = ++_playToken;
-    final song = _songs[index];
-    _loading = true;
-    // F4-16（审查②-B，P2）：新歌一开始解析就重置试听标记，
-    // 否则上一首的「60 秒试听」角标会挂到这首完整曲上（第 18 条：世代切换即重置派生状态）。
-    if (_isPreview) {
-      _isPreview = false;
-      _previewController.add(false);
-    }
-    try {
-      // 先广播缓冲状态
-      _broadcastState(_player.playbackEvent);
-
-      // PLY-06（审查③）：本地资源可用的歌**先走离线**，不做网络补全——
-      // fetchDetail 要等 20-30s 超时，飞行模式下离线播放基本不可用。
-      final local = song.localPath;
-      final localUsable = local != null &&
-          local.isNotEmpty &&
-          (local.startsWith('content://') || File(local).existsSync());
-
-      if (localUsable) {
-        // ---- 离线分支 ----
-        _isPreview = false;
-        _previewController.add(false);
-        // V401-C2：离线文件已在本地，播放完成无需再永久缓存。
-        if (token == _playToken) _setLastSource('', 0, isPreview: false);
-        try {
-          final applied = await _applySource(
-            token,
-            AudioSource.uri(
-              local.startsWith('content://')
-                  ? Uri.parse(local)
-                  : Uri.file(local),
-              tag: mediaItem.value,
-            ),
-          );
-          if (!applied) return;
-        } on Exception {
-          // PL-01（审查③）：本地文件失效（被删/迁移/URI 失效）→
-          // **同曲回退在线解析**，而不是抛给外层 catch 跳下一首。
-          final detailed = await _repository.fetchDetail(song);
-          if (token != _playToken) return;
-          _songs[index] = detailed;
-          _emitMediaItem();
-          final result = await _repository.resolveUrl(detailed);
-          if (token != _playToken) return;
-          _actualQualityController.add(result.quality);
-          _isPreview = result.isPreview;
-          _previewController.add(_isPreview);
-          // V401-C2：记录本次装载成功的 URL，供播放完成后永久缓存。
-          _setLastSource(result.url, result.expectedBytes,
-              isPreview: result.isPreview);
-          // 清掉失效的 localPath，防止下次再走坏源（PL-04 同源）
-          // F4-15（审查②-B，P1）：`localPath: null` 在原 copyWith 中是空操作，
-          // 必须走显式清除标记。
-          _songs[index] = detailed.copyWith(
-              quality: result.quality, clearLocalPath: true);
-          final applied = await _applySource(
-            token,
-            AudioSource.uri(Uri.parse(result.url), tag: mediaItem.value),
-          );
-          if (!applied) return;
-        }
+    final p = _playerInstance;
+    if (p == null) return;
+    if (st is PlayerPlaying) {
+      // 单曲循环/恢复：世代未变且 source 已装好，只调 play()。
+      if (_loadedGeneration == s.generation && _loadedSource != null) {
+        await p.play();
       } else {
-        // ---- 在线分支：补全详情 + 解析 URL ----
-        final detailed = await _repository.fetchDetail(song);
-        if (token != _playToken) return;
-        _songs[index] = detailed;
-        _emitMediaItem();
+        await _loadGeneration(s.generation, st.song);
+      }
+      return;
+    }
+    if (st is PlayerPaused || st is PlayerSuspended || st is PlayerFailure) {
+      if (p.playing) await p.pause();
+      return;
+    }
+    if (st is PlayerIdle) {
+      await p.stop();
+      _loadedSource = null;
+      _loadedGeneration = -1;
+    }
+  }
 
-        final result = await _repository.resolveUrl(detailed);
-        if (token != _playToken) return;
-        _actualQualityController.add(result.quality);
-        _isPreview = result.isPreview;
-        _previewController.add(_isPreview);
-        _songs[index] = detailed.copyWith(quality: result.quality);
-        // V401-C2：在线主分支同样记录 URL（播放完成后永久缓存实际文件）。
-        _setLastSource(result.url, result.expectedBytes,
-            isPreview: result.isPreview);
-        final applied = await _applySource(
-          token,
-          AudioSource.uri(Uri.parse(result.url), tag: mediaItem.value),
-        );
-        if (!applied) return;
+  // ── 装载链（唯一异步写入点，全程世代校验） ─────────────────────────────
+  Future<void> _loadGeneration(int gen, Song song) async {
+    if (_disposed) return;
+    // 保证引擎与本 Handler 的双向订阅已建立。
+    if (!_initialized) {
+      final ok = await ensureEngineReady();
+      if (!ok || _disposed) return;
+    }
+    if (gen != _machine.generation || _disposed) return;
+    final p = _playerInstance;
+    if (p == null) return;
+
+    // 同一世代重复投射（LoadingPhaseChanged/PlaybackTick）不重复解析。
+    if (_loadedGeneration == gen && _loadedSource != null) return;
+
+    NetworkPhaseTracker.instance.begin(NetworkPhase.resolving,
+        detail: 'gen:$gen:${song.hash}');
+    try {
+      final resolved = await _resolveSource(gen, song);
+      if (resolved == null || gen != _machine.generation || _disposed) return;
+      _machine.dispatch(LoadingPhaseChanged(gen, NetworkPhase.buffering));
+      NetworkPhaseTracker.instance.begin(NetworkPhase.buffering,
+          detail: 'setSource:$gen');
+      try {
+        await p.setAudioSource(resolved.source, preload: true);
+      } finally {
+        NetworkPhaseTracker.instance.end(NetworkPhase.buffering);
       }
-      if (token != _playToken) return;
-      _failureStreak = 0;
-      await _player.play();
-      // V3-03（第5批复核②，P2）：play() 期间队列可能被整体替换，
-      // 世代校验 + 越界双检（第 18/12 条）；否则 RangeError 会被下面的
-      // catch 当成播放失败，用户看到假错误并触发跳歌。
-      if (token != _playToken) return;
-      if (index < _songs.length && _index == index) {
-        _playedController.add(_songs[index]);
-      }
+      if (gen != _machine.generation || _disposed) return;
+      _loadedSource = resolved;
+      _loadedGeneration = gen;
+      await p.play();
+      if (gen != _machine.generation || _disposed) return;
+      final sourceId = '$gen:${song.hash}';
+      _machine.dispatch(PlaybackStarted(
+        gen,
+        song: song,
+        quality: resolved.quality,
+        isPreview: resolved.isPreview,
+        sourceId: sourceId,
+      ));
+      _playedController.add(song);
     } catch (e) {
-      // V402-R1（复核① P2-1）：catch 入口先作废世代——旧请求的 20028
-      // 迟到不得弹验证页/记 pendingHash，否则验证通过会打断当前播放。
-      // 放在 20028 判定**之前**，与下方普通失败守卫统一（第 18 条）。
-      if (token != _playToken) return;
-      // 命中 20028：需要人机验证，不跳歌，交由 UI 弹验证页后重试
-      final api = _extractApiException(e);
+      if (gen != _machine.generation || _disposed) return; // 迟到异常丢弃
+      final api = unwrapApi(e);
       if (api != null && api.needsVerification) {
-        // V402-P1：存 hash 而非下标（队列变化后按 hash 重新定位）
-        _pendingSongHash = index < _songs.length ? _songs[index].hash : '';
-        _verificationController.add(api);
-        // PLY-02（审查③）：用户必须知道发生了什么，否则停在静默 error 态
-        _errorController.add('需要完成人机验证后重试');
-        playbackState.add(playbackState.value.copyWith(
-          playing: false,
-          processingState: AudioProcessingState.error,
-          errorMessage: '需要人机验证',
-        ));
+        _machine.dispatch(VerificationSuspended(gen, song, api));
         return;
       }
-      // 播放失败，尝试下一首（连续失败达到队列长度即停止，防止无限循环）
-      // V35-B1-1（第 B 批，P2）：catch 入口必须先校验世代——resolveUrl
-      // 在飞时用户按暂停（pause 作废世代）→ 旧请求随后网络失败抛异常，
-      // 此前会 ①上报已作废请求的假错误（UI 弹「播放失败」）②暂停引擎
-      // ——把新歌的装载一并暂停（新请求 play() 之前的窗口）。
-      if (token != _playToken) return;
-      _errorController.add('播放失败：$e');
-      playbackState.add(playbackState.value.copyWith(
-        playing: false,
-        processingState: AudioProcessingState.error,
-        errorMessage: '播放失败：$e',
+      unawaited(ErrorLogger.instance.log(
+        e,
+        StackTrace.current,
+        source: 'audio_handler',
+        context: 'loadGeneration($gen)',
       ));
-      // F-3（第7批终审，P1）：失败分支用 _pauseEngineOnly——
-      // pause() 会 _playToken++，导致 canAdvance 恒 false，
-      // 自动跳歌彻底失效（用户必须手动点下一首）。
-      await _pauseEngineOnly();
-      _failureStreak++;
-      final canAdvance =
-          token == _playToken && _songs.length > 1 && _failureStreak < _songs.length;
-      if (canAdvance) {
-        await skipToNext();
-      } else {
-        _failureStreak = 0;
-      }
+      _machine.dispatch(Failed(
+        gen,
+        PlayerFailureReason.resolveFailed,
+        e,
+      ));
     } finally {
-      // F4-14（审查②-B，P0）：闸门只在本处释放（第 19 条）——
-      // playQueue 不再直接置 `_loading = false`，因此「关闭中又开闸」不会发生，
-      // 也就不会出现两个 _playAt 真正并发装载音源的情况。
-      // 被作废的旧请求同样负责放行：它退出后队列里排着的 _pendingIndex
-      // 必须由它交给下一轮 _playAt，否则新请求会被永久挂起。
-      _loading = false;
-      final pending = _pendingIndex;
-      if (pending != null) {
-        _pendingIndex = null;
-        // V402-R2（复核① P2-2）：交接携带世代号——microtask 执行时
-        // 若队列已被整体替换/新请求已开始，丢弃旧 pending 不再错播。
-        final handoffToken = _playToken;
-        Future.microtask(() {
-          if (handoffToken == _playToken) _playAt(pending);
-        });
+      NetworkPhaseTracker.instance.end(NetworkPhase.resolving);
+    }
+  }
+
+  /// 解析本世代可播放源：离线优先，失败同曲回退在线（A-24 留痕）。
+  Future<_ResolvedSource?> _resolveSource(int gen, Song song) async {
+    final local = song.localPath;
+    final localUsable = local != null &&
+        local.isNotEmpty &&
+        (local.startsWith('content://') || File(local).existsSync());
+    if (localUsable) {
+      try {
+        return _ResolvedSource(
+          source: AudioSource.uri(
+            local.startsWith('content://')
+                ? Uri.parse(local)
+                : Uri.file(local),
+            tag: _mediaItemOf(song),
+          ),
+          url: '',
+          declaredBytes: 0,
+          isPreview: false,
+          quality: song.quality,
+        );
+      } catch (e) {
+        debugPrint('[audio] local source unusable, fallback online: $e');
       }
     }
+    final detailed = await _repository.fetchDetail(song);
+    if (gen != _machine.generation) return null;
+    final result = await _repository.resolveUrl(detailed);
+    if (gen != _machine.generation) return null;
+    final effective = detailed.copyWith(
+      quality: result.quality,
+      clearLocalPath: localUsable && local != null,
+    );
+    return _ResolvedSource(
+      source: AudioSource.uri(
+        Uri.parse(result.url),
+        tag: _mediaItemOf(effective),
+      ),
+      url: result.url,
+      declaredBytes: result.expectedBytes,
+      isPreview: result.isPreview,
+      quality: result.quality,
+    );
   }
 
-  /// 装载音源，并在装载前后各校验一次世代（第 18 条）。
-  ///
-  /// `_player.setAudioSource` 不可取消：旧请求的调用若在新请求之后完成，
-  /// 会把**旧歌**的 URL 装进引擎，而 `_index`/`mediaItem` 已是新歌
-  /// （用户看到新歌封面、听到上一首）。这里用返回值告诉调用方
-  /// 「装载完成后我是否仍是当前有效请求」，不是就放弃后续 play()。
-  Future<bool> _applySource(int token, AudioSource source) async {
-    if (token != _playToken) return false;
-    // v5.3 P2：URL 已就绪、引擎装载到首帧可播属「缓冲阶段」——
-    // setAudioSource 不可取消，包裹播报让 UI 在装载期显示缓冲（原则 34）。
-    NetworkPhaseTracker.instance.begin(NetworkPhase.buffering,
-        detail: 'setSource');
-    try {
-      await _player.setAudioSource(source);
-    } finally {
-      NetworkPhaseTracker.instance.end(NetworkPhase.buffering);
-    }
-    return token == _playToken;
+  // ── UI 事件入口（controller 只调这些） ──────────────────────────────────
+  Future<void> enqueueQueue(List<Song> songs, int index) async {
+    _bindStateStream();
+    if (!await ensureEngineReady()) return;
+    _machine.dispatch(PlayQueueRequested(songs, index));
   }
 
-  /// V402-P1（主代理亲修）：待验证歌曲的 **hash 快照**。
-  /// 旧实现只存整数下标——20028 挂起期间队列若被替换/原地增删，
-  /// retryPendingPlayback 会按旧 idx 播到新队列的错歌（第 18 条）。
-  /// hash 才是队列内唯一可判定标识（Song.== 只比 hash）。
-  String? _pendingSongHash;
-
-  ApiException? _extractApiException(Object e) {
-    if (e is ApiException) return e;
-    if (e is DioException && e.error is ApiException) {
-      return e.error as ApiException;
-    }
-    return null;
+  Future<void> enqueueSong(Song song) async {
+    _bindStateStream();
+    if (!await ensureEngineReady()) return;
+    _machine.dispatch(PlaySongRequested(song));
   }
 
-  /// 验证完成后重试上次失败的播放
-  Future<void> retryPendingPlayback() async {
-    final hash = _pendingSongHash;
-    _pendingSongHash = null;
-    if (hash == null || hash.isEmpty) return;
-    // 按 hash 在**当前队列**重新定位：验证期间队列被换/增删都不会播错歌；
-    // 找不到（已被移除）则明确丢弃并留痕，不按下标盲播（第 14/16 条）。
-    final idx = _songs.indexWhere((s) => s.hash == hash);
-    if (idx < 0) {
-      debugPrint('[player] retry dropped: hash $hash no longer in queue');
+  Future<void> skipToIndex(int index) async {
+    _machine.dispatch(SkipToQueueItemRequested(index));
+  }
+
+  Future<void> nextFromUi() async {
+    _machine.dispatch(const NextRequested(manual: true));
+  }
+
+  Future<void> previousFromUi() async {
+    final p = _playerInstance;
+    if (p != null && p.position > const Duration(seconds: 3)) {
+      await p.seek(Duration.zero);
       return;
     }
-    await _playAt(idx);
+    _machine.dispatch(const PreviousRequested());
   }
 
+  Future<void> togglePlayFromUi() async {
+    if (!await ensureEngineReady()) return;
+    final st = _machine.snapshot.state;
+    if (st is PlayerPlaying) {
+      _machine.dispatch(const PauseRequested());
+    } else if (st is PlayerPaused) {
+      _machine.dispatch(const ResumeRequested());
+    } else {
+      _machine.dispatch(const RetryRequested());
+    }
+  }
+
+  Future<void> seekFromUi(Duration position) async {
+    if (!await ensureEngineReady()) return;
+    final before = _machine.generation;
+    final snap = _machine.dispatch(SeekToRequested(position.inMilliseconds));
+    // reducer 拒绝（Loading/Idle/Failure）时 state 变成 Failure，不执行 seek。
+    if (snap.state is PlayerFailure) return;
+    final p = _playerInstance;
+    if (p == null || before != _machine.generation) return;
+    final maxMs = p.duration?.inMilliseconds;
+    if (position.inMilliseconds < 0 ||
+        (maxMs != null && position.inMilliseconds > maxMs)) {
+      return;
+    }
+    try {
+      await p.seek(position);
+    } catch (e) {
+      _machine.dispatch(Failed(
+        _machine.generation,
+        PlayerFailureReason.sourceFailed,
+        e,
+      ));
+    }
+  }
+
+  Future<void> toggleShuffleFromUi() async {
+    if (!await ensureEngineReady()) return;
+    final q = _machine.snapshot.queue;
+    _machine.dispatch(ShuffleModeChanged(!q.shuffle));
+  }
+
+  Future<void> cycleRepeatFromUi() async {
+    if (!await ensureEngineReady()) return;
+    final q = _machine.snapshot.queue;
+    final next = switch (q.repeat) {
+      PlayerRepeatMode.all => PlayerRepeatMode.one,
+      PlayerRepeatMode.one => PlayerRepeatMode.off,
+      PlayerRepeatMode.off => PlayerRepeatMode.all,
+    };
+    _machine.dispatch(RepeatModeChanged(next));
+  }
+
+  Future<void> retryFromUi() async {
+    if (!await ensureEngineReady()) return;
+    _machine.dispatch(const RetryRequested());
+  }
+
+  /// 验证页返回：只按「当前 Suspended 的 hash + generation」重放（A-08）。
+  Future<void> verificationPassedFromUi() async {
+    final st = _machine.snapshot.state;
+    if (st is! PlayerSuspended) return;
+    _machine.dispatch(VerificationPassed(st.song.hash, st.generation));
+  }
+
+  // ── 系统媒体会话指令（A-00：全部经同一个注册 Handler 到达） ─────────────
   @override
   Future<void> play() async {
     if (!await ensureEngineReady()) return;
-    await _player.play();
-  }
-
-  /// 失败分支专用：只停引擎，**不**作废世代（F-3，第7批终审 P1）。
-  /// 用户主动暂停用 [pause]（作废世代防缓冲中自动续播）；
-  /// 失败路径的世代由 catch 里的 canAdvance 判定使用，作废即失效。
-  Future<void> _pauseEngineOnly() async {
-    final p = _playerOrNull;
-    if (p == null) return;
-    try {
-      await p.pause();
-    } catch (_) {}
+    _machine.dispatch(const SystemPlayRequested());
   }
 
   @override
   Future<void> pause() async {
-    final p = _playerOrNull;
-    if (p == null) return;
-    // V3-02（第5批复核②，P2）：暂停必须作废在途播放请求——
-    // 否则缓冲中的 _playAt 恢复后会自动 play()，出现「按了暂停却开始播放」
-    //（QUALITY_STANDARD 第 18 条）。
-    // V3-13（复核②终审回归）：**只作废世代，不开闸**（第 19 条）——
-    // 在途 _playAt 各 await 点的 `token != _playToken` 检查会放弃后续
-    // play()，闸门仍由它自己的 finally 释放。这里若直接 `_loading=false`，
-    // 旧请求 finally 之前就开闸，第二个请求与旧请求并发 setAudioSource。
-    _playToken++;
-    _pendingIndex = null;
-    await p.pause();
+    _machine.dispatch(const SystemPauseRequested());
   }
 
   @override
   Future<void> stop() async {
-    // V3-01（第5批复核②，P1）：停止/划掉通知必须作废世代，
-    // 在途 _playAt 恢复后不得再调用 play()（第 18 条）。
-    // V3-13：同 pause()，不开闸——闸门由持有者 finally 释放（第 19 条）。
-    _playToken++;
-    _pendingIndex = null;
-    _pendingSongHash = null;
-    _setLastSource('', 0, isPreview: true); // 停止后没有「完整播放」，不缓存
-    final p = _playerOrNull;
-    if (p == null) return;
-    await p.stop();
-    _currentSongController.add(null);
-    await super.stop();
+    _machine.dispatch(const StopRequested(fromSystem: true));
   }
 
   @override
-  Future<void> seek(Duration position) async {
-    final p = _playerOrNull;
-    if (p == null) return;
-    await p.seek(position);
-  }
+  Future<void> seek(Duration position) => seekFromUi(position);
 
   @override
   Future<void> skipToNext() async {
-    // V402-R7（复核① P3-5）：用户手动切歌视为放弃上一次验证挂起，
-    // 否则验证通过后会跳回旧歌打断当前播放（第 5/18 条）。
-    _pendingSongHash = null;
-    if (!await ensureEngineReady()) return;
-    if (_songs.isEmpty) return;
-    if (_player.shuffleModeEnabled) {
-      final next = _randomIndex();
-      await _playAt(next);
-      return;
-    }
-    var next = _index + 1;
-    if (next >= _songs.length) {
-      if (_player.loopMode == LoopMode.all) {
-        next = 0;
-      } else {
-        return;
-      }
-    }
-    await _playAt(next);
+    _machine.dispatch(const SystemSkipToNextRequested());
   }
 
   @override
-  Future<void> skipToPrevious() async {
-    // V402-R7：同 skipToNext，手动切歌清验证挂起。
-    _pendingSongHash = null;
-    if (!await ensureEngineReady()) return;
-    if (_songs.isEmpty) return;
-    // 播放超过 3 秒回到开头
-    if (_player.position > const Duration(seconds: 3)) {
-      await _player.seek(Duration.zero);
-      return;
-    }
-    var prev = _index - 1;
-    if (prev < 0) {
-      prev = _player.loopMode == LoopMode.all ? _songs.length - 1 : 0;
-    }
-    await _playAt(prev);
-  }
+  Future<void> skipToPrevious() =>
+      previousFromUi(); // >3s 回开头语义与 UI 一致
 
-  int _randomIndex() {
-    if (_songs.length <= 1) return _index;
-    final candidates =
-        List.generate(_songs.length, (i) => i)..remove(_index);
-    candidates.shuffle();
-    return candidates.first;
+  @override
+  Future<void> skipToQueueItem(int index) async {
+    _machine.dispatch(SystemSkipToQueueItemRequested(index));
   }
 
   @override
   Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
-    if (!await ensureEngineReady()) return;
-    await _player.setShuffleModeEnabled(
-        shuffleMode == AudioServiceShuffleMode.all);
-    _broadcastState(_player.playbackEvent);
+    _machine.dispatch(SystemSetShuffleModeRequested(
+        shuffleMode != AudioServiceShuffleMode.none));
   }
 
   @override
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
-    if (!await ensureEngineReady()) return;
-    await _player.setLoopMode(switch (repeatMode) {
-      AudioServiceRepeatMode.none => LoopMode.off,
-      AudioServiceRepeatMode.all => LoopMode.all,
-      AudioServiceRepeatMode.one => LoopMode.one,
-      AudioServiceRepeatMode.group => LoopMode.all,
-    });
-    _broadcastState(_player.playbackEvent);
+    // group 未实现（audio_service 官方注释）：显式归一为 all 并留痕（A-07）。
+    if (repeatMode == AudioServiceRepeatMode.group) {
+      debugPrint('[audio] repeatMode.group unimplemented → all');
+    }
+    final mode = switch (repeatMode) {
+      AudioServiceRepeatMode.none => PlayerRepeatMode.off,
+      AudioServiceRepeatMode.one => PlayerRepeatMode.one,
+      AudioServiceRepeatMode.all || AudioServiceRepeatMode.group =>
+        PlayerRepeatMode.all,
+    };
+    _machine.dispatch(SystemSetRepeatModeRequested(mode));
   }
 
   @override
   Future<void> onTaskRemoved() async {
-    final p = _playerOrNull;
-    if (p == null) return;
-    // 任务被移除时若未在播放则停止服务
-    if (!p.playing) {
-      await stop();
-    }
+    final p = _playerInstance;
+    if (p == null || !p.playing) await stop();
   }
 
   @override
   Future<void> onNotificationDeleted() async {
-    // V3-01（第5批复核②，P1）：与 stop() 对称，作废在途请求（第 18 条）。
-    // V3-13：不开闸，闸门由持有者 finally 释放（第 19 条）。
-    _playToken++;
-    _pendingIndex = null;
-    _pendingSongHash = null;
-    await _playerOrNull?.stop();
+    // 划掉通知必须清队列/挂起/资源快照（A-10）。
+    await stop();
+  }
+
+  void _broadcastPlaybackEvent(PlaybackEvent event) {
+    if (_disposed) return;
+    final p = _playerInstance;
+    if (p == null) return;
+    // 只更新连续遥测字段，不改离散 state（避免与 reducer 抢事实源）。
+    playbackState.add(playbackState.value.copyWith(
+      updatePosition: p.position,
+      bufferedPosition: p.bufferedPosition,
+      speed: p.speed,
+    ));
+  }
+
+  /// 对称释放（原则 20）：3 条订阅 + 3 个 controller + AudioPlayer。
+  Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
+    await _stateSub?.cancel();
+    await _eventSub?.cancel();
+    await _processingSub?.cancel();
+    await _playerInstance?.dispose();
+    await _engineReadyController.close();
+    await _playedController.close();
+    await super.stop();
   }
 }

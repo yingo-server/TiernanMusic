@@ -1,87 +1,159 @@
+/// v5.3 P1：单一 `PlayerState` → Riverpod 投射层。
+///
+/// 旧文件有 16 个各自独立的 StreamProvider（currentSong / queue / error /
+/// preview / quality / verification / isPlaying / shuffle / repeat ...），
+/// 状态互不原子。本版只保留：
+/// - [playerStateProvider]：唯一离散状态流（UI 三态渲染的唯一输入）；
+/// - [playerStateMachineProvider]：状态机实例（adapter 与 controller 共用）；
+/// - [audioHandlerProvider]：唯一注册的媒体会话 Handler（just_audio 适配器）；
+/// - [audioPlayerProvider]：高频遥测（position / duration / buffered /
+///   playing / shuffle / repeat）的独立流，避免进度 tick 重建整页；
+/// - 兼容派生 provider：消费 playerStateProvider 的同一次快照，
+///   保证 mini_player / full_player_page / queue_sheet 同源。
+library;
+
 import 'package:audio_service/audio_service.dart';
-import '../../core/foundation/errors.dart' show ApiException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
-import '../../core/api/kugou_api_client.dart';
-import '../../core/direct/kg_providers.dart';
 import '../../app/di.dart' show kugouApiClientProvider;
+import '../../core/audio/audio_service_bootstrap.dart';
+import '../../core/direct/kg_providers.dart' show kgClientProvider;
+import '../../core/domain/quality.dart';
+import '../../core/domain/song.dart';
+import '../../core/foundation/errors.dart' show ApiException;
+import '../../core/player_state/player_state.dart';
 import '../library/data/recent_play_store.dart';
 import 'data/audio_handler.dart';
-import '../../core/domain/song.dart';
 import 'data/player_repository.dart';
-import '../../core/domain/quality.dart';
 
-/// API 客户端单例。
-///
-/// 复用 [kugouApiClientProvider]（core/providers.dart），
-/// 保证与认证模块**共享同一个 CookieJar** —— 否则登录态不会带到播放/评论请求里。
+/// API 客户端单例：复用全局 Provider，保证与认证模块共享 CookieJar。
 final _apiClientProvider = Provider<KugouApiClient>(
     (ref) => ref.watch(kugouApiClientProvider));
 
 /// 播放器仓库（直连播放 + kapi 内容接口）。
 final playerRepositoryProvider = Provider<PlayerRepository>((ref) {
-  // 预热直连客户端，确保首次播放前设备身份已就绪
+  // 预热直连客户端，确保首次播放前设备身份已就绪。
   ref.watch(kgClientProvider);
   return PlayerRepository(ref.watch(_apiClientProvider), ref);
 });
 
-
-/// 全局音频处理器（应用生命周期内常驻）。
-final audioHandlerProvider = Provider<TiernanAudioHandler>((ref) {
-  return TiernanAudioHandler(ref.watch(playerRepositoryProvider));
+/// 状态机实例（进程内唯一）。
+final playerStateMachineProvider = Provider<PlayerStateMachine>((ref) {
+  final machine = PlayerStateMachine();
+  ref.onDispose(machine.dispose);
+  return machine;
 });
 
-/// 底层 just_audio 播放器（音频引擎未就绪时为 null）。
+/// 全局音频处理器：**唯一**注册到系统媒体会话的 Handler。
+final audioHandlerProvider = Provider<TiernanAudioHandler>((ref) {
+  final handler = TiernanAudioHandler(
+    ref.watch(playerRepositoryProvider),
+    ref.watch(playerStateMachineProvider),
+  );
+  // A-00 定案：把同一个 Handler 挂到 AudioService.init 创建的桥上。
+  AudioServiceBootstrap.attach(handler);
+  ref.onDispose(handler.dispose);
+  return handler;
+});
+
+/// 唯一离散状态流（PLAN §二「UI 只 watch 一个 playerStateProvider」）。
+final playerStateProvider = StreamProvider<PlayerSnapshot>(
+    (ref) => ref.watch(playerStateMachineProvider).snapshots);
+
+/// 底层 just_audio 播放器（引擎未就绪时为 null）。
 ///
-/// ⚠️ 必须是 **StreamProvider**：AudioPlayer 是首次播放时才惰性创建的，
-/// 若用普通 Provider，首帧拿到的 null 会被永久缓存，导致
-/// 进度条/播放键/时长/随机/循环全部不随真实播放更新（终审 P0-1）。
+/// 必须是 StreamProvider：AudioPlayer 惰性创建，普通 Provider 会把首帧
+/// null 永久缓存，导致进度条/播放键/时长全部不更新。
 final audioPlayerProvider = StreamProvider<AudioPlayer?>((ref) async* {
   final handler = ref.watch(audioHandlerProvider);
-  yield handler.player; // 可能是 null（引擎未就绪）
+  yield handler.player;
   await for (final p in handler.engineReady) {
     yield p;
   }
 });
 
-/// 当前播放歌曲。
-final currentSongProvider = StreamProvider<Song?>((ref) =>
-    ref.watch(audioHandlerProvider).currentSongStream);
+// ── 派生 provider：全部从同一个 PlayerSnapshot 取，不再各自维护流 ──
 
-/// 播放错误事件流（引擎未就绪 / 权益不足 / 播放失败）
-final playerErrorProvider = StreamProvider<String>(
-    (ref) => ref.watch(audioHandlerProvider).errors);
+final currentSongProvider = StreamProvider<Song?>((ref) async* {
+  await for (final s in ref.watch(playerStateProvider.stream)) {
+    yield s.currentSong;
+  }
+});
 
-/// 实际播放音质。
-final actualQualityProvider = StreamProvider<AudioQuality?>(
-    (ref) => ref.watch(audioHandlerProvider).actualQualityStream);
+final queueProvider = StreamProvider<List<Song>>((ref) async* {
+  await for (final s in ref.watch(playerStateProvider.stream)) {
+    yield s.queue.songs;
+  }
+});
 
-/// 当前是否为 60 秒试听（VIP/付费曲的官方免费试听）。
-final previewProvider = StreamProvider<bool>(
-    (ref) => ref.watch(audioHandlerProvider).previewStream);
+final actualQualityProvider = StreamProvider<AudioQuality?>((ref) async* {
+  await for (final s in ref.watch(playerStateProvider.stream)) {
+    final st = s.state;
+    yield st is PlayerPlaying ? st.quality : null;
+  }
+});
 
-/// 需要人机验证的事件流。
+final previewProvider = StreamProvider<bool>((ref) async* {
+  await for (final s in ref.watch(playerStateProvider.stream)) {
+    final st = s.state;
+    yield st is PlayerPlaying ? st.isPreview : false;
+  }
+});
+
+/// 播放错误（「发生了什么 + 下一步」），main.dart 统一 Toast。
+final playerErrorProvider = StreamProvider<String>((ref) async* {
+  await for (final s in ref.watch(playerStateProvider.stream)) {
+    final st = s.state;
+    if (st is PlayerFailure) {
+      yield '${st.whatHappened}，${st.nextAction}';
+    } else if (st is PlayerSuspended) {
+      yield '需要完成人机验证后重试';
+    }
+  }
+});
+
+/// 20028 验证事件：单次消费（Suspended 态进入时发一次，退出不再重发）。
 final verificationStreamProvider = StreamProvider<ApiException?>((ref) async* {
   yield null;
-  await for (final e in ref.watch(audioHandlerProvider).verificationRequired) {
-    yield e;
+  ApiException? last;
+  await for (final s in ref.watch(playerStateProvider.stream)) {
+    final st = s.state;
+    if (st is PlayerSuspended) {
+      if (!identical(st.api, last)) {
+        last = st.api;
+        yield st.api;
+      }
+    } else {
+      last = null;
+      yield null;
+    }
   }
 });
 
-/// 播放队列。
-final queueProvider = StreamProvider<List<Song>>((ref) async* {
-  final handler = ref.watch(audioHandlerProvider);
-  yield handler.songs;
-  await for (final _ in handler.queue.stream) {
-    yield handler.songs;
-  }
+/// 音频引擎是否可用（保留旧 API 名，语义已与状态机同源）。
+final audioEngineReadyProvider = Provider<bool>((ref) {
+  final s = ref.watch(playerStateProvider).valueOrNull;
+  return s?.engineError == null;
 });
 
-/// 播放进度 / 缓冲 / 时长 / 播放态 / 随机 / 循环。
-///
-/// 引擎未就绪（just_audio_background 启动失败）时返回稳定的空值流，
-/// 避免直接用 null 播放器导致空指针。
+/// 播放真正开始（setAudioSource 成功且 play() 已调用）→ 最近播放记录。
+final recentPlayRecorderProvider = Provider<void>((ref) {
+  final sub = ref.watch(audioHandlerProvider).onSongStarted.listen((song) {
+    if (song.hash.isEmpty) return;
+    RecentPlayStore.add(RecentPlay(
+      hash: song.hash,
+      name: song.name,
+      artist: song.artist,
+      cover: song.cover,
+      albumAudioId: song.albumAudioId,
+      ts: DateTime.now().millisecondsSinceEpoch,
+    )).then((_) => RecentPlayStore.notifyListeners());
+  });
+  ref.onDispose(sub.cancel);
+});
+
+/// 高频遥测：独立流，避免进度 tick 触发 playerStateProvider 重建整页。
 final positionProvider = StreamProvider<Duration>((ref) async* {
   await for (final p in ref.watch(audioPlayerProvider.stream)) {
     if (p == null) {
@@ -142,86 +214,38 @@ final repeatProvider = StreamProvider<LoopMode>((ref) async* {
   }
 });
 
-/// 音频引擎是否可用（false 时可提示"音频服务启动失败"）。
-final audioEngineReadyProvider = Provider<bool>(
-    (ref) => ref.watch(audioHandlerProvider).isEngineReady);
-
-/// 播放控制器，供 UI 调用。
+/// 播放控制器：UI 只投递事件，禁止直改状态字段（PLAN §二）。
 final playerControllerProvider = Provider<PlayerController>(
     (ref) => PlayerController(ref.watch(audioHandlerProvider)));
-
-/// 最近播放记录器：监听 onSongStarted（播放真正出声后）写最近播放。
-///
-/// 覆盖所有播放入口：自动切歌 / 手动上下一首 / 播放失败自动跳歌，
-/// 原 PlayHelper._record（发起播放即写）已由本流取代（F2）。
-final recentPlayRecorderProvider = Provider<void>((ref) {
-  final sub = ref.watch(audioHandlerProvider).onSongStarted.listen((song) {
-    if (song.hash.isEmpty) return;
-    RecentPlayStore.add(RecentPlay(
-      hash: song.hash,
-      name: song.name,
-      artist: song.artist,
-      cover: song.cover,
-      albumAudioId: song.albumAudioId,
-      ts: DateTime.now().millisecondsSinceEpoch,
-    )).then((_) => RecentPlayStore.notifyListeners());
-  });
-  ref.onDispose(sub.cancel);
-});
 
 class PlayerController {
   PlayerController(this._handler);
   final TiernanAudioHandler _handler;
 
-  /// 播放单曲。
-  Future<void> playSong(Song song) => _handler.playSong(song);
+  Future<void> playSong(Song song) => _handler.enqueueSong(song);
 
-  /// 播放队列。
   Future<void> playQueue(List<Song> songs, int index) =>
-      _handler.playQueue(songs, index);
+      _handler.enqueueQueue(songs, index);
 
-  /// 下一首。
-  Future<void> next() => _handler.skipToNext();
+  /// 队列弹层「跳到第 N 首」：只投递 SkipToQueueItem 事件，不整表替换。
+  Future<void> skipToIndex(int index) => _handler.skipToIndex(index);
 
-  /// 上一首。
-  Future<void> prev() => _handler.skipToPrevious();
+  Future<void> next() => _handler.nextFromUi();
+  Future<void> prev() => _handler.previousFromUi();
 
-  /// 播放 / 暂停切换。
-  Future<void> togglePlay() async {
-    final p = _handler.player;
-    if (p == null) {
-      // 引擎未就绪：尝试拉起（首次点播放时初始化可能尚未完成）
-      if (!await _handler.ensureEngineReady()) return;
-      await _handler.play();
-      return;
-    }
-    if (p.playing) {
-      await _handler.pause();
-    } else {
-      await _handler.play();
-    }
-  }
+  Future<void> togglePlay() => _handler.togglePlayFromUi();
 
-  /// 跳转进度。
-  Future<void> seekTo(Duration position) => _handler.seek(position);
+  Future<void> seekTo(Duration position) =>
+      _handler.seekFromUi(position);
 
-  /// 切换随机播放。
-  Future<void> toggleShuffle() async {
-    final p = _handler.player;
-    if (p == null) return;
-    await _handler.setShuffleMode(p.shuffleModeEnabled
-        ? AudioServiceShuffleMode.none
-        : AudioServiceShuffleMode.all);
-  }
+  Future<void> toggleShuffle() => _handler.toggleShuffleFromUi();
 
-  /// 循环模式轮转：列表循环 → 单曲循环 → 顺序播放。
-  Future<void> cycleRepeatMode() async {
-    final p = _handler.player;
-    if (p == null) return;
-    await _handler.setRepeatMode(switch (p.loopMode) {
-      LoopMode.all => AudioServiceRepeatMode.one,
-      LoopMode.one => AudioServiceRepeatMode.none,
-      LoopMode.off => AudioServiceRepeatMode.all,
-    });
-  }
+  Future<void> cycleRepeatMode() => _handler.cycleRepeatFromUi();
+
+  /// 失败态重试 / 空态拉起引擎。
+  Future<void> retry() => _handler.retryFromUi();
+
+  /// 人机验证完成后由 VerificationListener 调用。
+  Future<void> retryPendingPlayback() =>
+      _handler.verificationPassedFromUi();
 }
