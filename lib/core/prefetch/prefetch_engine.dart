@@ -92,7 +92,7 @@ class PrefetchEngine {
     for (final song in songs) {
       if (taken >= _maxEnqueuePerCall - _pending.length) break;
       if (song.hash.isEmpty) continue;
-      if (!_requested.contains(song.hash)) continue; // 已命中缓存/已入队：跳过
+      if (_requested.contains(song.hash)) continue; // 已入队/已缓存：跳过
       _pending.add(song);
       taken++;
     }
@@ -116,7 +116,7 @@ class PrefetchEngine {
     for (var i = start; i < queue.length && upcoming.length < window; i++) {
       final song = queue[i];
       if (song.hash.isEmpty) continue;
-      if (!_requested.contains(song.hash)) continue;
+      if (_requested.contains(song.hash)) continue;
       upcoming.add(song);
     }
     if (upcoming.isEmpty) return;
@@ -211,6 +211,10 @@ class PrefetchEngine {
     } catch (e) {
       debugPrint('[prefetch] cover/album json failed (${song.name}): $e');
     }
+    // v5.3 B-10 修复收尾：请求完成后才标记「已请求」——放在这里保证
+    // 三段预热（URL/歌词候选/专辑）全部尝试过后才去重，失败的歌曲在
+    // 下次入队时仍有机会重试（第 16 条：失败≠已处理）。
+    _markRequested(song.hash);
   }
 
   /// 定时器对称释放（第 20 条）。
