@@ -956,3 +956,17 @@ C-2 代理（332b329a）同样超时零产出 → 主代理亲自接线：
 ### 待办
 - 收藏歌单歌曲纳入启动预热（需登录态 provider）
 - 全量 analyze + 3 并发复核代理（进行中）
+
+## ✅ v4.0.2 发布确认
+
+- release 437975253（draft=False），tag 6526566 构建成功（版本 4.0.2+45）
+- 资产：arm64/v7a/x86_64 APK + screenshots-349.zip
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v4.0.2/app-arm64-v8a-release.apk
+
+### v4.0.2 内容
+- V402-P1: retryPendingPlayback 改 hash 快照（队列变化后按 hash 重定位）
+- V402-P3: playQueue/playSong 世代前置（消除首次引擎窗口并发）
+- V402-URL-SIZE: 永久缓存身份=(url,播放JSON声明字节数) 四道校验，试听永不入库
+- V402-R1/R2/R3/R4/R5/R6/R7: 20028 假验证页/交接世代/stale 可观测/超大歌单末尾页/探测跳过/空队列清态/手动切歌清挂起
+- 复核③剩余 2 条 P2 已记录归 v4.0.3（写操作后 Riverpod invalidate、越界起始页）
+- 下一步：v5.0 完全重构（docs/REFACTOR_PLAN_V5.md，七步迁移）
