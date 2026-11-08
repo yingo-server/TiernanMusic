@@ -20,7 +20,6 @@ class LyricTranslationPatch {
   /// 切歌后旧歌的译文补丁不得插入新歌词。
   final String songHash;
 }
-}
 
 /// 翻译增量广播（v4.0-B，V400-B-03）。
 ///
