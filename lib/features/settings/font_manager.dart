@@ -140,8 +140,7 @@ class CustomFontStore {
     final f = File(font.filePath);
     if (!await f.exists()) return;
     final loader = FontLoader(font.id)
-      ..addFont(Future<ByteData>.value(
-          ByteData.view(Uint8List.fromList(f.readAsBytesSync()))));
+      ..addFont(Future<ByteData>.value(ByteData.sublistView(f.readAsBytesSync())));
     await loader.load();
   }
 

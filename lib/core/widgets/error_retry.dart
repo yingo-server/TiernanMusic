@@ -206,7 +206,7 @@ FriendlyError errorClassification(BuildContext context, Object? error) {
   final l = context.l10n;
   // v5.1 B4-A P2-1：先解包 DioException 内层 ApiException——直连层包装的
   // 登录过期/人机验证错误此前全部显示为通用文案（第 8 条）。
-  final api = unwrapApi(error ?? Object());
+  final api = error == null ? null : unwrapApi(error);
   if (api != null) {
     return FriendlyError(
       friendly: api.message,
