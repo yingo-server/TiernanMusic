@@ -24,17 +24,19 @@ class CachedApiCall {
     Duration? ttl,
     bool stale = true,
   }) {
-    // ttl 参数保留兼容旧调用方；scope 由 ttl 是否为 90s 判定，
-    // 但**最终 TTL 仍取 cacheTtl(scope)**，不允许第二套数值口径。
+    // v5.1 B3-B P1-7 修复：自定义 TTL 必须透传（歌词 168h 等），不允许
+    // 「非 90s 一律归 168h」的口径吞掉调用方意图。scope 仅用于 ns 失效分组。
     final scope = ttl == cacheTtl(CacheScope.list)
         ? CacheScope.list
         : CacheScope.json;
+    final effectiveTtl = ttl ?? cacheTtl(scope);
     return ResourceGateway.instance.json(
       ns: ns,
       scope: scope,
       path: path,
       query: query,
       userid: _userid,
+      ttl: effectiveTtl,
       fetch: () => _api.get(path, query: query),
       staleOnError: stale,
     );

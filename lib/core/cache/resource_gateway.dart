@@ -50,7 +50,8 @@ class ResourceGateway {
     _memory[key] = (value, nowMs() + ttl);
   }
 
-  /// L2 磁盘 JSON：TTL 由 cacheTtl(scope) 唯一决定，L1 同源。
+  /// L2 磁盘 JSON：TTL 优先取调用方显式 [ttl]（歌词 168h 等自定义场景），
+  /// 未传时按 cacheTtl(scope)；L1 与之同源，禁止双套口径。
   Future<Map<String, dynamic>> json({
     required String ns,
     required String path,
@@ -59,9 +60,10 @@ class ResourceGateway {
     String userid = '0',
     String? extra,
     CacheScope scope = CacheScope.json,
+    Duration? ttl,
     bool staleOnError = true,
   }) {
-    final scopeTtl = cacheTtl(scope);
+    final scopeTtl = ttl ?? cacheTtl(scope);
     final key = cacheKey(
       ns: ns,
       scope: scope,

@@ -595,23 +595,20 @@ class _CoverOrLyricState extends ConsumerState<_CoverOrLyric>
       children: [
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
-          child: _showLyric && lyric != null
-              ? FadeTransition(
-                  opacity: _fadeCurve,
-                  child: ClipRect(
-                    key: const ValueKey('lyric'),
-                    child: LyricView(
-                      lyric: lyric,
-                      position: position,
-                      mode: lyricMode,
-                      lyricId: lyricId,
-                      songHash: songHash,
-                      // onTapLine 的参数单位是毫秒（lyric_view.dart KrcLine.startMs）
-                      onTapLine: (ms) => ref
-                          .read(playerControllerProvider)
-                          .seekTo(Duration(milliseconds: ms)),
-                    ),
-                  ),
+          child: _showLyric
+              ? _LyricPhaseView(
+                  key: const ValueKey('lyric'),
+                  lyricAsync: lyricAsync,
+                  songHash: songHash,
+                  lyric: lyric,
+                  lyricId: lyricId,
+                  lyricMode: lyricMode,
+                  position: position,
+                  onTapLine: (ms) => ref
+                      .read(playerControllerProvider)
+                      .seekTo(Duration(milliseconds: ms)),
+                  onRetry: () =>
+                      ref.invalidate(currentLyricProvider),
                 )
               : _CoverView(song: widget.song),
         ),
@@ -847,6 +844,162 @@ class _CoverPlaceholder extends StatelessWidget {
       child: Center(
         child: Icon(Icons.music_note_rounded,
             size: 96, color: theme.colorScheme.onSurfaceVariant),
+      ),
+    );
+  }
+}
+
+/// 歌词三态视图（v5.3 质量原则 34「加载必须可见」的实现）。
+///
+/// 三态明确分离、互不混淆（第 16 条：错误 ≠ 空 ≠ 加载中）：
+/// 1. **加载态**：骨架行占位，加载过程阶段可见，禁止静默回落到空白；
+///    refresh 期间同样显示骨架而非旧内容闪断。
+/// 2. **错误态**：区分「无候选（暂无歌词）」与「解析失败」，
+///    文案说明发生了什么 + 提供重试动作。
+/// 3. **数据态**：交给 [LyricView]，透传 lyricId/songHash 供翻译补丁
+///    世代校验（V400-A-04，原则 18）。
+class _LyricPhaseView extends ConsumerWidget {
+  const _LyricPhaseView({
+    super.key,
+    required this.lyricAsync,
+    required this.songHash,
+    required this.lyric,
+    required this.lyricId,
+    required this.lyricMode,
+    required this.position,
+    required this.onTapLine,
+    required this.onRetry,
+  });
+
+  /// 歌词加载结果（currentLyricProvider 的 AsyncValue），状态单一来源（第 5 条）。
+  final AsyncValue<
+          ({KrcLyric? lyric, String? error, String? lyricId, String? songHash})>
+      lyricAsync;
+
+  /// 当前歌词所属歌曲 hash（原则 18：切歌世代校验，防旧结果污染）。
+  final String? songHash;
+
+  /// 非空时进入数据态（来源与 [lyricAsync] 同代，由调用方保证）。
+  final KrcLyric? lyric;
+
+  /// 歌词候选 id（冻结契约 LyricTranslationStream，B 按 candidate.id emit）。
+  final String? lyricId;
+
+  final LyricDisplayMode lyricMode;
+
+  final Duration position;
+
+  final ValueChanged<int> onTapLine;
+
+  /// 错误态的重试动作（由调用方 invalidate provider，页面不自行触网）。
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    // ── 加载态（含 refresh 重载）：骨架行，加载必须可见（原则 34）。
+    if (lyricAsync.isLoading) {
+      return const _LyricSkeleton();
+    }
+
+    // ── 错误态：区分「无候选」与「解析失败」（第 16 条），
+    //    文案 = 发生了什么 + 重试动作。
+    final error = lyricAsync.value?.error;
+    if (error != null) {
+      return EmptyState(
+        icon: Icons.lyrics_outlined,
+        message: error,
+        actionLabel: context.l10n.retry,
+        onAction: onRetry,
+      );
+    }
+
+    // ── 数据态：正常歌词。
+    final data = lyric;
+    if (data != null) {
+      return LyricView(
+        lyric: data,
+        position: position,
+        mode: lyricMode,
+        onTapLine: onTapLine,
+        lyricId: lyricId,
+        songHash: songHash,
+      );
+    }
+
+    // ── 兜底空态：provider 正常返回但无歌词（理论上 error 已覆盖，
+    //    此处防御性兜底，不给空白屏）。
+    return EmptyState(
+      icon: Icons.music_off_outlined,
+      message: context.l10n.lyricEmptyGuide,
+    );
+  }
+}
+
+/// 歌词加载骨架：3 组「主线 + 副线」占位行，模拟歌词版式，
+/// 使加载阶段可感知（原则 34：超过 500ms 的阶段必须可见）。
+class _LyricSkeleton extends StatefulWidget {
+  const _LyricSkeleton();
+
+  @override
+  State<_LyricSkeleton> createState() => _LyricSkeletonState();
+}
+
+class _LyricSkeletonState extends State<_LyricSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat(reverse: true);
+
+  late final Animation<double> _opacity =
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final baseColor = theme.colorScheme.surfaceContainerHighest;
+    final highlightColor = theme.colorScheme.surfaceContainer;
+
+    Widget line(double width, {double height = 16}) {
+      return FadeTransition(
+        opacity: _opacity,
+        child: Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: baseColor,
+            gradient: LinearGradient(
+              colors: [baseColor, highlightColor, baseColor],
+            ),
+            borderRadius: BorderRadius.circular(height / 2),
+          ),
+        ),
+      );
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < 3; i++) ...[
+              line(220 * (1 - i * 0.18), height: 18),
+              const SizedBox(height: 8),
+              line(140 - i * 20, height: 13),
+              const SizedBox(height: 28),
+            ],
+          ],
+        ),
       ),
     );
   }
