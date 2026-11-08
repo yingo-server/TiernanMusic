@@ -14,6 +14,7 @@ import 'core/api/kugou_api_client.dart';
 import 'core/direct/kg_client.dart';
 import 'core/direct/kg_providers.dart';
 import 'app/di.dart' show kugouApiClientProvider;
+import 'app/bootstrap.dart' show openHiveBoxes;
 import 'core/prefetch/prefetch_engine.dart';
 import 'core/cache/resource_gateway.dart';
 import 'core/resource/resource_cache.dart';
@@ -75,28 +76,8 @@ Future<void> main() async {
         debugPrint('[startup] Hive.initFlutter failed: $e\n$st');
       }
 
-      // 逐个 box 打开，单个失败不影响启动
-      Future<void> openSafe(String name, {bool stringValues = false}) async {
-        try {
-          if (stringValues) {
-            await Hive.openBox<String>(name);
-          } else {
-            await Hive.openBox<dynamic>(name);
-          }
-        } catch (e) {
-          debugPrint('[startup] openBox($name) failed: $e');
-        }
-      }
-
-      await openSafe(KgDeviceStore.boxName, stringValues: true);
-      await openSafe('settings');
-      await openSafe('accounts');
-      await openSafe('recent_plays');
-      await openSafe('search_history', stringValues: true);
-      await openSafe('lyric_translations', stringValues: true);
-      await openSafe('lyric_cache', stringValues: true);
-      await openSafe('resource_json', stringValues: true);
-      await openSafe('downloads');
+      // v5.0 M6：开箱表集中 app/bootstrap.dart（行为等价，单箱失败不阻塞启动）。
+      await openHiveBoxes();
 
       // Cookie 持久化目录（应用私有存储，三层存储规范第 2 层）。
       // 必须是可写目录，否则 PersistCookieJar 会报「Read-only file system」。
