@@ -4,8 +4,10 @@ import '../../../core/net/repository_reads.dart';
 enum CommentResourceType { song, playlist, album }
 
 class CommentRepository {
-  CommentRepository(this._api);
-  final RepositoryReads _reads = RepositoryReads(_api, 'comment');
+  CommentRepository(this._api) {
+    _reads = RepositoryReads(_api, 'comment');
+  }
+  late final RepositoryReads _reads;
   final KugouApiClient _api;
 
   /// 当前登录用户 userid（来自 API 客户端 cookie 上下文），用于 isMine 判定

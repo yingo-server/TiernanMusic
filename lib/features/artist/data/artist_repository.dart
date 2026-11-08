@@ -155,10 +155,12 @@ class ArtistSong {
 
 class ArtistRepository {
   // V37-06（C1 ALB-R2，第 13/2 条）：同 album_repository——dynamic 改具体类型。
-  ArtistRepository(this._api);
+  ArtistRepository(this._api) {
+    _reads = RepositoryReads(_api, 'artist');
+  }
 
   final KugouApiClient _api;
-  final RepositoryReads _reads = RepositoryReads(_api, 'artist');
+  late final RepositoryReads _reads;
 
   Future<ArtistInfo> fetchDetail(String id) async {
     // V37-06（C1 ART 同病，第 13 条）：裸强转改 is Map 分支校验——

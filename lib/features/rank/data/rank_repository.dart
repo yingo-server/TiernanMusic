@@ -97,8 +97,10 @@ class RankSongsPage {
 }
 
 class RankRepository {
-  RankRepository(this._api);
-  final RepositoryReads _reads = RepositoryReads(_api, 'rank');
+  RankRepository(this._api) {
+    _reads = RepositoryReads(_api, 'rank');
+  }
+  late final RepositoryReads _reads;
   final KugouApiClient _api;
 
   /// 榜单歌曲（分页）

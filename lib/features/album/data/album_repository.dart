@@ -124,10 +124,12 @@ class AlbumSongsPage {
 class AlbumRepository {
   // V37-06（C1 ALB-R1，第 13/2 条）：`final dynamic _api` 改具体类型——
   // dynamic 绕过静态检查，`_api.get` 拼错方法名/参数名要到运行期才炸。
-  AlbumRepository(this._api);
+  AlbumRepository(this._api) {
+    _reads = RepositoryReads(_api, 'album');
+  }
 
   final KugouApiClient _api;
-  final RepositoryReads _reads = RepositoryReads(_api, 'album');
+  late final RepositoryReads _reads;
 
   Future<AlbumInfo> fetchDetail(String id) async {
     // V37-06（C1 ALB-R2，第 13 条）：裸强转改 is Map 分支校验（对齐
