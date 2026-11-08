@@ -1035,3 +1035,11 @@ CI 终验与 release 产出由定时任务 660af9b0 处理。
 - 存储诊断页 + MV按钮三态 + 入口行唯一化 48dp + 歌词三态视图
 - 译文 lineIndices 契约重写 + preload 键对齐 + fr notPlaying 修复
 - l10n 385键x11语。待办：kg_client 直连超时 3s 档、歌词正文预热、11语长度失衡翻译批。
+
+## ✅ v5.3.0 正式发布确认（最终）
+
+- release 438562704（draft=False，target a4da2f2）：arm64 24.0MB / v7a 21.9MB / x86_64 25.5MB + 截图包
+- tag 构建 CI 全绿（analyze + 双 APK + release 全流程）
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v5.3.0/app-arm64-v8a-release.apk
+- 播放器体系化二次重构交付完毕：状态机/延迟捕获/权限诊断页/布局重排/歌词三态
+- 遗留：kg_client 直连 3s 超时档、歌词正文预热、11语长度失衡翻译批、keystore 轮换（需用户手动）
