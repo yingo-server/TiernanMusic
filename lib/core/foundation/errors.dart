@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// 业务/API 异常（v5.0 M1：上移至 core/foundation，原位置 re-export 兼容）。
 ///
 /// 全仓错误翻译唯一出口（REFACTOR_PLAN §5.2）：20028 判定收敛在
@@ -25,7 +23,7 @@ class ApiException implements Exception {
   /// 原始错误响应体，便于上层判断 fail_process 等
   final Map<String, dynamic>? body;
 
-  bool get needsVerification => errorCode == 20028;
+  bool get needsVerification => errorCode == 20028; // 唯一常量见 response_policy.dart
 
   @override
   String toString() => 'ApiException($errorCode): $message';

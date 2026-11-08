@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'kg_client.dart';
+import '../domain/response_policy.dart';
 import 'kg_crypto.dart';
 import 'kg_endpoints_search.dart';
 import 'kg_endpoints_comment.dart';
@@ -75,47 +76,12 @@ class KgDirectApiClient extends KugouApiClient {
   /// `errcode`/`error_code` 为 151/152 等**警告码**时，只要响应里**有数据**
   /// （data 非空）就不算失败 —— 实测这两个码常与有效数据同时出现，
   /// 按「errcode != 0 即失败」判定会误杀正常响应。
+  /// v5.0 M4：成功/异常判定已上移 [evaluateResponse]（Bridge-N 单点）。
+  /// 本层只保留「KgResponse → body/ssaCode」适配，禁止在此重写业务语义。
   Map<String, dynamic> _wrap(KgResponse r) {
-    final body = r.body;
-    final status = body['status'];
-    int codeOf(Object? v) => v is int ? v : (int.tryParse('$v') ?? 0);
-    final errorCode = codeOf(body['error_code'] ?? body['errcode']);
-
-    String msgOf() =>
-        '${body['error'] ?? body['error_msg'] ?? body['errmsg'] ?? body['info'] ?? '请求失败'}';
-
-    // PLY-10（审查①-A，P1）：mcomment 系列用 `err_code` 表达业务错误，
-    // 与 status 无关——评论/楼中楼在 status=1 或裸 Map 时都可能带 err_code=60102。
-    // 该判定提到所有分支之前，且兼容字符串形态（"60102"）。
-    final errCode = body['err_code'];
-    if (errCode != null && codeOf(errCode) != 0) {
-      throw ApiException(codeOf(errCode), msgOf(),
-          ssaCode: r.ssaCode, body: body);
-    }
-
-    // status == 1 → 成功
-    if (status == 1) {
-      // 警告码 + 有数据 → 放过；无数据且有错码 → 视为失败
-      if (errorCode == 0 || _hasData(body)) return body;
-      throw ApiException(errorCode, msgOf(), ssaCode: r.ssaCode, body: body);
-    }
-
-    // ⚠️ status == 200 也是成功语义（歌词类接口实测如此：
-    //    status=200 + errcode=200 + candidates[]）。errcode=200 是正常码，
-    //    因此本分支不做 error_code 判定（err_code 已在上面统一校验过）。
-    if (status == 200) return body;
-
-    if (status == 0 || status == 2 || errorCode != 0) {
-      throw ApiException(errorCode, msgOf(), ssaCode: r.ssaCode, body: body);
-    }
-
-    // PLY-11（审查①-A，P1）：无 status 且响应体为空 → 风控/网关空包，
-    // 不能当作成功（否则不回退、页面恒空白且无错误提示）。
-    if (body.isEmpty) {
-      throw ApiException(-1, '空响应体（可能被风控拦截）',
-          ssaCode: r.ssaCode, body: body);
-    }
-    return body;
+    final outcome = evaluateResponse(r.body, ssaCode: r.ssaCode);
+    if (!outcome.isOk) throw outcome.failure!;
+    return outcome.body;
   }
 
   /// 响应里是否带有有效数据（用于判断 151/152 警告码是否可忽略）

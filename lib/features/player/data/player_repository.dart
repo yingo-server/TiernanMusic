@@ -13,6 +13,8 @@ import '../../../core/resource/cached_api.dart';
 import '../../../core/resource/resource_cache.dart';
 import '../../../core/domain/song.dart';
 import '../../../core/domain/quality.dart';
+import '../../../core/domain/response_policy.dart';
+import '../../../core/foundation/errors.dart';
 
 /// 一次成功解析出的播放结果。
 class PlayableResult {
@@ -212,7 +214,7 @@ class PlayerRepository {
         }
       } on ApiException catch (e) {
         // 20028/权益错误直接上抛，不再回退（回退也会被同样拦截）
-        if (e.errorCode == 20028 || preferred.isSpecial) rethrow;
+        if (requiresVerification(e) || preferred.isSpecial) rethrow;
         // 其它错误回退 kapi 再试
       } catch (e) {
         // V34-02（v3.4 审查①，P1）：直连的**网络异常**（DioException/
@@ -287,7 +289,7 @@ class PlayerRepository {
         lastSsaCode = result.ssaCode!;
       }
       // 20028（需验证）直接退出
-      if (result.errorCode == 20028) break;
+      if (requiresVerification(ApiException(result.errorCode, result.message))) break;
       // V399-B3：特殊音源档不享有官方 60 秒试听通道兜底——
       // 魔法/蝰蛇是特殊音源，freePart 试听返回的是普通音源片段，
       // 冒充特殊音效属数据失真；失败直接进入下一族内档或抛错报因。
@@ -437,7 +439,7 @@ class PlayerRepository {
   }
 
   static String _songFailureMessage(Map data, AudioQuality quality) {
-    if (_int(data['errcode'] ?? data['error_code']) == 20028) {
+    if (_int(data['errcode'] ?? data['error_code']) == kVerificationRequired) {
       return '本次请求需要验证';
     }
     if (data['privilege'] != null && !canPlay(data)) {
