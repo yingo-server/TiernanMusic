@@ -942,3 +942,17 @@ C-2 代理（332b329a）同样超时零产出 → 主代理亲自接线：
 2. playQueue 首次引擎初始化窗口内第二次队列不作废第一次（P3）
 3. 收藏歌单歌曲未纳入启动预热
 4. keystore 轮换（用户手动）
+
+## v4.0.2 播放列表暗病（主代理亲修，待发版）
+
+### V402-P1（P1）retryPendingPlayback 按旧 idx 播错歌
+- 根因：20028 挂起只存整数下标 `_pendingSongIndex`；验证期间队列被替换/增删后按旧 idx 播新队列的错歌
+- 修法：改存 **hash 快照**（`_pendingSongHash`），重试时按 hash 在**当前队列** `indexWhere` 重定位；找不到则明确丢弃并留痕（第 14/16/18 条）
+
+### V402-P3（P3）首次引擎窗口竞态
+- 根因：playQueue/playSong 先 `await ensureEngineReady()`（首次数百 ms）才 `_playToken++`，窗口内第二次请求不作废第一次
+- 修法：`final token = ++_playToken` 提到引擎初始化之前，await 后 `if (token != _playToken) return`；playQueue 的 failureStreak/pendingIndex 复位同步前置
+
+### 待办
+- 收藏歌单歌曲纳入启动预热（需登录态 provider）
+- 全量 analyze + 3 并发复核代理（进行中）

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 import '../../features/download/data/storage_permission_service.dart';
+import '../utils/error_logger.dart';
 
 /// TTL 常量（v4.0 冻结契约，TASK_v400_arch.md）。
 const kJsonTtl = Duration(hours: 168); // 一切 API 返回的 JSON
@@ -117,7 +119,16 @@ class ResourceCache {
       // 次优行为=返回旧值副本并标 `__stale`；恢复条件=下次 fetch 成功覆盖。
       if (staleOnError && staleBody != null) {
         debugPrint('[resource] fetch($fullKey) failed, stale fallback: $e');
-        // 副本打标（第 16 条：降级必须可感知），不污染箱内原始值
+        // V402-R3（复核② P1-2）：`__stale` 此前无任何消费方=假降级。
+        // 回退本身即带用户可见留痕：经 ErrorLogger 落盘（verbose 开关
+        // 打开后日志里可见），并在返回值打标供调用方按需感知。
+        // 不抛、不吞：网络失败时旧值可用是明确降级（第 9/11/16 条）。
+        unawaited(ErrorLogger.instance.log(
+          'stale cache used for $fullKey',
+          StackTrace.current,
+          source: 'resource_cache',
+          context: 'fetch failed: $e',
+        ));
         return Map<String, dynamic>.from(staleBody)..['__stale'] = true;
       }
       rethrow;
@@ -156,11 +167,14 @@ class ResourceCache {
     return dir;
   }
 
-  /// 确定性文件名：FNV-1a（32 位步进避免 JS/大整数问题）+ 长度 + 扩展名。
-  /// 同一 URL 永远映射同一文件名（第 3 条：幂等）。
-  static String _hashName(String url) {
+  /// V402（用户口径）：确定性文件名 = FNV-1a(`url + '|' + bytes`) + 长度 + 扩展名。
+  /// 永久文件缓存的身份是 **`(URL, JSON 声明字节数)` 二元组**——不同清晰度、
+  /// 试听/全曲、CDN 截断即使复用同一 URL，只要声明字节数不同就是不同资源，
+  /// 绝不互相覆盖/误复用（第 3/23 条）。bytes=0（未声明）由调用方禁止入库。
+  static String _hashName(String url, {int bytes = 0}) {
+    final identity = '$url|$bytes';
     var h = 0x811c9dc5;
-    for (final c in url.codeUnits) {
+    for (final c in identity.codeUnits) {
       h ^= c & 0xff;
       h = (h * 0x01000193) & 0xFFFFFFFF;
       h ^= (c >> 8) & 0xff;
@@ -174,7 +188,7 @@ class ResourceCache {
         (dot >= 0 && dot < ext.length - 1 && ext.length <= 8)
             ? ext.substring(dot)
             : '';
-    return '${h.toRadixString(16)}_${url.length}$suffix';
+    return '${h.toRadixString(16)}_${url.length}_$bytes$suffix';
   }
 
   /// 写入字节永久缓存（契约签名）。写失败留痕不抛（缓存可重建）。
@@ -213,36 +227,64 @@ class ResourceCache {
     }
   }
 
-  /// 从 URL 下载并永久缓存（契约签名）。
+  /// 从 URL 下载并永久缓存（V402：`(url, declaredBytes)` 身份严格校验）。
   ///
-  /// 供 C 在 audio_handler「完整播放完成」分支调用（v4.0 契约模块二）。
-  /// 已存在直接返回路径（幂等，第 21 条）；下载到 `.part` 临时文件后
-  /// 原子 rename，避免半截文件被当作完整缓存（第 14 条边界校验）。
+  /// 规则（用户 2026-11-08 口径）：
+  /// 1. 只有请求 JSON 返回的 URL **及其附带字节数完全相同**才允许写入/复用；
+  /// 2. declaredBytes<=0（JSON 未声明）**拒绝入库**——身份不可判定（第 14 条）；
+  /// 3. 下载完成后校验磁盘实际长度 == declaredBytes，不等则删 `.part` 不入库；
+  /// 4. Content-Length 若与声明不符直接放弃（不下载大文件后发现不对）。
   /// 失败返回 null 并留痕（失效回退由调用方继续走网络流）。
-  Future<String?> cacheUrlFile(String url, String kind) async {
+  Future<String?> cacheUrlFile(
+    String url,
+    String kind, {
+    int declaredBytes = 0,
+  }) async {
     if (url.isEmpty) return null;
+    if (declaredBytes <= 0) {
+      debugPrint('[resource] cacheUrlFile($kind) rejected: no declared bytes');
+      return null;
+    }
     try {
       final dir = await _dirOf(kind);
-      final name = _hashName(url);
+      final name = _hashName(url, bytes: declaredBytes);
       final target = File('${dir.path}/$name');
-      if (await target.exists()) return target.path;
+      if (await target.exists()) {
+        // 复用前也校验：同名文件可能因上次中断留下半截（第 14 条）
+        if (await target.length() == declaredBytes) return target.path;
+        await target.delete();
+      }
 
       final dio = Dio(BaseOptions(
         connectTimeout: const Duration(seconds: 20),
-        // 大文件流式下载，给足接收时间（第 15 条：单位显式，秒）
         receiveTimeout: const Duration(minutes: 10),
       ));
       final part = File('${target.path}.part');
+      final head = await dio.head(url);
+      final cl = int.tryParse(
+          '${head.headers.value('content-length') ?? ''}') ??
+          0;
+      if (cl > 0 && cl != declaredBytes) {
+        debugPrint('[resource] cacheUrlFile($kind) rejected: '
+            'Content-Length=$cl != declared=$declaredBytes');
+        return null;
+      }
       await dio.download(url, part.path);
+      final actual = await part.length();
+      if (actual != declaredBytes) {
+        debugPrint('[resource] cacheUrlFile($kind) rejected: '
+            'downloaded=$actual != declared=$declaredBytes');
+        await part.delete();
+        return null;
+      }
       await part.rename(target.path);
       debugPrint('[resource] cached url file: ${target.path}');
       return target.path;
     } catch (e) {
       debugPrint('[resource] cacheUrlFile($kind) failed: $e');
-      // 清理半截临时文件（第 20 条：资源对称清理）
       try {
         final part = File(
-            '${(await _dirOf(kind)).path}/${_hashName(url)}.part');
+            '${(await _dirOf(kind)).path}/${_hashName(url, bytes: declaredBytes)}.part');
         if (await part.exists()) await part.delete();
       } catch (_) {}
       return null;

@@ -40,11 +40,15 @@ class TiernanAudioHandler extends BaseAudioHandler
   /// 引擎初始化失败的原因（供 UI 展示；null = 未失败）
   String? engineError;
 
-  /// V401-C2（主代理亲修）：本次装载成功的播放 URL。
+  /// V401-C2（主代理亲修）：本次装载成功的播放资源快照。
   /// 播放完成回调（processingStateStream）拿不到 `_playAt` 的局部变量
   /// `result.url`，必须把它存为字段，否则「完整播放后永久缓存实际文件」
-  /// 永远无法触发（C-2 收尾定时器的核对点）。
+  /// 永远无法触发。
+  /// V402：`(url, declaredBytes)` 必须来自同一次播放 JSON；isPreview
+  /// 决定片段是否允许入库（试听/高潮片段永不永久缓存）。
   String _lastPlayUrl = '';
+  int _lastDeclaredBytes = 0;
+  bool _lastIsPreview = true;
 
   /// 等待音频后台服务就绪；失败返回 false（调用方给友好错误，不要播放）。
   Future<bool> ensureEngineReady() async {
@@ -79,8 +83,16 @@ class TiernanAudioHandler extends BaseAudioHandler
       if (state == ProcessingState.completed) {
         // V401-C2：完整播放完成后把实际音频文件永久缓存（ResourceCache）。
         // URL 来自本曲装载成功时写入的 _lastPlayUrl；离线本地文件不重复缓存。
-        if (_lastPlayUrl.startsWith('http')) {
-          PrefetchEngine.instance.onPlaybackCompleted(_lastPlayUrl, 'audio');
+        // V402：仅「完整播放 + JSON 声明字节数>0 + 非试听」才永久缓存。
+        // 试听/高潮片段即使播完也绝不入库（用户口径）；未声明字节数
+        // 时身份不可判定，ResourceCache 会拒绝。
+        if (_lastPlayUrl.startsWith('http') &&
+            !_lastIsPreview &&
+            _lastDeclaredBytes > 0) {
+          PrefetchEngine.instance.onPlaybackCompleted(
+            _lastPlayUrl, 'audio',
+            declaredBytes: _lastDeclaredBytes,
+          );
         }
         skipToNext();
       }
@@ -230,6 +242,14 @@ class TiernanAudioHandler extends BaseAudioHandler
     ));
   }
 
+  /// V402：原子写入本次播放资源快照（三个字段必须同批更新，
+  /// 防止 completed 回调读到「新 URL + 旧字节数」的拼接态，第 5 条）。
+  void _setLastSource(String url, int bytes, {required bool isPreview}) {
+    _lastPlayUrl = url;
+    _lastDeclaredBytes = bytes;
+    _lastIsPreview = isPreview;
+  }
+
   void _emitQueue() {
     queue.add(_songs
         .map((s) => MediaItem(
@@ -247,9 +267,15 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   /// 设置队列并从 [index] 开始播放。
   Future<void> playQueue(List<Song> songs, int index) async {
+    // V402-P3（主代理亲修）：作废世代必须在引擎初始化**之前**——
+    // 旧实现先 await ensureEngineReady()（首次可达数百 ms），窗口内
+    // 第二次 playQueue 不会作废第一次，两次队列可能同时装载。
+    final token = ++_playToken;
+    _pendingSongHash = null;
+    _pendingIndex = null;
+    _failureStreak = 0;
     if (!await ensureEngineReady()) return;
-    // 新的播放请求会清掉 20028 挂起状态，避免验证后跳回旧歌
-    _pendingSongIndex = null;
+    if (token != _playToken) return; // 等待期间来了更新的播放请求
     // PLY-03（审查③）：队列被整体替换时**立即作废在途请求**——
     // 旧 _playAt 恢复后按旧 index 写 _songs 会污染新队列（越界或覆盖错歌）。
     // F4-14（审查②-B，P0）：队列替换时**不得**无条件 `_loading = false`。
@@ -257,11 +283,7 @@ class TiernanAudioHandler extends BaseAudioHandler
     // （QUALITY_STANDARD 第 19 条：闸门必须由持有者成对开关）。
     // 这里只作废旧请求的世代标记并把新下标排队，闸门由旧请求的 finally 释放，
     // 释放后立即播放排队中的新下标。
-    _playToken++;
-    // V3-04（第5批复核②，P2）：换队列必须重置连续失败计数（第 18 条）——
-    // 旧队列累积的 streak 若接近旧队列长度，新队列第一首失败就会触发「停止」。
-    _failureStreak = 0;
-    _pendingIndex = null;
+    // V3-04：换队列重置连续失败计数已在函数开头完成。
     _songs
       ..clear()
       ..addAll(songs);
@@ -271,9 +293,11 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   /// 播放单曲（追加到队列或替换当前位置）。
   Future<void> playSong(Song song) async {
+    // V402-P3：同 playQueue，世代前置消除首次引擎初始化窗口内并发。
+    final token = ++_playToken;
+    _pendingSongHash = null;
     if (!await ensureEngineReady()) return;
-    // 新的播放请求会清掉 20028 挂起状态，避免验证后跳回旧歌
-    _pendingSongIndex = null;
+    if (token != _playToken) return;
     final existing = _songs.indexOf(song);
     if (existing >= 0) {
       // PLY-17（审查③）：Song== 只比 hash。若传入歌带 localPath（下载页入口）
@@ -340,7 +364,7 @@ class TiernanAudioHandler extends BaseAudioHandler
         _isPreview = false;
         _previewController.add(false);
         // V401-C2：离线文件已在本地，播放完成无需再永久缓存。
-        if (token == _playToken) _lastPlayUrl = '';
+        if (token == _playToken) _setLastSource('', 0, isPreview: false);
         try {
           final applied = await _applySource(
             token,
@@ -365,7 +389,8 @@ class TiernanAudioHandler extends BaseAudioHandler
           _isPreview = result.isPreview;
           _previewController.add(_isPreview);
           // V401-C2：记录本次装载成功的 URL，供播放完成后永久缓存。
-          _lastPlayUrl = result.url;
+          _setLastSource(result.url, result.expectedBytes,
+              isPreview: result.isPreview);
           // 清掉失效的 localPath，防止下次再走坏源（PL-04 同源）
           // F4-15（审查②-B，P1）：`localPath: null` 在原 copyWith 中是空操作，
           // 必须走显式清除标记。
@@ -391,7 +416,8 @@ class TiernanAudioHandler extends BaseAudioHandler
         _previewController.add(_isPreview);
         _songs[index] = detailed.copyWith(quality: result.quality);
         // V401-C2：在线主分支同样记录 URL（播放完成后永久缓存实际文件）。
-        _lastPlayUrl = result.url;
+        _setLastSource(result.url, result.expectedBytes,
+            isPreview: result.isPreview);
         final applied = await _applySource(
           token,
           AudioSource.uri(Uri.parse(result.url), tag: mediaItem.value),
@@ -409,10 +435,15 @@ class TiernanAudioHandler extends BaseAudioHandler
         _playedController.add(_songs[index]);
       }
     } catch (e) {
+      // V402-R1（复核① P2-1）：catch 入口先作废世代——旧请求的 20028
+      // 迟到不得弹验证页/记 pendingHash，否则验证通过会打断当前播放。
+      // 放在 20028 判定**之前**，与下方普通失败守卫统一（第 18 条）。
+      if (token != _playToken) return;
       // 命中 20028：需要人机验证，不跳歌，交由 UI 弹验证页后重试
       final api = _extractApiException(e);
       if (api != null && api.needsVerification) {
-        _pendingSongIndex = index;
+        // V402-P1：存 hash 而非下标（队列变化后按 hash 重新定位）
+        _pendingSongHash = index < _songs.length ? _songs[index].hash : '';
         _verificationController.add(api);
         // PLY-02（审查③）：用户必须知道发生了什么，否则停在静默 error 态
         _errorController.add('需要完成人机验证后重试');
@@ -457,8 +488,12 @@ class TiernanAudioHandler extends BaseAudioHandler
       final pending = _pendingIndex;
       if (pending != null) {
         _pendingIndex = null;
-        // 异步调度，避免在 finally 中递归调用自身
-        Future.microtask(() => _playAt(pending));
+        // V402-R2（复核① P2-2）：交接携带世代号——microtask 执行时
+        // 若队列已被整体替换/新请求已开始，丢弃旧 pending 不再错播。
+        final handoffToken = _playToken;
+        Future.microtask(() {
+          if (handoffToken == _playToken) _playAt(pending);
+        });
       }
     }
   }
@@ -475,8 +510,11 @@ class TiernanAudioHandler extends BaseAudioHandler
     return token == _playToken;
   }
 
-  /// 待验证的歌曲下标（验证通过后重试）
-  int? _pendingSongIndex;
+  /// V402-P1（主代理亲修）：待验证歌曲的 **hash 快照**。
+  /// 旧实现只存整数下标——20028 挂起期间队列若被替换/原地增删，
+  /// retryPendingPlayback 会按旧 idx 播到新队列的错歌（第 18 条）。
+  /// hash 才是队列内唯一可判定标识（Song.== 只比 hash）。
+  String? _pendingSongHash;
 
   ApiException? _extractApiException(Object e) {
     if (e is ApiException) return e;
@@ -488,9 +526,16 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   /// 验证完成后重试上次失败的播放
   Future<void> retryPendingPlayback() async {
-    final idx = _pendingSongIndex;
-    if (idx == null) return;
-    _pendingSongIndex = null;
+    final hash = _pendingSongHash;
+    _pendingSongHash = null;
+    if (hash == null || hash.isEmpty) return;
+    // 按 hash 在**当前队列**重新定位：验证期间队列被换/增删都不会播错歌；
+    // 找不到（已被移除）则明确丢弃并留痕，不按下标盲播（第 14/16 条）。
+    final idx = _songs.indexWhere((s) => s.hash == hash);
+    if (idx < 0) {
+      debugPrint('[player] retry dropped: hash $hash no longer in queue');
+      return;
+    }
     await _playAt(idx);
   }
 
@@ -534,8 +579,8 @@ class TiernanAudioHandler extends BaseAudioHandler
     // V3-13：同 pause()，不开闸——闸门由持有者 finally 释放（第 19 条）。
     _playToken++;
     _pendingIndex = null;
-    _pendingSongIndex = null;
-    _lastPlayUrl = ''; // V401-C2：停止后没有「完整播放」，不缓存实际文件
+    _pendingSongHash = null;
+    _setLastSource('', 0, isPreview: true); // 停止后没有「完整播放」，不缓存
     final p = _playerOrNull;
     if (p == null) return;
     await p.stop();
@@ -630,7 +675,7 @@ class TiernanAudioHandler extends BaseAudioHandler
     // V3-13：不开闸，闸门由持有者 finally 释放（第 19 条）。
     _playToken++;
     _pendingIndex = null;
-    _pendingSongIndex = null;
+    _pendingSongHash = null;
     await _playerOrNull?.stop();
   }
 }

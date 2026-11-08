@@ -108,17 +108,18 @@ class PrefetchEngine {
     _startDrain(const Duration(milliseconds: 100));
   }
 
-  /// 完整播放完成 hook（v4.0.1 冻结签名）。
+  /// 完整播放完成 hook（V402：声明字节数为身份的一部分）。
   ///
-  /// [url] 为本次播放实际使用的播放地址，[kind] 为文件类型
-  /// （'audio' / 'mv' / 'krc' / 'cover'）。实际文件永久缓存由
-  /// ResourceCache.cacheUrlFile 负责；失败内部留痕返回 null，不崩。
-  void onPlaybackCompleted(String url, String kind) {
+  /// [url] + [declaredBytes] 必须来自**同一次播放 JSON 响应**；
+  /// declaredBytes<=0（未声明）由 ResourceCache 拒绝入库（第 14 条）。
+  /// 试听片段/通用预览不调用本方法（audio_handler 判 isPreview）。
+  void onPlaybackCompleted(String url, String kind,
+      {int declaredBytes = 0}) {
     if (_disposed) return;
     if (url.isEmpty) return;
-    // fire-and-forget 但异常必接住（第 6/9 条）：cacheUrlFile 内部已
-    // catch 大部分异常返回 null，这里再兜一层防未预期错误冒泡。
-    ResourceCache.instance.cacheUrlFile(url, kind).catchError((Object e) {
+    ResourceCache.instance
+        .cacheUrlFile(url, kind, declaredBytes: declaredBytes)
+        .catchError((Object e) {
       debugPrint('[prefetch] cacheUrlFile($kind) failed: $e');
       return null;
     });

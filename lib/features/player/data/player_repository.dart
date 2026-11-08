@@ -19,10 +19,16 @@ class PlayableResult {
     required this.url,
     required this.quality,
     this.isPreview = false,
+    this.expectedBytes = 0,
   });
   final String url;
   final AudioQuality quality;
   final bool isPreview;
+
+  /// V402（用户口径）：播放 JSON 声明的字节数（0=未声明）。
+  /// 永久缓存实际文件只允许在 `(url, expectedBytes)` 与请求 JSON
+  /// 完全一致时写入/复用；试听片段（isPreview=true）永不入库。
+  final int expectedBytes;
 }
 
 /// 播放器仓库：直连酷狗网关（不经 Node 中转），避免中转层的 20028 风控。
@@ -265,6 +271,13 @@ class PlayerRepository {
           url: result.bestUrl!,
           quality: _qualityFromBitrate(result, q),
           isPreview: result.isPreview,
+          // V402：整曲 JSON 的 filesize（PlayUrlResult.previewFileSize 是
+          // 「JSON 声明字节数」通用字段，非仅试听专用；试听片段用 offset 值）。
+          expectedBytes: result.isPreview
+              ? (result.offsetFileSize > 0
+                  ? result.offsetFileSize
+                  : result.previewFileSize)
+              : result.previewFileSize,
         );
       }
       lastErrorCode = result.errorCode;
@@ -290,6 +303,9 @@ class PlayerRepository {
             url: preview.bestUrl!,
             quality: _qualityFromBitrate(preview, q),
             isPreview: true,
+            expectedBytes: preview.offsetFileSize > 0
+                ? preview.offsetFileSize
+                : preview.previewFileSize,
           );
         }
         // PLY-08（审查③）：该档 fail_process 只代表**本档**被拒（flac 需会员
@@ -370,8 +386,9 @@ class PlayerRepository {
         return PlayableResult(
           url: url,
           quality: _actualQuality(data, q),
-          isPreview: _int(data['priv_status']) == 0 ||
+          isPreview: (_int(data['priv_status']) == 0) ||
               data['hash_offset'] is Map,
+          expectedBytes: _declaredBytes(data),
         );
       }
       lastError = ApiException(-1, '音质 ${q.value} 无可用播放地址');
@@ -394,6 +411,7 @@ class PlayerRepository {
             url: url,
             quality: _actualQuality(data, q),
             isPreview: true,
+            expectedBytes: _declaredBytes(data),
           );
         }
       } catch (_) {
@@ -432,6 +450,21 @@ class PlayerRepository {
 
   static int? _int(Object? value) =>
       value is int ? value : int.tryParse('$value');
+
+  /// V402：从播放 JSON 取声明字节数（优先 hash_offset 区间差值，
+  /// 其次顶层 filesize；0=未声明 → 禁止永久缓存实际文件，第 14 条）。
+  static int _declaredBytes(Map data) {
+    final off = data['hash_offset'];
+    if (off is Map) {
+      final st = _int(off['start_byte']) ?? 0;
+      final en = _int(off['end_byte']) ?? 0;
+      if (en > st) return en - st;
+      if (en > 0) return en;
+    }
+    return _int(data['filesize']) ?? 0;
+  }
+
+
 
   static String? _firstUrl(Object? value) {
     final first = value is List && value.isNotEmpty ? value.first : value;
