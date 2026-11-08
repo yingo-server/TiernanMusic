@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/foundation/errors.dart' show ApiException;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

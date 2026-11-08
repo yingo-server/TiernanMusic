@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// 音质等级枚举（v5.0 M1：上移 core/domain，依据 REFACTOR_PLAN §1.1——
 /// 音质属领域概念，core/audio 不应依赖 features/player）。
 /// 排序：super > high > flac > 320 > 128。
@@ -97,6 +95,16 @@ enum AudioQuality {
     for (final q in magicOrder) {
       if (q.value == 'magic_$v') return q;
     }
+    // v5.1 B1：未知值降级 q128 必须留痕（第 9 条），否则设置页显示
+    // 已生效但请求仍是 128k 时线上无线索。domain 层不引 Flutter：
+    // 用 Zone 无关的轻量回调由 app 层注入日志出口。
+    QualityDiagnostics.onUnknownValue?.call(s);
     return q128;
   }
+}
+
+
+/// v5.1 B1：domain 层零依赖的可观测钩子（app/di 注入 debugPrint/ErrorLogger）。
+class QualityDiagnostics {
+  static void Function(String raw)? onUnknownValue;
 }

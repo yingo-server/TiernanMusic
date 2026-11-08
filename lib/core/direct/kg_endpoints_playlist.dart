@@ -4,7 +4,7 @@ import 'kg_client.dart';
 import 'kg_crypto.dart';
 
 import 'kg_direct_api_client.dart';
-import '../api/kugou_api_client.dart' show ApiException;
+import '../foundation/errors.dart' show ApiException;
 
 /// 歌单端点（详情/歌曲/收藏/增删/用户歌单）
 ///

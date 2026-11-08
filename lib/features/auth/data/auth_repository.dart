@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../../core/foundation/errors.dart' show ApiException;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';

@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../core/foundation/errors.dart' show ApiException;
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';

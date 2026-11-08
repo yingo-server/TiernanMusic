@@ -1,28 +1,29 @@
 # v5.1 B1 合并裁决（三视角交叉）
 
 基线：v5.0.0 LTS（tag `71b4d73`）后主线 `08d05a6`。范围：`core/foundation`、`core/domain`、`core/config`、`core/api`（7 文件 / 719 行）。
-视角报告：`v51_cross_b1_a.md`（功能正确性，28 条：P1×8/P2×15/P3×5）、`v51_cross_b1_c.md`（用户路径，40 条：P1×11/P2×21/P3×8）、`v51_cross_b1_b.md`（鲁棒与质量，运行中，待补）。
+视角报告：`v51_cross_b1_a.md`（功能正确性，28 条：P1×8/P2×15/P3×5）、`v51_cross_b1_b.md`（鲁棒与质量，52 条：P1×15/P2×19/P3×18）、`v51_cross_b1_c.md`（用户路径，40 条：P1×11/P2×21/P3×8）。**三份齐，共 120 条，P0 全 0。**
 
-## 交叉共识（A+C 同指，优先级最高）
-1. **20028 / 成功判定未真正单点**：`errors.dart:26` 字面量、`response_policy.dart:10` 常量、`kugou_api_client.dart:76` 字面量、`kugou_api_client.dart:38-90` 完整复制旧 `_wrap`；`requiresVerification` 与 `ApiException.needsVerification` 两条出口。→ **裁定：真 P1**，M4 只搬了直连 `_wrap`，基类拦截器仍是第二套判定，且 `evaluateResponse` 与旧 `_wrap` 逐分支不等价（status 字符串、`err_code` 非数值、`_hasData` 放行非零 error_code、`ssaCode as String?` 裸强转）。
-2. **CookieJar 降级被缓存且无退出条件**（`kugou_api_client.dart:132-147`）+ cookie 域仍是 kapi 中转域（`app_config.dart:11-16`）→ 冷启动登录态静默变匿名。→ **裁定：P1**。
-3. **翻译链路**：超时直接抛无「保留原文」降级、畸形响应静默、按行对齐无条数校验、目标语言硬编码中文、切歌无世代。→ **裁定：P1（超时/条数/世代）**，i18n 提示词归 P2。
-4. **音质 `fromString` 未知值静默降 q128**、注释自述「数据一致性红线」却无留痕；`quality.dart` 残留 Flutter foundation 导入。→ **裁定：P2**（设置页写入值有白名单，未知值主要来自 Hive 损坏/旧版残留），但需补留痕。
-5. **Song 模型**：`==/hashCode` 只比 hash（设计如此，v5.0 前多份报告确认通过，防重依赖此语义）、歌名前缀剥离依赖 artist 精确相等、单位白名单、裸字符串化。→ **裁定：P2**（`==` 项为**误报**，标注依据：队列去重与 `_pendingSongHash` 均依赖 hash 唯一标识）。
+## 三视角共识（A+B+C 同指，最高优先级）
+1. **成功判定双套且互相矛盾**：`kugou_api_client.dart:38-90` 拦截器完整保留旧 `_wrap`，与 `response_policy.dart` 的 `evaluateResponse` 各自判一次，同一响应可得相反结论；`response_policy` 的 `ssaCode as String?` 裸强转、`codeOf` 把 double/空白/非数值错误码折叠为 0、`status` 未归一（字符串绕过）、`err_code` 非数值静默当成功。三视角共 9 条 P1 指向此处。**裁定：真 P1，优先修。**
+2. **20028 未单点**：`errors.dart:26` 字面量、`response_policy.dart:10` 常量、`kugou_api_client.dart:76` 字面量；`requiresVerification` 与 `ApiException.needsVerification` 两条出口。**裁定：真 P1。**
+3. **CookieJar 降级被永久缓存**（`kugou_api_client.dart:132-147`）无退出条件 → 冷启动静默匿名；cookie 域仍绑 kapi。**裁定：P1**（A/C/B 的第 10/28 条）。
+4. **翻译链路**：504 直接抛无「保留原文」降级、畸形响应静默、按行对齐无条数校验、无切歌世代。**裁定：P1**（A/C/B 的第 14/15/34 条）。
+5. **re-export 潜伏项**（B 第 13 条）：`kugou_api_client.dart:4` 仍 `export '../foundation/errors.dart'`，15 个引用方隐式依赖；按规划书 M1「放弃兼容层」应删并全部改直连。**裁定：本批一并做**（不向复杂度妥协）。
 
-## 主代理裁决：误报 / 降级
-- **A 报「`kugou_api_client.dart:18` 默认 baseUrl=kapi = P0」→ 降为 P2（防御性注释问题，非运行期）**：装配层 `kugouApiClientProvider` 恒注入 `kgDirectApiProvider`，`AuthRepository` 显式传直连实例，全仓仅两个构造点且都可控；kapi 值仅 CookieJar 的 URI 域占位与未移植路径的 -404 兜底，运行期不可达。但注释「运行期绝不调用」与默认参数并存易误导，补注释即可。
-- **C 报「`song.dart:1` 相对 import 风格不一致」→ 误报**：Dart 库内相对 import 合法，且 M1 已把 12 消费方全部改直连，路径有效性校验 0 无效。
-- **C 报「`ApiException` 无用户反馈出口」→ 误报**：`friendly_error.dart` 是翻译出口，异常类职责不含 UI。
-- **C 报「应用名三套硬编码无 i18n」→ P3**：`appName` l10n 键存在，配置层字符串是包名/UA 常量。
+## 主代理裁决：误报 / 降级 / 修法修正
+- **「`status==1` + 非零 error_code 被 `_hasData` 放行 = P1」→ 部分误报，修法修正**：代理因禁读历史报告（防锚定）不知道 `error_code=151/152/200/201 + 有数据` 是**实测成功语义**（PLY-10/11、F4-xx 多轮复核通过，comment 警告码）。一刀切「非零即 fail」会破坏已验证行为。**正确修法：显式警告码白名单**（`{0,151,152,200,201}`）+ 有数据才放行；20028 等真实错误码不再被放行。这比代理建议更正确。
+- **A 报「默认 baseUrl=kapi = P0」→ 降 P2**：装配层 `kugouApiClientProvider` 恒注入 `kgDirectApiProvider`，`AuthRepository` 显式传直连实例，两个构造点均可控，运行期不可达；仅注释与防御性问题。
+- **B 报「`app_config.dart:10` 注释与 Dio 真实请求冲突 = P1」→ 降 P2**：同上，Dio 实例虽以 kapi 为 baseUrl 构造，但所有 Provider 注入的是直连子类，未移植路径抛 -404 而非打 kapi。注释需澄清，非运行期违纪。
+- **C 报「`song.dart` 相对 import 风格不一致」→ 误报**：库内相对 import 合法，全库路径有效性 0 无效。
+- **C 报「ApiException 无用户反馈出口」→ 误报**：`friendly_error.dart` 是翻译出口。
+- **「Song `==` 只比 hash」→ 误报**：队列去重、`_pendingSongHash`、`Song==` 契约均依赖 hash 唯一标识（v5.0 前多份复核通过）。
 
-## 待 B 视角补齐
-B（鲁棒与质量）尚在运行；其报告到达后补「三视角共识」列并重算 P0/P1 总数，然后主代理按下列顺序亲修：
-1. `kugou_api_client` 拦截器改调 `evaluateResponse`（删第二套判定）；统一 `kVerificationRequired` 常量与 `requiresVerification` 出口
-2. `evaluateResponse` 修：status 归一、`err_code` 非数值不当成功、`ssaCode` 安全取、非零 error_code 不被 `_hasData` 无条件放行
-3. `sharedCookieJar` 降级不缓存内存 jar、路径就绪后重建
-4. 翻译超时/畸形返回「原文显式降级」+ 条数校验 + 切歌世代（与 lyric_repository 现有防线对接）
-5. 音质 `fromString` 未知值留痕；删 `quality.dart` 无用 Flutter 导入
+## 主代理亲修顺序（已执行）
+1. `response_policy.dart` 重写：status/code 归一、警告码白名单、err_code 非数值判失败、`ssaCode` 安全取、`requiresVerification` 复用 `needsVerification`
+2. `kugou_api_client.dart` 拦截器改调 `evaluateResponse`（删第二套判定）+ CookieJar 降级不缓存 + 删 re-export、15 引用方全部直连 foundation
+3. `errors.dart` 去字面量、统一 `kVerificationRequired`
+4. `translate_api.dart` 504/畸形显式降级 + 条数校验 + 留痕
+5. `quality.dart` 未知音质留痕 + 删无用 Flutter 导入
 
 ## 复核通过（A/C 共 27 项，摘）
 - domain 上移后 12+ 消费方 import 全部指向现存新位置、无悬空旧路径

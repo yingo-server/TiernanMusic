@@ -1,7 +1,7 @@
 
 import 'package:dio/dio.dart';
 import '../foundation/errors.dart';
-export '../foundation/errors.dart';
+import '../domain/response_policy.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:flutter/foundation.dart';
@@ -36,55 +36,29 @@ class KugouApiClient {
         handler.next(options);
       },
       onResponse: (response, handler) {
+        // v5.1 B1 三视角共识：成功/失败/风控判定**唯一**走 evaluateResponse。
+        // 旧拦截器曾完整复制一套 _wrap，与 ResponsePolicy 可得出相反结论。
         final data = response.data;
         if (data is Map<String, dynamic>) {
-          final status = int.tryParse('${data['status'] ?? 1}') ?? 1;
-          final rawCode = data['error_code'] ?? data['errcode'] ?? 0;
-          final errorCode = rawCode is int
-              ? rawCode
-              : int.tryParse('$rawCode') ?? -1;
-          final hasErrorCode = data.containsKey('error_code') ||
-              data.containsKey('errcode');
-
-          // 酷狗各接口的成功语义不统一，实测口径：
-          //   /search、/comment 等：status=1
-          //   /search/lyric：status=200 + errcode=200（**成功**，不是错误）
-          //   /comment/music 等：status=1 + errcode=151/152（**警告但有数据**）
-          // 若把 1xx/2xx 一律当失败，歌词接口会永远抛 ApiException(200)，
-          // 表现为播放页无歌词并刷屏报错。
-          final okStatus = status == 1 || status == 200;
-          final failedStatus = status == 0 || status == 2;
-          // 警告码：0 表示无错；151/152/200/201 是上游"有结果但需提示"的码。
-          // C-06（审查②）：不得把 1-299 全部放行——error_code=1/2 是真实
-          // 参数/系统错误，放行会让上层拿到错误体当正常数据。
-          const warningCodes = {0, 151, 152, 200, 201};
-          final isWarning = warningCodes.contains(errorCode);
-
-          if (failedStatus ||
-              (hasErrorCode && errorCode != 0 && !(okStatus && isWarning))) {
-            final defaultMessage = errorCode == 20028
-                ? '需要完成人机验证'
-                : status == 0 && errorCode == 0
-                    ? '请求失败'
-                    : '未知错误';
-            // ssaCode 优先取 body，其次取响应头 ssa-code（酷狗两种都可能给）
-            final ssaCode = (data['ssaCode'] ?? data['ssa_code'])
-                    ?.toString()
-                    .trim() ??
-                response.headers.value('ssa-code') ??
-                response.headers.value('ssa_code');
+          final ssaHeader = response.headers.value('ssa-code') ??
+              response.headers.value('ssa_code');
+          final outcome = evaluateResponse(data, ssaCode: ssaHeader);
+          if (!outcome.isOk) {
             handler.reject(DioException(
               requestOptions: response.requestOptions,
               response: response,
-              error: ApiException(
-                errorCode,
-                '${data['error_msg'] ?? data['errmsg'] ?? data['error'] ?? data['info'] ?? defaultMessage}',
-                ssaCode: (ssaCode != null && ssaCode.isNotEmpty) ? ssaCode : null,
-                body: data,
-              ),
+              error: outcome.failure,
             ));
             return;
           }
+        } else if (data == null) {
+          // 空响应体不得静默转 {} 当成功（第 14/16 条）
+          handler.reject(DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            error: ApiException(-1, '空响应体', body: const {}),
+          ));
+          return;
         }
         handler.next(response);
       },
@@ -140,8 +114,12 @@ class KugouApiClient {
     }
     final jar = _createCookieJar(path);
     if (jar is! PersistCookieJar) {
+      // v5.1 B1 三视角共识：降级到内存 jar **绝不缓存**——
+      // 否则持久化目录后续恢复可用时整个进程仍停留在内存 jar，
+      // 冷启动登录态永久丢失（第 5/11 条：降级必须有恢复条件）。
       debugPrint('[cookie] WARNING: falling back to in-memory jar '
-          '(path=$path) — logins will NOT survive restart');
+          '(path=$path) — will retry persistent jar on next client');
+      return CookieJar();
     }
     return _sharedJar = jar;
   }

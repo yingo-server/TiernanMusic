@@ -4,7 +4,7 @@ import 'kg_client.dart';
 import 'kg_crypto.dart';
 
 import 'kg_direct_api_client.dart';
-import '../api/kugou_api_client.dart' show ApiException;
+import '../foundation/errors.dart' show ApiException;
 
 /// 搜索端点（song/album/author/mv/special/lyric）
 ///

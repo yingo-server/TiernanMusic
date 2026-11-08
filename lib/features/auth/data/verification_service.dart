@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/foundation/errors.dart' show ApiException;
 
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/direct/kg_client.dart';

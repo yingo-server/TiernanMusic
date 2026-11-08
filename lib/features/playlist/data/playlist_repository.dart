@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/foundation/errors.dart' show ApiException;
 import '../../../core/net/music_api.dart';
 import '../../../core/cache/resource_gateway.dart';
 import 'package:flutter/foundation.dart';

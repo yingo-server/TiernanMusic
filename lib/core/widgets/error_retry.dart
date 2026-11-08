@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../foundation/errors.dart' show ApiException;
 
 import 'package:dio/dio.dart';
 

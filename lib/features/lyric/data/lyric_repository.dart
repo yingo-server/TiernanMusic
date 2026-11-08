@@ -190,17 +190,20 @@ class LyricRepository {
       final batch = texts.sublist(
           i, i + batchSize > texts.length ? texts.length : i + batchSize);
       try {
-        List<String> translated;
-        try {
-          translated = await _translate.translateLines(
-              lines: batch, targetLanguage: targetLanguage);
-        } catch (e) {
-          // V400-B-03：失败批重试一次（504 网关超时场景）；
-          // 重试仍失败按单批失败处理（留痕不崩不入缓存）。
-          debugPrint('[lyric] 翻译批次失败，重试一次：$e');
-          translated = await _translate.translateLines(
+        // v5.1 B1：TranslateResult 显式区分真译文与原文降级；
+        // ok=false 不写缓存、不 emit 译文 patch，服务恢复后自然重试。
+        TranslateResult tr = await _translate.translateLines(
+            lines: batch, targetLanguage: targetLanguage);
+        if (!tr.ok) {
+          debugPrint('[lyric] 翻译批次降级（${tr.reason}），重试一次');
+          tr = await _translate.translateLines(
               lines: batch, targetLanguage: targetLanguage);
         }
+        if (!tr.ok) {
+          debugPrint('[lyric] 翻译批次仍降级（${tr.reason}），本批不入缓存');
+          continue;
+        }
+        final translated = tr.lines;
         // F4-32（审查②-B，P1）：返回条数少于请求条数时旧实现用原文补位，
         // 译文区出现与原文一模一样的整行，且被当成「已翻译」写进持久缓存，
         // 之后即使服务恢复也不再重试。这里只接受真实返回的条目。

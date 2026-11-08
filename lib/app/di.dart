@@ -6,6 +6,7 @@ import '../core/api/translate_api.dart';
 import '../core/direct/kg_providers.dart';
 import '../core/net/music_api.dart';
 import '../core/cache/resource_gateway.dart';
+import '../core/domain/quality.dart' show QualityDiagnostics;
 
 /// 全局 API 客户端：默认直连酷狗网关，未移植路径自动回退 kapi。
 final kugouApiClientProvider = Provider<KugouApiClient>((ref) {
@@ -30,5 +31,10 @@ final lyricRepositoryProvider = Provider<LyricRepository>((ref) =>
 final musicApiProvider = Provider<MusicApi>((ref) {
   final api = MusicApi.of(ref.watch(kugouApiClientProvider));
   MusicApi.attachInvalidator(ResourceGateway.instance.invalidateNs);
+  QualityDiagnostics.onUnknownValue ??= (raw) {
+    // 第 9 条：降级必须可观测；不引 Flutter，由 app 层注入 debugPrint。
+    // ignore: avoid_print
+    print('[quality] unknown value fallback to q128: $raw');
+  };
   return api;
 });
