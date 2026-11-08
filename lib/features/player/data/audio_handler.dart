@@ -27,6 +27,19 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   final PlayerRepository _repository;
 
+  /// v5.1 B4-B P1-1：Handler 释放标记。audio_service 重建 Handler 时，
+  /// 旧实例的 8 个 StreamController + 3 条 player 流订阅 + AudioPlayer
+  /// 全部经此释放，不再累积（第 20 条对称释放）。
+  bool _disposed = false;
+
+  /// 幂等释放：多次调用安全（第 21 条）。
+  Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
+    await _playerOrNull?.dispose();
+    await super.stop();
+  }
+
   /// 延迟创建：启动期不实例化 AudioPlayer / AudioSession，
   /// 避免任何平台通道异常导致首屏卡死。
   ///
@@ -54,10 +67,20 @@ class TiernanAudioHandler extends BaseAudioHandler
   bool _lastIsPreview = true;
 
   /// 等待音频后台服务就绪；失败返回 false（调用方给友好错误，不要播放）。
+  ///
+  /// v5.1 B4-B P1-2：加 in-flight 合并——初始化期间并发调用共用同一个
+  /// Future，避免 N 个并发播放请求各触发一轮 init 重试。
+  Future<bool>? _engineInitFuture;
+
   Future<bool> ensureEngineReady() async {
     if (_initialized) return true;
-    final ok = await AudioServiceBootstrap.ensureReady();
+    if (_engineInitFuture != null) return _engineInitFuture!;
+    final fut = AudioServiceBootstrap.ensureReady();
+    _engineInitFuture = fut;
+    final ok = await fut;
     if (!ok) {
+      // 失败后清除 in-flight，允许下次重试（B-33 语义保持一致）。
+      _engineInitFuture = null;
       // 记录失败原因并同步播放态，避免 UI 停留在「播放中」假象
       engineError ??= '音频服务未就绪，请稍后重试';
       playbackState.add(playbackState.value.copyWith(
