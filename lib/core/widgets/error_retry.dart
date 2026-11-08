@@ -210,7 +210,7 @@ FriendlyError errorClassification(BuildContext context, Object? error) {
   if (api != null) {
     return FriendlyError(
       friendly: api.message,
-      hint: api.needsVerification ? l.genericErrorHint : null,
+      hint: l.genericErrorHint,
       icon: api.needsVerification
           ? Icons.verified_user_outlined
           : Icons.error_outline_rounded,
