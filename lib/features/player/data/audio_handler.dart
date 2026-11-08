@@ -5,6 +5,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:dio/dio.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/utils/error_logger.dart';
 import '../../../core/prefetch/prefetch_engine.dart';
@@ -276,6 +277,18 @@ class TiernanAudioHandler extends BaseAudioHandler
     _failureStreak = 0;
     if (!await ensureEngineReady()) return;
     if (token != _playToken) return; // 等待期间来了更新的播放请求
+    // V402-R6（复核① P2-3）：空队列是一个明确事实——清掉当前歌曲与
+    // 媒体会话，避免通知栏/播放页仍显示上一首的「假播放态」（第 16 条）。
+    if (songs.isEmpty) {
+      _songs.clear();
+      _index = -1;
+      _currentSongController.add(null);
+      mediaItem.add(null);
+      queue.add(const <MediaItem>[]);
+      _setLastSource('', 0, isPreview: true);
+      _pendingSongHash = null;
+      return;
+    }
     // PLY-03（审查③）：队列被整体替换时**立即作废在途请求**——
     // 旧 _playAt 恢复后按旧 index 写 _songs 会污染新队列（越界或覆盖错歌）。
     // F4-14（审查②-B，P0）：队列替换时**不得**无条件 `_loading = false`。
@@ -597,6 +610,9 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> skipToNext() async {
+    // V402-R7（复核① P3-5）：用户手动切歌视为放弃上一次验证挂起，
+    // 否则验证通过后会跳回旧歌打断当前播放（第 5/18 条）。
+    _pendingSongHash = null;
     if (!await ensureEngineReady()) return;
     if (_songs.isEmpty) return;
     if (_player.shuffleModeEnabled) {
@@ -617,6 +633,8 @@ class TiernanAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> skipToPrevious() async {
+    // V402-R7：同 skipToNext，手动切歌清验证挂起。
+    _pendingSongHash = null;
     if (!await ensureEngineReady()) return;
     if (_songs.isEmpty) return;
     // 播放超过 3 秒回到开头

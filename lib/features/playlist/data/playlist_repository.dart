@@ -162,16 +162,24 @@ class PlaylistRepository {
     final trustedTotal = first.total > 0 && first.total >= first.songs.length
         ? first.total
         : 0;
-    final totalPages = trustedTotal > 0
+    final wantedPages = trustedTotal > 0
         ? (trustedTotal / size).ceil().clamp(1, maxPages)
         : 0; // 0 = 未知，走探测
+    // V402-R4（复核③）：上界截断时**取末尾 wantedPages 页**而非 1..100，
+    // 否则反反的「末页优先」会退化成显示最旧 100 页；total 用实际条数
+    // 而非虚高的 trustedTotal（第 16 条：已取到的才是事实）。
+    final totalPages = wantedPages;
+    final startPage = totalPages > 0
+        ? (trustedTotal / size).ceil() - totalPages + 1
+        : 0;
 
     // 收集所有页（页号 → 该页实体），首页直接复用不重复请求。
     final pages = <int, List<PlaylistSong>>{page: first.songs};
     // 已知总页数：抓取 1..totalPages（跳过首页）
     if (totalPages > 0) {
-      for (var p = 1; p <= totalPages; p++) {
-        if (p == page || p > maxPages) continue;
+      // 从 startPage 起抓 wantedPages 页（上界截断的是头部旧页）。
+      for (var p = startPage; p < startPage + totalPages; p++) {
+        if (p < 1 || p == page || p > maxPages) continue;
         try {
           pages[p] = (await fetchPage(p)).songs;
         } catch (e) {
@@ -181,6 +189,7 @@ class PlaylistRepository {
     } else {
       // 未知总数：从首页向前探测，直到不满页 / 空页 / 触达上界。
       var p = page + 1;
+      var failedProbes = 0;
       while (p <= maxPages) {
         try {
           final t = await fetchPage(p);
@@ -188,7 +197,11 @@ class PlaylistRepository {
           if (t.songs.isEmpty || t.songs.length < size) break;
         } catch (e) {
           debugPrint('[playlist] probe page $p failed: $e');
-          break;
+          // V402-R5（复核③）：单页失败与「已知总页数」分支保持一致——
+          // 留痕并跳过继续探测，不 break 中断整体（第 9/6 条）。
+          // 连续 3 页失败才放弃，防止服务端持续报错时打满 100 次。
+          failedProbes++;
+          if (failedProbes >= 3) break;
         }
         p++;
       }
@@ -211,7 +224,10 @@ class PlaylistRepository {
 
     return PlaylistTracks(
       songs: songs,
-      total: trustedTotal > 0 ? trustedTotal : songs.length,
+      // V402-R4：上界截断时 trustedTotal 虚高，以实取条数为事实源。
+      total: trustedTotal > 0 && songs.length >= trustedTotal
+          ? trustedTotal
+          : songs.length,
     );
   }
 
