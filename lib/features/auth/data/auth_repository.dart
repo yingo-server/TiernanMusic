@@ -330,31 +330,12 @@ class AuthRepository {
       throw ApiException(-1, '登录响应缺少 token 或 userid');
     }
 
-    // V399-B1：登录成功后的落盘链并行化——dfid 获取（可能打一次网络）
-    // 与多账号 token 写入、账号 upsert、设置盒写入相互独立，此前串行
-    // await 使登录页停留时间叠加四段延迟（用户反馈「登录大延迟」）。
-    // saveCredentials 必须先完成（api.setCredentials 依赖它的语义顺序，
-    // 且登录态事实源），其余四项 Future.wait 并行。
+    // V399-B1：登录落盘链——**saveCredentials 必须最先完成**（v5.1 B5-C
+    // P1-2：此前 upsert/设置盒在凭证落盘前发起，窗口内「UI 显示 A、指针 B、
+    // 凭证 A」；api.setCredentials 也依赖它的语义顺序）。dfid 获取可与
+    // saveCredentials 并行，副作用四项在其后并行。
     final dfidFuture = getDfid();
     final auth = d['auth']?.toString();
-    // 多账号 token / 设置盒写入不依赖 dfid，立即并行发起
-    final sideFutures = <Future<void>>[
-      _storage.saveAccountToken(userid: userid, token: token),
-      AccountManager.instance.upsert(AccountRecord(
-        userid: userid,
-        token: token,
-        nickname: nickname,
-        avatar: avatar,
-        t1: t1,
-      )),
-      () async {
-        try {
-          final box = Hive.box('settings');
-          await box.put('nickname', nickname);
-          await box.put('avatar', avatar);
-        } catch (_) {}
-      }(),
-    ];
     final dfid = await dfidFuture;
     await _storage.saveCredentials(
       token: token,
@@ -372,6 +353,23 @@ class AuthRepository {
     );
     // 副产物写入失败不阻塞登录成功（与原 catch (_) {} 语义一致），
     // 但必须留痕（第 9 条）。
+    final sideFutures = <Future<void>>[
+      _storage.saveAccountToken(userid: userid, token: token),
+      AccountManager.instance.upsert(AccountRecord(
+        userid: userid,
+        token: token,
+        nickname: nickname,
+        avatar: avatar,
+        t1: t1,
+      )),
+      () async {
+        try {
+          final box = Hive.box('settings');
+          await box.put('nickname', nickname);
+          await box.put('avatar', avatar);
+        } catch (_) {}
+      }(),
+    ];
     try {
       await Future.wait(sideFutures);
     } catch (e) {

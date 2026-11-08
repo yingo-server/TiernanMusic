@@ -18,7 +18,24 @@ class DefaultQualityNotifier extends StateNotifier<String> {
 
   Future<void> set(String quality) async {
     state = quality;
-    await _box()?.put('defaultQuality', quality);
+    // v5.1 B5-C 实锤：盒未打开时 `?.` 使落盘成为 no-op——当前会话生效但
+    // 重启回退，用户无感知。改为：重试一次，仍失败 debugPrint 留痕（第 9 条）。
+    final box = _box() ?? await _reopen();
+    if (box != null) {
+      await box.put('defaultQuality', quality);
+      return;
+    }
+    debugPrint('[settings] defaultQuality save skipped: settings box unavailable');
+  }
+
+  /// 设置页清缓存后可能关闭 settings 盒——尝试重开一次。
+  Future<Box<dynamic>?> _reopen() async {
+    try {
+      return await Hive.openBox('settings');
+    } catch (e) {
+      debugPrint('[settings] reopen settings box failed: $e');
+      return null;
+    }
   }
 }
 

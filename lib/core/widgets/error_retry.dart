@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../foundation/errors.dart' show ApiException;
+import '../utils/friendly_error.dart' show unwrapApi;
 
 import 'package:dio/dio.dart';
 
@@ -203,6 +204,18 @@ class FriendlyError {
 /// ApiException → 其 message；其它 → 通用文案。
 FriendlyError errorClassification(BuildContext context, Object? error) {
   final l = context.l10n;
+  // v5.1 B4-A P2-1：先解包 DioException 内层 ApiException——直连层包装的
+  // 登录过期/人机验证错误此前全部显示为通用文案（第 8 条）。
+  final api = unwrapApi(error);
+  if (api != null) {
+    return FriendlyError(
+      friendly: api.message,
+      icon: api.needsVerification
+          ? Icons.verified_user_outlined
+          : Icons.error_outline_rounded,
+      raw: error?.toString() ?? '',
+    );
+  }
   final raw = error?.toString() ?? '';
   if (error is DioException) {
     final t = error.type;

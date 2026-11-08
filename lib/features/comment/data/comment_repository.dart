@@ -10,6 +10,11 @@ class CommentRepository {
   late final RepositoryReads _reads;
   final KugouApiClient _api;
 
+  /// v5.1 B5-A P1：评论写操作数据层防重闸（第 21 条）——
+  /// 防重此前只在 comments_page 单一 UI 入口，任何第二个调用方（深链、
+  /// 快捷方式、未来功能）都会绕过。键 = type:id:content 哈希。
+  final Set<String> _writeInFlight = {};
+
   /// 当前登录用户 userid（来自 API 客户端 cookie 上下文），用于 isMine 判定
   String get _currentUserId => _api.userid;
 
@@ -65,6 +70,23 @@ class CommentRepository {
 
   /// 发评论
   Future<void> sendComment({
+    required CommentResourceType type,
+    required String id,
+    required String content,
+    String? name,
+  }) async {
+    final wkey = 'send:$type:$id:$content';
+    if (!_writeInFlight.add(wkey)) {
+      throw ApiException(-1, '相同的评论正在发送中，请勿重复提交');
+    }
+    try {
+      await _sendCommentInner(type: type, id: id, content: content, name: name);
+    } finally {
+      _writeInFlight.remove(wkey);
+    }
+  }
+
+  Future<void> _sendCommentInner({
     required CommentResourceType type,
     required String id,
     required String content,
@@ -145,16 +167,24 @@ class CommentRepository {
     String? tid,
     CommentResourceType resourceType = CommentResourceType.song,
   }) async {
-    await _api.post('/comment/music/del', {}, query: {
-      'cid': cid,
-      // 直连层按 resource_type 选评论 code（歌曲/歌单/专辑各不相同）
-      'resource_type': resourceType.name,
-      // V37-03（B2 P3·口径统一，对齐 kg_endpoints_comment _nonEmpty）：
-      // 空串与缺失语义相同，不发——服务端拿到空串 mixsongid 可能 400
-      if (mixsongid != null && mixsongid.isNotEmpty) 'mixsongid': mixsongid,
-      if (specialId != null) 'special_id': specialId,
-      if (tid != null) 'tid': tid,
-    });
+    final wkey = 'del:$cid';
+    if (!_writeInFlight.add(wkey)) {
+      throw ApiException(-1, '该评论正在删除中，请勿重复提交');
+    }
+    try {
+      await _api.post('/comment/music/del', {}, query: {
+        'cid': cid,
+        // 直连层按 resource_type 选评论 code（歌曲/歌单/专辑各不相同）
+        'resource_type': resourceType.name,
+        // V37-03（B2 P3·口径统一，对齐 kg_endpoints_comment _nonEmpty）：
+        // 空串与缺失语义相同，不发——服务端拿到空串 mixsongid 可能 400
+        if (mixsongid != null && mixsongid.isNotEmpty) 'mixsongid': mixsongid,
+        if (specialId != null) 'special_id': specialId,
+        if (tid != null) 'tid': tid,
+      });
+    } finally {
+      _writeInFlight.remove(wkey);
+    }
   }
 }
 
