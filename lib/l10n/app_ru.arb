@@ -584,5 +584,12 @@
   "mvMkvContainer": "Контейнер MKV",
   "audioPausedForMv": "Музыка приостановлена для просмотра MV",
   "mvPlayError": "Ошибка воспроизведения",
-  "mvBuffering": "Буферизация…"
+  "mvBuffering": "Буферизация…",
+  "themeFont": "Шрифт",
+  "themeFontSystem": "Системный",
+  "themeFontBuiltin": "Встроенный",
+  "themeFontAdd": "Добавить шрифт",
+  "themeFontFromLocal": "Из локального файла",
+  "themeFontFromUrl": "По URL",
+  "themeFontDownloading": "Загрузка шрифта…"
 }

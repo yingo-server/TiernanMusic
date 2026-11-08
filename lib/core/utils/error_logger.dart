@@ -17,8 +17,9 @@ class ErrorLogger {
   ErrorLogger._();
   static final instance = ErrorLogger._();
 
-  static const MethodChannel _channel =
-      MethodChannel('com.tiernan.music/storage');
+  static const MethodChannel _channel = MethodChannel(
+    'com.tiernan.music/storage',
+  );
 
   /// V37-LOG-02（v3.7 日志批）：verbose 全量捕获总开关。
   /// 由 provider 侧（main.dart ref.watch → setVerbose）同步，幂等。
@@ -95,7 +96,7 @@ class ErrorLogger {
     // 1) 已授权所有文件访问 → 直写公共根
     try {
       final service = StoragePermissionService.instance;
-      final root = await service.resolveRoot();
+      final root = (await service.resolveRoot()).path;
       final dir = Directory('$root/${StoragePermissionService.logsSubDir}');
       if (!await dir.exists()) await dir.create(recursive: true);
       final file = File('${dir.path}/$fileName');
@@ -137,7 +138,10 @@ class ErrorLogger {
 
   /// 轮转：file 超过 [maxBytes] 时改为 .1 … .[maxBackups]（最旧删除）。
   static Future<void> _rotateIfNeeded(
-      File file, int maxBytes, int maxBackups) async {
+    File file,
+    int maxBytes,
+    int maxBackups,
+  ) async {
     try {
       if (!await file.exists() || await file.length() <= maxBytes) return;
       final oldest = File('${file.path}.$maxBackups');
@@ -160,8 +164,7 @@ class ErrorLogger {
   ///
   /// **必须以 `/` 结尾**：MediaStore 的 RELATIVE_PATH 规范要求目录形式，
   /// 原生 ≤28 分支也会按同样约定去掉 `Documents/` 前缀后拼接，两边保持一致。
-  static String get _relativePath =>
-      'Documents/$folderName/$logsDirName/';
+  static String get _relativePath => 'Documents/$folderName/$logsDirName/';
 
   /// 单个日志文件上限，超过后轮转
   static const int maxBytes = 5 * 1024 * 1024;
@@ -304,8 +307,9 @@ class ErrorLogger {
       // 这里**不主动弹权限框**（日志是隐式路径，突然弹窗体验很差），
       // 只读取当前授权状态；未授权则直接降级到 App 私有目录。
       if (!await _hasStoragePermission()) return false;
-      final base = await _channel.invokeMethod<String>(
-          'publicDir', {'type': 'documents'});
+      final base = await _channel.invokeMethod<String>('publicDir', {
+        'type': 'documents',
+      });
       if (base == null || base.isEmpty) return false;
       final dir = Directory('$base/$folderName/$logsDirName');
       if (!await dir.exists()) await dir.create(recursive: true);
@@ -360,7 +364,6 @@ class ErrorLogger {
       return false;
     }
   }
-
 
   /// 对日志文本脱敏：token/authorization/签名等敏感字段打码。
   ///
@@ -423,12 +426,14 @@ class ErrorLogger {
   /// **不再调用 [FlutterError.presentError]**：它会把同一异常再打印一遍
   /// （红屏/控制台重复输出），与本方法自己的落盘日志重复。
   void handleFlutterError(FlutterErrorDetails details) {
-    unawaited(log(
-      details.exception,
-      details.stack,
-      source: 'flutter',
-      context: details.context?.toDescription(),
-    ));
+    unawaited(
+      log(
+        details.exception,
+        details.stack,
+        source: 'flutter',
+        context: details.context?.toDescription(),
+      ),
+    );
   }
 
   /// 全局未捕获异步异常（runZonedGuarded）

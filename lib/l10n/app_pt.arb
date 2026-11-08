@@ -584,5 +584,12 @@
   "mvMkvContainer": "Contêiner MKV",
   "audioPausedForMv": "Música pausada para reproduzir o MV",
   "mvPlayError": "Erro de reprodução",
-  "mvBuffering": "Armazenando buffer…"
+  "mvBuffering": "Armazenando buffer…",
+  "themeFont": "Fonte",
+  "themeFontSystem": "Padrão do sistema",
+  "themeFontBuiltin": "Integrada",
+  "themeFontAdd": "Adicionar fonte",
+  "themeFontFromLocal": "De arquivo local",
+  "themeFontFromUrl": "De URL",
+  "themeFontDownloading": "Baixando fonte…"
 }

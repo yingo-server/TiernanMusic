@@ -24,6 +24,8 @@ class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // v5.2 B-4：API 22-23 系统证书库缺 ISRG Root X1/X2，安装自带 LE 根证书的 SSLContext
+        TlsCompat.install(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 try {
@@ -81,6 +83,30 @@ class MainActivity : AudioServiceActivity() {
                         "publicDirWritable" -> {
                             // 该公共目录在当前系统版本下是否可直接写入
                             result.success(isPublicDirWritable(call.argument<String>("type") ?: "documents"))
+                        }
+                        "canWrite" -> {
+                            // V5.2-A 检测矩阵②：原生 java.io.File.canWrite()
+                            // （排除 permission_handler 的 ROM 怪癖）
+                            val path = call.argument<String>("path") ?: "/storage/emulated/0"
+                            result.success(try { File(path).canWrite() } catch (e: Exception) { false })
+                        }
+                        "isExternalStorageManager" -> {
+                            // V5.2-A 检测矩阵④：原生复验 Environment.isExternalStorageManager()
+                            // （API 30+ 反射调用；API < 30 返回 null = 权限不存在）
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                result.success(try {
+                                    val m = Environment::class.java.getMethod("isExternalStorageManager")
+                                    (m.invoke(null) as Boolean)
+                                } catch (e: Exception) { false })
+                            } else {
+                                result.success(null)
+                            }
+                        }
+                        "externalFilesDir" -> {
+                            // V5.2-A 回退链 L4：getExternalFilesDir(null) 原生直取
+                            result.success(try {
+                                getExternalFilesDir(null)?.absolutePath
+                            } catch (e: Exception) { null })
                         }
                         else -> result.notImplemented()
                     }

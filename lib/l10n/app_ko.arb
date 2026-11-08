@@ -584,5 +584,12 @@
   "mvMkvContainer": "MKV 컨테이너",
   "audioPausedForMv": "MV 재생을 위해 음악을 일시정지했습니다",
   "mvPlayError": "재생 오류",
-  "mvBuffering": "버퍼링 중…"
+  "mvBuffering": "버퍼링 중…",
+  "themeFont": "글꼴",
+  "themeFontSystem": "시스템 기본값",
+  "themeFontBuiltin": "내장",
+  "themeFontAdd": "글꼴 추가",
+  "themeFontFromLocal": "로컬 파일에서",
+  "themeFontFromUrl": "URL에서 다운로드",
+  "themeFontDownloading": "글꼴 다운로드 중…"
 }

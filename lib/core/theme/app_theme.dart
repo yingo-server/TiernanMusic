@@ -29,20 +29,32 @@ class AppTheme {
   static const Duration motionMedium = Duration(milliseconds: 320);
   static const Curve motionCurve = Curves.easeOutCubic;
 
-  static ThemeData dark() => _base(
-        ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-      );
+  static ThemeData dark({String? fontFamily, List<String>? fallback}) =>
+      _base(ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
+          fontFamily: fontFamily, fallback: fallback);
 
-  static ThemeData light() => _base(
-        ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
-      );
+  static ThemeData light({String? fontFamily, List<String>? fallback}) => _base(
+    ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
+    fontFamily: fontFamily,
+    fallback: fallback,
+  );
 
-  static ThemeData _base(ColorScheme scheme) {
+  static ThemeData _base(
+    ColorScheme scheme, {
+    String? fontFamily,
+    List<String>? fallback,
+  }) {
     final isDark = scheme.brightness == Brightness.dark;
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      // V5.2-C：字体三来源——system（null=系统默认）/ Ubuntu Mono（内置）/
+      // 私有字体（运行时 FontLoader 注册，id 即 fontFamily）。CJK 恒由回退
+      // 链落到系统字体，不变形。
+      fontFamily: fontFamily ?? 'Ubuntu Mono',
+      fontFamilyFallback:
+          fallback ?? const ['UbuntuMono', 'NotoSansSC'],
       // 显式指定 Scaffold 底色，避免路由切换瞬间闪白
       scaffoldBackgroundColor: scheme.surface,
       canvasColor: scheme.surface,
@@ -81,9 +93,7 @@ class AppTheme {
       searchBarTheme: SearchBarThemeData(
         elevation: const WidgetStatePropertyAll(0),
         backgroundColor: WidgetStatePropertyAll(scheme.surfaceContainerHigh),
-        side: WidgetStatePropertyAll(
-          BorderSide(color: scheme.outlineVariant),
-        ),
+        side: WidgetStatePropertyAll(BorderSide(color: scheme.outlineVariant)),
         padding: const WidgetStatePropertyAll(
           EdgeInsets.symmetric(horizontal: 16),
         ),
@@ -114,22 +124,20 @@ class AppTheme {
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          shape: const StadiumBorder(),
-        ),
+        style: TextButton.styleFrom(shape: const StadiumBorder()),
       ),
       iconButtonTheme: IconButtonThemeData(
-        style: IconButton.styleFrom(
-          shape: const CircleBorder(),
-        ),
+        style: IconButton.styleFrom(shape: const CircleBorder()),
       ),
 
       // ---------- 输入 ----------
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusInput),
           borderSide: BorderSide.none,
@@ -253,9 +261,7 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         thumbIcon: WidgetStateProperty.resolveWith(
           (states) => Icon(
-            states.contains(WidgetState.selected)
-                ? Icons.check
-                : Icons.close,
+            states.contains(WidgetState.selected) ? Icons.check : Icons.close,
             size: 16,
           ),
         ),

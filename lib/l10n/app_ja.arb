@@ -584,5 +584,12 @@
   "mvMkvContainer": "MKV コンテナ",
   "audioPausedForMv": "MV 再生のため音楽を一時停止しました",
   "mvPlayError": "再生エラー",
-  "mvBuffering": "バッファリング中…"
+  "mvBuffering": "バッファリング中…",
+  "themeFont": "フォント",
+  "themeFontSystem": "システムデフォルト",
+  "themeFontBuiltin": "内蔵",
+  "themeFontAdd": "フォントを追加",
+  "themeFontFromLocal": "ローカルファイルから",
+  "themeFontFromUrl": "URLからダウンロード",
+  "themeFontDownloading": "フォントをダウンロード中…"
 }

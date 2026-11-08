@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
+
+import 'font_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -48,26 +50,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
   /// 音质档位名称（运行时从 l10n 取，随语言切换；替代原硬编码中文常量）
   /// V399-B3：新增蝰蛇三档 + 魔法六档（魔法档匿名可用）。
   Map<String, String> _qualityNames(BuildContext c) => {
-        '128': c.l10n.quality128,
-        '320': c.l10n.quality320,
-        'flac': c.l10n.qualityFlac,
-        // key 必须与 AudioQuality.value 一致（'high'）；
-        // 旧版写的 'hires' 由 AudioQuality.fromString 兼容
-        'high': c.l10n.qualityHigh,
-        'super': c.l10n.qualitySuper,
-        // V399-B3：蝰蛇三档（VIP 态真实返回；非 VIP 选它时由解析链
-        // 在族内降级并明确报因，不降为普通音源）
-        AudioQuality.viperTape.value: c.l10n.qualityViperTape,
-        AudioQuality.viperClear.value: c.l10n.qualityViperClear,
-        AudioQuality.viperAtmos.value: c.l10n.qualityViperAtmos,
-        // V399-B3：魔法六档（特殊音源，匿名也可用；不进通用 fallback）
-        AudioQuality.magicPiano.value: c.l10n.qualityMagicPiano,
-        AudioQuality.magicAcappella.value: c.l10n.qualityMagicAcappella,
-        AudioQuality.magicDj.value: c.l10n.qualityMagicDj,
-        AudioQuality.magicSurnay.value: c.l10n.qualityMagicSurnay,
-        AudioQuality.magicSubwoofer.value: c.l10n.qualityMagicSubwoofer,
-        AudioQuality.magicAncient.value: c.l10n.qualityMagicAncient,
-      };
+    '128': c.l10n.quality128,
+    '320': c.l10n.quality320,
+    'flac': c.l10n.qualityFlac,
+    // key 必须与 AudioQuality.value 一致（'high'）；
+    // 旧版写的 'hires' 由 AudioQuality.fromString 兼容
+    'high': c.l10n.qualityHigh,
+    'super': c.l10n.qualitySuper,
+    // V399-B3：蝰蛇三档（VIP 态真实返回；非 VIP 选它时由解析链
+    // 在族内降级并明确报因，不降为普通音源）
+    AudioQuality.viperTape.value: c.l10n.qualityViperTape,
+    AudioQuality.viperClear.value: c.l10n.qualityViperClear,
+    AudioQuality.viperAtmos.value: c.l10n.qualityViperAtmos,
+    // V399-B3：魔法六档（特殊音源，匿名也可用；不进通用 fallback）
+    AudioQuality.magicPiano.value: c.l10n.qualityMagicPiano,
+    AudioQuality.magicAcappella.value: c.l10n.qualityMagicAcappella,
+    AudioQuality.magicDj.value: c.l10n.qualityMagicDj,
+    AudioQuality.magicSurnay.value: c.l10n.qualityMagicSurnay,
+    AudioQuality.magicSubwoofer.value: c.l10n.qualityMagicSubwoofer,
+    AudioQuality.magicAncient.value: c.l10n.qualityMagicAncient,
+  };
 
   /// 日志目录路径（**必须是 State 字段**）
   ///
@@ -82,6 +84,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
   /// 必须是 State 字段（避免 build 内新建 Future → 无限重建，同 _logDirPath）
   late Future<(String, String)> _storageRoot;
 
+  /// V5.2-A：完整探测结果（生效级别 + 全链探测历史），State 字段同上
+  late Future<StorageResolution?> _storageResolution;
+
   /// 「检查更新」进行中（用于显示进度圈）
   bool _checkingUpdate = false;
 
@@ -95,6 +100,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     _storageGranted = PermissionGate.instance.hasStorageWriteAccess();
     // V37-LOG-10：根路径 + 模式一次性读取
     _storageRoot = _loadStorageRoot();
+    _storageResolution = _loadResolution();
+    _storageResolution = _loadResolution();
     // V37-PERM-02：「授权所有文件访问」跳的是系统设置页（无弹窗回调），
     // 用户在系统侧授权/取消授权后回到 App，只能靠 resumed 事件重新查询。
     // 没有 resumed 刷新时，UI 会一直停留在授权前的旧状态——这正是
@@ -110,22 +117,30 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
       setState(() {
         _storageGranted = PermissionGate.instance.hasStorageWriteAccess();
         _storageRoot = _loadStorageRoot();
+        _storageResolution = _loadResolution();
       });
     }
   }
 
   /// V37-LOG-10：读取当前生效存储根（路径, 模式）。
   /// 失败时返回占位值，绝不抛异常打断设置页构建（第 11 条降级有界）。
-  /// V399-B1：resolveRoot / resolveRootMode 并行（后者内部含写探针，
-  /// 串行会使该 tile 延迟翻倍）。
+  /// V5.2-A：resolveRoot 返回 StorageResolution 单对象（mode 由 level
+  /// 推导），不再并行调 resolveRootMode（消除双探针不一致）。
   Future<(String, String)> _loadStorageRoot() async {
     try {
-      final service = StoragePermissionService.instance;
-      final results =
-          await Future.wait([service.resolveRoot(), service.resolveRootMode()]);
-      return (results[0], results[1]);
+      final res = await StoragePermissionService.instance.resolveRoot();
+      return (res.path, res.mode);
     } catch (_) {
       return ('-', 'download');
+    }
+  }
+
+  /// V5.2-A：读取完整 StorageResolution（含生效级别 + 全链探测历史）。
+  Future<StorageResolution?> _loadResolution() async {
+    try {
+      return await StoragePermissionService.instance.resolveRoot();
+    } catch (_) {
+      return null;
     }
   }
 
@@ -140,6 +155,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     if (!mounted) return;
     setState(() {
       _storageRoot = _loadStorageRoot();
+      _storageResolution = _loadResolution();
       _storageGranted = PermissionGate.instance.hasStorageWriteAccess();
     });
     // V37-PERM-03：request() 的返回值不是本次授权结果——系统授权页
@@ -196,7 +212,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     }
   }
 
-  static String _formatBytes(int bytes) {    if (bytes < 1024) return '$bytes B';
+  static String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
@@ -219,7 +236,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
       // V401-C2：v4.0 统一缓存——清 JSON 与 90s 列表；
       // 实际资源文件（音频/MV/KRC/封面）按用户要求永久缓存，不随清缓存删。
       // 清空 Hive 缓存类 box（不动 settings box、不动 resource 文件目录）
-      for (final name in ['api_cache', 'image_cache', 'lyric_translations', LyricPersistentCache.boxName]) {
+      for (final name in [
+        'api_cache',
+        'image_cache',
+        'lyric_translations',
+        LyricPersistentCache.boxName,
+      ]) {
         if (Hive.isBoxOpen(name)) {
           await Hive.box(name).clear();
         }
@@ -256,9 +278,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
       // M3 规范：顶层页面用大标题（SliverAppBar.large）。
       body: CustomScrollView(
         slivers: [
-          SliverAppBar.large(
-            title: Text(context.l10n.settings),
-          ),
+          SliverAppBar.large(title: Text(context.l10n.settings)),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 32),
@@ -297,8 +317,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
           title: Text(context.l10n.verboseLogging),
           subtitle: Text(context.l10n.verboseLoggingHint),
           value: verbose,
-          onChanged: (v) =>
-              ref.read(verboseLoggingProvider.notifier).set(v),
+          onChanged: (v) => ref.read(verboseLoggingProvider.notifier).set(v),
         ),
         // 当前存储根路径（实际生效路径 + 模式说明）
         ListTile(
@@ -317,9 +336,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
               // resolveRoot 每次实测写入能力；探测失败时附失败原因，
               // 不再把「声称的路径」当「实际可写」误导用户（第 31 条）。
               final probeErr = StoragePermissionService.lastProbeError;
-              return Text(probeErr == null
-                  ? '$path\n$mode'
-                  : '$path\n$mode\n${context.l10n.storageProbeFailed}: $probeErr');
+              // V5.2-A：展示「生效级别 + 全链探测历史」
+              return FutureBuilder<StorageResolution?>(
+                future: _storageResolution,
+                builder: (context, resSnap) {
+                  final res = resSnap.data;
+                  final levelLine = res == null
+                      ? ''
+                      : '生效级别: L${res.level}（${res.mode == 'root' ? "根目录模式" : "Download 模式"}）';
+                  final history = res?.probeLogText ?? '';
+                  final lines = [
+                    path,
+                    mode,
+                    if (levelLine.isNotEmpty) levelLine,
+                    if (history.isNotEmpty) '探测历史:\n$history',
+                    if (probeErr != null)
+                      '${context.l10n.storageProbeFailed}: $probeErr',
+                  ];
+                  return Text(lines.join('\n'));
+                },
+              );
             },
           ),
           isThreeLine: true,
@@ -387,8 +423,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     // 可切换的账号列表（排除当前账号）
     final otherAccounts = loggedIn
         ? AccountManager.instance.accounts
-            .where((a) => a.userid != user!.userid)
-            .toList()
+              .where((a) => a.userid != user!.userid)
+              .toList()
         : <AccountRecord>[];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,23 +436,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
             // F4-42（审查③-B，P3）：头像走全项目统一的 AppImageCache（磁盘缓存 +
             // 解码尺寸上限），裸 NetworkImage 每次进入都重新下载（第 23/25 条）。
             backgroundImage: avatar != null && avatar.isNotEmpty
-                ? CachedNetworkImageProvider(avatar,
+                ? CachedNetworkImageProvider(
+                    avatar,
                     cacheManager: AppImageCache.instance,
-                    maxWidth: 132)
+                    maxWidth: 132,
+                  )
                 : null,
             child: avatar == null || avatar.isEmpty
                 ? const Icon(Icons.person_outline)
                 : null,
           ),
-          title: Text(loggedIn
-              ? ((nickname != null && nickname.isNotEmpty)
-                  ? nickname
-                  : user!.userid)
-              : context.l10n.notLoggedIn),
+          title: Text(
+            loggedIn
+                ? ((nickname != null && nickname.isNotEmpty)
+                      ? nickname
+                      : user!.userid)
+                : context.l10n.notLoggedIn,
+          ),
           subtitle: Text(
-              loggedIn
-                  ? context.l10n.userIdLabel(userid)
-                  : context.l10n.login),
+            loggedIn ? context.l10n.userIdLabel(userid) : context.l10n.login,
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () async {
             await context.push<void>('/login');
@@ -453,11 +492,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
         // 退出登录：仅已登录时显示，红色 + 二次确认（F3）
         if (loggedIn)
           ListTile(
-            leading: Icon(Icons.logout,
-                color: Theme.of(context).colorScheme.error),
-            title: Text(context.l10n.logout,
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.error)),
+            leading: Icon(
+              Icons.logout,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            title: Text(
+              context.l10n.logout,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
             onTap: _logout,
           ),
       ],
@@ -498,8 +540,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text(context.l10n.switchAccount,
-                  style: Theme.of(ctx).textTheme.titleMedium),
+              child: Text(
+                context.l10n.switchAccount,
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
             ),
             const Divider(height: 1),
             for (final a in accounts)
@@ -507,8 +551,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                 leading: CircleAvatar(
                   radius: 18,
                   backgroundImage: a.avatar.isNotEmpty
-                      ? CachedNetworkImageProvider(a.avatar,
-                          cacheManager: AppImageCache.instance, maxWidth: 108)
+                      ? CachedNetworkImageProvider(
+                          a.avatar,
+                          cacheManager: AppImageCache.instance,
+                          maxWidth: 108,
+                        )
                       : null,
                   child: a.avatar.isEmpty
                       ? const Icon(Icons.person_outline)
@@ -525,9 +572,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     );
     if (selected == null || !mounted) return;
     try {
-      await ref
-          .read(authStateProvider.notifier)
-          .switchAccount(selected.userid);
+      await ref.read(authStateProvider.notifier).switchAccount(selected.userid);
       if (mounted) {
         Toast.show(context, context.l10n.switchAccountSuccess);
         _loadAccount();
@@ -541,7 +586,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
         _loadAccount();
       }
     } catch (e) {
-      if (mounted) Toast.show(context, context.l10n.switchAccountFailed(friendlyError(e)));
+      if (mounted)
+        Toast.show(context, context.l10n.switchAccountFailed(friendlyError(e)));
     }
   }
 
@@ -552,9 +598,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     final localeLabel = locale == null
         ? context.l10n.themeSystem
         : AppConfig.localeNames[locale.countryCode != null
-                ? '${locale.languageCode}_${locale.countryCode}'
-                : locale.languageCode] ??
-            locale.toString();
+                  ? '${locale.languageCode}_${locale.countryCode}'
+                  : locale.languageCode] ??
+              locale.toString();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -566,8 +612,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(context.l10n.themeMode,
-                  style: Theme.of(context).textTheme.labelLarge),
+              Text(
+                context.l10n.themeMode,
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
@@ -595,13 +643,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                   ],
                   selected: {themeMode},
                   showSelectedIcon: false,
-                  onSelectionChanged: (s) => ref
-                      .read(themeModeProvider.notifier)
-                      .set(s.first),
+                  onSelectionChanged: (s) =>
+                      ref.read(themeModeProvider.notifier).set(s.first),
                 ),
               ),
             ],
           ),
+        ),
+        _navTile(
+          leading: Icons.text_fields_rounded,
+          title: context.l10n.themeFont,
+          subtitle: _fontLabel(ref.watch(appFontProvider)),
+          onTap: () => _showFontPicker(context),
         ),
         _navTile(
           leading: Icons.language_outlined,
@@ -613,12 +666,159 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     );
   }
 
+  /// v5.2：字体 id → 显示名（system / Ubuntu Mono / 私有字体名）
+  String _fontLabel(String fontId) {
+    if (fontId == 'system') return context.l10n.themeFontSystem;
+    if (fontId == 'Ubuntu Mono') return 'Ubuntu Mono';
+    final customs = ref.watch(customFontsProvider).value ?? const [];
+    for (final f in customs) {
+      if (f.id == fontId) return f.displayName;
+    }
+    return fontId;
+  }
+
+  /// v5.2：字体选择弹层（RadioListTile 三来源 + 添加/删除）
+  Future<void> _showFontPicker(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => Consumer(
+        builder: (ctx, ref, _) {
+          final current = ref.watch(appFontProvider);
+          final customs = ref.watch(customFontsProvider).value ?? const [];
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: Text(context.l10n.themeFont),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.add),
+                    tooltip: context.l10n.themeFontAdd,
+                    onPressed: () => _addFontFlow(ctx, ref),
+                  ),
+                ),
+                RadioListTile<String>(
+                  value: 'system',
+                  groupValue: current,
+                  onChanged: (v) => _pickFont(ctx, ref, v),
+                  title: Text(context.l10n.themeFontSystem),
+                ),
+                RadioListTile<String>(
+                  value: 'Ubuntu Mono',
+                  groupValue: current,
+                  onChanged: (v) => _pickFont(ctx, ref, v),
+                  title: const Text('Ubuntu Mono'),
+                  subtitle: Text(context.l10n.themeFontBuiltin),
+                ),
+                for (final f in customs)
+                  RadioListTile<String>(
+                    value: f.id,
+                    groupValue: current,
+                    onChanged: (v) => _pickFont(ctx, ref, v),
+                    title: Text(f.displayName),
+                    secondary: IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: () async {
+                        await CustomFontStore.instance.remove(f.id);
+                        if (current == f.id) {
+                          await ref.read(appFontProvider.notifier).set('system');
+                        }
+                        if (ctx.mounted) ref.invalidate(customFontsProvider);
+                      },
+                    ),
+                  ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _pickFont(
+      BuildContext ctx, WidgetRef ref, String? fontId) async {
+    if (fontId == null) return;
+    await ref.read(appFontProvider.notifier).set(fontId);
+    if (ctx.mounted) Navigator.pop(ctx);
+  }
+
+  /// v5.2：添加字体——本地（文件路径粘贴）或 URL 下载。
+  /// 本地路径方案刻意不做 file_picker 新依赖：用户在文件管理器长按复制路径
+  /// 后粘贴即可（与 v3.7 日志目录「路径已复制」体验一致，第 2 条零新依赖）。
+  Future<void> _addFontFlow(BuildContext ctx, WidgetRef ref) async {
+    final source = await showModalBottomSheet<String>(
+      context: ctx,
+      showDragHandle: true,
+      builder: (c2) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.folder_open),
+              title: Text(context.l10n.themeFontFromLocal),
+              onTap: () => Navigator.pop(c2, 'local'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.link),
+              title: Text(context.l10n.themeFontFromUrl),
+              onTap: () => Navigator.pop(c2, 'url'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !ctx.mounted) return;
+
+    final ctrl = TextEditingController();
+    final hint = source == 'local'
+        ? '/storage/emulated/0/Download/MyFont.ttf'
+        : 'https://example.com/MyFont.ttf';
+    final value = await showDialog<String>(
+      context: ctx,
+      builder: (c3) => AlertDialog(
+        title: Text(source == 'local'
+            ? context.l10n.themeFontFromLocal
+            : context.l10n.themeFontFromUrl),
+        content: TextField(controller: ctrl, decoration: InputDecoration(hintText: hint)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c3),
+              child: Text(context.l10n.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(c3, ctrl.text.trim()),
+            child: Text(context.l10n.themeFontAdd),
+          ),
+        ],
+      ),
+    );
+    if (value == null || value.isEmpty || !ctx.mounted) return;
+
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(content: Text(context.l10n.themeFontDownloading)),
+    );
+    try {
+      final font = source == 'local'
+          ? await CustomFontStore.instance.importLocal(value)
+          : await CustomFontStore.instance.importUrl(value);
+      ref.invalidate(customFontsProvider);
+      await ref.read(appFontProvider.notifier).set(font.id);
+      if (ctx.mounted) Navigator.pop(ctx); // 关闭字体选择弹层
+    } catch (e) {
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('$e')));
+      }
+    }
+  }
+
   void _showLocaleDialog(Locale? current) {
     String? codeOf(Locale? l) => l == null
         ? 'system'
         : (l.countryCode != null
-            ? '${l.languageCode}_${l.countryCode}'
-            : l.languageCode);
+              ? '${l.languageCode}_${l.countryCode}'
+              : l.languageCode);
     // M3 规范：长列表选项用底部弹层（showModalBottomSheet），不用居中 Dialog。
     showModalBottomSheet<void>(
       context: context,
@@ -631,8 +831,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text(context.l10n.appLanguage,
-                  style: Theme.of(ctx).textTheme.titleMedium),
+              child: Text(
+                context.l10n.appLanguage,
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
             ),
             const Divider(height: 1),
             Flexible(
@@ -657,9 +859,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                     title: Text(AppConfig.localeNames[code] ?? code),
                     onChanged: (_) {
                       final parts = code.split('_');
-                      ref.read(localeProvider.notifier).set(parts.length == 2
-                          ? Locale(parts[0], parts[1])
-                          : Locale(parts[0]));
+                      ref
+                          .read(localeProvider.notifier)
+                          .set(
+                            parts.length == 2
+                                ? Locale(parts[0], parts[1])
+                                : Locale(parts[0]),
+                          );
                       Navigator.pop(ctx);
                     },
                   );
@@ -687,8 +893,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(context.l10n.lyricDisplayMode,
-                  style: Theme.of(context).textTheme.labelLarge),
+              Text(
+                context.l10n.lyricDisplayMode,
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
@@ -715,9 +923,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                   ],
                   selected: {lyricMode},
                   showSelectedIcon: false,
-                  onSelectionChanged: (s) => ref
-                      .read(lyricModeProvider.notifier)
-                      .set(s.first),
+                  onSelectionChanged: (s) =>
+                      ref.read(lyricModeProvider.notifier).set(s.first),
                 ),
               ),
             ],
@@ -749,8 +956,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text(context.l10n.defaultQuality,
-                  style: Theme.of(ctx).textTheme.titleMedium),
+              child: Text(
+                context.l10n.defaultQuality,
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
             ),
             const Divider(height: 1),
             for (final entry in _qualityNames(context).entries)
@@ -759,7 +968,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                 groupValue: current,
                 title: Text(entry.value),
                 onChanged: (v) {
-                  if (v != null) ref.read(defaultQualityProvider.notifier).set(v);
+                  if (v != null)
+                    ref.read(defaultQualityProvider.notifier).set(v);
                   Navigator.pop(ctx);
                 },
               ),
@@ -809,8 +1019,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
         // 危险操作：删除类用 error 色 + 二次确认
         ListTile(
           leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
-          title: Text(context.l10n.clearCache,
-              style: TextStyle(color: theme.colorScheme.error)),
+          title: Text(
+            context.l10n.clearCache,
+            style: TextStyle(color: theme.colorScheme.error),
+          ),
           subtitle: Text(context.l10n.clearCacheDesc),
           onTap: _clearCache,
         ),
@@ -840,11 +1052,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
               final short = (path == null || path.isEmpty)
                   ? context.l10n.unknown
                   : '…/${path.split('/').where((s) => s.isNotEmpty).last}';
-              return Text(
-                short,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              );
+              return Text(short, maxLines: 1, overflow: TextOverflow.ellipsis);
             },
           ),
           trailing: IconButton(
@@ -872,9 +1080,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
             future: _storageGranted,
             builder: (context, snap) {
               final granted = snap.data ?? false;
-              return Text(granted
-                  ? context.l10n.permissionGranted
-                  : context.l10n.permissionDenied);
+              return Text(
+                granted
+                    ? context.l10n.permissionGranted
+                    : context.l10n.permissionDenied,
+              );
             },
           ),
           trailing: FutureBuilder<bool>(
@@ -883,15 +1093,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
               // F4-45（审查③-B，P3）：已授权时不再给出「申请权限」按钮
               // （点了会重复触发系统授权流程，属无效入口，第 30 条名称与行为一致）。
               if (snap.data == true) {
-                return Text(context.l10n.permissionGranted,
-                    style: Theme.of(context).textTheme.labelMedium);
+                return Text(
+                  context.l10n.permissionGranted,
+                  style: Theme.of(context).textTheme.labelMedium,
+                );
               }
               return TextButton(
                 onPressed: () async {
                   final ok = await PermissionGate.instance.ensureStorageWrite();
                   if (!context.mounted) return;
                   // 重新查询状态并刷新展示
-                  final future = PermissionGate.instance.hasStorageWriteAccess();
+                  final future = PermissionGate.instance
+                      .hasStorageWriteAccess();
                   setState(() => _storageGranted = future);
                   Toast.show(
                     context,
@@ -908,8 +1121,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
         ListTile(
           leading: const Icon(Icons.info_outline),
           title: Text(context.l10n.recentErrors),
-          subtitle: Text(context.l10n.recentErrorsCount(
-              ErrorLogger.recent.length.toString())),
+          subtitle: Text(
+            context.l10n.recentErrorsCount(
+              ErrorLogger.recent.length.toString(),
+            ),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _showRecentErrors(),
         ),
@@ -932,8 +1148,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                child: Text(context.l10n.recentErrors,
-                    style: Theme.of(ctx).textTheme.titleMedium),
+                child: Text(
+                  context.l10n.recentErrors,
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
               ),
               const Divider(height: 1),
               Expanded(
@@ -950,7 +1168,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                             '${context.l10n.techDetail} ${i + 1}',
                             style: Theme.of(ctx).textTheme.labelLarge,
                           ),
-                          trailing: const Icon(Icons.copy_all_outlined, size: 18),
+                          trailing: const Icon(
+                            Icons.copy_all_outlined,
+                            size: 18,
+                          ),
                           onTap: () => Toast.copy(ctx, entries[i]),
                         ),
                       ),
@@ -974,7 +1195,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
           // 版本号未取回前显示占位符，不出现「版本：」空白（第 4 条/第 30 条）。
           title: Text(context.l10n.appName),
           subtitle: Text(
-              '${context.l10n.version} ${_version.isEmpty ? '-' : _version}'),
+            '${context.l10n.version} ${_version.isEmpty ? '-' : _version}',
+          ),
         ),
         _navTile(
           leading: Icons.description_outlined,
@@ -1066,7 +1288,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                   }
                   return;
                 }
-                final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                final ok = await launchUrl(
+                  uri,
+                  mode: LaunchMode.externalApplication,
+                );
                 if (!ok && context.mounted) {
                   Toast.show(context, context.l10n.openFailed);
                 }
@@ -1091,8 +1316,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                child: Text(context.l10n.openSourceLicenses,
-                    style: Theme.of(ctx).textTheme.titleMedium),
+                child: Text(
+                  context.l10n.openSourceLicenses,
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
               ),
               const Divider(height: 1),
               Expanded(
@@ -1123,7 +1350,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
 int _dirSizeBytes(String path) {
   var total = 0;
   try {
-    for (final entity in Directory(path).listSync(recursive: true, followLinks: false)) {
+    for (final entity in Directory(
+      path,
+    ).listSync(recursive: true, followLinks: false)) {
       if (entity is File) {
         try {
           total += entity.lengthSync();

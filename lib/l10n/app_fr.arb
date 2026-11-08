@@ -584,5 +584,12 @@
   "mvMkvContainer": "Conteneur MKV",
   "audioPausedForMv": "Musique en pause pour la lecture du MV",
   "mvPlayError": "Erreur de lecture",
-  "mvBuffering": "Mise en mémoire tampon…"
+  "mvBuffering": "Mise en mémoire tampon…",
+  "themeFont": "Police",
+  "themeFontSystem": "Valeur par défaut du système",
+  "themeFontBuiltin": "Intégrée",
+  "themeFontAdd": "Ajouter une police",
+  "themeFontFromLocal": "Depuis un fichier local",
+  "themeFontFromUrl": "Depuis une URL",
+  "themeFontDownloading": "Téléchargement de la police…"
 }

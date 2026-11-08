@@ -367,6 +367,13 @@ const _strings_de = <String, String>{
   'audioPausedForMv': 'Musik für MV-Wiedergabe pausiert',
   'mvPlayError': 'Wiedergabefehler',
   'mvBuffering': 'Puffern…',
+  'themeFont': 'Schrift',
+  'themeFontSystem': 'Systemstandard',
+  'themeFontBuiltin': 'Eingebaut',
+  'themeFontAdd': 'Schriftart hinzufügen',
+  'themeFontFromLocal': 'Aus lokaler Datei',
+  'themeFontFromUrl': 'Von URL',
+  'themeFontDownloading': 'Schriftart wird heruntergeladen…',
 };
 
 const _strings_en = <String, String>{
@@ -732,6 +739,13 @@ const _strings_en = <String, String>{
   'audioPausedForMv': 'Music paused for MV playback',
   'mvPlayError': 'Playback error',
   'mvBuffering': 'Buffering…',
+  'themeFont': 'Font',
+  'themeFontSystem': 'System default',
+  'themeFontBuiltin': 'Built-in',
+  'themeFontAdd': 'Add font',
+  'themeFontFromLocal': 'From local file',
+  'themeFontFromUrl': 'From URL',
+  'themeFontDownloading': 'Downloading font…',
 };
 
 const _strings_es = <String, String>{
@@ -1097,6 +1111,13 @@ const _strings_es = <String, String>{
   'audioPausedForMv': 'Música pausada para reproducir el MV',
   'mvPlayError': 'Error de reproducción',
   'mvBuffering': 'Almacenando búfer…',
+  'themeFont': 'Fuente',
+  'themeFontSystem': 'Predeterminado del sistema',
+  'themeFontBuiltin': 'Integrada',
+  'themeFontAdd': 'Añadir fuente',
+  'themeFontFromLocal': 'Desde archivo local',
+  'themeFontFromUrl': 'Desde URL',
+  'themeFontDownloading': 'Descargando fuente…',
 };
 
 const _strings_fr = <String, String>{
@@ -1462,6 +1483,13 @@ const _strings_fr = <String, String>{
   'audioPausedForMv': 'Musique en pause pour la lecture du MV',
   'mvPlayError': 'Erreur de lecture',
   'mvBuffering': 'Mise en mémoire tampon…',
+  'themeFont': 'Police',
+  'themeFontSystem': 'Valeur par défaut du système',
+  'themeFontBuiltin': 'Intégrée',
+  'themeFontAdd': 'Ajouter une police',
+  'themeFontFromLocal': 'Depuis un fichier local',
+  'themeFontFromUrl': 'Depuis une URL',
+  'themeFontDownloading': 'Téléchargement de la police…',
 };
 
 const _strings_ja = <String, String>{
@@ -1827,6 +1855,13 @@ const _strings_ja = <String, String>{
   'audioPausedForMv': 'MV 再生のため音楽を一時停止しました',
   'mvPlayError': '再生エラー',
   'mvBuffering': 'バッファリング中…',
+  'themeFont': 'フォント',
+  'themeFontSystem': 'システムデフォルト',
+  'themeFontBuiltin': '内蔵',
+  'themeFontAdd': 'フォントを追加',
+  'themeFontFromLocal': 'ローカルファイルから',
+  'themeFontFromUrl': 'URLからダウンロード',
+  'themeFontDownloading': 'フォントをダウンロード中…',
 };
 
 const _strings_ko = <String, String>{
@@ -2192,6 +2227,13 @@ const _strings_ko = <String, String>{
   'audioPausedForMv': 'MV 재생을 위해 음악을 일시정지했습니다',
   'mvPlayError': '재생 오류',
   'mvBuffering': '버퍼링 중…',
+  'themeFont': '글꼴',
+  'themeFontSystem': '시스템 기본값',
+  'themeFontBuiltin': '내장',
+  'themeFontAdd': '글꼴 추가',
+  'themeFontFromLocal': '로컬 파일에서',
+  'themeFontFromUrl': 'URL에서 다운로드',
+  'themeFontDownloading': '글꼴 다운로드 중…',
 };
 
 const _strings_pt = <String, String>{
@@ -2557,6 +2599,13 @@ const _strings_pt = <String, String>{
   'audioPausedForMv': 'Música pausada para reproduzir o MV',
   'mvPlayError': 'Erro de reprodução',
   'mvBuffering': 'Armazenando buffer…',
+  'themeFont': 'Fonte',
+  'themeFontSystem': 'Padrão do sistema',
+  'themeFontBuiltin': 'Integrada',
+  'themeFontAdd': 'Adicionar fonte',
+  'themeFontFromLocal': 'De arquivo local',
+  'themeFontFromUrl': 'De URL',
+  'themeFontDownloading': 'Baixando fonte…',
 };
 
 const _strings_ru = <String, String>{
@@ -2922,6 +2971,13 @@ const _strings_ru = <String, String>{
   'audioPausedForMv': 'Музыка приостановлена для просмотра MV',
   'mvPlayError': 'Ошибка воспроизведения',
   'mvBuffering': 'Буферизация…',
+  'themeFont': 'Шрифт',
+  'themeFontSystem': 'Системный',
+  'themeFontBuiltin': 'Встроенный',
+  'themeFontAdd': 'Добавить шрифт',
+  'themeFontFromLocal': 'Из локального файла',
+  'themeFontFromUrl': 'По URL',
+  'themeFontDownloading': 'Загрузка шрифта…',
 };
 
 const _strings_zh = <String, String>{
@@ -3287,6 +3343,13 @@ const _strings_zh = <String, String>{
   'audioPausedForMv': '已暫停音樂播放',
   'mvPlayError': '播放出錯',
   'mvBuffering': '緩衝中…',
+  'themeFont': '字体',
+  'themeFontSystem': '系统默认',
+  'themeFontBuiltin': '内置',
+  'themeFontAdd': '添加字体',
+  'themeFontFromLocal': '从本地文件',
+  'themeFontFromUrl': '从链接下载',
+  'themeFontDownloading': '正在下载字体…',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -3652,6 +3715,13 @@ const _strings_zh_CN = <String, String>{
   'audioPausedForMv': '已暂停音乐播放',
   'mvPlayError': '播放出错',
   'mvBuffering': '缓冲中…',
+  'themeFont': '字体',
+  'themeFontSystem': '系统默认',
+  'themeFontBuiltin': '内置',
+  'themeFontAdd': '添加字体',
+  'themeFontFromLocal': '从本地文件',
+  'themeFontFromUrl': '从链接下载',
+  'themeFontDownloading': '正在下载字体…',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -4017,6 +4087,13 @@ const _strings_zh_TW = <String, String>{
   'audioPausedForMv': '已暫停音樂播放',
   'mvPlayError': '播放出錯',
   'mvBuffering': '緩衝中…',
+  'themeFont': '字體',
+  'themeFontSystem': '系統預設',
+  'themeFontBuiltin': '內建',
+  'themeFontAdd': '新增字體',
+  'themeFontFromLocal': '從本機檔案',
+  'themeFontFromUrl': '從連結下載',
+  'themeFontDownloading': '正在下載字體…',
 };
 
 const _template = _strings_zh_CN;
@@ -4438,6 +4515,13 @@ class AppLocalizations {
   String get audioPausedForMv => _t('audioPausedForMv');
   String get mvPlayError => _t('mvPlayError');
   String get mvBuffering => _t('mvBuffering');
+  String get themeFont => _t('themeFont');
+  String get themeFontSystem => _t('themeFontSystem');
+  String get themeFontBuiltin => _t('themeFontBuiltin');
+  String get themeFontAdd => _t('themeFontAdd');
+  String get themeFontFromLocal => _t('themeFontFromLocal');
+  String get themeFontFromUrl => _t('themeFontFromUrl');
+  String get themeFontDownloading => _t('themeFontDownloading');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

@@ -584,5 +584,12 @@
   "mvMkvContainer": "MKV-Container",
   "audioPausedForMv": "Musik für MV-Wiedergabe pausiert",
   "mvPlayError": "Wiedergabefehler",
-  "mvBuffering": "Puffern…"
+  "mvBuffering": "Puffern…",
+  "themeFont": "Schrift",
+  "themeFontSystem": "Systemstandard",
+  "themeFontBuiltin": "Eingebaut",
+  "themeFontAdd": "Schriftart hinzufügen",
+  "themeFontFromLocal": "Aus lokaler Datei",
+  "themeFontFromUrl": "Von URL",
+  "themeFontDownloading": "Schriftart wird heruntergeladen…"
 }

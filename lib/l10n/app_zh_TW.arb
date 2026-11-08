@@ -584,5 +584,12 @@
   "mvMkvContainer": "MKV 容器",
   "audioPausedForMv": "已暫停音樂播放",
   "mvPlayError": "播放出錯",
-  "mvBuffering": "緩衝中…"
+  "mvBuffering": "緩衝中…",
+  "themeFont": "字體",
+  "themeFontSystem": "系統預設",
+  "themeFontBuiltin": "內建",
+  "themeFontAdd": "新增字體",
+  "themeFontFromLocal": "從本機檔案",
+  "themeFontFromUrl": "從連結下載",
+  "themeFontDownloading": "正在下載字體…"
 }

@@ -14,8 +14,9 @@ class PublicMediaStore {
   PublicMediaStore._();
   static final instance = PublicMediaStore._();
 
-  static const MethodChannel _channel =
-      MethodChannel('com.tiernan.music/storage');
+  static const MethodChannel _channel = MethodChannel(
+    'com.tiernan.music/storage',
+  );
 
   /// 各类型对应的公共目录与 MIME
   ///
@@ -23,25 +24,25 @@ class PublicMediaStore {
   /// 这是**未授权 MANAGE_EXTERNAL_STORAGE 时**的 MediaStore 回退路径；
   /// 已授权时 _publishDirect 走 resolveRoot() 直写根目录同名子目录。
   static String relativePathOf(DownloadTaskType type) => switch (type) {
-        DownloadTaskType.audio =>
-          'Download/${StoragePermissionService.fallbackRootDirName}/${StoragePermissionService.audioSubDir}',
-        DownloadTaskType.cover =>
-          'Download/${StoragePermissionService.fallbackRootDirName}/${StoragePermissionService.coverSubDir}',
-        DownloadTaskType.lyric =>
-          'Download/${StoragePermissionService.fallbackRootDirName}/${StoragePermissionService.lyricsSubDir}',
-        DownloadTaskType.mv =>
-          'Download/${StoragePermissionService.fallbackRootDirName}/${StoragePermissionService.mvSubDir}',
-      };
+    DownloadTaskType.audio =>
+      'Download/${StoragePermissionService.fallbackRootDirName}/${StoragePermissionService.audioSubDir}',
+    DownloadTaskType.cover =>
+      'Download/${StoragePermissionService.fallbackRootDirName}/${StoragePermissionService.coverSubDir}',
+    DownloadTaskType.lyric =>
+      'Download/${StoragePermissionService.fallbackRootDirName}/${StoragePermissionService.lyricsSubDir}',
+    DownloadTaskType.mv =>
+      'Download/${StoragePermissionService.fallbackRootDirName}/${StoragePermissionService.mvSubDir}',
+  };
 
   static String collectionOf(DownloadTaskType type) => switch (type) {
-        DownloadTaskType.audio => 'audio',
-        DownloadTaskType.cover => 'images',
-        // MediaStore.Files：支持 Documents/ 下任意 RELATIVE_PATH。
-        // Downloads collection 要求 RELATIVE_PATH 位于 Download/ 之下，
-        // 用它插 Documents/ 路径在 Android 10+ 上 insert 必抛 IllegalArgumentException。
-        DownloadTaskType.lyric => 'files',
-        DownloadTaskType.mv => 'video',
-      };
+    DownloadTaskType.audio => 'audio',
+    DownloadTaskType.cover => 'images',
+    // MediaStore.Files：支持 Documents/ 下任意 RELATIVE_PATH。
+    // Downloads collection 要求 RELATIVE_PATH 位于 Download/ 之下，
+    // 用它插 Documents/ 路径在 Android 10+ 上 insert 必抛 IllegalArgumentException。
+    DownloadTaskType.lyric => 'files',
+    DownloadTaskType.mv => 'video',
+  };
 
   static String mimeOf(DownloadTaskType type, {String? realTempPath}) {
     // V35-B3（第 B 批，P1）：audio 真实扩展名（.flac/.m4a）对应正确
@@ -72,7 +73,6 @@ class PublicMediaStore {
   /// resolveRoot()+subDirOf 统一决定（三处根路径统一，禁各自硬编码）。
   static String publicDirNameOf(DownloadTaskType type) =>
       StoragePermissionService.subDirOf(type.name);
-
 
   /// 下载用临时目录（App 私有，发布完成后再写入公共目录）。
   static Future<Directory> tempDir() async {
@@ -110,8 +110,10 @@ class PublicMediaStore {
         return _publishDirect(type, tempFilePath, displayName);
       }
       try {
-        final ok = await _channel
-            .invokeMethod<bool>('write', {'uri': uri, 'srcPath': tempFilePath});
+        final ok = await _channel.invokeMethod<bool>('write', {
+          'uri': uri,
+          'srcPath': tempFilePath,
+        });
         if (ok != true) {
           await _channel.invokeMethod<bool>('delete', {'uri': uri});
           return await _publishDirect(type, tempFilePath, displayName);
@@ -119,7 +121,9 @@ class PublicMediaStore {
         // V35-B3（第 B 批，P1）：finalize 返回值必须校验——Kotlin 层
         // 现在真实返回 update 行数判定；false = 条目消失（被系统清理/
         // Uri 无效），此时不能当发布成功，降级直写。
-        final finalized = await _channel.invokeMethod<bool>('finalize', {'uri': uri});
+        final finalized = await _channel.invokeMethod<bool>('finalize', {
+          'uri': uri,
+        });
         if (finalized != true) {
           try {
             await _channel.invokeMethod<bool>('delete', {'uri': uri});
@@ -161,7 +165,7 @@ class PublicMediaStore {
     // 统一走 resolveRoot()——它每次实测写入能力，返回「探测到的实际可写路径」。
     // 探测失败时 resolveRoot 已降级到 Download 根；仍不可写则写入抛错，
     // 由调用方（publish 的降级链）接管 appFallback。
-    final grantedRoot = await service.resolveRoot();
+    final grantedRoot = (await service.resolveRoot()).path;
     final isGrantedRoot = grantedRoot == StoragePermissionService.rootPath;
     if (isGrantedRoot) {
       dirPath = '$grantedRoot/$sub';
@@ -240,8 +244,9 @@ class PublicMediaStore {
     }
     final base = await service.publicDir(publicDirNameOf(type));
     if (base == null || base.isEmpty) return null;
-    final dir =
-        Directory('$base/${StoragePermissionService.subDirOf(type.name)}');
+    final dir = Directory(
+      '$base/${StoragePermissionService.subDirOf(type.name)}',
+    );
     final file = File('${dir.path}/$displayName');
     if (await file.exists()) {
       return PublishedFile(
@@ -256,8 +261,9 @@ class PublicMediaStore {
   Future<bool> delete(PublishedFile file) async {
     try {
       if (file.uri != null && file.uri!.isNotEmpty) {
-        final ok = await _channel
-            .invokeMethod<bool>('delete', {'uri': file.uri});
+        final ok = await _channel.invokeMethod<bool>('delete', {
+          'uri': file.uri,
+        });
         return ok == true;
       }
       if (file.path != null && file.path!.isNotEmpty) {
@@ -294,7 +300,9 @@ class PublicMediaStore {
     final path = file.path;
     if (path == null || path.isEmpty) return false;
     try {
-      final ok = await _channel.invokeMethod<bool>('viewFolder', {'path': path});
+      final ok = await _channel.invokeMethod<bool>('viewFolder', {
+        'path': path,
+      });
       return ok == true;
     } catch (_) {
       return false;
@@ -304,11 +312,7 @@ class PublicMediaStore {
 
 /// 已发布文件的位置信息。
 class PublishedFile {
-  const PublishedFile({
-    this.uri,
-    this.path,
-    this.displayPath = '',
-  });
+  const PublishedFile({this.uri, this.path, this.displayPath = ''});
 
   /// MediaStore Uri（Android 10+）
   final String? uri;
@@ -319,6 +323,6 @@ class PublishedFile {
   /// 展示给用户的目录位置
   final String displayPath;
 
-  bool get isValid => (uri != null && uri!.isNotEmpty) ||
-      (path != null && path!.isNotEmpty);
+  bool get isValid =>
+      (uri != null && uri!.isNotEmpty) || (path != null && path!.isNotEmpty);
 }

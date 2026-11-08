@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!--
+      v5.2 B-5：network_security_config 仅 API 24+ 生效；
+      API 22-23 由 Kotlin TlsCompat（SSLContext + raw ISRG 根证书）兜底。
+    -->
     <!-- 默认禁止 cleartext -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
+            <!-- B-4：自带 Let's Encrypt 根证书，API 24+ 直接在此信任 LE 签发链 -->
+            <certificates src="@raw/isrg_root_x1" />
+            <certificates src="@raw/isrg_root_x2" />
         </trust-anchors>
     </base-config>
 

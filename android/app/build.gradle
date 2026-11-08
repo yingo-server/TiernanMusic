@@ -30,6 +30,8 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
+        // B-3：API 22 无 java.time 等 API，需 desugaring
+        coreLibraryDesugaringEnabled true
     }
 
     sourceSets {
@@ -38,10 +40,12 @@ android {
 
     defaultConfig {
         applicationId 'com.tiernan.music'
-        minSdk flutter.minSdkVersion
+        minSdk 22
         targetSdk flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        // B-2：API 22 无 ART 原生 multidex，必须启用 LegacyMultiDex
+        multiDexEnabled true
         // ABI 分包由 --split-per-abi 控制，这里不设 ndk.abiFilters
         // （两者同时设置会报 Conflicting configuration）
     }
@@ -88,4 +92,8 @@ flutter {
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
+    // B-2：API 21-22 multidex 支持
+    implementation 'androidx.multidex:multidex:2.0.1'
+    // B-3：coreLibraryDesugaring 依赖（java.time 等在 API 22 可用）
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 }

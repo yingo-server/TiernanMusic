@@ -15,6 +15,7 @@ import 'core/direct/kg_client.dart';
 import 'core/direct/kg_providers.dart';
 import 'app/di.dart' show kugouApiClientProvider;
 import 'app/bootstrap.dart' show openHiveBoxes;
+import 'features/settings/font_manager.dart' show appFontProvider;
 import 'core/prefetch/prefetch_engine.dart';
 import 'core/cache/resource_gateway.dart';
 import 'core/resource/resource_cache.dart';
@@ -78,6 +79,14 @@ Future<void> main() async {
 
       // v5.0 M6：开箱表集中 app/bootstrap.dart（行为等价，单箱失败不阻塞启动）。
       await openHiveBoxes();
+
+      // v5.2：私有字体注册（FontLoader 运行时挂载，须在 runApp 前完成；
+      // 失败不阻塞启动——字体加载失败最多回退系统字体）。
+      try {
+        await CustomFontStore.instance.registerAll();
+      } catch (e) {
+        debugPrint('[startup] font register failed: $e');
+      }
 
       // Cookie 持久化目录（应用私有存储，三层存储规范第 2 层）。
       // 必须是可写目录，否则 PersistCookieJar 会报「Read-only file system」。
@@ -178,6 +187,9 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
     with WidgetsBindingObserver {
   /// 启动准备是否完成（完成后才从 SplashScreen 切到主界面）
   bool _appReady = false;
+
+  /// v5.2：当前全局字体 id（'system' / 'Ubuntu Mono' / 私有字体 id）
+  String get fontId => ref.watch(appFontProvider);
 
   /// V33-04（修复②）：启动屏最短展示是否已到。
   ///
@@ -345,8 +357,8 @@ class _TiernanMusicAppState extends ConsumerState<TiernanMusicApp>
       // StartupErrorPage 早退分支没有 delegates，保留硬编码。
       onGenerateTitle: (ctx) => ctx.l10n.appName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.light(fontFamily: fontId == 'system' ? null : fontId, fallback: const ['UbuntuMono', 'NotoSansSC']),
+      darkTheme: AppTheme.dark(fontFamily: fontId == 'system' ? null : fontId, fallback: const ['UbuntuMono', 'NotoSansSC']),
       themeMode: themeMode,
       locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,

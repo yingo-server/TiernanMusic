@@ -10,7 +10,8 @@ import '../storage/storage_permission.dart';
 import '../utils/error_logger.dart';
 
 /// TTL 常量（v4.0 冻结契约，TASK_v400_arch.md）。
-const kFilePermanent = null; // 实际资源文件永久（占位常量，按契约保留；实际由 cacheUrlFile 的「已存在直接返回」保证）
+const kFilePermanent =
+    null; // 实际资源文件永久（占位常量，按契约保留；实际由 cacheUrlFile 的「已存在直接返回」保证）
 
 /// TTL 唯一事实源在 cache_keys.cacheTtl；此处仅保留契约兼容的别名。
 /// v5.1 B3-C：数值必须与 cacheTtl 一致，禁止再出现第二套 TTL 口径。
@@ -37,8 +38,10 @@ class ResourceCache {
   static const _boxName = 'resource_json';
   static const _jsonPrefix = 'json:';
   static const _listPrefix = 'list:';
+
   /// 内存中同 key 的 in-flight 请求（第 22 条：Dart 单 isolate，Map 即互斥点）
   final _inFlight = <String, Future<Map<String, dynamic>>>{};
+
   /// v5.1 B3-C：文件下载的 in-flight 合并（同名 .part 并发损坏防护）
   final _fileInFlight = <String, Future<String?>>{};
 
@@ -81,13 +84,17 @@ class ResourceCache {
     final box = _safeBox;
     final stored = _readStored(box, fullKey);
     final now = DateTime.now().millisecondsSinceEpoch;
-    final fresh = stored != null &&
-        now < stored.$1 + ttl.inMilliseconds;
+    final fresh = stored != null && now < stored.$1 + ttl.inMilliseconds;
 
     if (fresh) return stored.$2;
 
-    final fut = _doFetch(fullKey, fetch, box,
-        staleOnError: staleOnError, staleBody: stored?.$2);
+    final fut = _doFetch(
+      fullKey,
+      fetch,
+      box,
+      staleOnError: staleOnError,
+      staleBody: stored?.$2,
+    );
     _inFlight[fullKey] = fut;
     try {
       return await fut;
@@ -129,12 +136,14 @@ class ResourceCache {
         // 回退本身即带用户可见留痕：经 ErrorLogger 落盘（verbose 开关
         // 打开后日志里可见），并在返回值打标供调用方按需感知。
         // 不抛、不吞：网络失败时旧值可用是明确降级（第 9/11/16 条）。
-        unawaited(ErrorLogger.instance.log(
-          'stale cache used for $fullKey',
-          StackTrace.current,
-          source: 'resource_cache',
-          context: 'fetch failed: $e',
-        ));
+        unawaited(
+          ErrorLogger.instance.log(
+            'stale cache used for $fullKey',
+            StackTrace.current,
+            source: 'resource_cache',
+            context: 'fetch failed: $e',
+          ),
+        );
         return Map<String, dynamic>.from(staleBody)..['__stale'] = true;
       }
       rethrow;
@@ -165,7 +174,7 @@ class ResourceCache {
   /// 文件缓存根：`<resolveRoot()>/cache/resource/<kind>/`。
   /// resolveRoot 每次实测可写性（V399-B2 口径），此处不缓存路径。
   Future<Directory> _dirOf(String kind) async {
-    final root = await StoragePermissionService.instance.resolveRoot();
+    final root = (await StoragePermissionService.instance.resolveRoot()).path;
     final dir = Directory('$root/cache/resource/$kind');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
@@ -186,14 +195,11 @@ class ResourceCache {
       h ^= (c >> 8) & 0xff;
       h = (h * 0x01000193) & 0xFFFFFFFF;
     }
-    final ext = url.contains('?')
-        ? url.substring(url.indexOf('?'))
-        : '';
+    final ext = url.contains('?') ? url.substring(url.indexOf('?')) : '';
     final dot = ext.lastIndexOf('.');
-    final suffix =
-        (dot >= 0 && dot < ext.length - 1 && ext.length <= 8)
-            ? ext.substring(dot)
-            : '';
+    final suffix = (dot >= 0 && dot < ext.length - 1 && ext.length <= 8)
+        ? ext.substring(dot)
+        : '';
     return '${h.toRadixString(16)}_${url.length}_$bytes$suffix';
   }
 
@@ -237,7 +243,8 @@ class ResourceCache {
 
   /// 试听/高潮片段 URL 形态判定（缓存层防御点，第 14 条）。
   static bool _looksLikePreview(String url) =>
-      url.contains('/p_0_') || url.contains('/hash_offset/') ||
+      url.contains('/p_0_') ||
+      url.contains('/hash_offset/') ||
       url.contains('IsFreePart=1');
 
   Future<String?> _cacheUrlFileInner(
@@ -255,31 +262,38 @@ class ResourceCache {
         await target.delete();
       }
 
-      final dio = Dio(BaseOptions(
-        connectTimeout: const Duration(seconds: 20),
-        receiveTimeout: const Duration(minutes: 10),
-      ));
+      final dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 20),
+          receiveTimeout: const Duration(minutes: 10),
+        ),
+      );
       final part = File('${target.path}.part');
       // v5.1 B3-C：HEAD 405/403/超时不得让永久缓存整体失效——
       // 降级为「未知长度，靠下载后实际长度校验」（第 11 条）。
       int cl = 0;
       try {
         final head = await dio.head(url);
-        cl = int.tryParse(
-            '${head.headers.value('content-length') ?? ''}') ?? 0;
+        cl = int.tryParse('${head.headers.value('content-length') ?? ''}') ?? 0;
       } catch (e) {
-        debugPrint('[resource] HEAD unavailable ($e), rely on final length check');
+        debugPrint(
+          '[resource] HEAD unavailable ($e), rely on final length check',
+        );
       }
       if (cl > 0 && cl != declaredBytes) {
-        debugPrint('[resource] cacheUrlFile($kind) rejected: '
-            'Content-Length=$cl != declared=$declaredBytes');
+        debugPrint(
+          '[resource] cacheUrlFile($kind) rejected: '
+          'Content-Length=$cl != declared=$declaredBytes',
+        );
         return null;
       }
       await dio.download(url, part.path);
       final actual = await part.length();
       if (actual != declaredBytes) {
-        debugPrint('[resource] cacheUrlFile($kind) rejected: '
-            'downloaded=$actual != declared=$declaredBytes');
+        debugPrint(
+          '[resource] cacheUrlFile($kind) rejected: '
+          'downloaded=$actual != declared=$declaredBytes',
+        );
         await part.delete();
         return null;
       }
@@ -290,7 +304,8 @@ class ResourceCache {
       debugPrint('[resource] cacheUrlFile($kind) failed: $e');
       try {
         final part = File(
-            '${(await _dirOf(kind)).path}/${_hashName(url, bytes: declaredBytes)}.part');
+          '${(await _dirOf(kind)).path}/${_hashName(url, bytes: declaredBytes)}.part',
+        );
         if (await part.exists()) await part.delete();
       } catch (_) {}
       return null;
