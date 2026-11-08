@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/kugou_api_client.dart' show KugouApiClient;
-import '../../../core/providers.dart' show kugouApiClientProvider;
+import '../../../app/di.dart' show kugouApiClientProvider;
 import '../../home/data/models.dart' show kugouImageUrl;
 
 /// 专辑信息（/album/detail 实测字段，data 为**数组**取首项）。

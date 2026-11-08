@@ -27,7 +27,7 @@ import '../../../l10n/l10n.dart';
 import '../../auth/data/account_manager.dart';
 import '../../auth/data/auth_providers.dart';
 import '../../../core/storage/storage_permission.dart';
-import '../../player/data/models.dart';
+import '../../../core/domain/song.dart';
 import 'settings_providers.dart';
 import '../../../core/domain/quality.dart';
 

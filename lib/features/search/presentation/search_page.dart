@@ -10,7 +10,7 @@ import '../../home/data/models.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart'
     show GradientChip, EmptyState, ErrorRetry, ListSkeleton, SectionHeader, SongTile, SongTileMenuItem;
-import '../../player/data/models.dart';
+import '../../../core/domain/song.dart';
 import '../../player/play_helper.dart';
 import '../../download/presentation/download_sheet.dart';
 import '../../playlist/data/playlist_repository.dart';

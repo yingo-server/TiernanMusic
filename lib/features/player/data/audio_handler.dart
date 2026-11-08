@@ -12,7 +12,7 @@ import '../../../core/prefetch/prefetch_engine.dart';
 
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/audio/audio_service_bootstrap.dart';
-import 'models.dart';
+import '../../../core/domain/song.dart';
 import 'player_repository.dart';
 import '../../../core/domain/quality.dart';
 

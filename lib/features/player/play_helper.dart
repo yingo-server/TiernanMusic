@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../home/data/models.dart';
 import '../playlist/data/playlist_repository.dart';
-import 'data/models.dart';
+import '../../core/domain/song.dart';
 import 'player_provider.dart';
 
 /// 统一把各模块数据转换为 Song 并调用播放。

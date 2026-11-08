@@ -15,7 +15,7 @@ import '../../../core/widgets/song_tile.dart';
 import '../../auth/data/account_manager.dart';
 import '../../auth/data/auth_providers.dart';
 import '../../playlist/data/playlist_repository.dart';
-import '../../player/data/models.dart';
+import '../../../core/domain/song.dart';
 import '../../player/play_helper.dart';
 import '../../download/data/download_task.dart';
 import '../../download/download_provider.dart';

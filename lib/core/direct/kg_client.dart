@@ -9,7 +9,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
-import '../../features/auth/data/edt_generator.dart';
+import 'edt_generator.dart';
 import '../utils/error_logger.dart';
 import 'kg_crypto.dart';
 

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/kugou_api_client.dart';
-import '../../../core/providers.dart';
+import '../../../app/di.dart';
 import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/toast.dart';import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/song_tile.dart';

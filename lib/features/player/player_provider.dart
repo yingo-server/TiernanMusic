@@ -4,10 +4,10 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../core/api/kugou_api_client.dart';
 import '../../core/direct/kg_providers.dart';
-import '../../core/providers.dart' show kugouApiClientProvider;
+import '../../app/di.dart' show kugouApiClientProvider;
 import '../library/data/recent_play_store.dart';
 import 'data/audio_handler.dart';
-import 'data/models.dart';
+import '../../core/domain/song.dart';
 import 'data/player_repository.dart';
 import '../../core/domain/quality.dart';
 

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/kugou_api_client.dart';
 import '../../../core/resource/cached_api.dart';
 import '../../../core/resource/resource_cache.dart';
-import '../../../core/providers.dart';
+import '../../../app/di.dart';
 import 'models.dart';
 
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {

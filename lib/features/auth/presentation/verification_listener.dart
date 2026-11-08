@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers.dart';
+import '../../../app/di.dart';
 import '../../player/player_provider.dart';
 import 'captcha_page.dart';
 

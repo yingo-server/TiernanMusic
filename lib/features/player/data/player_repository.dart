@@ -11,7 +11,7 @@ import '../../../core/direct/kg_providers.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../core/resource/cached_api.dart';
 import '../../../core/resource/resource_cache.dart';
-import 'models.dart';
+import '../../../core/domain/song.dart';
 import '../../../core/domain/quality.dart';
 
 /// 一次成功解析出的播放结果。

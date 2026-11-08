@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/song_tile.dart';
 import '../data/audio_handler.dart';
-import '../data/models.dart';
+import '../../../core/domain/song.dart';
 import '../player_provider.dart';
 import '../../../l10n/l10n.dart';
 

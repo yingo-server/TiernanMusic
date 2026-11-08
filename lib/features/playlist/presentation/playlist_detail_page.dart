@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/providers.dart' show kugouApiClientProvider;
+import '../../../app/di.dart' show kugouApiClientProvider;
 // V37-UI-06：收藏失败文案统一走 friendlyError 解包（不拼 '$e' 技术串）
 import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/toast.dart';
@@ -13,7 +13,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../l10n/l10n.dart';
 import '../../auth/presentation/login_guard.dart';
 import '../../download/presentation/download_sheet.dart';
-import '../../player/data/models.dart';
+import '../../../core/domain/song.dart';
 import '../../player/play_helper.dart';
 import '../data/playlist_repository.dart';
 

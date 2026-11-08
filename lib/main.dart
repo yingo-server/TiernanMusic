@@ -13,14 +13,14 @@ import 'features/library/presentation/library_page.dart'
 import 'core/api/kugou_api_client.dart';
 import 'core/direct/kg_client.dart';
 import 'core/direct/kg_providers.dart';
-import 'core/providers.dart' show kugouApiClientProvider;
+import 'app/di.dart' show kugouApiClientProvider;
 import 'core/prefetch/prefetch_engine.dart';
 import 'core/resource/resource_cache.dart';
 import 'core/audio/audio_service_bootstrap.dart';
-import 'core/router/app_router.dart';
+import 'app/router.dart';
 import 'features/home/data/home_repository.dart' show homeDataProvider;
 import 'features/home/data/models.dart' show HomeData, HomeSong;
-import 'features/player/data/models.dart' show Song;
+import 'core/domain/song.dart' show Song;
 import 'core/theme/app_theme.dart';
 import 'core/theme/settings_provider.dart';
 import 'core/widgets/splash_handwriting.dart' show HandwritingCycle;

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/audio/preferred_quality.dart';
 import '../../../l10n/l10n.dart';
 import '../../mv/mv_provider.dart';
-import '../../player/data/models.dart';
+import '../../../core/domain/song.dart';
 import '../data/download_task.dart';
 import '../download_provider.dart';
 import '../../../core/domain/quality.dart';

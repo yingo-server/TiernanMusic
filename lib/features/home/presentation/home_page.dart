@@ -10,7 +10,7 @@ import '../../../core/cache/cache_manager.dart';
 import '../../../l10n/l10n.dart';
 
 import '../../player/play_helper.dart';
-import '../../player/data/models.dart';
+import '../../../core/domain/song.dart';
 import '../../download/presentation/download_sheet.dart';
 import '../../../core/widgets/shimmer.dart';
 import '../../../core/widgets/song_tile.dart';

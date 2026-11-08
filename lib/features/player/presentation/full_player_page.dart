@@ -15,7 +15,7 @@ import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../../core/image/app_image_cache.dart';
-import '../../../core/providers.dart' show lyricRepositoryProvider;
+import '../../../app/di.dart' show lyricRepositoryProvider;
 import '../../../core/theme/settings_provider.dart'
     show LyricDisplayMode, lyricModeProvider;
 import '../../../core/widgets/empty_state.dart';
@@ -27,7 +27,7 @@ import '../../download/presentation/download_sheet.dart';
 import '../../mv/mv_provider.dart';
 import '../../playlist/data/playlist_repository.dart';
 import '../../playlist/presentation/add_to_playlist_sheet.dart';
-import '../data/models.dart';
+import '../../../core/domain/song.dart';
 import '../player_provider.dart';
 import 'queue_sheet.dart';
 

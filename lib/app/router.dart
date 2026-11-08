@@ -2,22 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/presentation/login_page.dart';
-import '../../features/artist/presentation/artist_page.dart';
-import '../../features/album/presentation/album_page.dart';
-import '../../features/rank/presentation/rank_detail_page.dart';
-import '../../features/auth/presentation/verification_listener.dart';
-import '../../features/home/presentation/home_page.dart';
-import '../../features/player/presentation/full_player_page.dart';
-import '../../features/search/presentation/search_page.dart';
-import '../../features/settings/presentation/settings_page.dart';
-import '../../features/playlist/presentation/playlist_detail_page.dart';
-import '../../features/comment/presentation/comments_page.dart';
-import '../../features/mv/presentation/mv_player_page.dart';
-import '../../features/library/presentation/library_page.dart';
-import '../../features/player/presentation/mini_player.dart';
-import '../../features/download/presentation/download_page.dart';
-import '../../l10n/l10n.dart';
+import '../features/auth/presentation/login_page.dart';
+import '../features/artist/presentation/artist_page.dart';
+import '../features/album/presentation/album_page.dart';
+import '../features/rank/presentation/rank_detail_page.dart';
+import '../features/auth/presentation/verification_listener.dart';
+import '../features/home/presentation/home_page.dart';
+import '../features/player/presentation/full_player_page.dart';
+import '../features/search/presentation/search_page.dart';
+import '../features/settings/presentation/settings_page.dart';
+import '../features/playlist/presentation/playlist_detail_page.dart';
+import '../features/comment/presentation/comments_page.dart';
+import '../features/mv/presentation/mv_player_page.dart';
+import '../features/library/presentation/library_page.dart';
+import '../features/player/presentation/mini_player.dart';
+import '../features/download/presentation/download_page.dart';
+import '../l10n/l10n.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(

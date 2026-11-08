@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
 import '../../../core/direct/kg_providers.dart';
-import '../../../core/providers.dart';
+import '../../../app/di.dart';
 import '../../../core/storage/secure_storage.dart';
 import 'auth_repository.dart';
 import 'account_manager.dart';

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/kugou_api_client.dart';
-import '../../../core/providers.dart';
+import '../../../app/di.dart';
 import 'captcha_page.dart';
 
 /// 统一处理「20028 需要人机验证」

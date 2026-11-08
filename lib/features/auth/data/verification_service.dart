@@ -4,7 +4,7 @@ import '../../../core/api/kugou_api_client.dart';
 import '../../../core/direct/kg_client.dart';
 import '../../../core/storage/secure_storage.dart';
 import 'captcha_types.dart';
-import 'edt_generator.dart';
+import '../../../core/direct/edt_generator.dart';
 
 /// 人机验证服务
 ///

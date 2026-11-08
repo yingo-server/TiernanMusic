@@ -23,7 +23,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../../features/player/data/models.dart';
+import '../domain/song.dart';
 import '../api/kugou_api_client.dart';
 import '../resource/cached_api.dart';
 import '../resource/resource_cache.dart';

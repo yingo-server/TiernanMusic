@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/direct/kg_crypto.dart';
 import '../../core/direct/kg_providers.dart';
-import '../../core/providers.dart';
+import '../../app/di.dart';
 import '../../core/utils/error_logger.dart';
 import '../../core/utils/friendly_error.dart';
 import '../mv/data/mv_repository.dart';

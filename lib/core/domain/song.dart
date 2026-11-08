@@ -1,6 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../../core/domain/quality.dart';
+import 'quality.dart';
 
 /// 播放器数据模型。
 

@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/image/app_image_cache.dart';
 import '../../../core/widgets/song_tile.dart';
 import '../../../l10n/l10n.dart';
-import '../../player/data/models.dart';
+import '../../../core/domain/song.dart';
 import '../../player/play_helper.dart';
 import '../data/album_repository.dart';
 

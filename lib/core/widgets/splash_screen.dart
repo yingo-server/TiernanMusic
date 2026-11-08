@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../l10n/l10n.dart';
+import '../../l10n/l10n.dart';
 import 'splash_handwriting.dart';
 
 /// 启动页（App 冷启动时显示，直到首帧就绪）。

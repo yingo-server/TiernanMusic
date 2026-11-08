@@ -1,7 +1,7 @@
 import 'package:hive/hive.dart';
 
 import '../domain/quality.dart';
-import '../../features/player/data/models.dart';
+import '../domain/song.dart';
 
 /// 用户设置的默认音质（单一事实源）。
 ///
