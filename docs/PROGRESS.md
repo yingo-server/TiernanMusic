@@ -976,3 +976,11 @@ C-2 代理（332b329a）同样超时零产出 → 主代理亲自接线：
 七步全部落地：M1 domain/foundation 上移、M2 存储/桥接下沉（core→features=0）、M3 cache_keys+ResourceGateway、M4 response_policy+MusicApi、M5 RepositoryReads 读路径统一、M6 app/bootstrap、M7 CI 架构断言。
 全库 analyze 0 真错误、相对 import 0 无效、括号平衡、arb 362×11、pubspec=tag 同名。
 CI 终验与 release 产出由定时任务 660af9b0 处理。
+
+## ✅ v5.0.0 LTS 正式发布确认（最终）
+
+- release 438052974（draft=False），tag v5.0.0 → 71b4d73
+- 资产与最终 tag 构建 run 42451819131 完全一致：3 APK（24.8/22.7/26.4 MB）+ 2 截图包（375/381）；APK 大小与 /tmp/v5apk 本 run artifacts 逐项吻合
+- 版本 5.0.0+50 与 tag 同名；main/tag CI 双绿；架构断言 PASS
+- 七步重构 M1–M7 全部完成并随本发布交付
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v5.0.0/app-arm64-v8a-release.apk
