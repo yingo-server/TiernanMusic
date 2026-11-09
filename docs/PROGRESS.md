@@ -1050,3 +1050,9 @@ CI 终验与 release 产出由定时任务 660af9b0 处理。
 - release 439251922（draft=False），tag ef5d95b / pubspec 5.4.0+55，CI 双绿，3 APK + 截图包齐全。
 - 内容：登录态乐观恢复、歌单49页并发6、每代source只应用一次、播放URL 4min短缓存、并发2档探测、mini_player阶段条。
 - 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v5.4.0/app-arm64-v8a-release.apk
+
+## ✅ v5.5.0 正式发布确认
+- tag v5.5.0 @ f34b371（版本 5.5.0+56），CI 两个 push run 全绿，release 439349545 非 draft，资产 app-arm64-v8a / armeabi-v7a / x86_64 + screenshots-437.zip。
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v5.5.0/app-arm64-v8a-release.apk
+- 本版内容：①歌词漂移根治（估算行高→固定 itemExtent 84dp + 精确算术定位 + 常量跨类引用 _LyricViewState._lineExtent）②播放页按钮零文字无边框（纯图标 IconButton，唯一文字是歌词）③「音质与音效」14 档弹层入口（更多菜单，写 defaultQualityProvider）④3 l10n 键 × 11 语（382 键）。
+- CI 修复 3 轮：跨类常量前缀、full_player_page 补 quality/defaultQualityProvider 导入、3 l10n 键 gen 缺失。
