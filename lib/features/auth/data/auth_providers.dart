@@ -21,8 +21,12 @@ final authStateProvider =
 );
 
 class AuthStateNotifier extends AsyncNotifier<AuthUser?> {
+  /// v5.4：乐观恢复的后台刷新必须检查 notifier 存活（第 18/20 条）。
+  bool _disposed = false;
+
   @override
   Future<AuthUser?> build() async {
+    _disposed = false;
     await AccountManager.instance.init();
     // ⚠️ 必须**先补 t1** 再 restoreSession：
     // 直连 /login/token 的签名用 kg.t1，若此刻为空则刷新必然失败
@@ -42,7 +46,7 @@ class AuthStateNotifier extends AsyncNotifier<AuthUser?> {
         try {
           final fresh =
               await ref.read(authRepositoryProvider).restoreSession();
-          if (fresh != null && ref.mounted) setUser(fresh);
+          if (fresh != null && !_disposed) setUser(fresh);
         } catch (_) {
           // 网络失败保留乐观登录态（第 11 条：降级有退出条件）
         }
