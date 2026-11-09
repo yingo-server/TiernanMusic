@@ -1043,3 +1043,10 @@ CI 终验与 release 产出由定时任务 660af9b0 处理。
 - 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v5.3.0/app-arm64-v8a-release.apk
 - 播放器体系化二次重构交付完毕：状态机/延迟捕获/权限诊断页/布局重排/歌词三态
 - 遗留：kg_client 直连 3s 超时档、歌词正文预热、11语长度失衡翻译批、keystore 轮换（需用户手动）
+
+
+## ✅ v5.4.0 正式发布确认
+
+- release 439251922（draft=False），tag ef5d95b / pubspec 5.4.0+55，CI 双绿，3 APK + 截图包齐全。
+- 内容：登录态乐观恢复、歌单49页并发6、每代source只应用一次、播放URL 4min短缓存、并发2档探测、mini_player阶段条。
+- 下载：https://proxy.344977.xyz/https://github.com/yingo-server/TiernanMusic/releases/download/v5.4.0/app-arm64-v8a-release.apk
