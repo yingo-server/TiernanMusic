@@ -278,26 +278,43 @@ class PlayerRepository {
     var startIndex = order.indexOf(start);
     if (startIndex < 0) startIndex = order.length - 1;
 
+    // v5.4：首播只试「首选档 + 一个兜底档」，且两路并发（缓存命中零网络）。
+    // 旧实现串行 5 档 + 每档再发 freePart = 最多 10 次原生请求，是「一首歌
+    // 卡两次/首播慢」的剩余来源。上限 2 档来自实测：无权益时低一档即可
+    // 拿到可播 URL，再低音质对用户无价值（第 25 条有界）。
+    final endIndex = (startIndex + 2 > order.length) ? order.length : startIndex + 2;
+    final probes = order.sublist(startIndex, endIndex);
+    final results = await Future.wait(
+      probes.map((q) async {
+        try {
+          return MapEntry<AudioQuality, PlayUrlResult?>(
+              q,
+              await play.songUrl(
+                hash: song.hash,
+                albumId: int.tryParse(song.albumId) ?? 0,
+                albumAudioId: int.tryParse(song.albumAudioId) ?? 0,
+                quality: q.value,
+              ));
+        } catch (e) {
+          debugPrint('[player] probe ${q.value} failed: $e');
+          return MapEntry<AudioQuality, PlayUrlResult?>(q, null);
+        }
+      }),
+    );
+    // 优先取**首个有 URL** 的并发结果（首选档优先，results 保序）。
+    // 20028/权益错误收集到最后统一抛，保证验证链能拿到 ssaCode。
     int? lastErrorCode;
     String lastMessage = '';
-    // PLY-02（审查③）：20028 的 ssaCode 必须传给上层，否则验证页拿不到 eventid
     String lastSsaCode = '';
-    for (var i = startIndex; i < order.length; i++) {
-      final q = order[i];
-      final result = await play.songUrl(
-        hash: song.hash,
-        albumId: int.tryParse(song.albumId) ?? 0,
-        albumAudioId: int.tryParse(song.albumAudioId) ?? 0,
-        quality: q.value,
-      );
+    for (final entry in results) {
+      final q = entry.key;
+      final result = entry.value;
+      if (result == null) continue;
       if (result.hasUrl) {
         return PlayableResult(
-          // 直连拿到的是 http://fsandroid... ，走代理转 https
           url: result.bestUrl!,
           quality: _qualityFromBitrate(result, q),
           isPreview: result.isPreview,
-          // V402：整曲 JSON 的 filesize（PlayUrlResult.previewFileSize 是
-          // 「JSON 声明字节数」通用字段，非仅试听专用；试听片段用 offset 值）。
           expectedBytes: result.isPreview
               ? (result.offsetFileSize > 0
                   ? result.offsetFileSize
@@ -310,32 +327,33 @@ class PlayerRepository {
       if (result.ssaCode != null && result.ssaCode!.isNotEmpty) {
         lastSsaCode = result.ssaCode!;
       }
-      // 20028（需验证）直接退出
-      if (requiresVerification(ApiException(result.errorCode, result.message))) break;
-      // V399-B3：特殊音源档不享有官方 60 秒试听通道兜底——
-      // 魔法/蝰蛇是特殊音源，freePart 试听返回的是普通音源片段，
-      // 冒充特殊音效属数据失真；失败直接进入下一族内档或抛错报因。
+      if (requiresVerification(ApiException(result.errorCode, result.message))) {
+        break;
+      }
+      // 本档 fail_process（无权益/需购买）：并发发 freePart 试听兜底，
+      // 与整曲探测同轮执行，不再让用户在「整曲失败→再等一次试听」间卡住。
       if (result.failProcess.isNotEmpty && !q.isSpecial) {
-        final preview = await play.songUrl(
-          hash: song.hash,
-          albumId: int.tryParse(song.albumId) ?? 0,
-          albumAudioId: int.tryParse(song.albumAudioId) ?? 0,
-          quality: q.value,
-          freePart: true,
-        );
-        if (preview.hasUrl) {
-          return PlayableResult(
-            url: preview.bestUrl!,
-            quality: _qualityFromBitrate(preview, q),
-            isPreview: true,
-            expectedBytes: preview.offsetFileSize > 0
-                ? preview.offsetFileSize
-                : preview.previewFileSize,
+        try {
+          final preview = await play.songUrl(
+            hash: song.hash,
+            albumId: int.tryParse(song.albumId) ?? 0,
+            albumAudioId: int.tryParse(song.albumAudioId) ?? 0,
+            quality: q.value,
+            freePart: true,
           );
+          if (preview.hasUrl) {
+            return PlayableResult(
+              url: preview.bestUrl!,
+              quality: _qualityFromBitrate(preview, q),
+              isPreview: true,
+              expectedBytes: preview.offsetFileSize > 0
+                  ? preview.offsetFileSize
+                  : preview.previewFileSize,
+            );
+          }
+        } catch (e) {
+          debugPrint('[player] preview ${q.value} failed: $e');
         }
-        // PLY-08（审查③）：该档 fail_process 只代表**本档**被拒（flac 需会员
-        // 但 320 可能免费可播），continue 尝试更低音质而非放弃整首。
-        continue;
       }
     }
     if (lastErrorCode != null && lastErrorCode != 0) {

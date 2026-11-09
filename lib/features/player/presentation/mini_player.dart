@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:ui';
 
 import '../../../core/image/app_image_cache.dart';
+import '../../../core/net/network_phase.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,6 +58,10 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
               ),
               child: Column(
                 children: [
+                  // v5.4 原则 34：解析/缓冲期间 mini_player 也必须可见，
+                  // 禁止「看着能点播放键但后台在转」。与全屏页共用
+                  // NetworkPhaseTracker，不与进度条冲突。
+                  const _MiniPhaseBar(),
                   // 进度条独立：只有它随 position 重建
                   const _MiniProgressBar(),
                   Expanded(
@@ -157,6 +163,45 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
 }
 
 /// 迷你播放器顶部进度条：单独监听 position，避免整棵子树重建。
+/// v5.4：mini_player 的加载阶段细条（原则 34）。idle 时零高度。
+class _MiniPhaseBar extends StatefulWidget {
+  const _MiniPhaseBar();
+
+  @override
+  State<_MiniPhaseBar> createState() => _MiniPhaseBarState();
+}
+
+class _MiniPhaseBarState extends State<_MiniPhaseBar> {
+  StreamSubscription<NetworkPhaseEvent>? _sub;
+  NetworkPhase _phase = NetworkPhase.idle;
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = NetworkPhaseTracker.instance.stream.listen((e) {
+      if (mounted && e.phase != _phase) setState(() => _phase = e.phase);
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_phase == NetworkPhase.idle) return const SizedBox.shrink();
+    return SizedBox(
+      height: 2,
+      child: LinearProgressIndicator(
+        backgroundColor: Colors.transparent,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    );
+  }
+}
+
 class _MiniProgressBar extends ConsumerWidget {
   const _MiniProgressBar();
 
