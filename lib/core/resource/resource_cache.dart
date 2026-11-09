@@ -78,7 +78,10 @@ class ResourceCache {
     // v5.1 B3-A：in-flight 以 **fullKey**（含 scope 前缀）分键，
     // 避免同一业务键不同 TTL 的两个请求互相复用错误 TTL 的结果。
     final isList = ttl == kListTtl;
-    final fullKey = '${isList ? _listPrefix : _jsonPrefix}$key';
+    // v5.4：TTL 进键——4 分钟播放 URL 缓存与 168h JSON 缓存同业务键时
+    // 不得互相复用（否则 URL 过期后仍被当成新鲜值返回）。
+    final fullKey =
+        '${isList ? _listPrefix : _jsonPrefix}t${ttl.inMilliseconds}:$key';
     final pending = _inFlight[fullKey];
     if (pending != null) return pending;
     await init();

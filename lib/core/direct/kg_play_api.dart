@@ -9,6 +9,7 @@
 /// 避免两份拷贝参数不一致（历史上就是因为两处各写一份导致匿名态行为不一致）。
 library;
 
+import '../resource/resource_cache.dart';
 import 'kg_client.dart';
 import '../domain/response_policy.dart';
 import '../foundation/errors.dart';
@@ -30,6 +31,41 @@ class KgPlayApi {
     String quality = '128',
     bool freePart = false,
   }) async {
+    // v5.4：播放 URL 短缓存（4 分钟，CDN 直链约 5 分钟过期）。
+    // 键含 hash/音质/userid/freePart——不同身份与试听态绝不共用。
+    // 命中时零网络直接构造 PlayUrlResult，这就是「做了预读几乎瞬间播放」。
+    // TTL 取 cacheTtl(list) 的 90s 会过短、168h 会过期，用显式 4min。
+    final cacheKey = 'playurl:${client.userid}:$hash:$quality:${freePart ? 1 : 0}';
+    try {
+      final cached = await ResourceCache.instance.json(
+        cacheKey,
+        () async => (await _requestSongUrl(
+          client: client,
+          hash: hash,
+          albumId: albumId,
+          albumAudioId: albumAudioId,
+          quality: quality,
+          freePart: freePart,
+        )).body,
+        ttl: const Duration(minutes: 4),
+        staleOnError: false,
+      );
+      return PlayUrlResult.fromResponse(
+          KgResponse(status: 200, body: cached));
+    } on ApiException {
+      rethrow; // 20028 等上层验证链必须原样透传
+    }
+  }
+
+  /// 真正的原生 /v5/url 请求（v5.4 从 songUrl 拆出，供缓存未命中调用）。
+  static Future<KgResponse> _requestSongUrl({
+    required KgClient client,
+    required String hash,
+    required int albumId,
+    required int albumAudioId,
+    required String quality,
+    required bool freePart,
+  }) async {
     final params = KgSharedParams.songUrl(
       client: client,
       hash: hash,
@@ -38,24 +74,13 @@ class KgPlayApi {
       quality: quality,
       freePart: freePart,
     );
-
-    final res = await client.requestWithVerify(
+    return client.requestWithVerify(
       '/v5/url',
       method: 'GET',
-      // F4-02（审查①-B，P1）：播放主路径落原生域 trackercdn.kugou.com，
-      // 不再用 gateway + x-router（口径「trackercdn.kugou.com 用于 /v5/url」）。
       baseUrl: 'https://trackercdn.kugou.com',
       params: params,
       encryptType: 'android',
-      // F4-01（审查①-B，P1→驳回）：报告要求按 Node `notSign: true` 撤掉 signature，
-      // 但实测（curl 直打 trackercdn.kugou.com/v5/url）无 signature 时服务端返回
-      // {"errcode":"20006","status":0,"errmsg":"err signature"}，带 android signature
-      // 才返回 priv_status/hash_offset；且 Node util/request.js 只认 `notSignature`，
-      // `notSign` 拼写根本不生效（该端点实际是**签名**发的）。故保留自动签名，
-      // 见 docs/batch4_fix_1_network.md「F4-01 实测驳回」。
     );
-
-    return PlayUrlResult.fromResponse(res);
   }
 
   /// 获取音乐权益与音质（POST /v2/get_res_privilege/lite）
