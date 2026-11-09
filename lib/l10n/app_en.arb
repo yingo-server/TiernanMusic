@@ -601,5 +601,8 @@
   "playbackFailed": "Playback failed. Retry or play another song.",
   "verifyRequiredHint": "Verification required, then retry.",
   "translationInProgress": "Translating lyrics…",
-  "translationFailedHint": "Translation unavailable; will retry automatically."
+  "translationFailedHint": "Translation unavailable; will retry automatically.",
+  "audioQualityEffects": "Audio & Effects",
+  "magicEffectHint": "Magic source (works anonymously)",
+  "viperEffectHint": "Viper source (entitlement required)"
 }

@@ -601,5 +601,8 @@
   "playbackFailed": "Ошибка воспроизведения. Повторите или выберите другую песню.",
   "verifyRequiredHint": "Требуется проверка, затем повторите.",
   "translationInProgress": "Перевод текста…",
-  "translationFailedHint": "Перевод недоступен; повторится автоматически."
+  "translationFailedHint": "Перевод недоступен; повторится автоматически.",
+  "audioQualityEffects": "Звук и эффекты",
+  "magicEffectHint": "Магический источник (без аккаунта)",
+  "viperEffectHint": "Источник Viper (нужны права)"
 }

@@ -601,5 +601,8 @@
   "playbackFailed": "Falha na reprodução. Tente novamente ou reproduza outra música.",
   "verifyRequiredHint": "Verificação necessária; depois tente novamente.",
   "translationInProgress": "Traduzindo a letra…",
-  "translationFailedHint": "Tradução indisponível; será tentado novamente automaticamente."
+  "translationFailedHint": "Tradução indisponível; será tentado novamente automaticamente.",
+  "audioQualityEffects": "Áudio e efeitos",
+  "magicEffectHint": "Fonte mágica (sem conta)",
+  "viperEffectHint": "Fonte Viper (requer acesso)"
 }

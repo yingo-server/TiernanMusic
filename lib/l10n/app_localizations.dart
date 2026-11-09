@@ -384,6 +384,9 @@ const _strings_de = <String, String>{
   'verifyRequiredHint': 'Verprüfung erforderlich, dann erneut versuchen.',
   'translationInProgress': 'Liedtext wird übersetzt…',
   'translationFailedHint': 'Übersetzung nicht verfügbar; wird automatisch wiederholt.',
+  'audioQualityEffects': 'Klang & Effekte',
+  'magicEffectHint': 'Magic-Quelle (ohne Konto)',
+  'viperEffectHint': 'Viper-Quelle (Berechtigung nötig)',
 };
 
 const _strings_en = <String, String>{
@@ -766,6 +769,9 @@ const _strings_en = <String, String>{
   'verifyRequiredHint': 'Verification required, then retry.',
   'translationInProgress': 'Translating lyrics…',
   'translationFailedHint': 'Translation unavailable; will retry automatically.',
+  'audioQualityEffects': 'Audio & Effects',
+  'magicEffectHint': 'Magic source (works anonymously)',
+  'viperEffectHint': 'Viper source (entitlement required)',
 };
 
 const _strings_es = <String, String>{
@@ -1148,6 +1154,9 @@ const _strings_es = <String, String>{
   'verifyRequiredHint': 'Verificación requerida; luego reintenta.',
   'translationInProgress': 'Traduciendo la letra…',
   'translationFailedHint': 'Traducción no disponible; se reintentará automáticamente.',
+  'audioQualityEffects': 'Audio y efectos',
+  'magicEffectHint': 'Fuente mágica (sin cuenta)',
+  'viperEffectHint': 'Fuente Viper (requiere acceso)',
 };
 
 const _strings_fr = <String, String>{
@@ -1530,6 +1539,9 @@ const _strings_fr = <String, String>{
   'verifyRequiredHint': 'Vérification requise, puis réessayez.',
   'translationInProgress': 'Traduction des paroles…',
   'translationFailedHint': 'Traduction indisponible ; nouvelle tentative automatique.',
+  'audioQualityEffects': 'Audio et effets',
+  'magicEffectHint': 'Source magique (sans compte)',
+  'viperEffectHint': 'Source Viper (accès requis)',
 };
 
 const _strings_ja = <String, String>{
@@ -1912,6 +1924,9 @@ const _strings_ja = <String, String>{
   'verifyRequiredHint': '認証を完了してから再試行してください。',
   'translationInProgress': '歌詞を翻訳中…',
   'translationFailedHint': '翻訳を取得できませんでした。後で自動的に再試行します。',
+  'audioQualityEffects': '音質とエフェクト',
+  'magicEffectHint': '魔法音源（匿名でも利用可）',
+  'viperEffectHint': 'Viper 音源（権利必要）',
 };
 
 const _strings_ko = <String, String>{
@@ -2294,6 +2309,9 @@ const _strings_ko = <String, String>{
   'verifyRequiredHint': '인증 완료 후 다시 시도하세요.',
   'translationInProgress': '가사 번역 중…',
   'translationFailedHint': '번역을 가져오지 못했습니다. 자동으로 다시 시도합니다.',
+  'audioQualityEffects': '음질 및 효과',
+  'magicEffectHint': '매직 음원(비로그인 가능)',
+  'viperEffectHint': '바이퍼 음원(권한 필요)',
 };
 
 const _strings_pt = <String, String>{
@@ -2676,6 +2694,9 @@ const _strings_pt = <String, String>{
   'verifyRequiredHint': 'Verificação necessária; depois tente novamente.',
   'translationInProgress': 'Traduzindo a letra…',
   'translationFailedHint': 'Tradução indisponível; será tentado novamente automaticamente.',
+  'audioQualityEffects': 'Áudio e efeitos',
+  'magicEffectHint': 'Fonte mágica (sem conta)',
+  'viperEffectHint': 'Fonte Viper (requer acesso)',
 };
 
 const _strings_ru = <String, String>{
@@ -3058,6 +3079,9 @@ const _strings_ru = <String, String>{
   'verifyRequiredHint': 'Требуется проверка, затем повторите.',
   'translationInProgress': 'Перевод текста…',
   'translationFailedHint': 'Перевод недоступен; повторится автоматически.',
+  'audioQualityEffects': 'Звук и эффекты',
+  'magicEffectHint': 'Магический источник (без аккаунта)',
+  'viperEffectHint': 'Источник Viper (нужны права)',
 };
 
 const _strings_zh = <String, String>{
@@ -3440,6 +3464,9 @@ const _strings_zh = <String, String>{
   'verifyRequiredHint': '需要完成人机验证后重试',
   'translationInProgress': '正在翻译歌词…',
   'translationFailedHint': '译文获取失败，稍后将自动重试',
+  'audioQualityEffects': '音质与音效',
+  'magicEffectHint': '魔法音源档（匿名可用）',
+  'viperEffectHint': '蝰蛇音源档（需权益）',
 };
 
 const _strings_zh_CN = <String, String>{
@@ -3822,6 +3849,9 @@ const _strings_zh_CN = <String, String>{
   'verifyRequiredHint': '需要完成人机验证后重试',
   'translationInProgress': '正在翻译歌词…',
   'translationFailedHint': '译文获取失败，稍后将自动重试',
+  'audioQualityEffects': '音质与音效',
+  'magicEffectHint': '魔法音源档（匿名可用）',
+  'viperEffectHint': '蝰蛇音源档（需权益）',
 };
 
 const _strings_zh_TW = <String, String>{
@@ -4204,6 +4234,9 @@ const _strings_zh_TW = <String, String>{
   'verifyRequiredHint': '需要完成人機驗證後重試',
   'translationInProgress': '正在翻譯歌詞…',
   'translationFailedHint': '譯文取得失敗，稍後將自動重試',
+  'audioQualityEffects': '音質與音效',
+  'magicEffectHint': '魔法音源檔（匿名可用）',
+  'viperEffectHint': '蝰蛇音源檔（需權益）',
 };
 
 const _template = _strings_zh_CN;
@@ -4642,6 +4675,9 @@ class AppLocalizations {
   String get verifyRequiredHint => _t('verifyRequiredHint');
   String get translationInProgress => _t('translationInProgress');
   String get translationFailedHint => _t('translationFailedHint');
+  String get audioQualityEffects => _t('audioQualityEffects');
+  String get magicEffectHint => _t('magicEffectHint');
+  String get viperEffectHint => _t('viperEffectHint');
 }
 
 class _Delegate extends LocalizationsDelegate<AppLocalizations> {

@@ -601,5 +601,8 @@
   "playbackFailed": "播放失敗，請重試或換一首",
   "verifyRequiredHint": "需要完成人機驗證後重試",
   "translationInProgress": "正在翻譯歌詞…",
-  "translationFailedHint": "譯文取得失敗，稍後將自動重試"
+  "translationFailedHint": "譯文取得失敗，稍後將自動重試",
+  "audioQualityEffects": "音質與音效",
+  "magicEffectHint": "魔法音源檔（匿名可用）",
+  "viperEffectHint": "蝰蛇音源檔（需權益）"
 }

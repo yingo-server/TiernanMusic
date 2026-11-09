@@ -601,5 +601,8 @@
   "playbackFailed": "재생에 실패했습니다. 다시 시도하거나 다른 곡을 재생해 보세요.",
   "verifyRequiredHint": "인증 완료 후 다시 시도하세요.",
   "translationInProgress": "가사 번역 중…",
-  "translationFailedHint": "번역을 가져오지 못했습니다. 자동으로 다시 시도합니다."
+  "translationFailedHint": "번역을 가져오지 못했습니다. 자동으로 다시 시도합니다.",
+  "audioQualityEffects": "음질 및 효과",
+  "magicEffectHint": "매직 음원(비로그인 가능)",
+  "viperEffectHint": "바이퍼 음원(권한 필요)"
 }

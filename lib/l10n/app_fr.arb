@@ -601,5 +601,8 @@
   "playbackFailed": "Échec de la lecture. Réessayez ou lisez un autre titre.",
   "verifyRequiredHint": "Vérification requise, puis réessayez.",
   "translationInProgress": "Traduction des paroles…",
-  "translationFailedHint": "Traduction indisponible ; nouvelle tentative automatique."
+  "translationFailedHint": "Traduction indisponible ; nouvelle tentative automatique.",
+  "audioQualityEffects": "Audio et effets",
+  "magicEffectHint": "Source magique (sans compte)",
+  "viperEffectHint": "Source Viper (accès requis)"
 }

@@ -601,5 +601,8 @@
   "playbackFailed": "Wiedergabe fehlgeschlagen. Erneut versuchen oder anderen Titel spielen.",
   "verifyRequiredHint": "Verprüfung erforderlich, dann erneut versuchen.",
   "translationInProgress": "Liedtext wird übersetzt…",
-  "translationFailedHint": "Übersetzung nicht verfügbar; wird automatisch wiederholt."
+  "translationFailedHint": "Übersetzung nicht verfügbar; wird automatisch wiederholt.",
+  "audioQualityEffects": "Klang & Effekte",
+  "magicEffectHint": "Magic-Quelle (ohne Konto)",
+  "viperEffectHint": "Viper-Quelle (Berechtigung nötig)"
 }

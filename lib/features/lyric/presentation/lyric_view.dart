@@ -49,8 +49,10 @@ class LyricView extends StatefulWidget {
 class _LyricViewState extends State<LyricView> {
   final ScrollController _scroll = ScrollController();
 
-  /// 行高近似值（原文 + 可选译文 + 内边距）。歌词行高不固定，滚动定位取近似即可。
-  static const double _itemExtentApprox = 64.0;
+  /// v5.5：固定行高（几何唯一事实源）。旧实现按「是否有译文」估算
+  /// 64/76px，翻译实时插行后累计偏移整体跳变 = 用户反馈的滚动漂移。
+  static const double _lineExtent = 84.0;
+  static const double _verticalPadding = 120.0;
 
   /// 用户手动滚动后暂停自动跟随时长
   static const Duration _userScrollPause = Duration(seconds: 5);
@@ -86,11 +88,13 @@ class _LyricViewState extends State<LyricView> {
 
   /// 订阅译文增量广播（冻结契约：LyricTranslationStream.instance.patches）。
   void _subscribePatches() {
-    _patchSub = LyricTranslationStream.instance.patches
-        .listen(_onTranslationPatch, onError: (Object e) {
-      // 广播异常不应拖垮歌词显示（第 7 条：只捕获并留痕）
-      debugPrint('[lyric_view] 翻译补丁流错误：$e');
-    });
+    _patchSub = LyricTranslationStream.instance.patches.listen(
+      _onTranslationPatch,
+      onError: (Object e) {
+        // 广播异常不应拖垮歌词显示（第 7 条：只捕获并留痕）
+        debugPrint('[lyric_view] 翻译补丁流错误：$e');
+      },
+    );
   }
 
   void _onTranslationPatch(LyricTranslationPatch p) {
@@ -169,37 +173,23 @@ class _LyricViewState extends State<LyricView> {
   /// 带 offset 的歌词整首与音频错开。
   void _scrollTo(int index, {bool jump = false}) {
     if (!_scroll.hasClients || index < 0) return;
-    // F4-34（审查②-B，P1）：旧实现用固定 64px × 行号，忽略 120px 垂直 padding
-    // 与行高浮动（双语行更高），偏差随行号线性累积，唱到后半段当前行跑到屏外。
-    // 改为「按行估算高度 + 扣除顶部 padding + 让当前行居中」。
-    final lines = widget.lyric.lines;
+    // v5.5：固定 itemExtent 下的精确算术定位，译文插入不改变几何。
     final viewport = _scroll.position.viewportDimension;
-    var offset = 0.0;
-    final upper = index < lines.length ? index : lines.length;
-    for (var i = 0; i < upper; i++) {
-      offset += _estimateLineHeight(lines[i]);
-    }
-    offset += _estimateLineHeight(
-            index < lines.length ? lines[index] : lines.last) /
-        2;
-    final target = (offset - viewport / 2).clamp(0.0, _scroll.position.maxScrollExtent);
+    final target =
+        (_verticalPadding +
+                index * _lineExtent +
+                _lineExtent / 2 -
+                viewport / 2)
+            .clamp(0.0, _scroll.position.maxScrollExtent);
     if (jump) {
       _scroll.jumpTo(target);
     } else {
-      _scroll.animateTo(target,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic);
+      _scroll.animateTo(
+        target,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
     }
-  }
-
-  /// 单行高度估算：基础行高 + 译文行（双语模式且该行有译文时）。
-  ///
-  /// 估算是刻意的（第 24 条：不得在每帧路径做真实布局测量），
-  /// 但必须把「是否有译文」这一最显著的变量纳入，否则双语模式整体偏移。
-  double _estimateLineHeight(KrcLine line) {
-    final hasTranslation = widget.mode == LyricDisplayMode.bilingual &&
-        (line.translation ?? '').isNotEmpty;
-    return hasTranslation ? 76 : _itemExtentApprox;
   }
 
   @override
@@ -218,8 +208,8 @@ class _LyricViewState extends State<LyricView> {
             context.l10n.lyricEmptyGuide,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       );
@@ -256,7 +246,12 @@ class _LyricViewState extends State<LyricView> {
       },
       child: ListView.builder(
         controller: _scroll,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 120),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 24,
+          vertical: _verticalPadding,
+        ),
+        itemExtent: _lineExtent,
+        cacheExtent: 240,
         itemCount: lines.length,
         itemBuilder: (context, i) {
           final line = lines[i];
@@ -319,39 +314,46 @@ class _LyricLineTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 原文（逐字高亮）
-            _buildOriginal(theme, primary),
-            // 译文
-            if (mode == LyricDisplayMode.bilingual &&
-                translation.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                translation,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  // V400-A-03：译文 14 → 12，与原文 16/17 层次分明
-                  fontSize: 12,
+      child: SizedBox(
+        height: _lineExtent,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 原文（逐字高亮）
+              _buildOriginal(theme, primary),
+              // 译文
+              if (mode == LyricDisplayMode.bilingual &&
+                  translation.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  translation,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    // V400-A-03：译文 14 → 12，与原文 16/17 层次分明
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-            ] else if (mode == LyricDisplayMode.translation &&
-                translation.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                translation,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: primary,
-                  fontWeight: FontWeight.w600,
-                  // V400-A-03：纯译文模式同步降到 12（原 titleMedium 默认更大）
-                  fontSize: 12,
+              ] else if (mode == LyricDisplayMode.translation &&
+                  translation.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  translation,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: primary,
+                    fontWeight: FontWeight.w600,
+                    // V400-A-03：纯译文模式同步降到 12（原 titleMedium 默认更大）
+                    fontSize: 12,
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -376,16 +378,18 @@ class _LyricLineTile extends StatelessWidget {
     for (final w in line.words) {
       final isPast = posMs >= w.startMs + w.durationMs;
       final isNow = posMs >= w.startMs && posMs < w.startMs + w.durationMs;
-      spans.add(TextSpan(
-        text: w.text,
-        style: TextStyle(
-          color: isPast || isNow
-              ? primary
-              : theme.colorScheme.onSurface.withValues(alpha: 0.45),
-          fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
-          fontSize: isCurrent ? 17 : 16,
+      spans.add(
+        TextSpan(
+          text: w.text,
+          style: TextStyle(
+            color: isPast || isNow
+                ? primary
+                : theme.colorScheme.onSurface.withValues(alpha: 0.45),
+            fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+            fontSize: isCurrent ? 17 : 16,
+          ),
         ),
-      ));
+      );
     }
 
     return Text.rich(

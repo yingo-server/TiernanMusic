@@ -601,5 +601,8 @@
   "playbackFailed": "再生に失敗しました。再試行するか別の曲をお試しください。",
   "verifyRequiredHint": "認証を完了してから再試行してください。",
   "translationInProgress": "歌詞を翻訳中…",
-  "translationFailedHint": "翻訳を取得できませんでした。後で自動的に再試行します。"
+  "translationFailedHint": "翻訳を取得できませんでした。後で自動的に再試行します。",
+  "audioQualityEffects": "音質とエフェクト",
+  "magicEffectHint": "魔法音源（匿名でも利用可）",
+  "viperEffectHint": "Viper 音源（権利必要）"
 }
