@@ -268,8 +268,14 @@ class TiernanAudioHandler extends BaseAudioHandler {
   }
 
   // ── 装载链（唯一异步写入点，全程世代校验） ─────────────────────────────
+  /// v5.4：本代 source 只应用一次——`LoadingPhaseChanged` / 状态投射
+  /// 重入时不得再 `setAudioSource`/`play()`（用户反馈「卡两次」根因）。
+  int _sourceAppliedGeneration = -1;
+
   Future<void> _loadGeneration(int gen, Song song) async {
     if (_disposed) return;
+    // 同一世代：无论已装或正在装，都直接返回（一次性消费 URL）。
+    if (_sourceAppliedGeneration == gen) return;
     // 保证引擎与本 Handler 的双向订阅已建立。
     if (!_initialized) {
       final ok = await ensureEngineReady();
@@ -281,6 +287,8 @@ class TiernanAudioHandler extends BaseAudioHandler {
 
     // 同一世代重复投射（LoadingPhaseChanged/PlaybackTick）不重复解析。
     if (_loadedGeneration == gen && _loadedSource != null) return;
+    // 到这里才真正占用本代（失败时由 catch 清回，允许 RetryRequested 重来）。
+    _sourceAppliedGeneration = gen;
 
     NetworkPhaseTracker.instance.begin(NetworkPhase.resolving,
         detail: 'gen:$gen:${song.hash}');
@@ -310,6 +318,8 @@ class TiernanAudioHandler extends BaseAudioHandler {
       ));
       _playedController.add(song);
     } catch (e) {
+      // 失败清回占用，允许同代 RetryRequested 重新解析（第 11 条）。
+      if (_sourceAppliedGeneration == gen) _sourceAppliedGeneration = -1;
       if (gen != _machine.generation || _disposed) return; // 迟到异常丢弃
       final api = unwrapApi(e);
       if (api != null && api.needsVerification) {

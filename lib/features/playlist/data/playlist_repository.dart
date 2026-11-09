@@ -178,16 +178,25 @@ class PlaylistRepository {
 
     // 收集所有页（页号 → 该页实体），首页直接复用不重复请求。
     final pages = <int, List<PlaylistSong>>{page: first.songs};
-    // 已知总页数：抓取 1..totalPages（跳过首页）
+    // 已知总页数：抓取 1..totalPages（跳过首页）。
+    // v5.4：串行 49 页是「歌单加载 1 分多钟」的根因；改并发 6 页分批
+    //（上限受服务端 QPS 约束，6 为实测保守值；每页仍走 ResourceCache
+    // 90s 缓存 + in-flight 合并，缓存命中零请求）。
     if (totalPages > 0) {
-      // 从 startPage 起抓 wantedPages 页（上界截断的是头部旧页）。
-      for (var p = startPage; p < startPage + totalPages; p++) {
-        if (p < 1 || p == page || p > maxPages) continue;
-        try {
-          pages[p] = (await fetchPage(p)).songs;
-        } catch (e) {
-          debugPrint('[playlist] page $p failed: $e'); // 第 9 条：留痕
-        }
+      final todo = <int>[
+        for (var p = startPage; p < startPage + totalPages; p++)
+          if (p >= 1 && p != page && p <= maxPages) p,
+      ];
+      const batch = 6;
+      for (var i = 0; i < todo.length; i += batch) {
+        final slice = todo.sublist(i, (i + batch).clamp(0, todo.length));
+        await Future.wait(slice.map((p) async {
+          try {
+            pages[p] = (await fetchPage(p)).songs;
+          } catch (e) {
+            debugPrint('[playlist] page $p failed: $e');
+          }
+        }));
       }
     } else {
       // 未知总数：从首页向前探测，直到不满页 / 空页 / 触达上界。

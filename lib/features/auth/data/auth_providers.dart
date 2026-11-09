@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
@@ -25,13 +27,27 @@ class AuthStateNotifier extends AsyncNotifier<AuthUser?> {
     // ⚠️ 必须**先补 t1** 再 restoreSession：
     // 直连 /login/token 的签名用 kg.t1，若此刻为空则刷新必然失败
     // （原本要等 authState 变化后才补，而那已经晚于这次请求了）。
+    Credentials? cred;
     try {
-      final cred = await SecureStorage.instance.readCredentials();
+      cred = await SecureStorage.instance.readCredentials();
       if (cred?.t1 != null && cred!.t1!.isNotEmpty) {
         ref.read(kgClientProvider).t1 = cred.t1!;
       }
     } catch (_) {
       // 读不到凭证就按无 t1 继续，后续有降级路径
+    }
+    // v5.4 乐观恢复：本地凭证立即渲染，loginByToken 网络刷新转后台。
+    if (cred != null && cred.token.isNotEmpty && cred.userId.isNotEmpty) {
+      unawaited(Future<void>(() async {
+        try {
+          final fresh =
+              await ref.read(authRepositoryProvider).restoreSession();
+          if (fresh != null && ref.mounted) setUser(fresh);
+        } catch (_) {
+          // 网络失败保留乐观登录态（第 11 条：降级有退出条件）
+        }
+      }));
+      return AuthUser(userid: cred.userId, token: cred.token);
     }
     return ref.read(authRepositoryProvider).restoreSession();
   }
