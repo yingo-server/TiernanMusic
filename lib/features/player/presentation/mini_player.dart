@@ -178,7 +178,7 @@ class _MiniPhaseBarState extends State<_MiniPhaseBar> {
   @override
   void initState() {
     super.initState();
-    _sub = NetworkPhaseTracker.instance.stream.listen((e) {
+    _sub = NetworkPhaseTracker.instance.events.listen((e) {
       if (mounted && e.phase != _phase) setState(() => _phase = e.phase);
     });
   }
