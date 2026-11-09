@@ -1,507 +1,195 @@
-# v5.1 交叉审查 B4 批 · 视角 C（用户路径与一致性）
+### F13 `lib/features/player/data/player_repository.dart`（506 行，完整读 1-506）
 
-基线：v5.0.0（71b4d73）后当前磁盘主线；只读审查，当前磁盘状态。
-范围：43 文件 / 9550 行。本代理通读 ✅ 标注的 12 个文件，其余只做 ≤8 文件跨文件契约抽查（签名 + 调用点）。
-视角：真实用户操作序列（进入→操作→反馈）的断点、空/加载/失败三态、可观测性、i18n、生命周期、跨模块契约一致性、回归。
-证据等级：本报告所有结论均为「静态推演」或「实锤」（静态可证的代码事实），**未实测**（无 SDK/构建/真机，任务书禁止）。
-规范：QUALITY_STANDARD.md（第 1–33 条）+ REVIEW_SPEC.md；冲突以 QUALITY_STANDARD 为准。
-去重索引已读：b1/b2/b3_merged、b3_b、b3_c 的条目标题；不重复报告已审条目。
-
----
-
-## 逐文件记录（实时 append）
-
-### F1 `lib/app/router.dart`（163 行，完整读）
-
-### lib/app/router.dart:22-27 未配置 `errorBuilder` / `redirect`，未知深链无本地化错误页与脱出口
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 14 条（深链属于必须校验的数据边界）
-- 依据：`GoRouter` 构造参数只有 `initialLocation` 与 `routes`，无 `errorBuilder`、无 `onException`、无顶层 redirect；而同文件 :63-95 对「/rank/:rankId 非法」这一同类深链边界专设了 `context.l10n.rankParamsInvalid` + `context.go('/home')` 的错误页。同一类用户输入（非法深链）在本文件内存在两种截然不同的处理口径。
-- 影响：用户点开拼错或截断的分享链接（例如 `/playlist` 缺 `:id`、`/rank/abc` 之外的未知路径）时，落到 go_router 默认错误呈现（框架自带的英文/调试态信息），既不是应用语言也不提供「返回首页」按钮；若该链接是冷启动的 initialLocation，系统返回键直接退出应用而不是回首页。与 :63-95 已经做好的中文引导形成明显不一致。
-- 证据等级：静态推演（默认错误页具体形态未实测，任务书禁止构建/真机）
-
-### lib/app/router.dart:22 / 115-127 GoRouter 由无 `dispose` 的 `Provider` 持有，`MainShell` 内的 NavigationBar 依赖 `shell.currentIndex` 但路由对象无重建/失效约定
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 20 条（生命周期双向对称）
-- 依据：`appRouterProvider = Provider<GoRouter>((ref) => GoRouter(...))` 未指定 `dispose`；`GoRouter` 自身持有路由信息解析与刷新监听。`MainShell` 是 StatelessWidget，选中态完全由 `shell.currentIndex` 提供（:135-140）。
-- 影响：热重载 / provider 被失效重建时旧路由对象未被释放，存在旧监听继续消费刷新事件的窗口；用户侧可能表现为一次深链打开旧页面。该路径在正常使用序列中不易触发，定 P3。
-- 证据等级：静态推演（未实测热重载；`main.dart` 是否 invalidate 该 provider 不在本代理抽查范围）
-
-### 复核通过（F1）
-- :90-95、:141-156 底部导航四项标签与排行榜错误页文案全部走 `context.l10n`，路由层无硬编码用户可见中文；i18n 一致。
-- :63-95 非法 rankId 直接给本地化错误页 + 「返回首页」出口，失败可观测且可脱出（第 9 条）。
-- :23-36 `StatefulShellRoute.indexedStack` 四个分支各自保活，切换 tab 不重建页面，用户切走再回来不丢滚动位置与输入内容。
-
-#### F1 `dart analyze lib/app/router.dart`
-```
-62 issues found（61 error + 1 warning）
-噪音归类：uri_does_not_exist ×3（package:flutter/material.dart、flutter_riverpod、go_router 三方包缺失）
-          undefined_function ×24 / undefined_identifier ×12 / creation_with_non_type ×9 /
-          undefined_method ×7 / undefined_class ×3 / extends_non_class ×1 /
-          non_type_as_type_argument ×1 / super_formal_parameter_without_associated_named ×1 /
-          override_on_non_overriding_member ×1（均由上述 3 个包缺失导致 GoRouter/Widget/Icon/Icons/
-          context.l10n 等符号无法解析的级联噪音）
-项目自有类错误：0（import 的 16 个 lib/ 相对路径逐一核对，全部存在）→ 合格
-```
-
-### F2 `lib/core/image/app_image_cache.dart`（79 行，完整读）
-
-### lib/core/image/app_image_cache.dart:57-67 / 69-79 `getFileStream` 的串行闸门只挡住「开始消费」，流本身并行下载，与文件头承诺的「同一时刻只有一个 DB 事务」不符
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 22 条（并发假设必须写明并保护）、第 31 条（注释须与行为一致）
-- 依据：`_serial` 把每个排队的 `action` 链接到 `_queue`（:41-51），只有 `getSingleFile` 的 `action` 真的是「下载+写入」（:61-62）。`getFileStream` 传入的是空操作 `_serial(() async {})`（:74），await 后立即 `yield* super.getFileStream(...)`（:75-77）——此后不再持有任何闸门；而且 `_serial` 的 `_queue` 在空操作完成后即释放，下一个调用者的 `await _serial(() async {})` 立即通过。文件头 :7-21 声称 CachedNetworkImage 的 getFileStream 链路也「串行化」，:68-70 注释声称「不串行化则 sqflite 并发写事务 → SQLITE_BUSY」。统计核对：全库 15 个使用 `CachedNetworkImage` 的文件全部显式传 `cacheManager: AppImageCache.instance`，即主要链路确实走这个方法。
-- 影响：首页/榜单首屏一次并发拉几十张封面时，多个 `getFileStream` 仍可同时进入 `super` 的下载/写库路径；文件头描述已被修掉的 `DatabaseException(database is locked)` 日志刷屏与 IO 拖慢会从这个入口重现，用户表现为首屏封面加载慢/偶发不显示。属「承诺的修复实际未覆盖主链路」的回归。
-- 证据等级：静态推演（`flutter_cache_manager` 内部是否对下载再排队未实测；按注释自身陈述的「本身不做并发控制」推演）
-
-### lib/core/image/app_image_cache.dart:35-45 `maxNrOfCacheObjects: 600` 与「500MB 字节上限」注释互相矛盾，清缓存入口对图片盒无独立可见性
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 31 条（注释解释「为什么」，不得与实现相反）
-- 依据：注释 :32-34 写「加 500MB 上限」，紧接着 :34-38 又写「Config 无字节上限参数……条目上限 600 已由 maxNrOfCacheObjects 承担；字节维度由『清缓存』入口（settings_page emptyCache）+ 用户手动兜底」，但 `Config` 实参里只有 `stalePeriod: 30 days` 与 `maxNrOfCacheObjects: 600`（:29-31），没有任何 500MB 语义；「用户手动兜底」对 App 内图片缓存无对应操作。
-- 影响：用户在设置页看到的清缓存说明与实际容量口径不一致；长期大量浏览封面时仍可能占用较大内部存储而没有任何字节维度提示。定 P3（该现象需长期运行才可见，未实测）。
-- 证据等级：静态推演
-
-### 复核通过（F2）
-- :26 / :38 `AppImageCache._()` + `static final instance` 全局单例，且对全库 15 个 `CachedNetworkImage` 使用文件逐一核对：`cacheManager: AppImageCache.instance` 全部到位，无一处退回默认实例（与 :22-23 的强约束一致，用户切页不会因多实例产生重复下载）。
-- :17 静态过期 30 天 + 条目上限 600，满足第 25 条「资源必须有常量上限」。
-- :44-51 `_serial` 用 `Completer` 显式 completeError 传递异常与 stack，未吞异常（第 6/9 条）。
-
-#### F2 `dart analyze lib/core/image/app_image_cache.dart`
-```
-11 issues found（9 error + 2 warning）
-噪音归类：uri_does_not_exist ×2（package:file/file.dart、package:flutter_cache_manager/...，三方包缺失）
-          extends_non_class ×1 / undefined_method ×1 / extra_positional_arguments ×1 /
-          non_type_as_type_argument ×2 / undefined_super_member ×2 /
-          override_on_non_overriding_member ×2（均为 CacheManager/Config/File/FileResponse
-          无法解析的级联噪音）
-项目自有类错误：0 → 合格
-```
-
-### F3 `lib/core/utils/toast.dart`（139 行，完整读）
-
-### lib/core/utils/toast.dart:17-24 / 26-28 去重发生在 Overlay 查找之前，无 Overlay 时消息被记为「已展示」，真实提示永久丢失
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 9 条（失败必须可观测）、第 18 条（异步/跨上下文结果须校验有效性）
-- 依据：`show()` 先 `_lastShown[msg] = now` 记账（:22），再 `context.findRootAncestorStateOfType<OverlayState>()`，取不到就直接 `return`（:27-28）；返回前既不回滚 `_lastShown` 也不记日志。而 `_dedupeWindow = 3s`（:11），`_lastShown` 是进程级静态 Map（:17）。异步操作完成后常见序列是：请求 A 失败 → Toast.show 成功展示；3 秒内页面被 pop，`await` 后的请求 B 用已卸载 context 调 `Toast.show`（此时找不到 Overlay 或 context 已失效）→ 静默 return 且写入时间戳；紧接着用户重新进入页面、同一错误在 3 秒内再次发生 → :20-21 的 `_lastShown` 命中，`return` 不展示。
-- 影响：失败/操作反馈在「转场瞬间 + 3 秒内复现」这一常见序列中完全不可见，用户既看不到错误也看不到重试提示；与 `copy()`（:46-50）显式检查 `context.mounted` 的处理口径不一致。
-- 证据等级：静态推演（Overlay 缺失的具体时机未实测）
-
-### lib/core/utils/toast.dart:35-42 / 59-65 `_current` 与 `_dismissTimer` 绑定到「创建时的根 Overlay」，页面重建/多 Navigator 时旧 OverlayEntry 无人移除
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 20 条（生命周期双向对称）
-- 依据：`overlay.insert(entry)`（:40）把 entry 插入的是调用处的 `OverlayState`，但 `_current` 是静态字段（:18），`_hide()`（:60-65）只对 `_current` 调 `remove()`，没有保存 entry 所属的 OverlayState，也没有在 `OverlayState.dispose` 时清理的钩子。若两次 `show()` 分别来自不同根 Overlay（例如全屏 `/player` 页自带 Overlay、或路由重建后新的 Navigator Overlay），:34-36 的「清掉当前显示的」会调用旧 entry 的 `remove()`，而旧 Overlay 已不存在/已 dispose；同时 `_dismissTimer` 只有一个（:19、:41），旧计时器被无条件 `cancel()`，旧 entry 再无第二个移除时机。类注释 :8「同一时刻最多显示 1 条」在此路径不成立。
-- 影响：全屏播放器/对话框切换期间可能出现两条提示叠加，或一条提示常驻不退（直到下一次 Toast.show 才被清），遮挡底部导航与迷你播放器。
-- 证据等级：静态推演（多 Overlay 的具体路由结构未在本范围完整核对）
-
-### lib/core/utils/toast.dart:24-28 / 46-50 `_lastShown` 以整个 `msg` 字符串作键，动态错误信息绕开去重，且长文本无截断
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 25 条（资源必须有上限）
-- 依据：去重键是原始 `msg`（:20、:22）；`_ToastView` 的 `Text(widget.msg)`（:115）无 `maxLines`/`overflow`。Map 上限只在 `length > 64` 时按时间清理（:24-27），单条 msg 的长度没有上限。上游 `friendly_error` 等处若把 URL/异常 toString 拼入提示文本，每次文本都不同 → 3 秒窗口形同虚设，且长文本会在 `bottom: media.padding.bottom + 96`（:98）的固定位置撑成多行胶囊。
-- 影响：并发失败时连续弹多条不同文字的提示、互相顶掉；长错误串撑破屏幕底部布局。属轻微体验问题，定 P3。
-- 证据等级：静态推演
-
-### 复核通过（F3）
-- :45-50 `copy()` 对空文本早退、await 后用 `context.mounted` 再展示，异步后校验了上下文有效性（第 18/20 条）。
-- :85-96 `_ToastViewState` 的 `_exitTimer` 与 `AnimationController` 在 `dispose()` 成对取消/释放（第 20 条）。
-- :107-116 提示文案取 `theme.colorScheme.inverseSurface/onInverseSurface`，深浅色主题下对比度随系统主题切换，无硬编码颜色。
-
-#### F3 `dart analyze lib/core/utils/toast.dart`
-```
-43 issues found（39 error + 4 warning）
-噪音归类：uri_does_not_exist ×2（package:flutter/material.dart、package:flutter/services.dart）
-          undefined_method ×13 / undefined_identifier ×10 / undefined_class ×7 /
-          override_on_non_overriding_member ×4 / undefined_super_member ×2 /
-          non_type_as_type_argument ×1 / mixin_with_non_class_superclass ×1 /
-          mixin_of_non_class ×1 / extends_non_class ×1 / creation_with_non_type ×1
-          （全部源于 Flutter 包缺失：StatefulWidget/State/AnimationController/Positioned/
-          OverlayEntry/Clipboard/Colors/Curves 等无法解析；`context.l10n` 亦因此不可解析）
-项目自有类错误：0（l10n/l10n.dart 相对 import 路径存在）→ 合格
-```
-
-### F4 `lib/core/utils/error_logger.dart`（486 行，完整读 1-486）
-
-### lib/core/utils/error_logger.dart:43-66 `setVerbose(false)` 不再恢复 `debugPrint`，且包装体不检查 `verboseMode`，关闭 verbose 后仍全量落盘
+### lib/features/player/data/player_repository.dart:64-124 / 220-235 `ensureDfid` 失败后用 `/register/dev`（kapi 兜底）作为唯一注册路径，且失败异常对用户完全不可观测
 - 级别：P1
-- 违反：QUALITY_STANDARD 第 30/31 条（命名/注释与行为一致）、第 25 条（资源上限与开关语义）
-- 依据：`setVerbose` 中 `if (on && !_debugPrintHookInstalled)` 才安装包装；包装体（:47-59）唯一的短路条件是 `_inDebugPrintHook || message == null || message.isEmpty`，**没有 `verboseMode` 判断**，随即无条件 `instance._enqueueVerbose('debugPrint: $message')`。:63-65 的注释明确写「关闭时保留包装（包装体内部以 verboseMode 判断是否落盘）」，但包装体内不存在该判断；`_debugPrintHookInstalled` 一经置 true 也永不清 false，`original` 指针永不恢复。统计核对：`main.dart:265` 每次 `ref.watch(verboseLoggingProvider)` 变化都调用 `setVerbose`，即用户在设置页关闭详细日志后该包装仍在。
-- 影响：用户把「详细日志」开关关掉后，App 仍把每一次 `debugPrint`（网络、播放、缓存等所有走 debugPrint 的信息）写进 `verbose.log` 并轮转 2MB×5 份；存储空间持续被写入、诊断页仍显示 verbose 条目，开关对用户完全失效，且用户无从得知自己关闭失败。属「设置项静默无效」的长时间静默错误。
-- 证据等级：实锤（本文件内开关与包装体互斥条件可直接静态确证；`_enqueueVerbose` :80-86 自身只有 `_recent` 记账 + `unawaited(_enqueue(...))`，不再检查 verboseMode）
+- 违反：QUALITY_STANDARD 第 9 条（失败必须可观测）、第 27/33 条（kapi 只可作显式兜底，返回不可作判定依据）
+- 依据：`ensureDfid()` 在缓存缺失时走 `_api.get('/register/dev')`（:88），注释 :80-85 明确写「走 kapi 中转……原生注册在 KgClient.registerDevice……真正缺失时走 kapi 兜底」——即运行时主路径是 kapi 而非原生 `userservice risk/v3/r_register_dev`；`data['dfid']` 为空时 `throw ApiException(-1, '注册设备失败：未返回 dfid')`（:90-92），`catch (e) { rethrow; }`（:118-119）无日志、无 ErrorLogger、无用户可见提示。`_resolveViaDirect`（:250）与 `_resolveViaKapi`（:350）都在最开始 `await ensureDfid()`；`resolveUrl` 的 `catch (e)` 分支（:224-235）只 `debugPrint` 并继续回退。统计核对：`audio_handler.dart:71` 会对播放异常调 `ErrorLogger.instance.log`，但 `ensureDfid` 抛出的 `ApiException` 在 `resolveUrl` 的 `on ApiException catch (e)`（:217-221）里若非 20028/非特殊档会静默落到 kapi 路径，而 kapi 路径又再次 `ensureDfid()` 抛同样异常。
+- 影响：设备票据缺失（首次安装/清除数据/存储损坏）时，用户点播任意歌曲都会走到「注册失败 → 直连失败 → kapi 回退 → 再次注册失败」的闭环，界面表现为一直转圈或一句通用播放失败，且没有任何可检索日志说明是「kapi 注册未返回 dfid」；用户重试/重启都无法恢复，必须靠清除数据碰运气。第 33 条要求 kapi 返回必须标注「包装结果，需原生复核」，此处把它当成设备身份的唯一来源。
+- 证据等级：静态推演（`_api.get('/register/dev')` 的实际网关分派不在本代理通读范围；按本文件注释陈述推演）
 
-### lib/core/utils/error_logger.dart:47-59 / 80-86 / 103-149 verbose 包装把「原 debugPrint 输出」也重新入队，日志量随自身输出放大
+### lib/features/player/data/player_repository.dart:203-236 `resolveUrl` 的 `on ApiException catch` 只按 `requiresVerification`/`isSpecial` 上抛，其余业务错误（版权、需会员、地区限制）静默回退 kapi
 - 级别：P2
-- 违反：QUALITY_STANDARD 第 25 条（资源必须有上限）、第 24 条（不得在热路径重复计算/无谓 IO）
-- 依据：包装体内 `_inDebugPrintHook = true;` 保护的是「落盘动作内部再触发 debugPrint」，但 :58 `original(message, wrapWidth: wrapWidth)` 是在 `finally { _inDebugPrintHook = false; }`（:54-56）之后调用的，此时守卫已复位；`original` 若最终仍指向别的包装链，或 :134/:147/:291 等处 `debugPrint('[ErrorLogger] ...')` 在写入失败时产生的新消息，都会被再次当作新的 debugPrint 事件入队一条 `[verbose]`。每条 verbose 落盘都是一次 `resolveRoot()`（:106，含探测写根目录）+ 一次文件轮转检查 + 一次 flush 写盘（:110-112），全部串在同一条 `_writeQueue` 上，与 `log()`（:240-252）共用。
-- 影响：打开详细日志后浏览首页/播放时，日志写盘队列被 verbose 条目占满，用户主动触发的「记录错误」与设置页「查看日志目录」排在长队后面，诊断页迟迟不刷新；同时外部存储的写放大与耗电明显。verbose 关闭失效（上一条）会让此影响在整个会话持续。
-- 证据等级：静态推演（写入放大倍数取决于上游 debugPrint 频率，未实测）
-
-### lib/core/utils/error_logger.dart:451-466 `currentDirPath()` 的「（日志仅进程内）」哨兵与 verbose 写入路径脱节
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 5 条（状态单一来源）、第 9 条（失败可观测）
-- 依据：`_everPersisted`（:186）只在 `log()` 的成功分支写入（:228、:246）；`_writeVerbose()` 的三条成功路径（:113、:127、:141）只分别设置 `_publicDirPath` / `_fallbackWrittenPath`，**从不设置 `_everPersisted`**。而 `currentDirPath()` 先看 `_publicDirPath`，再看 `_fallbackWrittenPath`，只有两者都为空时才用 `!_everPersisted` 返回哨兵（:456-465）。`settings_page.dart:94` 与 :854/:864 都调用该方法向用户展示日志位置。
-- 影响：用户打开详细日志、日志实际已成功写到 `logs/verbose.log` 且 `_publicDirPath` 已赋值时，诊断页显示的是真实路径——此路径下只有 verbose 文件；但从未调用过 `log()` 时 `_everPersisted=false` 并不影响它。反过来，若 verbose 的三条路径都失败（例如 `apiLevel < 29` 且公共直写与私有目录都不可写），`_everPersisted` 仍为 false，用户看到「（日志仅进程内）」，而真实失败原因（三个分支的 `catch (_) {}` 空体，:115、:132）既无日志也无 Toast。用户在设置页「导出/分享日志」时得到的是一个与事实不符的静态提示，无法自行定位。
-- 证据等级：实锤（字段写入点可逐一静态确证）
-
-### lib/core/utils/error_logger.dart:103-115 / 121-133 `_writeVerbose` 前两级失败完全静默，`catch (_) {}` 空体
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 6 条（禁止吞掉异常）、第 9 条（失败必须可观测）
-- 依据：公共根直写分支 :114-116 是 `catch (_) { // 直写失败（权限中途被收回等）→ 走 MediaStore }`，无任何日志/计数；MediaStore 分支 :129-132 是 `catch (_) {}`，同样空体；仅第三级私有目录失败才 `debugPrint('[ErrorLogger] verbose write failed: $e')`（:145）。对照同文件 `_appendPublic`/`_rewriteMediaStore`/`_hasStoragePermission`（:286-288、:329-332、:343-346）都会 `debugPrint` 留痕。
-- 影响：用户开启详细日志后，日志被静默写到 App 私有目录（文件管理器里看不到），设置页虽显示私有路径但用户按注释 :8-9 的预期去「公共 Downloads/Documents」找文件会找不到；权限中途被收回这一具体原因在日志中毫无记录，客服/用户无法区分「没开开关」「写了但找不到」「完全没写」。
+- 违反：QUALITY_STANDARD 第 9 条（失败可观测）、第 11 条（降级须有明确触发条件）、第 27 条
+- 依据：`on ApiException catch (e) { if (requiresVerification(e) || preferred.isSpecial) rethrow; // 其它错误回退 kapi 再试 }`（:217-221）既没有 `debugPrint(e)` 也不带 `e` 的任何信息进入回退；`_resolveViaKapi` 从零开始重新按 `fallbackOrder` 打一遍 `/song/url`（:350-397），最终抛 `lastError ?? ApiException(-1, '没有可尝试的播放音质')`（:415），把直连已经明确给出的「歌曲暂无版权/需要会员/地区限制」覆盖成一句无因的失败文案。对照同方法 `catch (e)` 分支（:222-235）至少 `debugPrint` 留痕。
+- 影响：用户点播无版权或付费歌曲，直连已返回明确原因，界面却显示「没有可尝试的播放音质」或长时间转圈后才失败；用户无法得知需要会员/无版权，客服日志里也查不到直连拒绝原因。回退对这类明确业务错误没有意义，却多打一轮请求。
 - 证据等级：实锤
 
-### lib/core/utils/error_logger.dart:47-59 / 43-45 反复 `setVerbose(true)` 与 `verboseMode` 外部直改会让包装链叠加/失配
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 19 条（互斥闸门必须归属同一所有者）
-- 依据：`verboseMode` 是 public static 可写字段（:26），`setVerbose` 的幂等条件 `if (verboseMode == on) return`（:44）依赖该字段；`_debugPrintHookInstalled` 是另一个独立布尔（:30）。若任一调用方直接写 `ErrorLogger.verboseMode = false`（字段公开），再调 `setVerbose(false)` 会因 `verboseMode == on` 直接 return，`_debugPrintHookInstalled` 与全局 `debugPrint` 指针状态再无同步点；`original` 闭包被保留但无从卸载。统计核对本范围外仅 `main.dart:265` 与 `kg_client.dart:172` 使用该字段，当前调用链未直接赋值。
-- 影响：热重载或第三方代码改动开关后，全局 `debugPrint` 包装无法卸载，控制台输出与落盘行为不一致。当前已读调用链未触发，定 P3。
-- 证据等级：静态推演
+### lib/features/player/data/player_repository.dart:340 / 399-415 试听兜底第二轮的 `catch (_)` 空体 + 最终异常丢失所有中间错误，`data['status']` 判失败条件与 `canPlay` 口径不一致
+- 级别：P2
+- 违反：QUALITY_STANDARD 第 6 条（禁止吞掉异常）、第 8 条（异常契约单一）、第 29 条（成功判定须逐端点确认）
+- 依据：第二轮 `free_part` 试听循环（:399-413）`catch (_) { // 继续尝试下一档 }`（:411-412）空体吞掉所有异常，包括 `TypeError`、`DioException`、`ApiException`；最终 `throw lastError ?? ApiException(-1, '没有可尝试的播放音质')`（:415）只保留**第一轮**最后一档的错误，第二轮全部失败原因丢失。成功判定 `final errorCode = _int(data['errcode'] ?? data['error_code']); final status = _int(data['status']); if (errorCode != 0 || (status != null && status != 1))`（:359-363）与本文件 `canPlay`（:419-424，`status != 1` 且 `privilege & 8`）以及 REVIEW_SPEC 的「成功判定不统一」口径不一致；`_int(null)` 返回 `int.tryParse('null') == null`，`errorCode` 为 null 时 `null != 0` 为 **true**，即任何不带 errcode 的成功响应都会被判为失败并 `continue`。`dart analyze` 在 :340 也报 `unnecessary_null_comparison`（`r.bitrate != null` 恒真），属同一类类型契约漂移的信号。
+- 影响：上游播放响应不带 `errcode` 字段（或字段改名为 `errorcode`）时，所有音质被当成失败、再走一遍试听、最后抛「没有可尝试的播放音质」，用户点播直接失败；日志里完全没有「某个字段缺失」的线索（第 29 条：成功判定口径未留样）。
+- 证据等级：静态推演（上游真实返回形态未实测；判失败条件在本文件内可静态确证）
 
-### 复核通过（F4）
-- :250-269 `_enqueue` 用 `_writeQueue.then` + 链尾 `catchError` 兜底，任一事务抛错不破坏整条串行链，避免日志锁永久死锁（第 19/22 条）。
-- :376-405 `_redact` 对 token/authorization/sign/cookie/dfid/t1/userid/mobile 四种键值形态 + 裸手机号 + Bearer/Basic 统一脱敏，且 `logApi`、`verbose`、`log` 三条入口都过 `_redact`（:197、:84、:222），公共目录日志不泄漏凭据（第 14 条）。
-- :26-27 `verboseMaxBytes`/`verboseMaxBackups`、:21 `maxBytes`、:172-173 `_recent` 上限 200，均具名常量且轮转保留份数有上限（第 25 条）。
-- :451-466 `currentDirPath()` 只返回「实际确认写入」的路径，不把计划路径当真实路径，且 :9/:20 注释明确「绝不因日志写入影响主流程」；`handleFlutterError`/`handleUncaught` 均 `unawaited`，不阻塞 UI。
+### lib/features/player/data/player_repository.dart:20-35 / 274-292 `PlayableResult.expectedBytes` 在直连路径用 `previewFileSize` 表示「整曲 JSON 声明字节数」，而 `isPreview` 时取 `offsetFileSize`，字段名与语义相反
+- 级别：P2
+- 违反：QUALITY_STANDARD 第 15 条（单位/语义必须显式）、第 30 条（命名即文档）、第 23 条（缓存键维度）
+- 依据：`PlayableResult.expectedBytes` 注释（:27-31）声明「播放 JSON 声明的字节数……永久缓存实际文件只允许在 `(url, expectedBytes)` 与请求 JSON 完全一致时写入/复用」；但 `_resolveViaDirect` 中整曲用 `expectedBytes: result.previewFileSize`（:283），试听用 `result.offsetFileSize > 0 ? result.offsetFileSize : result.previewFileSize`（:278-281）。注释 :276-278 解释「`PlayUrlResult.previewFileSize` 是『JSON 声明字节数』通用字段，非仅试听专用」——即命名 `preview*` 承载整曲大小，`offset*` 承载试听区间。`_resolveViaKapi` 的 `_declaredBytes`（:444-453）又优先取 `hash_offset` 区间差值（试听区间），无区间才取 `filesize`。两条路径对「完整文件字节数」的取法来自不同字段，与 B3 已审「`declaredBytes` 在 kapi 回退路径可能取试听区间差值」相邻但不同：这里是直连路径字段命名与语义反转造成的跨层契约不一致。
+- 影响：永久文件缓存按 `(url, expectedBytes)` 判身份，直连与 kapi 给同一 URL 算出不同的「声明字节数」时，缓存命中失败或把试听片段按整曲大小登记；用户重复播放同一首歌时反复回源下载，或被判定为损坏文件重新下载。
+- 证据等级：静态推演（`PlayUrlResult` 字段来源不在本代理通读范围）
 
-#### F4 `dart analyze lib/core/utils/error_logger.dart`
-```
-20 issues found（20 error）
-噪音归类：uri_does_not_exist ×3（package:flutter/foundation.dart、flutter/services.dart、path_provider）
-          undefined_method ×12 / undefined_identifier ×2 / undefined_class ×2 /
-          const_initialized_with_non_constant_value ×1（均源于上述三方包缺失：debugPrint、
-          FlutterErrorDetails、MethodChannel、Directory? 等类型/符号级联不可解析）
-项目自有类错误：0（../storage/storage_permission.dart 相对 import 存在）→ 合格
-```
-
-### F5 `lib/core/widgets/empty_state.dart`（68 行，完整读）
-
-### lib/core/widgets/empty_state.dart:1-6 / 63-68 导入与尾部注释错位：文件尾是 `error_retry.dart` 的文档注释，且 3 个 import 完全未使用
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 32 条（死代码零容忍）、第 31 条（注释解释「为什么」）
-- 依据：`import 'dart:async';`、`import '../utils/toast.dart';`、`import '../../l10n/l10n.dart';`（:1-6）在本文件 68 行内无任何符号引用（`EmptyState` 只用 `IconData`/`Theme`/`LayoutBuilder`，全部来自 material.dart）。文件尾 :63-68 的注释「统一错误重试 / 绝不把原始异常……折叠在『技术详情』里」描述的是 `error_retry.dart`，而不是本文件的 `EmptyState`。对照 `list_skeleton.dart` 尾部 :44-46 的注释「统一空态（图标 + 文案 + 可选按钮）」恰好描述 `empty_state.dart`——两个文件的尾部注释互换了位置。
-- 影响：维护者按注释在 `empty_state.dart` 找错误重试逻辑会扑空，改空态组件时容易误删/误改；用户不可见，定 P3。
-- 证据等级：实锤
-
-### lib/core/widgets/empty_state.dart:44-50 / 14-19 空态按钮文案由调用方传入，组件自身无 l10n 兜底，且 `actionLabel` 与 `onAction` 必须同时非空才渲染
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 16 条（空集合与缺失语义分离）、第 9 条（失败可观测）
-- 依据：`if (actionLabel != null && onAction != null)`（:44）是「与」条件；`FilledButton.tonalIcon` 的 `label: Text(actionLabel!)`（:49）直接渲染调用方字符串，本文件没有 `context.l10n` 兜底（虽然 import 了 l10n 却未用）。组件无 `icon`/`message` 的语义提示（例如「请求失败」与「确实为空」共用同一 `IconData` 参数），全部依赖调用方区分。
-- 影响：调用方只给了操作回调忘了给文案（或只给文案忘了回调）时，空态/失败态既无说明外的动作也无重试入口，用户卡在空页面无法脱出；调用方传入硬编码中文时该处不走 l10n。属边界态一致性问题，当前 8 个 SongTile 调用方是否全部正确配对未在本代理通读范围，定 P3。
-- 证据等级：静态推演
-
-### 复核通过（F5）
-- :25-31 `LayoutBuilder` 按 `constraints.maxHeight.isFinite` 分支：全屏占位用 `Center`、放进无界高度 ListView 时直接返回 content，避免无限高度断言（第 14 条：对外部布局约束做校验）。
-- :33-42 图标与文案取 `theme.colorScheme.onSurfaceVariant`，深浅主题一致，无硬编码颜色。
-
-#### F5 `dart analyze lib/core/widgets/empty_state.dart`
-```
-24 issues found（23 error + 1 warning）
-噪音归类：uri_does_not_exist ×1（package:flutter/material.dart）
-          undefined_method ×7 / undefined_identifier ×6 / undefined_class ×4 /
-          creation_with_non_type ×3 / extends_non_class ×1 /
-          super_formal_parameter_without_associated_named ×1 /
-          override_on_non_overriding_member ×1（Flutter 缺失的级联噪音）
-项目自有类错误：0（3 个 lib/ 相对 import 路径均存在）→ 合格
-补充：本文件 3 个未使用 import 因 Flutter 包缺失未被 analyzer 报出（级联噪音覆盖），
-      已由完整阅读确证，见 F5 第 1 条（第 32 条）。
-```
-
-### F6 `lib/core/widgets/list_skeleton.dart`（46 行，完整读）
-
-### lib/core/widgets/list_skeleton.dart:1-6 / 44-46 3 个 import 完全未使用，尾部注释描述的是 `empty_state.dart`
+### lib/features/player/data/player_repository.dart:1-2 / 39-40 / 429-441 多个 import 与注释块为死代码或重复
 - 级别：P3
 - 违反：QUALITY_STANDARD 第 32 条（死代码零容忍）、第 31 条
-- 依据：`import 'dart:async';`、`import '../utils/toast.dart';`、`import '../../l10n/l10n.dart';`（:2-6）在 46 行内零引用；只有 `shimmer.dart`（:1）与 material.dart（:3）被使用。文件尾 :44-46 的「统一空态（图标 + 文案 + 可选按钮）」描述 `EmptyState`，与本文件 `ListSkeleton` 无关（与 F5 的错位注释互换）。
-- 影响：维护者按注释找空态组件会走错文件；用户不可见，定 P3。
+- 依据：`import '../../../core/net/music_api.dart';`（:2）在 506 行内无符号引用（本文件只用 `KugouApiClient`、`CachedApiCall`、`ResourceCache` 相关符号，见 import 列表 :6-16；`kListTtl` 来自 resource_cache.dart）；:429-441 是两段重复的「播放地址不再走前缀代理」文档注释（:429-435 与 :436-441），内容几乎逐字相同却都不附着在任何方法/字段上，只后接 `_actualQuality`（:443）。`canPlay`/`requiresVip`（:419-427）在本文件内 `_songFailureMessage` 有调用 `canPlay`，`requiresVip` 也有调用，非死代码。
+- 影响：无用户可见后果；维护者误以为存在代理层、或按注释去找 `music_api` 依赖会落空，定 P3。
 - 证据等级：实锤
 
-### lib/core/widgets/list_skeleton.dart:18-22 / 12-13 骨架屏用 `ListView.builder` 但无 `physics`/`shrinkWrap` 参数，嵌套在下拉刷新列表中会吃掉滚动手势
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 3 条（跨层契约：组件应声明自己适用的布局约束）、第 14 条
-- 依据：`ListView.builder(itemCount: itemCount, ...)`（:18-20）默认 `physics` 为平台滚动物理、`shrinkWrap: false`，需要有限高度约束；本组件不接收任何布局参数（构造函数只有 `itemCount`，:13），也不像 `EmptyState` 那样用 `LayoutBuilder` 判约束。统计核对：加载态骨架在首页/搜索/榜单等列表页使用，这些页面通常外层还有 `RefreshIndicator`/`NestedScrollView`。
-- 影响：把骨架放进无界高度或嵌套滚动容器时，用户下拉刷新手势被内层 ListView 抢走（或触发无限高度断言），首屏加载阶段出现「下拉没反应/白屏」；把加载态从「可交互」变成「卡住」。
-- 证据等级：静态推演（具体页面是否嵌套未在本代理通读范围逐一核对）
+### 复核通过（F13）
+- :70-78 / :116-122 `_registering` + `_registeringFuture` + `Completer` 让并发等待者挂在同一 Future 上，并在 `finally` 成对复位；`_registerRetries >= 3` 有界防无限轮询（第 19/21/25 条）。
+- :100-112 dfid 注册结果三写同步（SecureStorage / `kgClient.device.dfid` / `KgDeviceStore.saveDfidSync`），且失败单独 `debugPrint`（第 5/9 条）。
+- :145-192 `fetchDetail` 对「data 是 List」按 hash 精确匹配、未命中返回原 song，避免 A 歌用 B 歌详情；解析失败按 `TypeError/FormatException` 与网络失败分类留痕，且不阻塞播放（第 7/9/14 条）。
+- :155-159 / :175-179 两个分支都显式 `copyWith(localPath: song.localPath)`，离线歌曲播过一次后不会被详情覆盖成在线播放（回归防护到位）。
+- :243-248 `startIndex < 0` 时从最低档开始、特殊音源族内降级不越族边界、`requiresVerification` 时立即 break 保留 ssaCode（第 11/3 条）。
+- :468-481 `_firstUrl` 用 `Uri.tryParse` + `hasScheme` + `host` 三重校验，拒绝畸形 URL（第 14 条）。
 
-### lib/core/widgets/list_skeleton.dart:12-13 `itemCount` 无上界、无最小值校验，调用方可传负数/超大值
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 14 条（边界校验）、第 25 条（资源上限）
-- 依据：`final int itemCount;` 直接进 `ListView.builder(itemCount: itemCount)`（:19），构造时既无 `assert` 也无 clamp；默认 6。虽然 `builder` 是惰性的（第 24 条已满足），但 `itemCount` 完全由调用方控制。
-- 影响：传入负数时 Flutter 抛断言、加载态直接崩溃；传入极大值时骨架项虽惰性构建但滚动条比例异常。属边界防御缺失，定 P3。
-- 证据等级：静态推演
-
-### 复核通过（F6）
-- :16-39 `ListView.builder` 惰性构建（第 24 条），骨架行用 `SkeletonBox`/`SkeletonText` 且颜色取 `theme.colorScheme.surface`/`surfaceContainerHighest`，主题一致。
-- :15-17 `Shimmer` 由父层统一驱动，单个骨架项不各自创建动画控制器（第 20/26 条）。
-
-#### F6 `dart analyze lib/core/widgets/list_skeleton.dart`
+#### F13 `dart analyze lib/features/player/data/player_repository.dart`
 ```
-16 issues found（15 error + 1 warning）
-噪音归类：uri_does_not_exist ×1（package:flutter/material.dart）
-          undefined_method ×4 / undefined_identifier ×4 / undefined_class ×2 /
-          creation_with_non_type ×2 / extends_non_class ×1 /
-          super_formal_parameter_without_associated_named ×1 /
-          override_on_non_overriding_member ×1（Flutter 缺失级联噪音）
-项目自有类错误：0（shimmer.dart / toast.dart / l10n.dart 相对 import 均存在）→ 合格
-```
-
-### F7 `lib/core/widgets/song_tile.dart`（221 行，完整读）
-
-### lib/core/widgets/song_tile.dart:85-102 封面加载失败与「无封面」共用同一占位，`errorWidget` 不区分网络失败，用户无法看到加载/失败三态中的失败态
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 16 条（空集合与缺失必须语义分离）、第 9 条（失败可观测）
-- 依据：`placeholder: (_, __) => _placeholder(theme)` 与 `errorWidget: (_, __, ___) => _placeholder(theme)`（:99-100）指向**同一个** `_placeholder`（:185-195，一个音符图标）；`cover == null || cover!.isEmpty` 分支（:92）也返回同一个 `_placeholder`。三条完全不同的事实（加载中 / 图片 URL 404 或网络断开 / 该歌曲本来就没有封面）在 UI 上不可区分，且 `errorWidget` 未记录任何日志。
-- 影响：网络异常时整屏歌曲列表看起来「都没有封面」，用户误以为数据源无封面而不会去检查网络或重试；加载慢时也没有任何进度反馈。与 B4 范围其它组件（如 `error_retry.dart` 的「技术详情」折叠错误）的三态口径不一致。
-- 证据等级：实锤
-
-### lib/core/widgets/song_tile.dart:131-161 `PopupMenuButton` 与 `onMenuSelected` 无配对校验，给了菜单但漏回调时菜单项点击后完全无反馈
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 3 条（契约先行：回调可选却无失败语义）、第 9 条
-- 依据：`_hasMenu` 只判断 `menuItems != null && menuItems!.isNotEmpty`（:78）；`onSelected: (v) => onMenuSelected?.call(v)`（:137）在 `onMenuSelected == null` 时静默丢弃选择。构造函数把 `menuItems` 与 `onMenuSelected` 都声明为可选（:63-67），无 assert、无 disabled 态、无日志。统计核对：全库 8 个 `SongTile(` 使用文件中，4 个文件出现 `menuItems:` 字面量，另 4 个（artist/album/rank_detail/library 之一）计数为 0，具体配对情况未逐一通读（本代理只抽查，不越界）。
-- 影响：用户点「更多」→ 选「收藏/删除/添加到歌单」→ 弹窗关闭、界面毫无变化，也没有 Toast/日志；对「删除」这类写操作用户会反复点，可能产生重复提交疑虑（第 21 条）。属于「进入→操作→反馈」链路的操作后反馈断点。
-- 证据等级：静态推演（具体调用方配对不全在通读范围）
-
-### lib/core/widgets/song_tile.dart:215-217 `_fmt` 对时长 ≥60 分钟不做小时归一，且未处理负数或超大值
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 15 条（单位必须显式）、第 17 条（数值精度）
-- 依据：`duration` 注释为「秒」（:48/:57），`_fmt` 实现 `'${(sec ~/ 60)...}:${(sec % 60)...}'`（:216-217）：60 分钟显示为 `60:00`，超过 1 小时也不转 `h:mm:ss`；分钟用 `padLeft(1,'0')` 不补零（对比秒 `padLeft(2,'0')`），出现 `0:05` 与 `5:05` 宽度不一致。`sec` 为负时 `~/` 与 `%` 产生 `-1:59` 之类的非法显示。
-- 影响：播客/长音频/MV 伴生条目在列表里显示 `60:00`、`125:00` 等非常规时长；单位仍是秒却没有在命名/类型上体现（只有一个行尾注释）。轻微体验问题，定 P3。
-- 证据等级：静态推演
-
-### lib/core/widgets/song_tile.dart:7-16 / 1-5 `export` 五个组件 + 3 个未使用 import，单一职责被破坏
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 1 条（单一职责）、第 32 条（死代码）
-- 依据：`song_tile.dart` 在 :7-11 `export 'section_header.dart'; 'gradient_chip.dart'; 'list_skeleton.dart'; 'empty_state.dart'; 'error_retry.dart';`——一个「歌曲列表项」文件同时充当 6 个组件的门面；`import 'dart:async';`（:2）、`import '../utils/toast.dart';`（:13）、`import '../../l10n/l10n.dart';`（:15）中 l10n 实际被 `context.l10n.moreActions/download` 使用（:136、:173），另两个在 221 行内零引用。`import 'empty_state.dart';` 与 `import 'error_retry.dart';`（:6-7）也无本文件内引用，仅为了配合 export。
-- 影响：任何页面只想用 `EmptyState` 都必须连带编译 `SongTile` 及其 `cached_network_image` 依赖，改动任一被 export 的组件都会让所有使用方重新分析；维护时难以判断「统一组件」的权威入口在哪（与 `empty_state.dart`/`list_skeleton.dart` 尾部错位注释叠加）。用户不可见，定 P3。
-- 证据等级：实锤
-
-### 复核通过（F7）
-- :88-90 全部封面走 `cacheManager: AppImageCache.instance` + `memCacheWidth` 按设备像素比计算，与 `app_image_cache.dart` 的全局单例契约一致，且不会按原图解码（第 23/25 条）。
-- :165-177 单一高频下载按钮显式 `BoxConstraints(minWidth: 48, minHeight: 48)` 补足触控目标，并用 `context.l10n.download` 作 tooltip（可达性 + i18n）。
-- :131-161 多操作统一收进 `PopupMenuButton`，`isDestructive` 项用 `theme.colorScheme.error` 强调，危险操作有一致视觉口径。
-- :78 标题/副标题 `maxLines: 1` + `TextOverflow.ellipsis`，`isPlaying` 用 primary 色与半粗体，当前播放项在列表中可辨识。
-
-#### F7 `dart analyze lib/core/widgets/song_tile.dart`
-```
-55 issues found（54 error + 1 warning）
-噪音归类：uri_does_not_exist ×2（package:cached_network_image/...、package:flutter/material.dart）
-          undefined_method ×18 / undefined_identifier ×15 / undefined_class ×12 /
-          creation_with_non_type ×5 / extends_non_class ×1 /
-          super_formal_parameter_without_associated_named ×1 /
-          override_on_non_overriding_member ×1（三方包缺失级联噪音）
-项目自有类错误：0（app_image_cache.dart / gradient_chip.dart / empty_state.dart /
-          error_retry.dart / section_header.dart / list_skeleton.dart / toast.dart /
-          l10n.dart 相对 import 路径均存在）→ 合格
-```
-
-### F8 `lib/features/home/data/home_repository.dart`（198 行，完整读）
-
-### lib/features/home/data/home_repository.dart:157-188 五个区块全部失败时被折叠成一个通用异常，用户看不到「哪个区块失败/可重试」，且失败文案硬编码中文
-- 级别：P1
-- 违反：QUALITY_STANDARD 第 9 条（失败必须可观测）、第 16 条（空集合与失败语义分离）、i18n 一致性
-- 依据：`songsF/plF/rankF/bannerF/dailyF`（:159-175）每个都用 `catch (_) { return const []; }` 或 `return null` 把异常吞成空集合；`Future.wait` 后（:177-179）只判断 `songs/playlists/ranks/banners` 全空就 `throw Exception('首页数据加载失败，请检查网络后重试')`（:184-186），字符串为中文硬编码。统计核对：`home_page.dart:27-43` 用 `homeAsync` 的 error 态 + `onRetry` / `ref.refresh`，:71 的空态 `onAction` 也是 `ref.invalidate`；`main.dart:212` 还监听该 provider。
-- 影响：用户断网打开首页时看到的是一条不区分原因的中文提示；若四个接口恰好返回「合法但空」的列表（限流、地区榜单为空、未登录），同样抛同一条「请检查网络」——用户按提示反复检查网络/重试也不会恢复。部分区块成功时（例如只有新歌成功）其余空区块会以空白占位出现，用户无法区分「加载中/确实没有/加载失败」，三态完全混同。与 `router.dart` 已全部走 `context.l10n` 的口径不一致（英文/其它语言用户看到中文）。
-- 证据等级：实锤（异常与文案可直接静态确证；具体接口返回形态未实测）
-
-### lib/features/home/data/home_repository.dart:58-68 `fetchTopPlaylists` 的 `catch (_)` 空体回落，降级无留痕、无触发/退出条件
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 6 条（禁止吞掉异常）、第 11 条（降级须有触发与退出条件）、第 9 条
-- 依据：`try { ... _cachedGet('/top/playlist', ...) ... } catch (_) { // 回落 yueku 歌单 }`（:59-67）注释只有一行，既不 debugPrint 也不记日志，更不区分异常类型；`raw.isNotEmpty` 为 false 时**不抛异常**也直接落到 `fetchYuekuPlaylists()`（:68），即「主路径业务返回空」与「主路径抛异常」共用同一降级；降级结果还会经 `_cachedGet` 写进缓存，下一次请求只要主路径再失败就继续用旧数据，没有「何时退出降级」的判定。对照同文件 `fetchBanners`（:103-105）、`fetchDailyRecommend`（:128-131）、`fetchNewSongs`（:147-150）三处回落都有 `debugPrint` 留痕并写明原因，唯独此路径没有。
-- 影响：推荐歌单长期静默变成乐库歌单，用户看到的「推荐」内容悄悄改变却没有任何提示；线上无法从日志区分「/top/playlist 挂了」和「返回空」，客服无法定位，也不知何时恢复。
-- 证据等级：实锤
-
-### lib/features/home/data/home_repository.dart:1 / 3 `package:flutter/foundation.dart` 重复 import 两次
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 32 条（死代码零容忍）
-- 依据：:1 与 :3 是逐字相同的两行 `import 'package:flutter/foundation.dart';`，中间夹着 `import '../../../core/net/music_api.dart';`（:2）。`music_api.dart` 这个 import 在 198 行内也未被任何符号使用（本文件只用 `KugouApiClient`、`CachedApiCall`、`kListTtl`、`kugouApiClientProvider`、`Provider`、`debugPrint`）。
-- 影响：无用户可见后果；属整洁度与 import 一致性问题，定 P3。
-- 证据等级：实锤
-
-### lib/features/home/data/home_repository.dart:159-175 五个 `.timeout(12s)` 各自计时但 `Future.wait` 不校验世代，登录态切换后旧首页数据仍可写回
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 18 条（异步结果必须校验世代）
-- 依据：`fetchHomeData()` 内 5 个 Future 各自 `.timeout(t)`，聚合用 `Future.wait<dynamic>`（:177-179）等待全部完成（最坏 12s）；返回的 `HomeData` 不含任何请求世代/用户标识。`main.dart:287` 在登录态变化时 `ref.invalidate(homeDataProvider)`，但本方法没有 `cancel`/`generation` 参数，被 invalidate 的旧 Future 仍会跑完并（经 `CachedApiCall`/`ResourceCache`）写缓存。`fetchDailyRecommend()`（:117）明确说明「登录态强相关，绝不能进 MemoryCache」，但聚合方法把它的结果与其它区块一起在旧世代里完成。
-- 影响：用户登录/登出瞬间若旧首页请求仍在跑（最长 12 秒），新请求与旧请求的结果交错；每日推荐这一登录态强相关区块可能在登出后仍短暂显示、或登录后延迟不出现，用户看到与账号不符的推荐内容。
-- 证据等级：静态推演（Riverpod invalidate 对未完成 Future 的具体行为未实测）
-
-### 复核通过（F8）
-- :103-105 / :128-131 / :147-150 三处回落都 `debugPrint` 写明端点与失败原因，符合「静默降级必须留痕」（第 9 条）。
-- :117-120 每日推荐刻意绕开 `_cachedGet` 直接 `_api.get`，避免匿名态响应被缓存后登录仍不刷新（第 23 条：缓存键覆盖登录态维度）。
-- :157-179 五个区块并发 + 单项 12s 超时 + `Future.wait`，任一失败不影响其它区块，首页不是「全有或全无」（第 11 条退化粒度合理）。
-
-#### F8 `dart analyze lib/features/home/data/home_repository.dart`
-```
-8 issues found（8 error）
-噪音归类：uri_does_not_exist ×3（package:flutter/foundation.dart 重复 ×2、flutter_riverpod）
-          undefined_function ×2（Provider / FutureProvider）/ undefined_method ×3（debugPrint）
-          均为三方包缺失级联噪音
+8 issues found（7 error + 1 warning）
+噪音归类：uri_does_not_exist ×2（package:flutter/foundation.dart、flutter_riverpod）
+          undefined_class ×1（Ref）/ undefined_method ×4（debugPrint）
+          warning unnecessary_null_comparison ×1（:340 `r.bitrate != null` 恒真，
+          非项目自有类错误；已作为 F13 第 3 条的类型契约漂移佐证）
 项目自有类错误：0（core/net/music_api.dart、core/api/kugou_api_client.dart、
-          core/resource/cached_api.dart、core/resource/resource_cache.dart、app/di.dart、
-          models.dart 相对 import 均存在）→ 合格
-补充：:1/:3 重复 import 与 :2 未使用 import 已由完整阅读确证（F8 第 3 条）。
+          core/audio/preferred_quality.dart、core/direct/kg_play_api.dart / kg_client.dart /
+          kg_providers.dart、core/storage/secure_storage.dart、core/resource/cached_api.dart /
+          resource_cache.dart、core/domain/song.dart / quality.dart / response_policy.dart、
+          core/foundation/errors.dart 相对 import 均存在）→ 合格
 ```
 
-### F9 `lib/features/lyric/data/krc_decoder.dart`（102 行，完整读）
+### F14 `lib/features/player/presentation/full_player_page.dart`（854 行，完整读 1-720 + 721-854）
 
-### lib/features/lyric/data/krc_decoder.dart:97-101 兼容入口 `decode()` 把 4 类失败统一折叠成空串，仍可从任何调用方绕过结构化错误
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 9 条（失败必须可观测）、第 32 条（死代码）、第 3 条（契约单一）
-- 依据：`decodeDetailed()` 已定义 `KrcDecodeError{emptyInput, invalidBase64, notKrcContainer, corruptPayload}`（:11-16）与带 `error` 的 `KrcDecodeResult`（:18-28），但 :98-101 仍保留 `static String decode(...) => decodeDetailed(...).text;`，注释写「兼容旧调用点」；统计核对全库 `KrcDecoder` 调用点只有 `lyric_repository.dart:129` 一处且用的是 `decodeDetailed`，即"旧调用点"已不存在。文件头 :6-9 自述旧实现「统一返回 ''……损坏时被当成『无歌词』静默吞掉（第 9 条）」正是这个入口仍在提供的行为。
-- 影响：后续任一新调用方误用 `decode()`（名字更短、更符合直觉）时，KRC 密文损坏会再次被当成「没有歌词」，歌词页静默空白且日志无任何线索；用户无法区分「这首歌没歌词」与「歌词解密失败」，与 `EmptyState` 的三态语义冲突。
-- 证据等级：实锤
-
-### lib/features/lyric/data/krc_decoder.dart:88-92 `utf8.decode(..., allowMalformed: true)` 把乱码静默替换成 U+FFFD，解密成功但歌词内容已损坏仍报 success
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 9 条（失败可观测）、第 13/14 条（外部数据边界校验）
-- 依据：`_inflateUint8List` 只在 `text.trim().isEmpty` 时抛 `FormatException`（:90-92）；非法 UTF-8 字节因 `allowMalformed: true`（:89）被替换字符吸收，函数返回 `KrcDecodeResult.success(text)`（:68）。`decodeDetailed` 对解压后的内容不做任何 KRC 结构校验（不检查是否含 `[` 时间标签、不检查替换字符比例）。
-- 影响：上游返回编码异常或 XOR key 错位但 zlib 恰巧解压出字节流时，用户看到整页歌词是「□□□/问号菱形」，而 UI 认为解密成功、不触发回落 LRC 明文、不记日志；用户既无正确歌词也无错误提示，且反复重试无改善。
-- 证据等级：静态推演（上游返回是否会出现该形态未实测）
-
-### lib/features/lyric/data/krc_decoder.dart:42-46 / 60-84 `base64.normalize` 对超长输入无上限，XOR + 两次 zlib 解压都在主线程同步执行
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 25 条（所有资源必须有上限）、第 24 条（惰性/按需计算）
-- 依据：`decodeDetailed` 接收任意 `String base64Content`，只判 `trim().isEmpty`（:42-44），随后 `base64.decode(base64.normalize(...))` 整串解码（:46）、`bytes.sublist(4)` 复制一份（:59）、`Uint8List(body.length)` 再分配一份（:62）、失败时 `_inflateUint8List` 最多再尝试一次带移位的完整拷贝（:72-77）。全过程无长度上限、无 isolate、无 `compute`。
-- 影响：上游返回一个异常大的歌词字段时，切歌瞬间主线程同步做数次大内存拷贝与解压，歌词页/播放控制出现明显卡顿；极端情况下内存峰值翻倍。定 P3（正常歌词体量小，未实测卡顿）。
-- 证据等级：静态推演
-
-### 复核通过（F9）
-- :41-57 四类失败（空串 / 非法 Base64 / 非 krc1 头 / 解压损坏）在入口逐一分支返回结构化 `KrcDecodeResult.failure`，不再统一返回 `''`（第 13/14/16 条）。
-- :69-83 「krc1 头后还有 4 字节长度前缀」的形态只在首次解压失败时多试一次，不在成功路径增加开销，且失败仍落 `corruptPayload`（第 11 条：降级有明确触发与退出条件）。
-- :36-39 固定 key 为具名常量 `_key`，避免魔法值散落（第 2 条）。
-
-#### F9 `dart analyze lib/features/lyric/data/krc_decoder.dart`
-```
-2 issues found（2 error）
-噪音归类：uri_does_not_exist ×1（package:archive/archive.dart）、creation_with_non_type ×1（ZLibDecoder）
-项目自有类错误：0（仅 dart:convert / dart:typed_data / archive 三个 import）→ 合格
-```
-
-### F10 `lib/features/rank/data/rank_repository.dart`（133 行，完整读）
-
-### lib/features/rank/data/rank_repository.dart:107-129 `fetchRankSongs` 把「响应形态异常/接口失败」静默解析成空列表，且 `total` 用 `songs.length` 兜底，榜单详情页会错误停止分页
+### lib/features/player/presentation/full_player_page.dart:38-86 `currentLyricProvider` 把「无候选 / 解析失败」写成硬编码中文字符串，且 `LyricView` 从不消费 `error`，歌词失败态在 UI 上不可见
 - 级别：P1
-- 违反：QUALITY_STANDARD 第 16 条（请求失败与确实为空语义分离）、第 9 条（失败可观测）
-- 依据：`_reads.post(...) as Map<String, dynamic>`（:112-116）之后，`data is Map ? ... : <String,dynamic>{}`（:117）、`map['songlist'] is List ? ... : const []`（:118）；响应体没有 `data`、没有 `songlist`、或 `songlist` 里所有条目 `hash` 都为空（:121 的 `.where((s) => s.hash.isNotEmpty)`）时，一律返回 `RankSongsPage(songs: [], total: ...)`；`total` 在解析失败时用 `songs.length`（:126-127）即 0。全过程无 throw、无日志、无错误标记。统计核对：`rank_detail_page.dart:41-42 / :63-64` 用该结果驱动 `_page` 与「加载更多」。
-- 影响：用户点开排行榜，遇到上游返回结构变化、限流、需要登录等真实失败时看到的是「空榜单」而不是错误/重试提示；`total=0` 让分页逻辑认为已到末页，下拉「加载更多」不再触发，用户以为该榜单真的没有歌曲。失败态与空态混同，且刷新前不会自行恢复提示。
-- 证据等级：静态推演（`RepositoryReads.post` 是否已把业务错误抛异常不在本代理通读范围；但「有响应、形态不符」这一分支在本文件内确定会静默成空）
+- 违反：QUALITY_STANDARD 第 16 条（失败与空态语义分离）、第 9 条（失败可观测）、i18n 一致性
+- 依据：`currentLyricProvider` 返回记录类型 `({KrcLyric? lyric, String? error, String? lyricId, String? songHash})`（:38-39），两个失败分支分别 `return (lyric: null, error: '暂无歌词', ...)`（:51-53）与 `return (lyric: null, error: '歌词解析失败', ...)`（:55-57），均为硬编码中文；注释 :35-37 明确宣称「`error` 字段区分『无候选/解析失败』与正常空，不与加载中混为一谈」。但 `_CoverOrLyricState.build` 只取 `final lyric = lyricAsync.value?.lyric;`（:541）与 `lyricId`/`songHash`（:543-544），**`error` 在全文件 854 行内零消费**；`lyric == null` 时 `AnimatedSwitcher` 的 child 走 `_CoverView`（:548-566），即切到歌词页看到的是专辑封面，不是任何错误文案。同时 `lyricAsync.isLoading` / `hasError` 也未被使用，加载态与失败态都呈现同一张封面。
+- 影响：用户点「显示歌词」后，若歌词查询/解密失败或还在加载，界面毫无变化（仍是封面），也没有「重试」入口；英文/其它语言用户即使将来接了 error 也会看到中文。失败原因（无候选 vs 解析失败 vs 网络异常）全部折叠，用户反复点击切换按钮不会得到反馈。与 `LyricView` 的 `lyricEmptyGuide`（F11 第 1 条）叠加：即使 provider 返回了空 `KrcLyric`，也只显示一句「暂无歌词」引导。
+- 证据等级：实锤
 
-### lib/features/rank/data/rank_repository.dart:112 `post` 用于读操作，且 body 为空 Map 与 `rankRepositoryProvider` 用 `ref.watch` 装配，榜单分页与账号切换的契约不一致
+### lib/features/player/presentation/full_player_page.dart:432-461 `songMvProvider` 的 loading/error 态被折叠成「没有 MV」，MV 入口会闪烁或永久消失
+- 级别：P2
+- 违反：QUALITY_STANDARD 第 16 条（加载/失败/确实为空语义分离）、第 9 条
+- 依据：`final mvAsync = albumAudioId.isEmpty ? null : ref.watch(songMvProvider(albumAudioId)); final mv = mvAsync?.value; final hasMv = mv != null && mv.videoId.isNotEmpty;`（:435-438）；`hasMv` 为 false 时 `if (hasMv) ...[ SizedBox + Expanded(MV 按钮) ]`（:488-513）整块不渲染。既没有 `mvAsync?.isLoading` 的占位/骨架，也没有 `mvAsync?.hasError` 的提示或重试；`mv_provider.dart:19-25` 的 `findBySong` 异常会直接以 FutureProvider error 态传播（F12 第 2 条）。而同一行里的评论按钮明确用 `onPressed: albumAudioId.isEmpty ? null : ...` 保留「禁用态」以保证入口可发现（:447-460，注释 :428-431 也写明「绝不与 MV 有无绑定」），MV 按钮却没有任何等价处理。
+- 影响：（1）切歌后 MV 查询结果未回来时入口行只有 2 个按钮，几百毫秒后突然多出 1 个按钮，用户点击位置随布局重排而偏移，容易误点；（2）网络失败时 MV 按钮永久消失，用户以为这首歌没有 MV，且无重试入口；（3）与同排评论按钮「保留禁用态」的一致性口径相反。
+- 证据等级：静态推演（FutureProvider 的具体重建时机未实测）
+
+### lib/features/player/presentation/full_player_page.dart:538-566 `_showLyric` 为 true 但 `lyric == null` 时按钮文案已变成「显示封面」，界面却仍显示封面
+- 级别：P2
+- 违反：QUALITY_STANDARD 第 5 条（状态单一来源）、第 9 条（操作反馈）
+- 依据：`_toggleLyric()` 无条件 `setState(() => _showLyric = !_showLyric)`（:529-532）；`AnimatedSwitcher` 的分支条件是 `_showLyric && lyric != null`（:548），只要歌词尚未就绪/失败就渲染 `_CoverView`。而右下切换按钮的图标与文案**只看 `_showLyric`**：`_showLyric ? Icons.album_outlined : Icons.lyrics_outlined` 与 `_showLyric ? context.l10n.showCover : context.l10n.showLyrics`（:578-585）。即状态机有 4 种组合，UI 只表达 2 种。
+- 影响：用户点「显示歌词」后，按钮立刻变成「显示封面」，但屏幕内容还是封面且没有任何解释；用户会以为点击无效而反复点，实际每次点击只是把 `_showLyric` 在 true/false 间翻转。这是「操作 → 反馈」链路的直接断点，与上一条的 `error` 未消费叠加。
+- 证据等级：实锤
+
+### lib/features/player/presentation/full_player_page.dart:88-93 `_fmt` 与 `LyricView`/`SongTile` 的时长格式三套口径，`total` 为 0 时显示 `00:00`
 - 级别：P3
-- 违反：QUALITY_STANDARD 第 3 条（请求方法契约）、第 32 条
-- 依据：`_reads.post('/rank/audio', const <String, dynamic>{}, query: {...})`（:112）对只读的榜单歌曲查询使用 POST 且传空 body；`import '../../../core/api/kugou_api_client.dart';`（:3）与 `final KugouApiClient _api`（:105）在本文件只用于构造 `RepositoryReads`，`import '../../home/data/models.dart' show kugouImageUrl` 的 `show` 使用正确。`rankRepositoryProvider` 用 `ref.watch(kugouApiClientProvider)`（:132-133），而 `home_repository.dart:13` 用 `ref.read(...)`，同批两个仓库的装配口径不一致。
-- 影响：用户切号时榜单仓库会随 provider 重建，首页仓库不会；同一账号切换操作在两个 Tab 上产生不同的刷新行为。属一致性/整洁度问题，定 P3。
+- 违反：QUALITY_STANDARD 第 15 条（单位/格式单一来源）、第 30 条
+- 依据：`String _fmt(Duration d)`（:88-93）用 `inMinutes.remainder(60)` + `padLeft(2,'0')`，即 ≥1 小时显示为 `00:00`（小时被 remainder 丢弃）；`song_tile.dart:216-217` 用 `sec ~/ 60` 不补零、超过 60 分钟显示 `60:00`；`rank_repository.dart:97` 用 `Duration(milliseconds: ms)`。全屏播放器 :747-751 把 `_fmt(position)` 与 `_fmt(total)` 直接摆在进度条两端，`total` 默认 `Duration.zero`（:704）时显示 `00:00`，与「加载中/未知时长」不可区分。
+- 影响：长音频（>1h）在播放器上显示错误时长；缓冲阶段进度条右侧显示 `00:00`，用户误以为歌曲时长就是 0 或文件损坏。三处格式互不统一，定 P3。
+- 证据等级：实锤
+
+### lib/features/player/presentation/full_player_page.dart:700-742 `_ProgressBar` 用 `total.inMilliseconds > 0 ? ... : 1.0` 兜底，`secondaryTrackValue: bufMs` 未夹到 `maxMs` 的 Slider 语义边界
+- 级别：P3
+- 违反：QUALITY_STANDARD 第 14 条（边界值校验）、第 17 条（进度精度）
+- 依据：`maxMs = total.inMilliseconds > 0 ? total.inMilliseconds.toDouble() : 1.0`（:706）；`posMs`/`bufMs` 都 clamp 到 `[0, total.inMilliseconds]`（:707-708），当 `total == Duration.zero` 时二者恒为 0，而 `maxMs` 是 1.0，Slider 显示一个可拖动的 0/1 轨道；`onChangeEnd` 里 `controller.seekTo(Duration(milliseconds: v.round()))`（:734）在 total 为 0 时仍会发起 seek（最多 1ms）。注释 :696 只说明「拖动期间用本地值，松手才 seek」，未说明这段兜底的触发/退出条件。
+- 影响：切歌瞬间或时长未就绪时用户误触进度条，会向引擎发出一次无意义 seek，可能打断刚开始的播放；视觉上出现一个「有 1ms 长度」的假进度条。定 P3（边界态）。
 - 证据等级：静态推演
 
-### lib/features/rank/data/rank_repository.dart:77-89 时长只认 `duration_128/320/flac`，缺失时静默 `Duration.zero`，列表显示 `0:00`
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 15 条（单位必须显式）、第 16 条
-- 依据：`var ms = 0;`（:77）遍历三个键（:78-88），`v` 既非正 int 也非可解析的正数字符串时保持 0，最终 `duration: Duration(milliseconds: ms)`（:97）。文件头 :12 注释写明这三个字段单位是毫秒，但字段名本身不含单位，且代码无「字段缺失」与「时长确为 0」的区分。
-- 影响：上游字段名变动或某音质无时长时，榜单里一批歌曲统一显示 `0:00`，用户误以为文件损坏而不敢点播；同时没有任何日志提示字段缺失。定 P3。
-- 证据等级：静态推演
+### lib/features/player/presentation/full_player_page.dart:41-86 语言切换/歌词模式切换后 `currentLyricProvider` 不重新翻译，`ensureTranslation` 只在首次加载时调用一次
+- 级别：P2
+- 违反：QUALITY_STANDARD 第 23 条（缓存/结果键必须覆盖语言维度）、第 18 条（结果世代）
+- 依据：`targetLang` 在 provider 内由 `WidgetsBinding.instance.platformDispatcher.locale` 取（:69-73），但 `FutureProvider.autoDispose` 的依赖只有 `currentSongProvider`（:40）、`lyricRepositoryProvider`（:45）、`lyricModeProvider`（:77）——`locale` 不是被 watch 的 provider，系统语言变化不会让该 Future 失效。`ensureTranslation(lyric, candidate.id, targetLang, songHash: song.hash)`（:80-81）只在本次 provider 求值时跑一次。统计核对：`lyricModeProvider` 来自 `core/theme/settings_provider.dart`，用户在设置页切「原文/双语/译文」会因 :77 的 watch 触发重算，但切 App 语言不会。
+- 影响：用户把系统语言从中文切到英文（或反向）后回到播放页，双语歌词仍是旧语言译文；只有切歌或重进页面才可能刷新。用户在设置里改语言得到的是「部分界面变了、歌词没变」的不一致体验。
+- 证据等级：静态推演（Riverpod autoDispose 在语言变化时的具体行为未实测）
 
-### 复核通过（F10）
-- :50-53 对 `audio_info`/`album_info`/`trans_param`/`video_info` 四个嵌套对象逐一 `is Map` 分支校验后再 `Map.from`，未裸强转（第 13 条）。
-- :55-59 歌手名优先 `author_name`，缺失时回落 `authors[].author_name` 且 `first is Map` 才取值（第 14 条）。
-- :120-122 过滤 `hash.isEmpty` 的无效条目，避免用户点到无法播放的歌（第 14 条）。
-- :65-68 封面统一走 `kugouImageUrl(..., size: 400)`，与首页/搜索的图片尺寸契约一致。
+### 复核通过（F14）
+- :96-120 四态明确分离：`engineError` 常驻横幅 + 引擎失败且无歌曲时 `_EngineFailureView`（带「重试播放」）+ 无歌曲 `_EmptyPlayerView`（带「返回首页」）+ 正常态，页面不自行构造 Repository、不触网（第 5/9/16 条）。
+- :69-86 `currentLyricProvider` 用 `songHash` 记录代际，翻译 await 后 `ref.read(currentSongProvider)` 再比对 hash，不一致则作废本次结果（第 18 条）；原文模式不触发翻译 API（第 24 条）。
+- :541-560 `LyricView` 同时透传 `lyricId` 与 `songHash`，补丁代际校验的两个键都到位（与 F11 第 4 条的 null 分支风险相对：本调用方确实传了两个键）。
+- :299-320 `_SongInfoHeader` 用 `MediaQuery.textScalerOf(context).scale(14)/14` 判大字号、`LayoutBuilder` 判窄屏，标题允许两行不截断（可访问性）。
+- :513-535 `_CoverOrLyricState` 的 `_fadeCtrl`/`_fadeCurve` 在 `dispose()` 对称释放（第 20 条）。
+- :730-740 进度条 `onChangeEnd` 先 `if (mounted)` 再 seek，异步/延迟回调确认对象存活（第 18/20 条）。
+- :447-460 评论入口在 `albumAudioId.isEmpty` 时渲染禁用态而非消失，保证入口可发现（第 9 条）。
+- :818-830 `_CoverPlaceholder` 用主题色，封面加载失败有确定占位（对比 F7 的三态混同，此处至少有占位）。
 
-#### F10 `dart analyze lib/features/rank/data/rank_repository.dart`
+#### F14 `dart analyze lib/features/player/presentation/full_player_page.dart`
 ```
-3 issues found（2 error + 1 warning）
-噪音归类：uri_does_not_exist ×1（package:flutter_riverpod/...）、undefined_function ×1（Provider）
-          warning unnecessary_cast ×1（:112 `as Map<String, dynamic>`，非项目自有类错误）
-项目自有类错误：0（core/net/repository_reads.dart、core/api/kugou_api_client.dart、
-          app/di.dart、home/data/models.dart 相对 import 均存在）→ 合格
+329 issues found（329 error）
+噪音归类：uri_does_not_exist ×5（cached_network_image、flutter/material.dart、
+          flutter_riverpod、go_router、just_audio 三方包缺失）
+          undefined_identifier ×106 / undefined_method ×104 / undefined_class ×43 /
+          creation_with_non_type ×31 / override_on_non_overriding_member ×19 /
+          extends_non_class ×16 / undefined_super_member ×2 /
+          super_formal_parameter_without_associated_named ×1 /
+          mixin_with_non_class_superclass ×1 / mixin_of_non_class ×1
+          （全部为上述 5 个包缺失导致 Widget/ConsumerWidget/Icon/context.l10n/
+          LoopMode/FutureProvider 等符号无法解析的级联噪音）
+项目自有类错误：0（core/image/app_image_cache.dart、app/di.dart、
+          core/theme/settings_provider.dart、core/widgets/empty_state.dart、l10n/l10n.dart、
+          auth/presentation/login_guard.dart、lyric/data/krc_parser.dart、
+          lyric/presentation/lyric_view.dart、download/presentation/download_sheet.dart、
+          mv/mv_provider.dart、playlist/data/playlist_repository.dart、
+          playlist/presentation/add_to_playlist_sheet.dart、core/domain/song.dart、
+          player_provider.dart、queue_sheet.dart 相对 import 全部存在）→ 合格
 ```
 
-### F11 `lib/features/lyric/presentation/lyric_view.dart`（379 行，完整读）
+## 跨文件契约抽查（○ 文件，共 8 个：只读签名与调用点，不通读其余 ○ 文件）
 
-### lib/features/lyric/presentation/lyric_view.dart:186-200 `lines.isEmpty` 用同一句 `lyricEmptyGuide` 覆盖「纯音乐 / 解密失败 / 加载中」三种事实
+抽查文件清单（≤8）：`app/di.dart`、`app/bootstrap.dart`、`core/audio/audio_service_bootstrap.dart`、`core/utils/friendly_error.dart`、`core/utils/update_checker.dart`、`core/theme/settings_provider.dart`、`core/widgets/error_retry.dart`、`features/rank/presentation/rank_detail_page.dart`。
+辅助核对（仅统计/调用点，不计入 8 个）：`main.dart`、`settings_page.dart`、`play_helper.dart`、`full_player_page.dart` 已在 F14 通读。
+
+### X1 `lib/core/utils/friendly_error.dart` + `lib/core/widgets/error_retry.dart` 两套「异常→用户文案」出口互不知晓，`friendlyError` 未解包，`errorClassification` 未复用
 - 级别：P1
-- 违反：QUALITY_STANDARD 第 16 条（空集合与缺失/失败语义分离）、第 9 条（失败可观测）
-- 依据：`build()` 的唯一空态分支（:186-200）只渲染 `Text(context.l10n.lyricEmptyGuide)`，没有任何参数用于区分上游状态；`LyricView` 构造参数（:21-29）只有 `lyric/position/mode/onTapLine/lyricId/songHash`，没有 loading / error / retry 入口。对照 `krc_decoder.dart` 已把 KRC 失败细分为 4 类 `KrcDecodeError`，但本视图无从消费。注释 :186-188 自述旧实现「无法区分『纯音乐/解密失败/加载中』」，而当前实现只是把「一片空白」换成了一句引导文案，三种事实仍然共用同一 UI。
-- 影响：网络失败/歌词解密损坏时用户看到「暂无歌词 + 引导」，会以为这首歌本来就没有歌词，不会去重试或检查网络；加载过程中也没有任何进度指示，切歌后长时间停在「暂无歌词」。用户路径「进入歌词页 → 等待 → 得到反馈」中的反馈是错的。
-- 证据等级：实锤（构造参数与空态分支可直接静态确证）
+- 违反：QUALITY_STANDARD 第 5 条（状态单一来源）、第 8 条（异常契约单一且稳定）、i18n 一致性
+- 依据：`friendly_error.dart:3` 注释宣称「此 helper 是表现层解包的**唯一入口**」，提供 `unwrapApi`（:12-18）与把异常转中文的 `friendlyError`（:23-32）；统计核对全库 8 个文件调用 `friendlyError(`（登录页、设置页、歌单页、评论页、下载 provider 等）。而 `error_retry.dart:190-248` 另有一套 `errorClassification(context, error)`，按 `DioException`/`ApiException` 分类并使用 `context.l10n.networkErrorTitle/genericErrorTitle/...`（:195-246），被 `ErrorRetry` 组件（:22-24）与 9 个页面的错误态使用；`errorClassification` 对 `ApiException` 直接取 `error.message`（:230-236）而不是 `unwrapApi` + `friendlyError`，对 `DioException(error: ApiException)` 这种直连层包装形态（friendly_error.dart:5-7 明确描述）归类为通用错误文案而非 `needsVerification` / 登录过期文案。两套出口的文案集合也不同：一套全部硬编码中文（:26-31），一套走 l10n。
+- 影响：同一条直连 20028 风控异常，在登录页/Toast 里显示「需要完成人机验证后重试」，在首页/搜索/歌单的 `ErrorRetry` 错误页显示通用「操作失败」；英文用户看到中英混排。用户按其中一处文案去操作（例如重新登录）在另一处得不到对应引导，且 `ErrorRetry` 的「技术详情」里虽有 raw，但主文案完全丢失了验证/登录过期语义。
+- 证据等级：实锤（两套实现与调用点均可静态确证）
 
-### lib/features/lyric/presentation/lyric_view.dart:232-239 用户手动滚动的 `ScrollStartNotification` 判定带 `dragDetails != null`，程序化滚动也刷新暂停计时，且 `_lastUserScrollAt` 换歌后不重置
+### X2 `lib/app/bootstrap.dart:18/21/23/53-79` 声明的看门狗与并行启动编排在 `main.dart` 中零调用，形成两套并行的启动事实源
 - 级别：P2
-- 违反：QUALITY_STANDARD 第 30 条（命名与行为一致）、第 18 条（异步结果世代）
-- 依据：`onNotification` 条件为 `n is ScrollStartNotification && n.dragDetails != null || n is UserScrollNotification`（:234-235），第二个分支对所有 `UserScrollNotification`（包括 `_scrollTo` 的 `animateTo` 触发的方向变化通知）都会 `_lastUserScrollAt = DateTime.now()`；`_scrollTo` 在 :216-217 用 300ms 动画，动画本身会产生滚动通知。而 :212 的 `paused` 判定用 `DateTime.now().difference(_lastUserScrollAt) < 5s`；`didUpdateWidget` 换歌词时（:142-149）只重置 `_currentIndex`/`_boundLyric`/`_boundSongHash`，**不重置 `_lastUserScrollAt`，也不重置 `_didInitialScroll`**。
-- 影响：用户手动划一下歌词后 5 秒内切歌，新歌当前行的自动跟随仍处于「暂停」状态，且因 `_didInitialScroll` 已为 true 不再做首帧 `jumpTo`，用户看到的是上一首歌遗留的滚动位置、当前演唱行跑到屏幕外，需要再等 5 秒或手动回滚。这是「换歌 → 歌词跟随」这条高频路径的可见断点。
-- 证据等级：静态推演（ScrollNotification 具体派发序列未实测）
+- 违反：QUALITY_STANDARD 第 5 条（状态单一来源）、第 32 条（死代码）
+- 依据：`bootstrap.dart` 导出 `startupError`（:18）、`firstFrameRendered`（:21）、`startupWatchdog`（:23）、`startWatchdog()`（:53-59）、`markFirstFrame()`（:62-66）、`bootstrapServices()`（:69-79）。统计核对：全库除本文件自身外，只有 `main.dart:17` import 了 `openHiveBoxes`；`main.dart:141-165` 自己实现了 `_firstFrameRendered`、`_watchdog` 与 15 秒 `Timer`，`main.dart:127/160` 用的是 `_startupError`；`main.dart:107-110` 直接调 `AudioServiceBootstrap.start()`、`main.dart:204` 直接 `unawaited(PermissionGate.instance.ensureNotification())`。`startWatchdog`/`markFirstFrame`/`bootstrapServices`/`startupError`/`firstFrameRendered`/`startupWatchdog` 在全库无调用点。
+- 影响：启动看门狗有两份 15 秒逻辑，其中 `bootstrap.dart:53-59` 那份会 `ErrorLogger.instance.log('first frame timeout', ...)`，但实际从不运行；用户遇到「卡启动屏」时只有 `debugPrint`（release 不可见），日志里查不到首帧超时记录。`bootstrapServices()` 里对通知权限/音频引擎失败的 `catchError` 留痕也从未执行，实际走 `main.dart` 的无 catchError 路径。
+- 证据等级：实锤
 
-### lib/features/lyric/presentation/lyric_view.dart:160-175 自动滚动用固定 64/76px 估算行高，长文本换行后偏差随行号线性累积
+### X3 `lib/app/bootstrap.dart:25-45` 开箱失败仅 debugPrint 且继续 runApp，登录/歌词/缓存等盒缺失时 UI 无任何可见提示
 - 级别：P2
-- 违反：QUALITY_STANDARD 第 17 条（数值与索引精度）、第 14 条
-- 依据：`_estimateLineHeight` 只按「是否双语且有译文」在 `_itemExtentApprox = 64.0`（:58）与 `76`（:174-177）之间二选一；`_scrollTo` 用 `for (var i = 0; i < upper; i++) offset += _estimateLineHeight(lines[i])`（:165-168）线性累加。实际 `_LyricLineTile` 的 `Text` 没有 `maxLines`，长歌词行/超长译文在窄屏或大字体（系统无障碍字号放大）下会换成 2–3 行，实际行高远超 76；`ListView.builder` 未使用 `itemExtent`/`prototypeItem`，也没有真实布局测量。注释 :154-157 自述「偏差随行号线性累积」是旧实现的问题，但新实现仍用累加估算，只是把基线从「固定 64px」改成「按估算高度」。
-- 影响：大字体模式或长译文歌曲，唱到后半段当前行逐渐偏出屏幕中心甚至跑出视口，用户看不到正在唱的字；`_scrollTo` 还把 target clamp 到 `maxScrollExtent`，末尾几行始终贴底无法居中。
-- 证据等级：静态推演（未实测具体字号下的像素偏差）
+- 违反：QUALITY_STANDARD 第 9 条（失败必须可观测）、第 11 条（降级须有触发/退出条件）
+- 依据：`openSafe` 的 `catch (e) { debugPrint('[bootstrap] openBox($name) failed: $e'); }`（:31-33）吞掉开箱异常后不重试、不记账、不通知 UI；10 个盒子（:36-45）任一失败都直接跳过。`main.dart:80` `await openHiveBoxes()` 后照常 `runApp`；`settings_provider.dart:8-14` 的 `_settingsBoxProvider` 在 `Hive.isBoxOpen('settings')` 为 false 时返回 null（内存态），`ThemeModeNotifier.set`/`LocaleNotifier.set`/`LyricModeNotifier.set`/`VerboseLoggingNotifier.set` 全部 `await _box?.put(...)`——box 为 null 时写操作静默变成 no-op。
+- 影响：Hive 首次开箱失败（存储满/权限异常）时，用户在设置页改主题、语言、歌词模式、详细日志开关，界面当下生效但重启后全部回退；用户完全没有「设置未保存」的提示，也没有可检索日志（debugPrint 在 release 不可见），会把这归因为「App 记不住设置」而反复操作。
+- 证据等级：静态推演（`main.dart` 的启动错误页是否展示 `_startupError` 未在通读范围完整核对；本代理只读到 :127 的赋值与 debugPrint）
 
-### lib/features/lyric/presentation/lyric_view.dart:92-101 / 142-149 译文补丁订阅只在 `initState` 建立，`didUpdateWidget` 换歌词时不重绑，且 `songHash` 变化时 `_boundSongHash` 有条件不更新
+### X4 `lib/core/utils/update_checker.dart:59-64` `currentVersion()` 失败静默兜底为 `'1.0.0'`，与「失败不得当成已是最新」的自身契约冲突
 - 级别：P2
-- 违反：QUALITY_STANDARD 第 18 条（异步结果必须校验世代）、第 23 条（匹配键覆盖全部维度）
-- 依据：`_subscribePatches()` 只在 `initState`（:85-90）调用；`didUpdateWidget` 仅在 `oldWidget.lyric != widget.lyric` 时更新 `_boundLyric` 与 `_boundSongHash`（:144-148），订阅本身不重建。`_onTranslationPatch` 的歌曲代际校验是 `final wantHash = widget.songHash; if (wantHash != null && wantHash.isEmpty == false) {...}`（:105-109）——当 `songHash` 为 null 或空串时**跳过歌曲代际校验**，只靠 `lyricId` 比对（:110），而 `lyricId` 注释 :28-32 明确「为 null 时退化为只接受当前歌词代际内、下标范围合法」。注释 :47-50 又宣称「换歌后即使候选 id 恰好复用，旧歌词/旧译文也不得写入新歌视图」。
-- 影响：全屏播放器/下载面板等未传 `songHash` 的调用方，切歌后如果新歌歌词对象复用了同一实例（或 `lyricId` 恰好相同），旧歌译文补丁会写进新歌的行里，用户看到与当前歌曲无关的译文；与 b3_c 已撤销的「跨歌串入」条目不同——那条针对 `lyric_view` 已实现的 hash 校验，本条是 hash 为 null/空时该校验被整体跳过的分支。
-- 证据等级：静态推演（调用方是否传 songHash 未逐一通读；`full_player_page.dart` 在本批通读范围，见 F14 交叉核对）
+- 违反：QUALITY_STANDARD 第 11 条（降级须有明确触发条件与退出条件）、第 9 条、第 16 条
+- 依据：`currentVersion()` 的 `catch (_) { return '1.0.0'; }`（:62-64）空体吞异常且返回硬编码版本；而 `check()` 的注释 :77-79 明确「**失败时抛异常**：网络故障、接口异常都不能被当成『已是最新版本』」，`_fetchLatestRelease()`（:115-133）也严格区分 404 与其它失败。`_compareVersion(latest, current) > 0`（:94）在 `current` 被伪造成 1.0.0 时，任何真实版本号都会被判为「有新版本」。统计核对：`settings_page.dart:1009-1021` 拿到 `hasUpdate=true` 后弹更新对话框、`hasUpdate=false` 时 Toast「已是最新版本」。
+- 影响：`PackageInfo.fromPlatform()` 在部分 ROM/安装渠道抛异常时，用户每次点「检查更新」都被提示有一个远高于当前版本的新版本（实际可能就是同一版本），引导去下载覆盖安装；失败原因在日志中完全没有留痕。与 :77-79 宣称的失败口径直接相反。
+- 证据等级：实锤
 
-### lib/features/lyric/presentation/lyric_view.dart:198-200 / 262-263 空态与行内文案未接入 `MediaQuery` 字号缩放限制，`fontSize: 12/16/17` 硬编码
+### X5 `lib/features/rank/presentation/rank_detail_page.dart:57-73` + `lib/features/rank/data/rank_repository.dart:107-129` 加载更多的错误被静默吞掉且 `_error` 未清，失败后按钮布局不变、用户无反馈
+- 级别：P2
+- 违反：QUALITY_STANDARD 第 6 条（禁止吞掉异常）、第 9 条（失败可观测）、第 16 条
+- 依据：`_loadMore()` 的 `catch (_) { // 静默：保留已有列表 }`（:68-70）空体，只有 `finally` 复位 `_loadingMore`（:71-72）；`_error` 这个字段只在 `_load()` 的 catch（:49-52）与重试按钮（:120-123）里被写/清，加载更多失败时从不清空也不赋值。首屏错误态的渲染条件是 `_songs.isEmpty`（:104-110）——第二页失败时 `_songs` 非空，永远走不到错误态。叠加 F10 第 1 条：`fetchRankSongs` 对形态异常返回 `total = songs.length`，`_hasMore = _songs.length < r.total`（:46、:66）会变 false，「加载更多」按钮被替换成 `noMore` 文案。
+- 影响：用户点「加载更多」遇到网络失败，转圈结束后列表原样、按钮仍在（可反复点）却没有任何错误提示；若上游返回形态异常则直接显示「没有更多了」，用户以为榜单只有当前这几十首歌，无法重试也无从知晓是请求失败。这是「进入榜单 → 翻页 → 反馈」的断点。
+- 证据等级：实锤
+
+### X6 `lib/features/player/presentation/full_player_page.dart:69-73` + `lib/core/theme/settings_provider.dart:50-72` 歌词翻译取「系统 locale」而 App 有独立的 `localeProvider`，应用内切换语言后译文语言不跟随
+- 级别：P2
+- 违反：QUALITY_STANDARD 第 23 条（结果键必须覆盖语言维度）、第 5 条（状态单一来源）
+- 依据：`currentLyricProvider` 用 `WidgetsBinding.instance.platformDispatcher.locale`（:69-73）算 `targetLang`；注释 :67-68 明确写「取语言用 platformDispatcher 而非 BuildContext：Provider 是全局对象，没有 Element」。但 `settings_provider.dart:48-72` 提供 `LocaleNotifier`/`localeProvider`（应用内语言设置，持久化到 Hive），`main.dart:334/351` 把 `ref.watch(localeProvider)` 作为 `MaterialApp.locale`。即应用真实的界面语言事实源是 `localeProvider`，歌词译文却用另一份（系统 locale），且该值不是 Riverpod 依赖，语言变化不会触发 provider 重算（F14 第 6 条的落地证据）。
+- 影响：用户在设置里把 App 语言切成英文（系统仍为中文）后，界面变英文但双语歌词译文仍是中文；反之亦然。用户「设置语言 → 返回播放页」这条路径得到不一致结果，且切歌前不会自行修正。
+- 证据等级：实锤
+
+### X7 `lib/core/audio/audio_service_bootstrap.dart:41-47` + `lib/app/bootstrap.dart:74-76` 并行 `ensureReady()` 的 `whenComplete` 无条件把 `_future` 置 null，可能让「成功」被后续调用者重复 init
 - 级别：P3
-- 违反：QUALITY_STANDARD 第 26 条（无障碍/一致性）
-- 依据：`_LyricLineTile._buildOriginal` 用 `fontSize: isCurrent ? 17 : 16`（:351）、译文两处 `fontSize: 12`（:302、:315），都是硬编码逻辑像素；`theme.textTheme.titleMedium?.copyWith(...)` 的其它属性（字族/字重）保留但字号被覆盖，系统「大字体」无障碍设置对逐字歌词行无效。
-- 影响：开启系统大字体/粗体的用户，歌词行仍以固定 12–17px 显示，与页面其它文字大小不一致，译文尤其难读。定 P3（可访问性缺陷）。
+- 违反：QUALITY_STANDARD 第 19 条（互斥闸门须归属同一所有者）、第 22 条
+- 依据：`_ensureStarted()` 里 `final f = _future ??= _init(); return f.whenComplete(() { if (_ready == false) _future = null; });`（:42-47）——`whenComplete` 在 `_init` 成功时 `_ready=true`，不清 `_future`；但多个调用者共享同一个 `f`，每个调用者都会注册一个独立的 `whenComplete`，且 `_ready` 是全局静态值，任一并发调用者观察到 `_ready == false`（例如 `ensureReady()` 在 `bootstrapServices` 与 `audio_handler.dart:59` 同时发起、其中一个尚未完成）就会把 `_future` 置 null，导致下一次播放重新跑一次 `JustAudioBackground.init()`。`ensureReady()` 的 `catch (_) { return false; }`（:97-100）也吞掉异常不留痕。
+- 影响：极端并发下后台播放服务被重复初始化，可能出现通知栏控制短暂重复/前台服务抖动；`catch (_)` 让「初始化为何失败」只能从 `_error` 这个静态字段查，用户侧无额外提示。正常启动序列（main.dart:110 先 start、audio_handler 播放前 ensureReady）不易触发，定 P3。
 - 证据等级：静态推演
 
-### 复核通过（F11）
-- :103-135 `_onTranslationPatch` 有 `if (!mounted) return`、`_boundLyric == null` 早退、`songHash`/`lyricId` 双维度代际校验、`startIndex` 边界检查、「已有译文不覆盖」，且 `changed` 时才 `setState` 一次（第 18/20/24 条）。
-- :137-140 `dispose()` 与 `initState` 的 `_patchSub` 订阅对称 `cancel()`，`_scroll.dispose()`（第 20 条）。
-- :206-226 `build()` 不直接改状态，改用 `_pendingRebuild` + `addPostFrameCallback` 保证同一帧只排一次 `setState`（第 24 条：build 纯函数）。
-- :364-373 `_findCurrentLine` 二分查找，不在每帧做线性扫描（第 26 条）。
-- :198 空态文案走 `context.l10n.lyricEmptyGuide`，无硬编码中文。
-
-#### F11 `dart analyze lib/features/lyric/presentation/lyric_view.dart`
-```
-85 issues found（84 error + 1 warning）
-噪音归类：uri_does_not_exist ×1（package:flutter/material.dart）
-          undefined_identifier ×35 / undefined_method ×17 / undefined_class ×11 /
-          override_on_non_overriding_member ×6 / undefined_super_member ×3 /
-          extends_non_class ×3 / type_test_with_undefined_name ×2 /
-          super_formal_parameter_without_associated_named ×2 /
-          non_type_as_type_argument ×2 / creation_with_non_type ×2
-          （全部为 Flutter 缺失的级联噪音）
-          warning unused_element_parameter ×1（:282 `_LyricLineTile.key` 从未传值，非自有类错误）
-项目自有类错误：0（l10n/l10n.dart、core/resource/lyric_translation_stream.dart、
-          core/theme/settings_provider.dart、../data/krc_parser.dart 均存在）→ 合格
-```
-
-### F12 `lib/features/mv/mv_provider.dart`（34 行，完整读）
-
-### lib/features/mv/mv_provider.dart:27-33 `mvDetailProvider` 空 catch 把「MV 详情请求失败」折叠成 null，与注释「隐藏清晰度按钮」以外的失败不可区分
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 6 条（禁止吞掉异常）、第 9 条（失败必须可观测）、第 16 条
-- 依据：`try { return await ref.watch(mvRepoProvider).fetchDetail(hash); } catch (_) { return null; }`（:29-33），异常对象被丢弃、无 debugPrint、无 ErrorLogger、无错误态；返回类型 `MvDetail?` 用 null 同时表示「该 MV 没有清晰度列表」与「请求失败/超时/解析异常」。统计核对：`mv_player_page.dart:280` 用 `ref.watch(mvDetailProvider(...))` 决定是否渲染清晰度入口。
-- 影响：网络波动时用户打开 MV 播放页，清晰度选择按钮直接消失，既没有「加载中」也没有「重试」；用户会以为该 MV 只有一种清晰度，反复退出重进也不会得到错误提示，无法判断是网络问题还是内容本身。
-- 证据等级：实锤
-
-### lib/features/mv/mv_provider.dart:11-16 / 19-25 `mvExistsProvider` 与 `songMvProvider` 对同一 `albumAudioId` 各发一次 `findBySong`，无异常折叠口径不一致
-- 级别：P2
-- 违反：QUALITY_STANDARD 第 5 条（状态单一来源）、第 8 条（异常契约单一且稳定）
-- 依据：两个 `FutureProvider.family.autoDispose` 分别对同一个 `albumAudioId` 调 `findBySong`（:14、:22），一个返回 `bool`（`list.isNotEmpty`），一个返回 `MvInfo?`（`list.first`），两者都没有 try/catch——异常直接以 FutureProvider 的 error 态向外传播；而同文件 :27-33 的 `mvDetailProvider` 却把异常吞成 null。三个 provider 对「同一仓库调用失败」给出三种不同形态（error / error / null）。统计核对：`full_player_page.dart:436`、`download_sheet.dart:37` 消费 `songMvProvider`；`mvExistsProvider` 在全库除本文件定义外无任何消费点（第 32 条嫌疑，见下条）。
-- 影响：同一首歌在播放器与下载面板上，「MV 是否存在」这一事实需要两次独立网络请求且可能得到不同结果；某个页面展示 MV 入口而另一个不展示，用户看到不一致；失败时一个页面报错、另一个静默隐藏按钮，反馈口径混乱。
-- 证据等级：静态推演（`findBySong` 内部是否有缓存合并不在本代理通读范围）
-
-### lib/features/mv/mv_provider.dart:11-16 `mvExistsProvider` 全库零消费点
-- 级别：P3
-- 违反：QUALITY_STANDARD 第 32 条（死代码零容忍）
-- 依据：统计核对全库 `mvExistsProvider` 仅在本文件 :11 定义、:11-16 实现体内无自引用；`songMvProvider` 已在 :19-25 提供同一 `findBySong(...).isNotEmpty` 的等价信息且被两个页面消费。
-- 影响：无用户可见后果；多一个可被误用的 state 入口，定 P3。
-- 证据等级：实锤
-
-### 复核通过（F12）
-- :7-8 `mvRepoProvider` 用 `ref.watch(kugouApiClientProvider)` 装配（DI 注入，不 new 裸 client），播放页与全屏播放器共享同一仓库实例（第 2/5 条）。
-- :11 / :19 / :27 三个 family 均 `autoDispose`，离开页面后释放缓存态，避免切歌累积（第 20/25 条）。
-- :12-13 / :20-21 `albumAudioId.isEmpty` 早退，不发无意义的空 ID 请求（第 14 条）。
-
-#### F12 `dart analyze lib/features/mv/mv_provider.dart`
-```
-5 issues found（5 error）
-噪音归类：uri_does_not_exist ×1（package:flutter_riverpod/...）、undefined_function ×1（Provider）、
-          undefined_identifier ×3（FutureProvider）
-项目自有类错误：0（app/di.dart、data/mv_repository.dart 相对 import 均存在）→ 合格
-```
+### 跨文件复核通过（抽查）
+- `app/di.dart:12-15` `kugouApiClientProvider` 恒 `ref.watch(kgDirectApiProvider)`，`lyricRepositoryProvider`（:21-23）注入同一实例；本批 ✅ 通读的 `home_repository.dart:13` 与 `rank_repository.dart:132`、`mv_provider.dart:7` 全部经该 provider 装配，**无一处 new 裸 `KugouApiClient()`**（第 27 条 + REVIEW_SPEC §5）。
+- `core/widgets/error_retry.dart:25-75` 主文案 + 副提示 + 「重载」按钮 + 折叠「技术详情」（`SelectableText` + 复制）四位一体，绝不把原始异常直接上屏（第 9/14 条）；`Toast.copy`（toast.dart:45-50）与它形成「点文案即复制」的一致交互。
+- `features/rank/presentation/rank_detail_page.dart:27-32 / 92-132` 首屏区分 `_error`（错误+重试）、`_loaded`（空态 `noData`）、未加载（进度圈）三态，且 `_load()`/`_loadMore()` 都在写状态前 `if (!mounted) return`（第 16/18 条）；`SongTile` 的 MV trailing 显式补足 48dp 触控区（与 F7 一致）。
+- `features/player/play_helper.dart:24-52` HomeSong/PlaylistSong → Song 各只有一个转换点，hash 缺失时不用 id 冒充、时长显式 `Duration(seconds: ...)`（第 15/14 条）；`playQueue` 空列表早退（:86-89）。
+- `core/utils/update_checker.dart:115-133 / 137-147` 404 与其它失败严格分离、`assets` 逐一 `is Map` 校验、更新说明截断 1200 字符（第 14/25 条）；`_compareVersion`（:150-190）按 semver 处理预发布后缀与 build number。
 
