@@ -315,7 +315,7 @@ class _LyricLineTile extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        height: _lineExtent,
+        height: _LyricViewState._lineExtent,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(

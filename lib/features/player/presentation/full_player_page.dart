@@ -18,6 +18,9 @@ import '../../../core/image/app_image_cache.dart';
 import '../../../app/di.dart' show lyricRepositoryProvider;
 import '../../../core/theme/settings_provider.dart'
     show LyricDisplayMode, lyricModeProvider;
+import '../../../core/domain/quality.dart' show AudioQuality;
+import '../../settings/presentation/settings_providers.dart'
+    show defaultQualityProvider;
 import '../../../core/widgets/empty_state.dart';
 import '../../../l10n/l10n.dart';
 import '../../download/presentation/download_sheet.dart';
